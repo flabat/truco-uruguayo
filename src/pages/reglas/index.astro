@@ -1,0 +1,76 @@
+---
+import Site from "../../layouts/Site.astro";
+import Icon from "../../components/Icon.astro";
+import { groups, rules, ruleUrl, url } from "../../lib/guide";
+---
+
+<Site
+  title="Reglas del Truco"
+  description="Índice del reglamento uruguayo. Consultá el reparto, la jerarquía, las pardas, el envido, la flor y el truco."
+  active="reglas"
+>
+  <div class="page-intro">
+    <div class="shell">
+      <p class="crumb">
+        <a href={url()}>Inicio</a>
+        <Icon name="chevron" size={12} />
+        Reglas del Truco
+      </p>
+      <p class="eyebrow">
+        <span class="mini-diamond" aria-hidden="true">
+          ◆
+        </span>{" "}
+        El manual
+      </p>
+      <h1>Reglas del Truco</h1>
+      <p>
+        Del primer reparto al último «quiero». Leé la guía en orden o buscá la regla que necesitás
+        en la mesa.
+      </p>
+    </div>
+  </div>
+  <div class="shell index-layout">
+    <aside class="side-index">
+      <p class="eyebrow">En esta guía</p>
+      <nav aria-label="Grupos del índice">
+        {groups.map((group) => (
+          <a href={"#" + group.id}>
+            {group.title}
+            <Icon name="down" size={14} />
+          </a>
+        ))}
+        <a href={url("fuentes/#variantes")}>
+          Variantes de mesa
+          <Icon name="arrow" size={14} />
+        </a>
+      </nav>
+    </aside>
+    <div>
+      {groups.map((group) => (
+        <section class="index-section" id={group.id}>
+          <div class="index-heading">
+            <div>
+              <span class="chapter-count">{group.ids.length} capítulos</span>
+              <h2>{group.title}</h2>
+            </div>
+            <img src={url("img/" + group.image + ".webp")} alt="" width="92" height="92" />
+          </div>
+          <div class="chapter-list">
+            {group.ids.map((id) => {
+              const rule = rules.find((rule) => rule.id === id)!;
+              return (
+                <a href={ruleUrl(id)}>
+                  <div>
+                    <h3>{rule.title}</h3>
+                    <p>{rule.intro}</p>
+                  </div>
+                  <Icon name="arrow" size={20} />
+                </a>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  </div>
+</Site>

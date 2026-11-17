@@ -1,0 +1,154 @@
+---
+import Icon from "./Icon.astro";
+import { rules, ruleUrl, url } from "../lib/guide";
+const searchEntries = rules.map((rule) => ({
+  id: rule.id,
+  title: rule.title,
+  href: ruleUrl(rule.id),
+  intro: rule.intro,
+  text: [
+    rule.id,
+    rule.title,
+    rule.intro,
+    ...rule.blocks.flatMap((block) => [
+      block.heading,
+      block.text,
+      ...(block.items ?? []),
+      ...(block.table?.rows.flat() ?? []),
+    ]),
+    ...(rule.variants ?? []).flatMap((variant) => [variant.title, variant.text]),
+  ].join(" "),
+}));
+---
+
+<a class="search-trigger" id="open-search" href={url("reglas/")} aria-label="Buscar en la guía">
+  <Icon name="search" size={16} />
+  <span>Buscar</span>
+  <kbd>/</kbd>
+</a>
+<dialog
+  class="search-dialog"
+  id="search-dialog"
+  aria-labelledby="search-title"
+  data-entries={JSON.stringify(searchEntries)}
+>
+  <div class="dialog-top">
+    <h2 id="search-title">Buscar en la guía</h2>
+    <button type="button" aria-label="Cerrar búsqueda" id="close-search">
+      <Icon name="x" />
+    </button>
+  </div>
+  <div class="search-box">
+    <Icon name="search" />
+    <input
+      id="query"
+      type="search"
+      aria-label="Buscar una regla"
+      placeholder="Buscá una carta, un canto, una regla…"
+      autocomplete="off"
+    />
+  </div>
+  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+  <ul id="search-results"></ul>
+</dialog>
+<script>
+  const dialog = document.querySelector<HTMLDialogElement>("#search-dialog")!;
+  const input = dialog.querySelector<HTMLInputElement>("#query")!;
+  const list = dialog.querySelector<HTMLUListElement>("#search-results")!;
+  const status = dialog.querySelector<HTMLElement>("#search-status")!;
+  const trigger = document.querySelector<HTMLAnchorElement>("#open-search")!;
+  type Entry = { title: string; href: string; intro: string; text: string; id: string };
+  const entries: Entry[] = JSON.parse(dialog.dataset.entries ?? "[]");
+  function normalize(text: string) {
+    return text
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  }
+  function render() {
+    const terms = normalize(input.value.trim()).split(/\s+/).filter(Boolean);
+    const matches = entries
+      .filter((entry) => terms.every((term) => normalize(entry.text).includes(term)))
+      .sort((a, b) => {
+        function score(entry: Entry) {
+          return terms.filter((term) => normalize(entry.title + " " + entry.id).includes(term))
+            .length;
+        }
+        return score(b) - score(a);
+      });
+    status.textContent = !terms.length
+      ? "Capítulos de la guía"
+      : matches.length === 0
+        ? "No encontramos esa regla. Probá con «muestra» o «envido»."
+        : matches.length +
+          (matches.length === 1 ? " capítulo encontrado" : " capítulos encontrados");
+    list.replaceChildren(
+      ...matches.map((entry) => {
+        const li = document.createElement("li");
+        const a = document.createElement("a");
+        a.href = entry.href;
+        const title = document.createElement("strong");
+        title.textContent = entry.title;
+        const note = document.createElement("span");
+        note.textContent = entry.intro;
+        a.append(title, note);
+        li.append(a);
+        return li;
+      }),
+    );
+  }
+  function open() {
+    input.value = "";
+    render();
+    dialog.showModal();
+    input.focus();
+  }
+  trigger.addEventListener("click", (event) => {
+    if (
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.shiftKey &&
+      typeof dialog.showModal === "function"
+    ) {
+      event.preventDefault();
+      open();
+    }
+  });
+  dialog.querySelector("#close-search")!.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("click", (event) => {
+    const rect = dialog.getBoundingClientRect();
+    if (
+      event.target === dialog &&
+      (event.clientX < rect.left ||
+        event.clientX > rect.right ||
+        event.clientY < rect.top ||
+        event.clientY > rect.bottom)
+    )
+      dialog.close();
+  });
+  input.addEventListener("input", render);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") list.querySelector("a")?.click();
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      list.querySelector("a")?.focus();
+    }
+  });
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "/" &&
+      !dialog.open &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey &&
+      !(
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        (event.target instanceof HTMLElement && event.target.isContentEditable)
+      )
+    ) {
+      event.preventDefault();
+      open();
+    }
+  });
+</script>
