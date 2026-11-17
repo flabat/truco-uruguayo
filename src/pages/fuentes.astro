@@ -1,0 +1,106 @@
+---
+import Site from "../layouts/Site.astro";
+import SourceList from "../components/SourceList.astro";
+import Icon from "../components/Icon.astro";
+import { bibliography, variants, ruleUrl, url } from "../lib/guide";
+function catalogTitle(target: string, fallback: string) {
+  const names: [string, string][] = [
+    ["canelonchiqueadas.com", "Club Canelón Chico · Reglamento de las Canelonchiqueadas 2026"],
+    ["leyenda_FSV", "Fernán Silva Valdés · Leyenda, «El truco»"],
+    ["53454", "Daniel Vidart · Genealogía y espíritu del truco"],
+    ["38341", "Roberto J. Bouton · La vida rural en el Uruguay"],
+    ["granaventura.com", "Gran Aventura · Reglamento de truco uruguayo (archivo)"],
+    ["retruco.com", "ReTruco.com · Reglamento (archivo)"],
+    ["ludoteka.com", "Ludoteka · Reglas del truco uruguayo"],
+    ["conectagames.com", "ConectaGames · Reglas del truco uruguayo"],
+    ["wikipedia.org", "Wikipedia · Truco uruguayo"],
+    ["quierotruco.com", "Quiero Truco · Reglamento del proyecto"],
+  ];
+  return names.find(([part]) => target.includes(part))?.[1] ?? fallback;
+}
+---
+
+<Site
+  title="Fuentes y variantes"
+  description="Consultá las fuentes del manual y compará las reglas que cambian entre mesas, plataformas y campeonatos uruguayos."
+  active="fuentes"
+>
+  <div class="page-intro">
+    <div class="shell">
+      <p class="crumb">
+        <a href={url()}>Inicio</a>
+        <Icon name="chevron" size={12} />
+        Fuentes
+      </p>
+      <p class="eyebrow">
+        <span class="mini-diamond" aria-hidden="true">
+          ◆
+        </span>{" "}
+        Referencias
+      </p>
+      <h1>Fuentes y variantes</h1>
+      <p>
+        Reglamentos de campeonatos, testimonios uruguayos y mesas en línea. Cada capítulo indica de
+        dónde sale la regla que describe.
+      </p>
+    </div>
+  </div>
+  <div class="shell index-layout">
+    <aside class="side-index">
+      <p class="eyebrow">En esta página</p>
+      <nav aria-label="Secciones de fuentes">
+        <a href="#bibliografia">
+          Fuentes consultadas
+          <Icon name="down" size={14} />
+        </a>
+        <a href="#variantes">
+          Variantes de mesa
+          <Icon name="down" size={14} />
+        </a>
+      </nav>
+    </aside>
+    <div class="sources-body">
+      <section id="bibliografia">
+        <h2>Fuentes consultadas</h2>
+        <ul class="bibliography">
+          {bibliography.map(({ source, chapters }) => (
+            <li>
+              <a class="book-link" href={source.url}>
+                {catalogTitle(source.url, source.title)}
+                <Icon name="external" size={17} />
+              </a>
+              <p>En la guía</p>
+              <div class="ref-chapters">
+                {Array.from(chapters.values()).map((rule) => (
+                  <a href={ruleUrl(rule.id)}>{rule.title}</a>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <section id="variantes">
+        <h2>Variantes de mesa</h2>
+        <p>
+          Antes de repartir, acuerden qué modalidad van a jugar. Estas diferencias pueden cambiar
+          quién cobra y cuántos tantos se anota.
+        </p>
+        {variants.map((variant) => (
+          <details class="variant-details">
+            <summary>
+              {variant.title}
+              <Icon name="down" size={18} />
+            </summary>
+            <div>
+              <p>{variant.text}</p>
+              <SourceList sources={variant.sources} />
+              <a class="text-link" href={ruleUrl(variant.rule.id)}>
+                Leer el capítulo <Icon name="arrow" size={15} />
+              </a>
+            </div>
+          </details>
+        ))}
+      </section>
+    </div>
+  </div>
+</Site>

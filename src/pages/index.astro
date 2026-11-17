@@ -1,0 +1,122 @@
+---
+import Site from "../layouts/Site.astro";
+import Icon from "../components/Icon.astro";
+import { groups, ruleUrl, url } from "../lib/guide";
+const facts = [
+  { icon: "deck", label: "Baraja española", value: "40 cartas" },
+  { icon: "players", label: "Jugadores", value: "2, 4 o 6" },
+  { icon: "fan", label: "Por jugador", value: "3 cartas" },
+  { icon: "turn", label: "Sentido de juego", value: "Antihorario" },
+];
+---
+
+<Site
+  title="Truco uruguayo"
+  description="Aprendé a jugar al truco uruguayo con muestra. Una guía en español de las cartas, los cantos y las variantes de mesa, con ejemplos y fuentes."
+  active="inicio"
+>
+  <section class="hero">
+    <div class="shell hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow hero-kicker">
+          <span aria-hidden="true"></span> Guía de juego
+        </p>
+        <h1>
+          Truco{" "}
+          <em>
+            uruguayo<span>.</span>
+          </em>
+        </h1>
+        <p class="hero-deck">
+          Aprendé a jugar al truco con muestra. Una guía de las cartas, los cantos y las reglas de
+          la mesa uruguaya.
+        </p>
+        <div class="actions">
+          <a class="button" href={url("reglas/")}>
+            <Icon name="book" size={19} />
+            Leer las reglas <Icon name="arrow" size={17} />
+          </a>
+          <a class="quiet-link" href={ruleUrl("jerarquia")}>
+            Ver la baraja <Icon name="arrow" size={15} />
+          </a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img
+          src={url("img/mesa-criolla.webp")}
+          alt="Grabado ilustrado de tres gauchos jugando a las cartas en una mesa de campo."
+          width="1536"
+          height="1024"
+          fetchpriority="high"
+        />
+      </div>
+    </div>
+  </section>
+  <section class="facts" aria-label="La partida de un vistazo">
+    <div class="shell facts-inner">
+      {facts.map((fact) => (
+        <div class="fact">
+          <Icon name={fact.icon} size={30} />
+          <div>
+            <small>{fact.label}</small>
+            <strong>{fact.value}</strong>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+  <section class="home-rules shell" id="reglas">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">
+          <span class="mini-diamond" aria-hidden="true">
+            ◆
+          </span>{" "}
+          El manual
+        </p>
+        <h2>Reglas del Truco</h2>
+        <p>Elegí un tema para empezar o consultá el reglamento completo.</p>
+      </div>
+      <a class="text-link" href={url("reglas/")}>
+        Ver índice completo <Icon name="arrow" size={16} />
+      </a>
+    </div>
+    <div class="topic-grid">
+      {groups.map((group) => (
+        <a class={"topic-card topic-" + group.image} href={url("reglas/#" + group.id)}>
+          <div class="topic-picture">
+            <img
+              src={url("img/" + group.image + ".webp")}
+              alt=""
+              width="560"
+              height="560"
+              loading="lazy"
+            />
+          </div>
+          <div class="topic-copy">
+            <span class="chapter-count">{group.ids.length} capítulos</span>
+            <div>
+              <h3>{group.title}</h3>
+              <Icon name="arrow" size={22} />
+            </div>
+            <p>{group.description}</p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+  <aside class="home-source">
+    <div class="shell provenance-inner">
+      <div class="source-icon">
+        <Icon name="source" size={28} />
+      </div>
+      <div>
+        <h2>Las reglas cambian de mesa en mesa.</h2>
+        <p>Compará lo que dicen los reglamentos sobre el puntaje, la falta y el resto.</p>
+      </div>
+      <a class="text-link" href={url("fuentes/#variantes")}>
+        Consultar variantes <Icon name="arrow" size={16} />
+      </a>
+    </div>
+  </aside>
+</Site>

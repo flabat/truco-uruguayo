@@ -1,0 +1,113 @@
+---
+import Site from "../../layouts/Site.astro";
+import Icon from "../../components/Icon.astro";
+import SourceList from "../../components/SourceList.astro";
+import { groups, rules, ruleUrl, url } from "../../lib/guide";
+export function getStaticPaths() {
+  return rules.map((rule, index) => ({ params: { id: rule.id }, props: { rule, index } }));
+}
+const { rule, index } = Astro.props;
+const group = groups.find((group) => group.ids.includes(rule.id))!;
+const previous = rules[index - 1];
+const next = rules[index + 1];
+---
+
+<Site title={rule.title} description={rule.intro} active="reglas">
+  <div class="shell reading-breadcrumb">
+    <p class="crumb">
+      <a href={url()}>Inicio</a>
+      <Icon name="chevron" size={12} />
+      <a href={url("reglas/")}>Reglas del Truco</a>
+      <Icon name="chevron" size={12} />
+      {group.title}
+    </p>
+  </div>
+  <div class="shell reading-layout">
+    <aside class="side-index article-nav">
+      <p class="eyebrow">Reglas del Truco</p>
+      <nav aria-label="Capítulos del manual">
+        {groups.map((group) => (
+          <div class="nav-cluster">
+            <h2>{group.title}</h2>
+            {group.ids.map((id) => (
+              <a href={ruleUrl(id)} aria-current={id === rule.id ? "page" : undefined}>
+                {rules.find((rule) => rule.id === id)!.title}
+              </a>
+            ))}
+          </div>
+        ))}
+      </nav>
+    </aside>
+    <article class="article">
+      <header>
+        <p class="eyebrow">
+          <span class="mini-diamond" aria-hidden="true">
+            ◆
+          </span>{" "}
+          {group.category}
+        </p>
+        <h1>{rule.title}</h1>
+        <p class="standfirst">{rule.intro}</p>
+      </header>
+      {rule.blocks.map((block) => (
+        <section class="rule-block">
+          <h2>{block.heading}</h2>
+          <p>{block.text}</p>
+          {block.items && (
+            <ul>
+              {block.items.map((item) => (
+                <li>{item}</li>
+              ))}
+            </ul>
+          )}
+          {block.table && (
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    {block.table.headers.map((header) => (
+                      <th scope="col">{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {block.table.rows.map((row) => (
+                    <tr>
+                      {row.map((value, i) =>
+                        i === 0 ? <th scope="row">{value}</th> : <td>{value}</td>,
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      ))}
+      {rule.variants?.map((variant) => (
+        <aside class="variant">
+          <p class="eyebrow">Variante de mesa</p>
+          <h2>{variant.title}</h2>
+          <p>{variant.text}</p>
+          <SourceList sources={variant.sources} />
+        </aside>
+      ))}
+      <section class="citations">
+        <h2>Fuentes del capítulo</h2>
+        <SourceList sources={rule.sources} />
+      </section>
+      <nav class="chapter-pager" aria-label="Recorrido del manual">
+        {previous && (
+          <a href={ruleUrl(previous.id)}>
+            <small>← Anterior</small>
+            {previous.title}
+          </a>
+        )}
+        <a href={next ? ruleUrl(next.id) : url("fuentes/")}>
+          <small>Siguiente →</small>
+          {next ? next.title : "Fuentes y variantes"}
+        </a>
+      </nav>
+    </article>
+  </div>
+</Site>
