@@ -1,0 +1,218 @@
+[
+  {
+    "id": "preparacion",
+    "title": "La mesa y el reparto",
+    "intro": "Prepará una baraja española de 40 cartas. Cada jugador recibe tres y una más queda a la vista de todos. Esa carta es la muestra.",
+    "blocks": [
+      {
+        "heading": "Armar la mesa",
+        "text": "Usá los cuatro palos (oro, copa, espada y basto), cada uno con las cartas del 1 al 7, la sota (10), el caballo (11) y el rey (12). Retirá los ochos, los nueves y los comodines.",
+        "items": [
+          "De a dos, jugás mano a mano con tu rival.",
+          "De a cuatro, formá dos parejas. Los compañeros se sientan enfrentados.",
+          "De a seis, formá dos equipos de tres. Sentate entre dos rivales, con un tercero enfrente."
+        ]
+      },
+      {
+        "heading": "Dar las cartas",
+        "text": "Quien reparte mezcla y ofrece el mazo para que corte el rival de su izquierda. Empezando por la derecha, reparte una carta boca abajo a cada jugador y sigue en sentido antihorario hasta completar tres vueltas. Para la próxima mano, el mazo pasa un asiento a la derecha."
+      },
+      {
+        "heading": "Dar vuelta la muestra",
+        "text": "Dejá la siguiente carta boca arriba, a la vista junto al mazo. Su palo determina las cinco piezas de esta mano. La persona a la derecha de quien repartió es mano y juega primero. Quien repartió es pie y cierra la primera vuelta."
+      }
+    ],
+    "variants": [
+      {
+        "title": "¿Y si son tres? El truco de gallo",
+        "text": "Roberto J. Bouton describe una variante para tres personas. El gallo juega solo contra los otros dos y recibe cuatro cartas. Elige con cuáles tres se queda y devuelve la cuarta al mazo antes de jugar.",
+        "sources": [
+          {"title": "Roberto J. Bouton · La vida rural en el Uruguay, apartado «Truco»", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/38341/1/VIDARURALred.pdf"},
+          {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+        ]
+      }
+    ],
+    "sources": [
+      {"title": "Gran Aventura · Reparto, arts. 5–8", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego"},
+      {"title": "Quiero Truco · El reparto", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"}
+    ]
+  },
+  {
+    "id": "jerarquia",
+    "title": "La jerarquía de las cartas",
+    "intro": "Para saber qué carta gana una baza, mirá primero la muestra. Hasta el as de espada pierde frente a cualquiera de las cinco piezas.",
+    "blocks": [
+      {
+        "heading": "Las cinco piezas",
+        "text": "Solo son piezas las cartas de este cuadro que coinciden con el palo de la muestra. Leé de arriba hacia abajo. El caballo vence a la sota en una baza, aunque ambos aportan el mismo valor al envido.",
+        "table": {
+          "headers": ["Orden", "Pieza", "Valor de envido"],
+          "rows": [["1.ª", "2", "30"], ["2.ª", "4", "29"], ["3.ª", "5", "28"], ["4.ª", "11 · caballo o perico", "27"], ["5.ª", "10 · sota o perica", "27"]]
+        }
+      },
+      {
+        "heading": "Cuándo el rey es pieza",
+        "text": "Si la muestra es una de las cinco piezas, el rey de ese palo ocupa exactamente su lugar. Con el 4 de copas de muestra, el 12 de copas vence al 5 de copas, pierde ante el 2 de copas y vale 29 para el envido. Con el 6 de copas de muestra, ese mismo rey conserva su rango común."
+      },
+      {
+        "heading": "Las cartas que siguen",
+        "text": "Después de las piezas viene la siguiente escala. Cada grupo supera al de la fila de abajo. Dentro de cada fila, leé de izquierda a derecha y excluí toda carta que ya sea pieza.",
+        "table": {
+          "headers": ["Grupo", "De mayor a menor"],
+          "rows": [
+            ["Matas", "1 de espada (espadilla), 1 de basto (bastillo), 7 de espada, 7 de oro"],
+            ["Chicas o fíos", "3, 2, ases de copa y de oro"],
+            ["Negras", "12, 11, 10"],
+            ["Comunes bajas", "7 de copa y de basto, 6, 5, 4"]
+          ]
+        }
+      },
+      {
+        "heading": "Un empate de valor",
+        "text": "Un 3 de oros y un 3 de espadas tienen la misma fuerza, sea cual sea la muestra. También empatan entre sí los dos ases que quedan en el grupo de las chicas y los dos sietes de la última fila."
+      }
+    ],
+    "sources": [
+      {"title": "Ludoteka · Muestra, piezas y jerarquía", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "ReTruco.com · Las cartas y sus valores, arts. 7–9", "url": "https://web.archive.org/web/20121228153734/http://www.retruco.com/pagina.phtml?pag=ReglamentoRetruco"},
+      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+    ]
+  },
+  {
+    "id": "bazas",
+    "title": "Las bazas y las pardas",
+    "intro": "Una baza es una vuelta en la que cada jugador activo tira una carta. Con las tres cartas de un reparto se pueden jugar hasta tres bazas.",
+    "blocks": [
+      {
+        "heading": "Ganar la mano",
+        "text": "El mano abre la primera baza. Cada jugador elige una de sus cartas y la juega a su turno. La carta de mayor jerarquía gana la baza para su equipo y quien la tiró abre la vuelta siguiente. Al ganar dos bazas, el equipo cobra el truco. Si ganó las dos primeras, ya puede entregar las cartas."
+      },
+      {
+        "heading": "Resolver un empate",
+        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una baza. Dos cartas iguales de compañeros pueden ganar juntas frente a rivales con cartas menores. Si emparda la primera, vuelve a salir el mano.",
+        "table": {
+          "headers": ["Qué pasó", "Cómo se decide"],
+          "rows": [
+            ["Primera parda", "Quien gane la segunda gana la mano."],
+            ["Primera y segunda pardas", "Decide la tercera baza."],
+            ["Segunda parda, con ganador en la primera", "Gana quien hizo la primera."],
+            ["Una baza para cada equipo", "Decide la tercera. Si sale parda, gana quien hizo la primera."],
+            ["Las tres pardas", "Gana el equipo del mano."]
+          ]
+        }
+      },
+      {
+        "heading": "Pasar e irse al mazo",
+        "text": "En el reglamento de Gran Aventura, decir «paso» al llegar tu turno te retira de la mano y tus compañeros pueden seguir jugando. Si entregás las cartas al mazo sin avisar, comprometés al equipo entero. Cuando el equipo abandona, el rival cobra lo que valía el truco en ese momento."
+      }
+    ],
+    "sources": [
+      {"title": "Gran Aventura · Bazas y salida de juego, arts. 55–59 y 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Ludoteka · Truco y baza parda", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"}
+    ]
+  },
+  {
+    "id": "puntaje",
+    "title": "El tanteador",
+    "intro": "Antes de repartir, acuerden a cuántos tantos juegan. En una partida a 40 hay 20 malas y 20 buenas. Gana el equipo que llegue primero a 40.",
+    "blocks": [
+      {
+        "heading": "Pasar a buenas",
+        "text": "Cada equipo lleva su propia cuenta. Si van 18 a 14 y tu equipo suma tres, pasa a 21 en total, o una buena. El rival sigue con 14 malas. Si juegan a 30, la mitad está en 15."
+      },
+      {
+        "heading": "Qué se anota",
+        "text": "Hay tantos por el truco y, según los cantos de la mano, por el envido o la flor. Pueden cobrarlos equipos distintos. Por ejemplo, si ganás un envido de dos y el rival gana las bazas sin haber gritado truco, anotás dos y el rival anota uno."
+      },
+      {
+        "heading": "El chico y el partido",
+        "text": "Un chico termina cuando un equipo alcanza el total acordado. Se puede jugar a un solo chico o al mejor de tres. En este último formato gana el partido el primero que consiga dos chicos."
+      }
+    ],
+    "variants": [
+      {
+        "title": "El puntaje cambia según la mesa",
+        "text": "Wikipedia recoge 40 como meta habitual. Ludoteka fija 30 y el Club Canelón Chico jugó su torneo de 2026 a 30 en parejas y a 50 de a seis. Al organizar la partida, elegí el total antes de calcular la falta.",
+        "sources": [
+          {"title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego"},
+          {"title": "Ludoteka · Objetivo del juego", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
+        ]
+      }
+    ],
+    "sources": [
+      {"title": "ConectaGames · Objetivo y tantos", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+    ]
+  },
+  {
+    "id": "seis-jugadores",
+    "title": "El juego de a seis",
+    "intro": "Dos tercetos comparten mesa y tanteador. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
+    "blocks": [
+      {
+        "heading": "Alternar las manos",
+        "text": "Empiecen con una redondilla. En el reparto siguiente se juegan tres duelos con la misma muestra. Juega primero la pareja de rivales que incluye al mano y luego las otras dos por turno. En la modalidad de Gran Aventura, quienes esperan dejan sus cartas sobre la mesa sin mirarlas ni intervenir."
+      },
+      {
+        "heading": "Anotar los duelos",
+        "text": "Al terminar cada duelo, los tantos van al marcador de los equipos. La alternancia entre redondilla y pico a pico se usa mientras los dos equipos estén en malas. Cuando uno llega a buenas, los siguientes repartos son redondillas."
+      }
+    ],
+    "variants": [
+      {
+        "title": "La falta y el resto en el pico a pico",
+        "text": "Wikipedia asigna 6 tantos a la falta y 12 a la contraflor al resto (6 del desafío y 6 de las flores). En las Canelonchiqueadas de 2026, la contraflor al resto del pico a pico valía 15. Gran Aventura fija un tope de 10 para los envites de falta y resto, con las flores contabilizadas según su propio reglamento. Conviene fijar estos valores junto con la meta del partido.",
+        "sources": [
+          {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
+          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Gran Aventura · Arts. 31 y 86", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+        ]
+      }
+    ],
+    "sources": [
+      {"title": "ConectaGames · Juego de a seis", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+      {"title": "Gran Aventura · Partidos entre dos tercetos, arts. 83–87", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+    ]
+  },
+  {
+    "id": "senas",
+    "title": "Las señas",
+    "intro": "En equipo, un gesto le cuenta a tu compañero qué carta podés aportar. Las señas se hacen a la vista de la mesa, disimulando para que el rival no las lea.",
+    "blocks": [
+      {
+        "heading": "Un código de mesa",
+        "text": "Estas son las convenciones recogidas en la guía de Wikipedia. Las señas de flor y de buen tanto son opcionales. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
+        "table": {
+          "headers": ["Carta o jugada", "Gesto"],
+          "rows": [
+            ["2 de la muestra", "Alzar ambas cejas."],
+            ["4 de la muestra", "Juntar los labios como para dar un beso."],
+            ["5 de la muestra", "Fruncir la nariz."],
+            ["11 de la muestra", "Guiñar el ojo derecho."],
+            ["10 de la muestra", "Guiñar el ojo izquierdo."],
+            ["As de espada o as de basto", "Llevar los labios a la derecha."],
+            ["7 de espada o 7 de oro", "Llevar los labios a la izquierda."],
+            ["Un 3", "Morder suavemente el labio de abajo."],
+            ["Un 2 que no es pieza", "Entreabrir la boca."],
+            ["As de copa o de oro", "Asomar la lengua."],
+            ["Solo cartas bajas o figuras comunes", "Cerrar los dos ojos."],
+            ["Buen tanto para el envido", "Pasar la lengua por el labio de arriba."],
+            ["Flor", "Inflar los cachetes."]
+          ]
+        }
+      },
+      {
+        "heading": "Qué significa cada gesto",
+        "text": "Averiguá qué código usa la mesa. Por ejemplo, Gran Aventura agrupa los doses comunes y los ases de copa y oro bajo el mismo gesto de entreabrir la boca. Daniel Vidart también documenta parejas con un código propio."
+      }
+    ],
+    "sources": [
+      {"title": "Wikipedia · Valores y señas de las cartas", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Valores_y_se%C3%B1as_de_las_cartas"},
+      {"title": "Gran Aventura · Señas, art. 102", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+    ]
+  }
+]

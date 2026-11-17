@@ -1,0 +1,161 @@
+[
+  {
+    "id": "envido",
+    "title": "El envido",
+    "intro": "Cuando llega tu turno, podés decir «envido» antes de tirar tu primera carta. Si el otro equipo acepta, cada jugador cuenta sus tantos. El mejor puntaje individual gana la apuesta para su equipo.",
+    "blocks": [
+      {
+        "heading": "Cómo contar los tantos",
+        "text": "Primero mirá si tenés flor. Si la tenés, corresponde cantarla. Para el envido, las cartas del 1 al 7 aportan su número y las figuras comunes valen cero. Las piezas tienen valor propio.",
+        "table": {
+          "headers": ["Tu mano", "La cuenta", "Ejemplo con muestra de oro"],
+          "rows": [
+            ["Una pieza y dos cartas de palos distintos entre sí", "Valor de la pieza más la mejor de las otras dos.", "2 de oro, 7 de copa y 3 de basto suman 30 + 7 = 37."],
+            ["Dos cartas del mismo palo, sin pieza", "Sumá 20 a esas dos cartas.", "6 y sota de basto con 7 de espada dan 20 + 6 + 0 = 26."],
+            ["Tres palos distintos, sin pieza", "Contá la carta de mayor valor.", "Caballo de copa, 5 de espada y 3 de oro dan 5."]
+          ]
+        }
+      },
+      {
+        "heading": "Querer o revirar",
+        "text": "Decí «quiero» para comparar tantos o «no quiero» para conceder la apuesta. También podés revirar. Al subir aceptás lo que ya se ofreció. Esta tabla muestra lo que se anota por el envido, aparte del truco.",
+        "table": {
+          "headers": ["Cantos hasta el momento", "Si quieren", "Si rechazan el último"],
+          "rows": [
+            ["Envido", "2", "1"],
+            ["Real envido", "3", "1"],
+            ["Envido y envido", "4", "2"],
+            ["Envido y real envido", "5", "2"],
+            ["Falta envido directa", "Según el tanteador", "1"]
+          ]
+        }
+      },
+      {
+        "heading": "Quién habla primero",
+        "text": "Aceptado el envite, el mano declara cuánto tiene. Si el tanto de tu rival te gana, podés decir «son buenas». Entre jugadores empatados gana el que sea más mano, es decir, quien esté primero en el orden del reparto. Para acreditar el tanto ganador, mostrá las cartas antes de mezclarlas con el mazo."
+      },
+      {
+        "heading": "Cuánto vale la falta",
+        "text": "La regla de Gran Aventura toma el tanteador del que va primero. Si juegan a 40 y están 32 a 28, la falta directa vale 8. Si la gana el equipo que tiene 28, queda en 36. Si la gana el que tiene 32, completa el chico."
+      },
+      {
+        "heading": "Si los tantos cantados no coinciden",
+        "text": "En Gran Aventura, cantar 32 y mostrar cartas que suman 31 es canto errado. Si un solo equipo canta mal o niega una flor, el rival cobra los tantos envidados, las flores cantadas o negadas y el valor del truco aceptado, o un punto si todavía no se había aceptado. Si ambos equipos incurren en esos errores, la mano se anula."
+      }
+    ],
+    "sources": [
+      {"title": "Ludoteka · Envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "Gran Aventura · Arts. 14, 22–25 y 38–47", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Wikipedia · Puntos del envido", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_del_envido"}
+    ],
+    "variants": [
+      {
+        "title": "Qué tanteador determina la falta",
+        "text": "En las Canelonchiqueadas de 2026, en una redondilla de a seis a 50, quien gana la falta en malas llega a 25. Si ya está en buenas, gana la partida. ConectaGames habla de los tantos que le faltan «al rival para ganar», sin explicar el caso en que quien canta lleva la delantera. Acordá qué cuenta usa la mesa antes del reparto.",
+        "sources": [
+          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Ludoteka · Cálculo sobre el puntero", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+          {"title": "ConectaGames · Envido o toques", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "flor",
+    "title": "La flor",
+    "intro": "Mirá las tres cartas juntas. Si forman flor, cantá «flor» antes de jugar tu primera carta o de contestar otro canto. Al anunciar la flor se anula el envido ordinario que se hubiera cantado.",
+    "blocks": [
+      {
+        "heading": "Las cuatro formas de tener flor",
+        "text": "Sumá las tres cartas. Contá los 20 de base una sola vez. Cada pieza aporta lo que exceda de 20 en su valor de envido. Así, el 2 aporta 10, el 4 aporta 9, el 5 aporta 8 y el caballo y la sota aportan 7 cada uno.",
+        "table": {
+          "headers": ["Combinación", "Ejemplo con muestra de basto", "Tantos de la flor"],
+          "rows": [
+            ["Tres cartas de un palo sin pieza", "7, 6 y rey de copa", "20 + 7 + 6 + 0 = 33"],
+            ["Una pieza y dos cartas de un mismo palo", "5 de basto, 7 y 6 de oro", "20 + 8 + 7 + 6 = 41"],
+            ["Dos piezas y una carta cualquiera", "4 y caballo de basto, 6 de espada", "20 + 9 + 7 + 6 = 42"],
+            ["Tres piezas", "2, 4 y 5 de basto", "20 + 10 + 9 + 8 = 47"]
+          ]
+        }
+      },
+      {
+        "heading": "Qué se anota",
+        "text": "Una flor sin oposición le da 3 puntos a tu equipo, incluso si después pierde las bazas. Dos compañeros con flor hacen collera y suman 6 si ningún rival tiene flor. Tres compañeros con flor hacen trillera y suman 9 si el otro equipo carece de flor. Cuando hay flores en los dos bandos se compara la mejor de cada equipo. Si empatan, gana el jugador más cercano al mano en el orden de juego."
+      },
+      {
+        "heading": "Cómo contestar a otra flor",
+        "text": "Según la modalidad que recoge Wikipedia, si también tenés flor, anunciala en cuanto se cante la primera. Estas respuestas se entienden para una flor de cada lado.",
+        "items": [
+          "«La mía, flor». En la modalidad que recoge Wikipedia, se comparan las flores al terminar la mano y la mejor cobra 3.",
+          "«Con flor envido». Si quieren el envite simple, se comparan los tantos en ese momento. La mejor suma 5, tres de su flor y dos del envite. Si rechazan ese primer envite, el cantor cobra sus 3.",
+          "«Contraflor al resto». Eleva la apuesta. Antes de aceptarla conviene saber cuánto vale el resto en esa mesa."
+        ]
+      }
+    ],
+    "sources": [
+      {"title": "Wikipedia · Puntos de la flor", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
+      {"title": "Gran Aventura · Las flores y sus envites, arts. 14–20 y 27–33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Ludoteka · Flor y anulación del envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "Fernán Silva Valdés · «El truco», págs. 109–111", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/56489/1/leyenda_FSV_1936.pdf"}
+    ],
+    "variants": [
+      {
+        "title": "¿El resto gana la partida?",
+        "text": "ConectaGames adjudica el partido a quien gana la contraflor al resto. Wikipedia le asigna la distancia del puntero a la meta. Gran Aventura además suma el valor de las flores de ambos bandos al envite aceptado. Si el que va atrás gana la contraflor, las tres reglas pueden dar resultados distintos.",
+        "sources": [
+          {"title": "ConectaGames · Flor", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+          {"title": "Wikipedia · Contraflor al resto", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
+          {"title": "Gran Aventura · Arts. 31 y 33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+        ]
+      }
+    ]
+  },
+  {
+    "id": "truco",
+    "title": "Truco, retruco y vale cuatro",
+    "intro": "Ganar las bazas vale un punto de entrada. Cuando te toca jugar, podés gritar «truco» y ofrecer jugar por dos. El rival decide si acepta, cede o sube la apuesta.",
+    "blocks": [
+      {
+        "heading": "Los puntos en juego",
+        "text": "Si rechazan, termina la mano y quien hizo el último desafío anota el valor anterior. Si aceptan, la mano sigue y sus puntos son para quien gane las bazas.",
+        "table": {
+          "headers": ["Desafío", "Si quieren", "Si dicen «no quiero»"],
+          "rows": [["Truco", "2", "1"], ["Retruco", "3", "2"], ["Vale cuatro", "4", "3"]]
+        }
+      },
+      {
+        "heading": "A quién le toca subir",
+        "text": "Los equipos se alternan para subir de a un escalón. Si gritás truco y tu rival responde «retruco», ya aceptó jugar por dos y ahora te ofrece tres. Podés aceptar, concederle dos tantos o decir «vale cuatro». Si el rival había dicho «quiero» al truco, también puede retrucar más adelante en la misma mano."
+      },
+      {
+        "heading": "Cuando se cruzan los cantos",
+        "text": "Si te cantan truco antes de que juegues tu primera carta y el envido sigue abierto, podés tocar envido antes de contestar. Primero se resuelve el envido y luego se responde al truco pendiente. Si tenés flor, cantala primero. Cada lance se puntúa por separado."
+      },
+      {
+        "heading": "Quién cierra el chico",
+        "text": "En el tanteo de Quién Anota, el envido o la flor se cobran antes que el truco. Si van 38 a 39 en un chico a 40 y el equipo de 38 gana un envido querido, llega a 40 y gana, aunque al otro le alcanzara con un tanto de truco. Quiero Truco confirma el resultado al terminar la mano, después de dar tiempo a reclamar un canto sin acreditar."
+      },
+      {
+        "heading": "Echar los perros",
+        "text": "Es una modalidad que la mesa puede acordar. Antes de ver sus cartas, un equipo propone jugar la falta, el resto y el truco de una vez. El rival mira las suyas y dice «en ley» si tiene flor o «a punto» si juega el envido. Contesta por separado el envite que corresponda y el truco. Por ejemplo, «a punto, paso y quiero» rechaza la falta y acepta el truco."
+      }
+    ],
+    "sources": [
+      {"title": "ConectaGames · Gritos y echar los perros", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+      {"title": "Ludoteka · Lances de truco y envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "Quién Anota · Orden del tanteo", "url": "https://quienanota.com/reglas-del-truco-uruguayo"},
+      {"title": "Quiero Truco · El tanteador y los reclamos", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
+      {"title": "Gran Aventura · Arts. 60–82", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+    ],
+    "variants": [
+      {
+        "title": "Quién puede echar los perros",
+        "text": "Quiero Truco reserva el canto para el equipo que va perdiendo y exige que el rival ya esté en buenas. Gran Aventura permite que lo proponga cualquiera antes de que salga la muestra. Si los dos lo piden, tiene prioridad quien pierde y, en empate, el equipo del mano.",
+        "sources": [
+          {"title": "Quiero Truco · Echar los perros", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
+          {"title": "Gran Aventura · Arts. 71–72", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+        ]
+      }
+    ]
+  }
+]
