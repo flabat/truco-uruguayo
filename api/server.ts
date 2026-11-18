@@ -8,7 +8,7 @@ import { crearVivo } from "./vivo.ts";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  connectionTimeoutMillis: 1500,
+  connectionTimeoutMillis: 5000,
 });
 pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", error.message));
 await migrate(pool);
