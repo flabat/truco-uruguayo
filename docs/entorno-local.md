@@ -13,7 +13,20 @@ docker compose up --build --wait
 | PostgreSQL | Ejecutá `docker compose exec db psql -U truco -d truco`. El puerto de la base queda dentro de la red de Compose. |
 | Identidad de prueba | Abrí [la cuenta de Keycloak](http://localhost:8080/realms/truco-local/account/) con el usuario `prueba` y la contraseña `truco-local`. El [documento de descubrimiento OIDC](http://localhost:8080/realms/truco-local/.well-known/openid-configuration) publica el emisor y las URLs de autorización, tokens y claves. |
 
-Este primer incremento permite probar el proveedor local. El ingreso desde la web del juego y los cuatro perfiles de jugador corresponden al [issue de sesiones](https://github.com/flabat/truco-uruguayo/issues/95).
+## Entrar al juego con cuatro jugadores
+
+Abrí [la portada del juego](http://localhost:8081/#jugador) y elegí **Ingresar al juego**. Usá uno de estos cuatro usuarios de desarrollo. Todos usan la contraseña `truco-local`.
+
+| Jugador | Usuario |
+| --- | --- |
+| Ana | `ana` |
+| Bruno | `bruno` |
+| Clara | `clara` |
+| Diego | `diego` |
+
+Usá cuatro dispositivos o cuatro perfiles independientes del navegador. Las pestañas de un mismo perfil comparten sesión. Después del ingreso, la portada muestra el nombre y el ID de jugador. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador. La creación de mesas por invitación se sigue en [#96](https://github.com/flabat/truco-uruguayo/issues/96).
+
+Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloak importa el nuevo realm `mesa-local` junto al realm de prueba existente y la API aplica la migración a PostgreSQL. Nginx recibe el retorno del proveedor en `/api/auth/callback` y lo pasa a la API. El código se canjea dentro de Compose. El navegador recibe una cookie de sesión HTTP-only y las credenciales de desarrollo pertenecen a Keycloak. La compilación estática para GitHub Pages sigue ofreciendo la guía y la práctica individual.
 
 ## Motor de contenedores
 
@@ -48,4 +61,4 @@ El arranque normal publica los tres puertos en la interfaz local. En una red de 
 TRUCO_BIND=0.0.0.0 TRUCO_HOST=192.168.1.20 docker compose up --build --wait
 ```
 
-Desde el otro equipo usá `http://192.168.1.20:8081/` para la web, `http://192.168.1.20:3001/health` para la API y `http://192.168.1.20:8080/realms/truco-local/.well-known/openid-configuration` para identidad. Ambos equipos deben poder alcanzar esos puertos por la red y el firewall del anfitrión. Los valores de `WEB_PORT`, `API_PORT` y `OIDC_PORT` permiten elegir otros puertos. Repetí el comando normal de arranque para volver al acceso local.
+Desde el otro equipo usá `http://192.168.1.20:8081/#jugador`. El navegador tiene que poder alcanzar los puertos web y OIDC en el anfitrión. Los valores de `WEB_PORT`, `API_PORT` y `OIDC_PORT` permiten elegir otros puertos. Si un equipo también participa desde el propio anfitrión, puede abrir la misma URL. Para un grupo recurrente elegí un nombre LAN estable, resoluble por todos los dispositivos. La identidad OIDC se vincula por emisor y sujeto, por lo que cambiar el nombre o puerto público del emisor crea un espacio de identidades distinto. Volver al emisor original recupera sus jugadores.

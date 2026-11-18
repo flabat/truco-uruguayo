@@ -1,0 +1,125 @@
+import { createHash, randomBytes } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { Pool } from "pg";
+import * as oidc from "openid-client";
+
+const clientId = "truco-web";
+const flujo = "truco_ingreso";
+const sesion = "truco_sesion";
+const minutosDiez = 600;
+const diasSiete = 604800;
+const hash = (value: string) => createHash("sha256").update(value).digest("hex");
+const secreto = () => randomBytes(32).toString("base64url");
+
+function cookieDe(req: IncomingMessage, name: string) {
+  return req.headers.cookie?.split(";").map(part => part.trim())
+    .find(part => part.startsWith(name + "="))?.slice(name.length + 1) ?? "";
+}
+
+interface OpcionesOIDC {
+  web: URL;
+  callback: URL;
+  issuer: URL;
+  backend: URL;
+  local: boolean;
+}
+
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }: OpcionesOIDC) {
+  const protocol = "/protocol/openid-connect";
+  const config = new oidc.Configuration({
+    issuer: issuer.href,
+    authorization_endpoint: issuer.href + protocol + "/auth",
+    token_endpoint: backend.href + protocol + "/token",
+    jwks_uri: backend.href + protocol + "/certs",
+  }, clientId, { id_token_signed_response_alg: "RS256" }, oidc.None());
+  if (local) oidc.allowInsecureRequests(config);
+  else if ([web, callback, issuer, backend].some(url => url.protocol !== "https:")) {
+    throw new Error("La identidad requiere HTTPS fuera del entorno local.");
+  }
+  oidc.enableNonRepudiationChecks(config);
+  const inicio = new URL("/#jugador", web);
+  function cookie(name: string, value: string, age: number) {
+    return name + "=" + value + "; Path=/api/; HttpOnly; SameSite=Lax; Max-Age=" + age
+      + (web.protocol === "https:" ? "; Secure" : "");
+  }
+
+  return async function auth(req: IncomingMessage, res: ServerResponse) {
+    const url = new URL(req.url!, callback);
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    const sessionKey = hash(cookieDe(req, sesion));
+
+    if (req.method === "GET" && url.pathname === "/api/auth/login") {
+      // El intento y la sesión deben quedar en el dominio anunciado al navegador.
+      if (req.headers.host !== web.host) {
+        res.writeHead(303, { Location: new URL("/api/auth/login", web).href }).end();
+        return;
+      }
+      const handle = secreto();
+      const state = oidc.randomState();
+      const nonce = oidc.randomNonce();
+      const verifier = oidc.randomPKCECodeVerifier();
+      await pool.query("DELETE FROM juego.ingresos WHERE vence <= now()");
+      await pool.query("DELETE FROM juego.sesiones WHERE vence <= now()");
+      await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador) VALUES ($1,$2,$3,$4)",
+        [hash(handle), state, nonce, verifier]);
+      const location = oidc.buildAuthorizationUrl(config, {
+        response_type: "code", redirect_uri: callback.href, scope: "openid profile",
+        state, nonce, prompt: "login", code_challenge_method: "S256",
+        code_challenge: await oidc.calculatePKCECodeChallenge(verifier),
+      });
+      res.writeHead(303, { Location: location.href, "Set-Cookie": cookie(flujo, handle, minutosDiez) }).end();
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === callback.pathname) {
+      const { rows: [attempt] } = await pool.query(
+        "DELETE FROM juego.ingresos WHERE clave = $1 AND vence > now() RETURNING estado, nonce, verificador",
+        [hash(cookieDe(req, flujo))]);
+      res.setHeader("Set-Cookie", cookie(flujo, "", 0));
+      if (!attempt) { res.writeHead(401).end("El ingreso venció. Volvé a ingresar desde el juego."); return; }
+      let claims;
+      try {
+        const tokens = await oidc.authorizationCodeGrant(config, url, {
+          expectedState: attempt.estado, expectedNonce: attempt.nonce,
+          pkceCodeVerifier: attempt.verificador, idTokenExpected: true,
+        });
+        claims = tokens.claims()!;
+      } catch {
+        res.writeHead(401).end("No se pudo verificar el ingreso. Volvé a ingresar desde el juego.");
+        return;
+      }
+      const name = String(claims.given_name || claims.preferred_username || "Jugador");
+      const handle = secreto();
+      // Un solo commit vincula la identidad y crea la sesión, incluso en el primer ingreso concurrente.
+      await pool.query(`
+        WITH jugador AS (
+          INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
+          ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
+        ), anterior AS (DELETE FROM juego.sesiones WHERE clave = $4)
+        INSERT INTO juego.sesiones (clave, jugador) SELECT $5, id FROM jugador
+      `, [claims.iss, claims.sub, name, sessionKey, hash(handle)]);
+      res.writeHead(303, { Location: inicio.href, "Set-Cookie": [
+        cookie(flujo, "", 0), cookie(sesion, handle, diasSiete),
+      ] }).end();
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/jugador") {
+      const { rows: [player] } = await pool.query(`
+        SELECT j.id, j.nombre FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
+        WHERE s.clave = $1 AND s.vence > now()
+      `, [sessionKey]);
+      res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ?? null));
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/logout") {
+      if (req.headers.origin !== web.origin) { res.writeHead(403).end(); return; }
+      await pool.query("DELETE FROM juego.sesiones WHERE clave = $1", [sessionKey]);
+      res.writeHead(303, { Location: inicio.href, "Set-Cookie": cookie(sesion, "", 0) }).end();
+      return;
+    }
+    res.writeHead(404).end();
+  };
+}

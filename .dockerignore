@@ -11,3 +11,5 @@
 !scripts/
 !scripts/tatu/
 !scripts/tatu/**
+!infra/
+!infra/web.conf
