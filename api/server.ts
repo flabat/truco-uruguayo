@@ -1,9 +1,10 @@
 import { createServer } from "node:http";
 import pg from "pg";
 import { migrate } from "./migrate.ts";
-import { crearAuth } from "./auth.ts";
+import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
-import { crearRutasMesas, esRutaMesas } from "./mesas.ts";
+import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
+import { crearVivo } from "./vivo.ts";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -12,8 +13,6 @@ const pool = new pg.Pool({
 pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", error.message));
 await migrate(pool);
 const web = new URL(process.env.WEB_ORIGIN!);
-const partidas = crearPartidas(pool, web);
-const mesas = crearRutasMesas(pool, web);
 const auth = crearAuth(pool, {
   web,
   callback: new URL(process.env.OIDC_CALLBACK ?? "/api/auth/callback", web),
@@ -51,5 +50,17 @@ const server = createServer(async (request, response) => {
   response.end(JSON.stringify({ api: "ok", postgres: available ? "ok" : "unavailable" }));
 });
 
+const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
+const partidas = crearPartidas(pool, web, alCambiar);
+const mesas = crearRutasMesas(pool, web, alCambiar);
+const vivo = crearVivo(server, web, {
+  autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
+  leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
+  ejecutar: partidas.ejecutar,
+});
+
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
-process.on("SIGTERM", () => server.close(() => pool.end()));
+process.on("SIGTERM", () => {
+  vivo.cerrar();
+  server.close(() => pool.end());
+});

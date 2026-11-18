@@ -8,7 +8,7 @@ const ruta = /^\/api\/mesas\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 interface ServiciosVivo {
   autenticar(req: IncomingMessage): Promise<string | null>;
   leerMesa(mesa: string, jugador: string): Promise<unknown>;
-  ejecutar(mesa: string, jugador: string, operacion: "acciones" | "siguiente", datos: unknown): Promise<unknown>;
+  ejecutar(mesa: string, jugador: string, operacion: "acciones" | "siguiente", datos: Record<string, unknown>): Promise<unknown>;
 }
 
 interface Comando {
@@ -72,10 +72,9 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     try {
       if (!await sigueEnLaMesa(conexion)) return;
       // HTTP y WebSocket pasan por la misma clave idempotente y el mismo control de versión.
-      const { tipo, id, version, accion } = datos;
-      const partida = await servicios.ejecutar(mesa, jugador, tipo === "accion" ? "acciones" : "siguiente",
-        tipo === "accion" ? { id, version, accion } : { id, version });
-      if (await sigueEnLaMesa(conexion)) enviar(ws, { tipo: "confirmacion", id, partida });
+      const { tipo, ...solicitud } = datos;
+      const partida = await servicios.ejecutar(mesa, jugador, tipo === "accion" ? "acciones" : "siguiente", solicitud);
+      if (await sigueEnLaMesa(conexion)) enviar(ws, { tipo: "confirmacion", id: datos.id, partida });
     } catch (error) {
       const { status, mensaje } = fallo(error);
       if (status === 401 || status === 403 || status === 404) ws.close(1008, "Ingresá nuevamente a la mesa.");
