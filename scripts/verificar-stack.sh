@@ -33,6 +33,7 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
 node scripts/verificar-identidad.mjs "$issuer"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
 jugadores=$(sql "$consulta_jugadores")
@@ -46,6 +47,7 @@ migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-jueg
 "${compose[@]}" down
 up
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
+"${compose[@]}" exec -T api node --input-type=module - reinicio < scripts/verificar-mesas.mjs
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 [[ $(sql "$consulta_jugadores") == "$jugadores" ]]
 [[ $(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'") == "$migration" ]]

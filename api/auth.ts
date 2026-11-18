@@ -16,6 +16,22 @@ function cookieDe(req: IncomingMessage, name: string) {
     .find(part => part.startsWith(name + "="))?.slice(name.length + 1) ?? "";
 }
 
+export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
+  const handle = cookieDe(req, sesion);
+  if (!handle) return null;
+  const { rows: [player] } = await pool.query(`
+    SELECT j.id, j.nombre FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
+    WHERE s.clave = $1 AND s.vence > now()
+  `, [hash(handle)]);
+  return player ?? null;
+}
+
+function regresoPermitido(valor: string | null) {
+  // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
+  if (valor && /^\/jugar\/(?:\?(?:invitacion|mesa)=[a-zA-Z0-9_-]{1,80})?$/.test(valor)) return valor;
+  return "/#jugador";
+}
+
 interface OpcionesOIDC {
   web: URL;
   callback: URL;
@@ -50,9 +66,12 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
     const sessionKey = hash(cookieDe(req, sesion));
 
     if (req.method === "GET" && url.pathname === "/api/auth/login") {
+      const regreso = regresoPermitido(url.searchParams.get("volver"));
       // El intento y la sesión deben quedar en el dominio anunciado al navegador.
       if (req.headers.host !== web.host) {
-        res.writeHead(303, { Location: new URL("/api/auth/login", web).href }).end();
+        const login = new URL("/api/auth/login", web);
+        login.searchParams.set("volver", regreso);
+        res.writeHead(303, { Location: login.href }).end();
         return;
       }
       const handle = secreto();
@@ -61,22 +80,25 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
       const verifier = oidc.randomPKCECodeVerifier();
       await pool.query("DELETE FROM juego.ingresos WHERE vence <= now()");
       await pool.query("DELETE FROM juego.sesiones WHERE vence <= now()");
-      await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador) VALUES ($1,$2,$3,$4)",
-        [hash(handle), state, nonce, verifier]);
+      await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador, regreso) VALUES ($1,$2,$3,$4,$5)",
+        [hash(handle), state, nonce, verifier, regreso]);
       const location = oidc.buildAuthorizationUrl(config, {
         response_type: "code", redirect_uri: callback.href, scope: "openid profile",
         state, nonce, prompt: "login", code_challenge_method: "S256",
         code_challenge: await oidc.calculatePKCECodeChallenge(verifier),
       });
-      res.writeHead(303, { Location: location.href, "Set-Cookie": cookie(flujo, handle, minutosDiez) }).end();
+      res.writeHead(303, { Location: location.href, "Set-Cookie": cookie(flujo + "_" + state, handle, minutosDiez) }).end();
       return;
     }
 
     if (req.method === "GET" && url.pathname === callback.pathname) {
+      const state = url.searchParams.get("state") ?? "";
+      // Los ingresos ya abiertos antes de esta migración usaban una cookie compartida.
+      const nombreFlujo = cookieDe(req, flujo + "_" + state) ? flujo + "_" + state : flujo;
       const { rows: [attempt] } = await pool.query(
-        "DELETE FROM juego.ingresos WHERE clave = $1 AND vence > now() RETURNING estado, nonce, verificador",
-        [hash(cookieDe(req, flujo))]);
-      res.setHeader("Set-Cookie", cookie(flujo, "", 0));
+        "DELETE FROM juego.ingresos WHERE clave = $1 AND estado = $2 AND vence > now() RETURNING estado, nonce, verificador, regreso",
+        [hash(cookieDe(req, nombreFlujo)), state]);
+      res.setHeader("Set-Cookie", cookie(nombreFlujo, "", 0));
       if (!attempt) { res.writeHead(401).end("El ingreso venció. Volvé a ingresar desde el juego."); return; }
       let claims;
       try {
@@ -99,17 +121,14 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
         ), anterior AS (DELETE FROM juego.sesiones WHERE clave = $4)
         INSERT INTO juego.sesiones (clave, jugador) SELECT $5, id FROM jugador
       `, [claims.iss, claims.sub, name, sessionKey, hash(handle)]);
-      res.writeHead(303, { Location: inicio.href, "Set-Cookie": [
-        cookie(flujo, "", 0), cookie(sesion, handle, diasSiete),
+      res.writeHead(303, { Location: new URL(regresoPermitido(attempt.regreso), web).href, "Set-Cookie": [
+        cookie(nombreFlujo, "", 0), cookie(sesion, handle, diasSiete),
       ] }).end();
       return;
     }
 
     if (req.method === "GET" && url.pathname === "/api/jugador") {
-      const { rows: [player] } = await pool.query(`
-        SELECT j.id, j.nombre FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
-        WHERE s.clave = $1 AND s.vence > now()
-      `, [sessionKey]);
+      const player = await jugadorDeSesion(pool, req);
       res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ?? null));
       return;
     }
