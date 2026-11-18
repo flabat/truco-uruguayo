@@ -1,7 +1,7 @@
 import { esCardId, type CardId } from "./cartas.ts";
 import { compararCartas } from "./jerarquia.ts";
 import {
-  equipoPorAsiento, esAsiento, esRepartoV1, type Asiento, type Equipo, type RepartoV1,
+  equipoPorAsiento, esAsiento, esRepartoV1, esRepartoOnline, type Asiento, type Equipo, type Reparto, type RepartoV1,
 } from "./reparto.ts";
 
 export interface Jugada {
@@ -29,8 +29,8 @@ interface Mesa {
   readonly equipoGanador: Equipo | null;
 }
 
-export interface EstadoMano extends Mesa {
-  readonly reparto: RepartoV1;
+export interface EstadoMano<R extends Reparto = RepartoV1> extends Mesa {
+  readonly reparto: R;
   /** Cartas aún en juego, por asiento. */
   readonly restantes: readonly (readonly CardId[])[];
 }
@@ -41,21 +41,21 @@ export interface VistaAsiento extends Mesa {
   readonly muestra: CardId;
   readonly dador: Asiento;
   readonly mano: Asiento;
-  readonly equipoPorAsiento: typeof equipoPorAsiento;
+  readonly equipoPorAsiento: readonly Equipo[];
 }
 
 export type ErrorJugada = "mano-cerrada" | "jugada-invalida" | "fuera-de-turno" | "carta-ajena" | "carta-ya-jugada";
 
-export type ResultadoJugada =
-  | { readonly ok: true; readonly estado: EstadoMano }
+export type ResultadoJugada<R extends Reparto = RepartoV1> =
+  | { readonly ok: true; readonly estado: EstadoMano<R> }
   | { readonly ok: false; readonly error: ErrorJugada };
 
-export function iniciarMano(reparto: RepartoV1): EstadoMano {
-  if (!esRepartoV1(reparto)) throw new TypeError("El reparto no es un reparto V1 legal.");
-  const { versionReparto, semilla, dador, mano, manos: [a, b, c, d], muestra } = reparto;
-  const manos: RepartoV1["manos"] = [[...a], [...b], [...c], [...d]];
+export function iniciarMano<R extends Reparto>(reparto: R): EstadoMano<R> {
+  if (!esRepartoV1(reparto) && !esRepartoOnline(reparto)) throw new TypeError("El reparto no es válido.");
+  const copia = structuredClone(reparto);
+  const { mano, manos } = copia;
   return {
-    reparto: { versionReparto, semilla, dador, mano, manos, muestra },
+    reparto: copia,
     restantes: manos,
     turno: mano,
     vueltaActual: { salida: mano, jugadas: [] },
@@ -85,10 +85,10 @@ function ganadorDeMano(vueltas: readonly VueltaCerrada[], mano: Asiento): Equipo
   return null;
 }
 
-export function jugarCarta(estado: EstadoMano, jugada: Jugada): ResultadoJugada {
+export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jugada): ResultadoJugada<R> {
   const { vueltaActual, reparto } = estado;
   if (vueltaActual === null) return { ok: false, error: "mano-cerrada" };
-  if (!esAsiento(jugada?.asiento) || !esCardId(jugada.carta)) {
+  if (!esAsiento(jugada?.asiento) || jugada.asiento >= reparto.manos.length || !esCardId(jugada.carta)) {
     return { ok: false, error: "jugada-invalida" };
   }
   const { asiento, carta } = jugada;
@@ -101,8 +101,8 @@ export function jugarCarta(estado: EstadoMano, jugada: Jugada): ResultadoJugada 
   const restantes = estado.restantes.map((cartas, posicion) =>
     posicion === asiento ? cartas.filter((propia) => propia !== carta) : cartas);
   const jugadas = [...vueltaActual.jugadas, { asiento, carta }];
-  if (jugadas.length < 4) {
-    const turno = ((asiento + 1) % 4) as Asiento;
+  if (jugadas.length < reparto.manos.length) {
+    const turno = ((asiento + 1) % reparto.manos.length) as Asiento;
     return {
       ok: true,
       estado: { ...estado, restantes, turno, vueltaActual: { salida: vueltaActual.salida, jugadas } },
@@ -124,11 +124,12 @@ export function jugarCarta(estado: EstadoMano, jugada: Jugada): ResultadoJugada 
 }
 
 /** Los bots y la mesa guiada reciben sus cartas y una copia de los hechos públicos. */
-export function vistaPara(estado: EstadoMano, asiento: Asiento): VistaAsiento {
-  if (!esAsiento(asiento)) throw new RangeError("El asiento debe estar entre 0 y 3.");
+export function vistaPara(estado: EstadoMano<Reparto>, asiento: Asiento): VistaAsiento {
+  if (!esAsiento(asiento) || asiento >= estado.reparto.manos.length) throw new RangeError("El asiento debe estar en la mesa.");
   const { muestra, dador, mano } = estado.reparto;
   return structuredClone({
-    asiento, cartas: estado.restantes[asiento], muestra, dador, mano, equipoPorAsiento,
+    asiento, cartas: estado.restantes[asiento], muestra, dador, mano,
+    equipoPorAsiento: equipoPorAsiento.slice(0, estado.reparto.manos.length),
     turno: estado.turno,
     vueltaActual: estado.vueltaActual,
     vueltas: estado.vueltas,
