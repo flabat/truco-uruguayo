@@ -91,16 +91,32 @@ test("cuenta envido por pasos, con pista al error y mano nueva en el mismo tema"
   await expect(enlace(page, "Leer el capítulo completo en otra pestaña")).toHaveAttribute("href", /reglas\/envido\/$/);
 });
 
-for (const siete of ["7 de oros", "7 de copas"]) {
-  test(`acepta el ${siete} como selección equivalente de envido`, async ({ page }) => {
-    await semillas(page, 3);
-    await empezarTema(page, "contar-envido");
-    await boton(page, siete).click();
-    await boton(page, "Confirmar cartas").click();
-    await page.getByRole("spinbutton").fill("7");
-    await boton(page, "Comprobar total").click();
-    await expect(page.getByRole("heading", { name: "Mano resuelta" })).toBeVisible();
-  });
+for (const { semilla, selecciones, total, explicacion } of [
+  {
+    semilla: 3, selecciones: [["7 de oros"], ["7 de copas"]], total: 7,
+    explicacion: "Contás una sola carta. Con el 7 de oros o el 7 de copas hacés 7 de envido.",
+  },
+  {
+    semilla: 43, selecciones: [["Rey de copas"], ["Caballo de oros"], ["Sota de espadas"]], total: 0,
+    explicacion: "Contás una sola carta. Con el rey de copas, el caballo de oros o la sota de espadas hacés 0 de envido.",
+  },
+  {
+    semilla: 19, selecciones: [["5 de copas", "3 de oros"], ["5 de copas", "3 de bastos"]], total: 31,
+    explicacion: "Podés combinar el 5 de copas con el 3 de oros o el 3 de bastos. En ambos casos sumás 28 + 3 = 31.",
+  },
+]) {
+  for (const cartas of selecciones) {
+    test(`explica las alternativas de envido al elegir ${cartas.join(" y ")}`, async ({ page }) => {
+      await semillas(page, semilla);
+      await empezarTema(page, "contar-envido");
+      for (const nombre of cartas) await boton(page, nombre).click();
+      await boton(page, "Confirmar cartas").click();
+      await page.getByRole("spinbutton", { name: "Tu total" }).fill(String(total));
+      await boton(page, "Comprobar total").click();
+      await expect(page.getByRole("heading", { name: "Mano resuelta" })).toBeVisible();
+      await expect(page.getByRole("status")).toHaveText("¡Bien! " + explicacion);
+    });
+  }
 }
 
 test("progreso aprendido sigue abierto y permite una selección vacía de piezas", async ({ page }) => {
