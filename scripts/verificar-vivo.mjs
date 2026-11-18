@@ -54,7 +54,7 @@ function conectar(s, id) {
 }
 
 async function suscribir(sesiones, id) {
-  const clientes = sesiones.map(s => conectar(s, id));
+  const clientes = sesiones.map((s, i) => conectar(s, i === 0 ? id.toUpperCase() : id));
   for (const c of clientes) assert.deepEqual(await c.recibir(), { tipo: "actualizar" });
   return clientes;
 }
