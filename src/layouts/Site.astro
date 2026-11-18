@@ -12,11 +12,12 @@ import "../styles/site.css";
 interface Props {
   title: string;
   description: string;
-  active?: "inicio" | "aprender" | "reglas" | "fuentes";
+  active?: "inicio" | "jugar" | "aprender" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
 const pages = [
   { name: "Inicio", path: "", key: "inicio" },
+  ...(import.meta.env.PUBLIC_MULTIJUGADOR === "1" ? [{ name: "Jugar", path: "jugar/", key: "jugar" }] : []),
   { name: "Aprender", path: "aprender/", key: "aprender" },
   { name: "Reglas del Truco", path: "reglas/", key: "reglas" },
   { name: "Fuentes", path: "fuentes/", key: "fuentes" },

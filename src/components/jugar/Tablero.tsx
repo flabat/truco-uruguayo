@@ -1,0 +1,361 @@
+import { useEffect, useRef } from "react";
+import { cartasPorId } from "../../lib/cartas";
+import type { CardId } from "../../motor/cartas";
+import type { VistaOnline } from "../../motor/mesa-online";
+import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
+
+const canto = {
+  truco: "Truco",
+  retruco: "Retruco",
+  "vale-cuatro": "Vale cuatro",
+  envido: "Envido",
+  "real-envido": "Real envido",
+  "falta-envido": "Falta envido",
+  flor: "Flor",
+  "con-flor-envido": "Con flor envido",
+  "contraflor-al-resto": "Contraflor al resto",
+  quiero: "Quiero",
+  "no-quiero": "No quiero",
+  "paso-flor": "Sin flor",
+} satisfies Record<Exclude<Tipo, "carta">, string>;
+const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
+const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
+type Canto = Exclude<Tipo, "carta">;
+const grupos: { nombre: string; opciones: Canto[] }[] = [
+  { nombre: "Responder", opciones: ["quiero", "no-quiero", "paso-flor"] },
+  { nombre: "Truco", opciones: ["truco", "retruco", "vale-cuatro"] },
+  {
+    nombre: "Envido y flor",
+    opciones: ["envido", "real-envido", "falta-envido", "flor", "con-flor-envido", "contraflor-al-resto"],
+  },
+];
+
+function Naipe({ id, base }: { id: CardId; base: string }) {
+  return <img src={base + "img/cartas/tatu/" + id + ".webp"} width={384} height={596} alt={nombrar(id)} />;
+}
+
+function AsientoEnMesa({
+  asiento,
+  mesa,
+  vista,
+  base,
+  bloqueada,
+  jugar,
+}: {
+  asiento: Asiento;
+  mesa: Mesa;
+  vista: VistaOnline;
+  base: string;
+  bloqueada: boolean;
+  jugar: (a: Eleccion) => void;
+}) {
+  const propio = asiento.asiento === mesa.miAsiento;
+  const n = mesa.asientos.length;
+  const relativo = (asiento.asiento - mesa.miAsiento + n) % n;
+  const lugar = propio
+    ? "vos"
+    : n === 2 || relativo === 2
+      ? "frente"
+      : relativo === 1
+        ? "derecha"
+        : "izquierda";
+  const anterior = vista.vueltas.at(-1);
+  const vuelta = vista.vueltaActual ?? (vista.resultado?.motivo === "vueltas" ? anterior : undefined);
+  const jugada = vuelta?.jugadas.find((j) => j.asiento === asiento.asiento);
+  const restantes =
+    3 - vista.acciones.filter((a) => a.tipo === "carta" && a.asiento === asiento.asiento).length;
+  const papel = propio
+    ? "Vos"
+    : n === 2 || asiento.equipo !== mesa.asientos[mesa.miAsiento].equipo
+      ? "Rival"
+      : "Tu pareja";
+  return (
+    <div className={"j-puesto j-" + lugar} role="group" aria-label={papel + " · " + asiento.nombre}>
+      <div className="j-persona">
+        <b>{asiento.nombre}</b>
+        <span>
+          {papel}
+          {asiento.asiento === vista.mano && " · Mano"}
+        </span>
+      </div>
+      {jugada && (
+        <div className="j-jugada">
+          <Naipe base={base} id={jugada.carta} />
+        </div>
+      )}
+      {propio ? (
+        <div className="j-mano" role="group" aria-label="Tus cartas">
+          {vista.cartas.map((c) => (
+            <button
+              key={c}
+              disabled={bloqueada || !vista.legales.includes("carta")}
+              aria-label={"Jugar " + nombrar(c)}
+              onClick={() => jugar({ tipo: "carta", carta: c })}
+            >
+              <Naipe base={base} id={c} />
+              <span>{nombrar(c)}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        !jugada &&
+        restantes > 0 && (
+          <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
+            {Array.from({ length: restantes }, (_, i) => (
+              <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
+            ))}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
+  const { resultado, pendiente, porDeclararFlor, turno, legales } = vista;
+  const propio = mesa.asientos[mesa.miAsiento].equipo;
+  if (resultado) {
+    const fin = partida.ganadorPartida !== null;
+    const victoria = resultado.equipo === propio;
+    const motivos = { vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
+    return {
+      titulo: fin
+        ? victoria
+          ? "Ganaste la partida"
+          : "Ganó el rival"
+        : victoria
+          ? "Ganaste la mano"
+          : "El rival ganó la mano",
+      indicacion: `Se anotaron ${tantos(resultado.tantos)} por ${motivos[resultado.motivo]}.`,
+    };
+  }
+  if (porDeclararFlor !== null) {
+    const esTuTurno = porDeclararFlor === mesa.miAsiento;
+    return {
+      titulo: esTuTurno ? "Te toca declarar" : "Declara " + mesa.asientos[porDeclararFlor].nombre,
+      indicacion: esTuTurno ? "Indicá si tenés flor." : "Esperando su declaración de flor.",
+    };
+  }
+  if (pendiente) {
+    const cantor = mesa.asientos[pendiente.asiento];
+    const titulo = canto[pendiente.tipo];
+    let respuesta = mesa.modo === "1v1" ? "Tu rival responde." : "Responde el equipo rival.";
+    if (cantor.equipo !== propio) respuesta = "Responde tu equipo.";
+    if (legales.length)
+      respuesta = legales.includes("flor") ? "Cantá tu flor para responder." : "Podés responder.";
+    return { titulo, indicacion: `${cantor.nombre} cantó ${titulo.toLowerCase()}. ${respuesta}` };
+  }
+  if (turno === mesa.miAsiento) {
+    let indicacion = "Elegí una carta en el tapete.";
+    if (legales.length > 1) indicacion = "Elegí una carta en el tapete o hacé un canto.";
+    if (legales.includes("flor")) indicacion = "Cantá tu flor antes de tirar la primera carta.";
+    return { titulo: "Tu turno", indicacion };
+  }
+  return {
+    titulo: turno === null ? "Esperando la jugada" : "Turno de " + mesa.asientos[turno].nombre,
+    indicacion: "Esperando la jugada.",
+  };
+}
+
+export function EnJuego({
+  mesa,
+  partida,
+  bloqueada,
+  base,
+  jugar,
+}: {
+  mesa: Mesa;
+  partida: Partida;
+  bloqueada: boolean;
+  base: string;
+  jugar: (a?: Eleccion) => void;
+}) {
+  const v = partida.vista!;
+  const propio = mesa.asientos[mesa.miAsiento].equipo;
+  const ajeno = propio === 0 ? 1 : 0;
+  const equipo = (e: number) =>
+    mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
+  const nombre = (a: number) => mesa.asientos[a].nombre!;
+  const pendientes = v.pendiente;
+  const resultado = v.resultado;
+  const fin = partida.ganadorPartida !== null;
+  const { titulo, indicacion } = estadoDelTurno(mesa, partida, v);
+  const encabezado = useRef<HTMLHeadingElement>(null);
+  const desdeTeclado = useRef(false);
+  useEffect(() => {
+    if (desdeTeclado.current && document.activeElement === document.body) encabezado.current?.focus();
+    desdeTeclado.current = false;
+  }, [partida.version]);
+  const disponibles = grupos
+    .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
+    .filter((g) => g.opciones.length);
+  const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
+  return (
+    <>
+      <div className="j-tanteador" aria-label="Tanteador">
+        <span className="j-meta">
+          Partida a <b>{partida.meta}</b>
+        </span>
+        {[propio, ajeno].map((e) => (
+          <div key={e}>
+            <span>{equipo(e)}</span>
+            <strong>{partida.puntos[e]}</strong>
+          </div>
+        ))}
+      </div>
+      <div
+        className="j-partida"
+        onClickCapture={(e) => {
+          if (e.target instanceof Element && e.target.closest("button"))
+            desdeTeclado.current = e.detail === 0;
+        }}
+      >
+        <section className="j-tapete" aria-label="Tapete">
+          <header>
+            <strong>Mano {partida.manoNumero}</strong>
+            <span>{resultado ? "Terminada" : "Vuelta " + (v.vueltas.length + 1)}</span>
+          </header>
+          <div className={"j-puestos " + (mesa.modo === "1v1" ? "j-duelo" : "")}>
+            {mesa.asientos.map((a) => (
+              <AsientoEnMesa
+                key={a.asiento}
+                asiento={a}
+                mesa={mesa}
+                vista={v}
+                base={base}
+                bloqueada={bloqueada}
+                jugar={jugar}
+              />
+            ))}
+            <div className="j-muestra">
+              <div>
+                <Naipe base={base} id={v.muestra} />
+                <img
+                  className="j-mazo"
+                  src={base + "img/cartas/tatu/reverso.webp"}
+                  alt=""
+                  width={384}
+                  height={596}
+                />
+              </div>
+              <small>Muestra</small>
+              <strong>{nombrar(v.muestra)}</strong>
+            </div>
+          </div>
+        </section>
+        <section className="j-jugada-panel">
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <h2 ref={encabezado} tabIndex={-1}>
+              {titulo}
+            </h2>
+            <p>{indicacion}</p>
+          </div>
+          {v.trucoPendiente && pendientes && v.trucoPendiente.tipo !== pendientes.tipo && (
+            <p className="j-reserva">
+              Queda pendiente el {canto[v.trucoPendiente.tipo].toLowerCase()} de{" "}
+              {nombre(v.trucoPendiente.asiento)}.
+            </p>
+          )}
+          {!resultado && (
+            <dl className="j-cuenta">
+              <div>
+                <dt>Tus tantos</dt>
+                <dd>
+                  {v.tantosPropios.total} de {v.tantosPropios.modalidad}
+                </dd>
+              </div>
+              <div>
+                <dt>Valor de la mano</dt>
+                <dd>{tantos(v.valorTruco)}</dd>
+              </div>
+            </dl>
+          )}
+          {disponibles.map((grupo) => (
+            <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
+              {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
+              <div className="j-cantos">
+                {grupo.opciones.map((tipo) => (
+                  <button
+                    key={tipo}
+                    className={tipo === "quiero" ? "button" : "j-sec"}
+                    disabled={bloqueada}
+                    onClick={() => jugar({ tipo })}
+                  >
+                    {canto[tipo]}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          ))}
+          {fin ? (
+            <a className="button" href={base + "jugar/"}>
+              Crear otra mesa
+            </a>
+          ) : (
+            resultado && (
+              <button className="button" disabled={bloqueada} onClick={() => jugar()}>
+                Repartir otra mano
+              </button>
+            )
+          )}
+          {cobrados.length > 0 && (
+            <section className="j-lances">
+              <h3>Tantos cobrados</h3>
+              <ul>
+                {cobrados.map((c, i) => (
+                  <li key={i}>
+                    <b>
+                      {equipo(c.equipo)} · {tantos(c.tantos)}
+                    </b>{" "}
+                    por {c.motivo}
+                    {c.tantoGanador != null &&
+                      " (" + (c.asiento != null ? nombre(c.asiento) + " con " : "") + c.tantoGanador + ")"}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {v.vueltas.length > 0 && (
+            <ol className="j-vueltas" aria-label="Vueltas terminadas">
+              {v.vueltas.map((vuelta, i) => (
+                <li key={i}>
+                  <details>
+                    <summary>
+                      {i + 1}.ª vuelta ·{" "}
+                      <strong>
+                        {vuelta.resultado.tipo === "parda" ? "Parda" : equipo(vuelta.resultado.equipo)}
+                      </strong>
+                    </summary>
+                    <ul>
+                      {vuelta.jugadas.map((j) => (
+                        <li key={j.asiento}>
+                          {nombre(j.asiento)} · {nombrar(j.carta)}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      </div>
+      {v.acciones.length > 0 && (
+        <details className="j-historia">
+          <summary>Ver jugadas y cantos de la mano</summary>
+          <ol>
+            {v.acciones.map((a, i) => (
+              <li key={i}>
+                {nombre(a.asiento)}{" "}
+                {a.tipo === "carta"
+                  ? "jugó " + nombrar(a.carta).toLowerCase()
+                  : "dijo «" + canto[a.tipo] + "»"}
+                .
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </>
+  );
+}
