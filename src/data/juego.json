@@ -91,7 +91,7 @@
       },
       {
         "heading": "Resolver un empate",
-        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una vuelta. Dos cartas iguales de compañeros pueden ganar juntas frente a rivales con cartas menores. Si emparda la primera, vuelve a salir el mano.",
+        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una vuelta. Si emparda la primera, vuelve a salir el mano, aunque haya tirado una carta menor. Si también emparda la segunda, el mano abre la tercera. En parejas, si las dos cartas de mayor jerarquía son de compañeros y empatan entre sí, su equipo gana la vuelta. Si sigue la mano, sale el compañero que tiró primero una de esas cartas.",
         "table": {
           "headers": ["Qué pasó", "Cómo se decide"],
           "rows": [
@@ -110,6 +110,7 @@
     ],
     "sources": [
       {"title": "Gran Aventura · Vueltas y salida de juego, arts. 55–59 y 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Truquito · Orden de salida entre compañeros en la implementación uruguaya", "url": "https://github.com/truquito/gotruco/blob/534f9c77441133903021ac11ec1afa1286e884e4/pdt/partida.go#L242-L264"},
       {"title": "Ludoteka · Truco y pardas", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
       {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
       {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
