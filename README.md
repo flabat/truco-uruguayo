@@ -48,6 +48,6 @@ Una futura página de práctica puede incorporar un componente Astro con un `<sc
 
 ## Trabajo en el repositorio
 
-Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Con Python 3 instalado, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
+Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Después de instalar Chromium como indica la guía y con Python 3 disponible, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
 
 Las ilustraciones de ambiente se generaron para esta guía. La [baraja Tatú](scripts/tatu/README.md) usa recortes de una digitalización de GlyphEnjoyer y se puede volver a exportar desde la lámina original. Las fuentes tipográficas DM Sans y DM Serif Text se sirven con el sitio desde sus paquetes de Fontsource.

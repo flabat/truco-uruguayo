@@ -29,11 +29,12 @@ Con Node.js 24, npm y Python 3, ejecutá desde la raíz del checkout.
 
 ```sh
 npm ci
+npm exec -- playwright install --only-shell chromium
 npm run check
 git diff --check
 ```
 
-`npm run check` compila el sitio para la raíz de un dominio y para `/truco-uruguayo/`, y comprueba enlaces internos, anclas y recursos referenciados en el HTML de cada compilación. El PR ejecuta el mismo comando. La última compilación queda en `dist/` bajo la ruta del proyecto.
+`npm run check` compila el sitio para la raíz de un dominio y para `/truco-uruguayo/`, y comprueba enlaces internos, anclas y recursos referenciados en el HTML de cada compilación. Sobre cada compilación, Playwright prueba la búsqueda y la navegación en Chromium de escritorio y con emulación móvil. Instalá el navegador al preparar un checkout o actualizar Playwright. En Linux podés agregar `--with-deps` al comando de instalación. Si otra sesión usa el puerto 4322, elegí uno libre con `TEST_PORT=4323 npm run check`. El PR ejecuta el mismo comando. La última compilación queda en `dist/` bajo la ruta del proyecto.
 
 - **Reglas y datos.** Revisá el texto, las tablas, los ejemplos y las fuentes de los capítulos afectados. Calculá al menos una mano concreta y comprobá los empates, los límites del tanteador o las variantes que correspondan al cambio.
 - **Interfaz y navegación.** Probá el comportamiento modificado en el navegador en un ancho móvil y otro de escritorio. Para controles interactivos, verificá teclado, foco y estados relevantes. Si cambia la búsqueda, probá un término con tilde, uno sin tilde, un resultado vacío y el enlace al capítulo.

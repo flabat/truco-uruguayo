@@ -6,4 +6,5 @@ for pages_url in https://example.org/ https://example.org/truco-uruguayo/; do
   PAGES_URL="$pages_url" npm run build
   python3 .github/scripts/check_links.py dist "$pages_url"
   python3 .github/scripts/check_cards.py dist
+  PAGES_URL="$pages_url" npm exec -- playwright test
 done
