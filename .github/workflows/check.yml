@@ -17,3 +17,5 @@ jobs:
       - run: npm ci
       - run: npm exec -- playwright install --with-deps --only-shell chromium
       - run: npm run check
+        env:
+          CHECK_STACK: 1

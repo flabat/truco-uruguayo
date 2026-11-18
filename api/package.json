@@ -1,0 +1,9 @@
+{
+  "name": "truco-api",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "openid-client": "6.9.0",
+    "pg": "8.23.1"
+  }
+}
