@@ -4,13 +4,18 @@ import { formats, type Format } from "../contracts/index.ts";
 import { newRun, run, verify } from "./runs.ts";
 
 const [command, ...args] = process.argv.slice(2);
-const {values} = parseArgs({args, strict: true, options: {
-  formats: {type: "string"}, seed: {type: "string"}, pairs: {type: "string"},
-  output: {type: "string"}, resume: {type: "string"}, manifest: {type: "string"},
-  match: {type: "string"}, "limit-matches": {type: "string"},
-}});
+async function dispatch() {
+  if (command === "evaluate") {
+    const evaluator = await import("../eval/cli.ts");
+    await evaluator.main(args);
+    return;
+  }
+  const {values} = parseArgs({args, strict: true, options: {
+    formats: {type: "string"}, seed: {type: "string"}, pairs: {type: "string"},
+    output: {type: "string"}, resume: {type: "string"}, manifest: {type: "string"},
+    match: {type: "string"}, "limit-matches": {type: "string"},
+  }});
 
-try {
   if (command === "verify" || command === "replay") {
     if (!values.manifest || (command === "replay" && !values.match)) throw new Error("Se requiere --manifest y, para replay, --match.");
     console.log(JSON.stringify(verify(values.manifest, {}, command === "replay" ? values.match : undefined)));
@@ -28,6 +33,9 @@ try {
   } else {
     throw new Error("Uso: arena smoke|tournament [--formats all|duel,pairs --pairs N --seed S --output directorio | --resume directorio], replay|verify --manifest archivo [--match ID].");
   }
+}
+try {
+  await dispatch();
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
