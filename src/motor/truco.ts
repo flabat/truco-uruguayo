@@ -1,4 +1,3 @@
-import { esCardId } from "./cartas.ts";
 import { iniciarMano, jugarCarta, type ErrorJugada, type EstadoMano, type Jugada } from "./mano.ts";
 import { equipoPorAsiento, esAsiento, repartir, type Asiento } from "./reparto.ts";
 
@@ -36,7 +35,6 @@ export function aplicarAccion(estado: EstadoTruco, accion: AccionTruco): PasoTru
   switch (tipo) {
     case "carta": {
       if (apuesta === "pendiente") return { ok: false, error: "falta-respuesta" };
-      if (!esCardId(accion.carta)) return { ok: false, error: "jugada-invalida" };
       const paso = jugarCarta(mano, { asiento, carta: accion.carta });
       if (!paso.ok) return paso;
       mano = paso.estado;

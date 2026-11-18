@@ -97,8 +97,9 @@ export function crearLeccionTruco({
     repetir(modo: "ejemplo" | "otro-papel" | "otro-reparto") {
       const { reparto } = estado.mano;
       const dador = reparto.dador === 0 ? 0 : 3;
-      const semilla = modo === "ejemplo" ? ejemplo : modo === "otro-reparto" ? otraSemilla(reparto, azar()) : reparto.semilla;
-      estado = empezar(semilla, modo === "otro-papel" ? (dador === 3 ? 0 : 3) : dador);
+      if (modo === "otro-papel") estado = empezar(reparto.semilla, dador === 3 ? 0 : 3);
+      else if (modo === "otro-reparto") estado = empezar(otraSemilla(reparto, azar()), dador);
+      else estado = empezar(ejemplo, dador);
       cursor = null;
       guardar();
     },
@@ -116,8 +117,10 @@ export function crearLeccionTruco({
         if (!prefijo.ok) throw new Error("No se pudo reproducir el prefijo.");
         visible = prefijo.estado;
       }
+      const mesa = vistaPara(visible.mano, 0);
+      const resultado = resultadoTruco(visible);
       return {
-        mesa: vistaPara(visible.mano, 0), apuesta: visible.apuesta, resultado: resultadoTruco(visible),
+        mesa: resultado ? { ...mesa, turno: null } : mesa, apuesta: visible.apuesta, resultado,
         envido: envidoCobrado(visible.mano.reparto)!, acciones: visible.acciones.map((a) => ({ ...a })),
         cursor, total: estado.acciones.length,
       };
