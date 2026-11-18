@@ -4,6 +4,8 @@ Guía en español del truco uruguayo. Las reglas incluyen ejemplos, enlaces a su
 
 ## Desarrollo local
 
+Para levantar el sitio, la API, PostgreSQL y el proveedor de identidad de prueba, seguí la [guía del entorno local con contenedores](docs/entorno-local.md). El comando de arranque es `docker compose up --build --wait`.
+
 Con Node.js 24 y npm, instalá las dependencias e iniciá el servidor desde la raíz del proyecto.
 
 ```sh

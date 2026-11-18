@@ -1,0 +1,46 @@
+<div class="jugador" id="jugador">
+  <form action="/api/auth/login" method="get" hidden data-ingreso>
+    <button class="button" type="submit">Ingresar al juego</button>
+  </form>
+  <div hidden data-cuenta>
+    <strong data-nombre></strong>
+    <p>ID de jugador <code data-id></code></p>
+    <form action="/api/auth/logout" method="post"><button class="quiet-link" type="submit">Cerrar sesión</button></form>
+  </div>
+  <span role="status" data-estado>Consultando la sesión…</span>
+</div>
+
+<script>
+  const area = document.querySelector<HTMLElement>("#jugador")!;
+  async function mostrarJugador() {
+    const estado = area.querySelector<HTMLElement>("[data-estado]")!;
+    const ingreso = area.querySelector<HTMLElement>("[data-ingreso]")!;
+    const cuenta = area.querySelector<HTMLElement>("[data-cuenta]")!;
+    try {
+      const respuesta = await fetch("/api/jugador", { cache: "no-store" });
+      if (!respuesta.ok && respuesta.status !== 401) throw new Error();
+      const jugador = await respuesta.json();
+      if (jugador) {
+        area.querySelector("[data-nombre]")!.textContent = jugador.nombre;
+        area.querySelector("[data-id]")!.textContent = jugador.id;
+      }
+      ingreso.hidden = Boolean(jugador);
+      cuenta.hidden = !jugador;
+      estado.textContent = "";
+    } catch {
+      ingreso.hidden = true;
+      cuenta.hidden = true;
+      estado.textContent = "No se pudo consultar la sesión. Recargá para volver a intentar.";
+    }
+  }
+  if (area) window.addEventListener("pageshow", mostrarJugador);
+</script>
+
+<style>
+  .jugador { margin-top: 1rem; scroll-margin: 2rem; }
+  .jugador button { cursor: pointer; border: 0; }
+  [data-cuenta] { border-inline-start: 2px solid var(--accent); padding-inline-start: 1rem; }
+  .jugador p { margin: .25rem 0; font-size: .85rem; color: var(--body); }
+  .jugador code { display: block; overflow-wrap: anywhere; }
+  .jugador .quiet-link { padding: .4rem 0; background: transparent; color: var(--ink); }
+</style>
