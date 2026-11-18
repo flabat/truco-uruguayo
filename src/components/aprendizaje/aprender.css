@@ -185,6 +185,9 @@
 #instruccion {
   font-size: 14px;
 }
+#ir-a-practicar {
+  margin-top: 12px;
+}
 #instruccion:empty {
   display: none;
 }
@@ -259,7 +262,7 @@ button.ap-carta:hover,
   outline: 3px solid white;
   outline-offset: 1px;
 }
-.ap-respuesta .button,
+.ap-ejercicio .button,
 .ap-opcion,
 .ap-link {
   border: 0;

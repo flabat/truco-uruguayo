@@ -1,9 +1,8 @@
-import { test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { temas } from "../src/aprendizaje/lecciones/index.ts";
 import { comprobarMuestra } from "./helpers/muestra.mjs";
 
 test("la guía, la bienvenida y cada práctica distinguen la muestra de la mano", async ({ page, isMobile }) => {
-  await page.addInitScript(() => { Math.random = () => 0; });
   for (const width of isMobile ? [320, 609] : [1280]) {
     await page.setViewportSize({ width, height: width === 1280 ? 900 : 812 });
     await page.goto("reglas/jerarquia/#rey-pieza");
@@ -13,8 +12,11 @@ test("la guía, la bienvenida y cada práctica distinguen la muestra de la mano"
     for (const tema of temas) {
       await test.step(`${tema.titulo} a ${width} px`, async () => {
         await page.goto("aprender/?tema=" + tema.id);
-        await comprobarMuestra(page, tema.ejemplos[0].muestra);
-        await page.getByRole("button", { name: "Probar con otra mano" }).click();
+        const texto = await page.locator("#ejemplo-resuelto").innerText();
+        const ejemplo = tema.ejemplos.find(({ detalle }) => texto.includes(detalle));
+        expect(ejemplo).toBeDefined();
+        await comprobarMuestra(page, ejemplo.muestra);
+        await page.getByRole("button", { name: "Ir a practicar" }).click();
         await comprobarMuestra(page);
       });
     }

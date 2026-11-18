@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { temas } from "../src/aprendizaje/lecciones/index.ts";
+import { claveSituacion } from "../src/aprendizaje/generadores/index.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import { explicarSituacion } from "../src/aprendizaje/generadores/evaluacion.ts";
 
@@ -24,21 +25,28 @@ const enlace = (page, name) => page.getByRole("link", { name, exact: true });
 async function empezarTema(page, id) {
   await page.goto("aprender/?tema=" + id);
   await expect(page.getByText("Ejemplo resuelto", { exact: true })).toBeVisible();
-  await boton(page, "Probar con otra mano").click();
+  await boton(page, "Ir a practicar").click();
 }
+
+async function comprobarEjemplo(page, tema, ejemplo) {
+  const { muestra, cartas, detalle } = ejemplo;
+  await expect(page.getByRole("img", { name: "Muestra " + cartasPorId.get(muestra).nombre })).toBeVisible();
+  await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas.map((id) => cartasPorId.get(id).nombre));
+  await expect(page.locator("#ejemplo-resuelto")).toContainText(detalle);
+  if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
+    await expect(page.locator("#ejemplo-resuelto strong")).toHaveText(explicarSituacion(tema.habilidad, cartas, muestra));
+  }
+  expect(await page.evaluate(() => history.state.ejemplo.id)).toBe(ejemplo.id);
+}
+
+const elegirTema = (page, tema) => page.locator(`#temas a[href="?tema=${tema.id}"]`).click();
 
 for (const [indice, azar] of [0, 0.99].entries()) {
   test(`primera visita muestra la apertura ${indice + 1} de cada tema con sus cartas y explicación`, async ({ page }) => {
     await page.addInitScript((valor) => { Math.random = () => valor; }, azar);
     for (const tema of temas) {
       await page.goto("aprender/?tema=" + tema.id);
-      const { muestra, cartas, detalle } = tema.ejemplos[indice];
-      await expect(page.getByRole("img", { name: "Muestra " + cartasPorId.get(muestra).nombre })).toBeVisible();
-      await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas.map((id) => cartasPorId.get(id).nombre));
-      await expect(page.locator("#ejemplo-resuelto")).toContainText(detalle);
-      if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
-        await expect(page.locator("#ejemplo-resuelto strong")).toHaveText(explicarSituacion(tema.habilidad, cartas, muestra));
-      }
+      await comprobarEjemplo(page, tema, tema.ejemplos[indice]);
     }
   });
 }
@@ -57,7 +65,7 @@ test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", a
   await expect(page.getByRole("heading", { level: 1, name: "Comparar dos cartas" })).toBeFocused();
   await expect(page.locator("#ejemplo-resuelto")).toContainText("as de espadas");
   await page.keyboard.press("Tab");
-  await expect(boton(page, "Probar con otra mano")).toBeFocused();
+  await expect(boton(page, "Ir a practicar")).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "¿Qué carta gana la vuelta?" })).toBeFocused();
   await page.keyboard.press("Tab");
@@ -70,7 +78,7 @@ test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", a
 
   await boton(page, "Seguir con reconocer flor").click();
   await expect(page.getByRole("heading", { level: 1, name: "Reconocer flor" })).toBeFocused();
-  await boton(page, "Probar con otra mano").click();
+  await boton(page, "Ir a practicar").click();
   await boton(page, "Tengo flor").click();
   await boton(page, "Pedir una pista").click();
   await expect(page.getByRole("status")).toContainText("Apartá la pieza");
@@ -170,8 +178,18 @@ test("flor con piezas en pantalla angosta y sin almacenamiento", async ({ page }
   page.on("request", (req) => { if (req.url().includes("/img/cartas/tatu/")) imagenes.add(req.url()); });
   await page.addInitScript(() => { Math.random = () => 0; });
   await page.goto("aprender/?tema=contar-flor");
-  await expect(page.locator("#ejemplo-resuelto")).toContainText("20 + 7 + 3 + 1 = 31");
-  await boton(page, "Probar con otra mano").click();
+  const tema = temas.find(({ id }) => id === "contar-flor");
+  await comprobarEjemplo(page, tema, tema.ejemplos[0]);
+  await boton(page, "Ver otro ejemplo").click();
+  await comprobarEjemplo(page, tema, tema.ejemplos[1]);
+  await enlace(page, "Todos los temas").click();
+  await elegirTema(page, tema);
+  await comprobarEjemplo(page, tema, tema.ejemplos[2]);
+  await page.reload();
+  await comprobarEjemplo(page, tema, tema.ejemplos[2]);
+  await boton(page, "Ir a practicar").click();
+  const cartasPractica = await page.locator("#carta-muestra .frente, #cartas-mano img").evaluateAll((imgs) =>
+    imgs.map((img) => img.src.split("/").at(-1).replace(".webp", "")));
   for (const nombre of ["Caballo de espadas", "7 de oros", "4 de espadas"]) {
     const carta = boton(page, nombre);
     const caja = await carta.boundingBox();
@@ -190,5 +208,164 @@ test("flor con piezas en pantalla angosta y sin almacenamiento", async ({ page }
   await expect(page.getByRole("status")).toContainText("20 + 7 + 7 + 9 = 43");
   await enlace(page, "Todos los temas").click();
   await expect(enlace(page, "Retomar práctica mixta")).toBeVisible();
-  expect(imagenes.size).toBeLessThanOrEqual(11);
+  const esperadas = new Set([
+    "reverso", "bastos-02", "espadas-01", "bastos-06", // Viñeta del índice.
+    ...tema.ejemplos.flatMap(({ muestra, cartas }) => [muestra, ...cartas]),
+    ...cartasPractica,
+  ]);
+  for (const src of imagenes) expect(esperadas.has(src.split("/").at(-1).replace(".webp", ""))).toBe(true);
+});
+
+test("los cinco temas recorren tres ejemplos sin crédito y permiten practicar con una sola acción", async ({ page, isMobile }) => {
+  await page.setViewportSize({ width: isMobile ? 320 : 1280, height: 812 });
+  await page.addInitScript(() => { Math.random = () => 0; });
+  await page.goto("aprender/");
+  for (const tema of temas) {
+    await elegirTema(page, tema);
+    const practicar = boton(page, "Ir a practicar");
+    const otro = boton(page, "Ver otro ejemplo");
+    for (const ejemplo of tema.ejemplos) {
+      await comprobarEjemplo(page, tema, ejemplo);
+      await expect(page.locator("#avance-actual")).toHaveText("Sin practicar");
+      const nombres = await page.getByRole("group", { name: /Cartas de la/ }).ariaSnapshot();
+      for (const id of ejemplo.cartas) expect(nombres).toContain(cartasPorId.get(id).nombre);
+      await page.keyboard.press("Tab");
+      await expect(practicar).toBeFocused();
+      const caja = await practicar.boundingBox();
+      const mesa = await page.locator(".ap-mesa").boundingBox();
+      expect(caja.y + caja.height).toBeLessThanOrEqual(mesa.y);
+      await page.keyboard.press("Tab");
+      await expect(otro).toBeFocused();
+      for (const control of [otro, practicar]) {
+        const { x, width, height } = await control.boundingBox();
+        expect(height).toBeGreaterThanOrEqual(44);
+        expect(x).toBeGreaterThanOrEqual(0);
+        expect(x + width).toBeLessThanOrEqual(page.viewportSize().width);
+      }
+      await page.keyboard.press("Enter");
+      await expect(page.locator("#consigna")).toBeFocused();
+    }
+    await comprobarEjemplo(page, tema, tema.ejemplos[0]);
+    await page.keyboard.press("Tab");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#consigna")).toBeFocused();
+    await expect(page.locator("#etapa")).toContainText("Tu turno");
+    const casos = await page.evaluate((id) =>
+      JSON.parse(localStorage.getItem("truco-oriental.aprendizaje")).habilidades.find((h) => h.habilidad === id).casos, tema.habilidad);
+    expect(casos).toHaveLength(1);
+    const editoriales = tema.ejemplos.map(({ muestra, cartas }) => claveSituacion(muestra, cartas));
+    expect(editoriales).not.toContain(casos[0].clave);
+    await enlace(page, "Todos los temas").click();
+  }
+});
+
+test("elegir desde la lista o en otra pestaña avanza el ciclo. Recarga, Atrás y Adelante restauran la entrada", async ({ page, context }) => {
+  await context.addInitScript(() => { Math.random = () => 0; });
+  const tema = temas.find(({ id }) => id === "reconocer-piezas");
+  const [a, b, c] = tema.ejemplos;
+  await page.goto("aprender/");
+  await elegirTema(page, tema);
+  await comprobarEjemplo(page, tema, a);
+  await enlace(page, "Todos los temas").click();
+  await elegirTema(page, tema);
+  await comprobarEjemplo(page, tema, b);
+  const otra = await context.newPage();
+  await otra.goto(page.url());
+  await comprobarEjemplo(otra, tema, c);
+  await otra.close();
+  await page.reload();
+  await comprobarEjemplo(page, tema, b);
+  await page.goBack();
+  await expect(page.locator(`[data-avance="${tema.id}"]`)).toHaveText("Sin practicar");
+  await page.goBack();
+  await comprobarEjemplo(page, tema, a);
+  await page.goForward();
+  await page.goForward();
+  await comprobarEjemplo(page, tema, b);
+  await boton(page, "Ver otro ejemplo").click();
+  await comprobarEjemplo(page, tema, a);
+  await enlace(page, "Todos los temas").click();
+  await page.goBack();
+  await comprobarEjemplo(page, tema, a);
+  await page.goForward();
+  await elegirTema(page, tema);
+  await comprobarEjemplo(page, tema, b);
+  expect(await page.evaluate(() => localStorage.getItem("truco-oriental.aprendizaje"))).toBeNull();
+});
+
+test("el progreso V1 sobrevive a historial de ejemplos ausente, JSON roto e IDs retirados", async ({ page }) => {
+  await page.addInitScript(() => { Math.random = () => 0; });
+  const [comparar, flor, piezas] = temas;
+  await page.goto("aprender/");
+  const previo = JSON.stringify({ version: 1, habilidades: [{ habilidad: comparar.habilidad,
+    casos: [{ clave: "anterior", familia: comparar.familias[0], acreditado: true }],
+    recientes: ["anterior"], ultimosResultados: [true] }] });
+  await page.evaluate((previo) => {
+    localStorage.setItem("truco-oriental.aprendizaje", previo);
+    localStorage.setItem("truco-oriental.ejemplos.v1.reconocer-flor", "{");
+    localStorage.setItem("truco-oriental.ejemplos.v1.reconocer-piezas", JSON.stringify(["retirado", "dos-cincos"]));
+  }, previo);
+  await page.reload();
+  await elegirTema(page, comparar);
+  await comprobarEjemplo(page, comparar, comparar.ejemplos[0]);
+  await page.locator(".ap-consulta summary").click();
+  await boton(page, "Ver otro ejemplo").click();
+  await expect(page.locator("#avance-actual")).toContainText("1 mano resuelta sin ayuda");
+  await enlace(page, "Todos los temas").click();
+  await elegirTema(page, flor);
+  await comprobarEjemplo(page, flor, flor.ejemplos[0]);
+  await enlace(page, "Todos los temas").click();
+  await elegirTema(page, piezas);
+  await comprobarEjemplo(page, piezas, piezas.ejemplos[1]);
+  await page.evaluate(() => history.replaceState({ ejemplo: { ...history.state.ejemplo, id: "retirado" } }, ""));
+  await page.reload();
+  await comprobarEjemplo(page, piezas, piezas.ejemplos[2]);
+  expect(await page.evaluate(() => localStorage.getItem("truco-oriental.aprendizaje"))).toBe(previo);
+});
+
+test("la entrada inicial y mixta usan el mismo ciclo que cada tema y restauran su paso", async ({ page }) => {
+  const [comparar, flor] = temas;
+  await semillas(page, 2);
+  await page.addInitScript(() => { Math.random = () => 0; });
+  await page.goto("aprender/");
+  await elegirTema(page, comparar);
+  await enlace(page, "Todos los temas").click();
+  await enlace(page, "Empezar con un ejemplo").click();
+  await comprobarEjemplo(page, comparar, comparar.ejemplos[1]);
+  await boton(page, "Ir a practicar").click();
+  await boton(page, "Empatan").click();
+  await boton(page, "Seguir con reconocer flor").click();
+  await comprobarEjemplo(page, flor, flor.ejemplos[0]);
+  await page.reload();
+  await expect(page.locator("#modo")).toContainText("2 de 2");
+  await comprobarEjemplo(page, flor, flor.ejemplos[0]);
+  await enlace(page, "Todos los temas").click();
+  await enlace(page, "Retomar práctica mixta").click();
+  await comprobarEjemplo(page, flor, flor.ejemplos[1]);
+  await boton(page, "Ver otro ejemplo").click();
+  await page.reload();
+  await comprobarEjemplo(page, flor, flor.ejemplos[2]);
+  await boton(page, "Ir a practicar").click();
+  await boton(page, "Tengo flor").click();
+  await boton(page, "Otra mano").click();
+  await expect(page.locator("#modo")).toHaveText("Práctica mixta");
+  await expect(page.locator("#titulo-practica")).toHaveText(comparar.titulo);
+  await expect(page.locator("#etapa")).toContainText("Tu turno");
+});
+
+test("saltar al contenido conserva el ejemplo o el desafío activo", async ({ page }) => {
+  const [tema] = temas;
+  await page.addInitScript(() => { Math.random = () => 0; });
+  const saltar = enlace(page, "Saltar al contenido");
+  await page.goto("aprender/?tema=" + tema.id);
+  await saltar.press("Enter");
+  await comprobarEjemplo(page, tema, tema.ejemplos[0]);
+  await page.reload();
+  await comprobarEjemplo(page, tema, tema.ejemplos[0]);
+  await page.goBack();
+  await boton(page, "Ir a practicar").click();
+  const cartas = await page.locator("#cartas-mano .ap-carta").allTextContents();
+  await saltar.press("Enter");
+  await expect(page.locator("#etapa")).toContainText("Tu turno");
+  await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas);
 });
