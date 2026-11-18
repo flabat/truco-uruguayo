@@ -1,18 +1,12 @@
 ---
 import Carta from "./Carta.astro";
+import Muestra from "./Muestra.astro";
 import { url } from "../lib/guide";
 import { cartasPorId } from "../lib/cartas";
 ---
-<div class="mesa" role="group" aria-label="Ejemplo con el 4 de copas de muestra">
+<div class="mesa">
   <div class="reparto">
-    <div class="mazo">
-      <div class="dorso"><Carta id="reverso" /></div>
-      <Carta id="copas-04" decorativa />
-    </div>
-    <div>
-      <span class="rotulo">Muestra</span>
-      <strong>4 de copas</strong>
-    </div>
+    <Muestra id="muestra-rey" carta="copas-04" />
   </div>
   <span class="rotulo" id="orden-del-ejemplo">De mayor a menor fuerza</span>
   <ol class="jugadas" aria-labelledby="orden-del-ejemplo">
@@ -36,29 +30,15 @@ import { cartasPorId } from "../lib/cartas";
     border-radius: 6px;
   }
   .reparto {
-    display: flex;
-    align-items: center;
-    gap: 20px;
+    --direccion-muestra: row;
+    --alineacion-muestra: left;
+    --espacio-muestra: 20px;
+    --fuente-muestra: 400 clamp(23px, 5vw, 30px)/1.15 var(--serif);
+    --ancho-mazo: clamp(112px, 31vw, 161px);
     padding-bottom: 16px;
     margin-bottom: 15px;
     border-bottom: 1px solid rgb(250 248 240 / 25%);
   }
-  .mazo {
-    --ancho-carta: clamp(72px, 20vw, 104px);
-    display: grid;
-    place-items: end center;
-    isolation: isolate;
-  }
-  .mazo > :global(*) { grid-area: 1 / 1; }
-  .mazo :global(img) { width: var(--ancho-carta); }
-  .dorso {
-    z-index: 1;
-    display: grid;
-    place-content: center;
-    width: calc(var(--ancho-carta) * 596 / 384);
-    height: var(--ancho-carta);
-  }
-  .dorso :global(img) { transform: rotate(90deg); }
   .rotulo {
     display: block;
     color: #ded5b7;
@@ -66,11 +46,6 @@ import { cartasPorId } from "../lib/cartas";
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-  }
-  .reparto strong {
-    display: block;
-    margin-top: 3px;
-    font: 400 clamp(23px, 5vw, 30px) var(--serif);
   }
   .jugadas {
     display: grid;

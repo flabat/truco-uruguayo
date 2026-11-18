@@ -1,4 +1,5 @@
 ---
+import Muestra from "../Muestra.astro";
 import Icon from "../Icon.astro";
 import { url } from "../../lib/guide";
 ---
@@ -16,8 +17,7 @@ import { url } from "../../lib/guide";
     </div>
     <div class="ap-mesa">
       <div class="ap-muestra">
-        <h3>Muestra</h3>
-        <div id="carta-muestra"></div>
+        <Muestra id="carta-muestra" />
       </div>
       <div class="ap-mano">
         <h3 id="rotulo-mano">Cartas de la mano</h3>

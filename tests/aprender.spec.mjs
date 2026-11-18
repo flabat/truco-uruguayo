@@ -30,7 +30,9 @@ test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", a
   await enlace(page, "Practicar con las cartas").click();
   await expect(page.getByRole("navigation", { name: "Navegación principal" }).locator('[aria-current="page"]')).toHaveText("Aprender");
   const imagenes = await page.locator(".ap-vineta img").evaluateAll((imagenes) => imagenes.map((img) => img.src));
-  expect(new Set(imagenes).size).toBe(3);
+  expect(imagenes.map((src) => src.split("/").at(-1)).sort()).toEqual([
+    "bastos-02.webp", "bastos-06.webp", "espadas-01.webp", "reverso.webp",
+  ]);
   await enlace(page, "Empezar con un ejemplo").focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { level: 1, name: "Comparar dos cartas" })).toBeFocused();

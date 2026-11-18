@@ -1,4 +1,5 @@
 import type { VistaAsiento } from "../../motor/mano";
+import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "../aprendizaje/cartas";
 import { asientos, pareja } from "./relato";
 
@@ -40,7 +41,7 @@ export function pintarTapete(base: string, mesa: VistaAsiento, { enReparto, finD
   if (enReparto) turnoTexto = ["Sos mano", "Sale el rival de la derecha", "Sale tu compañero", "Sale el rival de la izquierda"][mesa.mano];
   if (cerrada && anterior) turnoTexto = anterior.resultado.tipo === "parda" ? "Parda" : pareja(anterior.resultado.equipo) + " ganó";
   document.getElementById("turno-mesa")!.textContent = anuncio ?? turnoTexto;
-  document.getElementById("muestra")!.replaceChildren(mostrarCarta(base, mesa.muestra));
+  actualizarMuestra(document.getElementById("muestra")!, base, mesa.muestra);
   const jugadas = mesa.vueltas.flatMap((v) => v.jugadas).concat(mesa.vueltaActual?.jugadas ?? []);
   asientos.forEach((_, i) => {
     const asiento = document.querySelector<HTMLElement>(".asiento-" + i)!;

@@ -37,7 +37,7 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await boton(page, "Practicar la respuesta").click();
   await boton(page, "No quiero").click();
   await boton(page, "Repetir el ejemplo").click();
-  await expect(page.locator("#muestra")).toHaveText("Sota de bastos");
+  await expect(page.getByRole("img", { name: "Muestra Sota de bastos", exact: true })).toBeVisible();
 });
 
 test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida rival", async ({ page }) => {

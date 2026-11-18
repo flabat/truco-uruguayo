@@ -72,7 +72,7 @@ test("al cerrar el capítulo se retoman las cartas, la cuenta y los intentos en 
 
   await expect(page).toHaveURL("aprender/?tema=contar-envido");
   await expect(page.locator("#etapa")).toHaveText("Tu turno · Paso 2 de 2");
-  await expect(page.locator("#carta-muestra")).toHaveText("3 de espadas");
+  await expect(page.getByRole("img", { name: "Muestra 3 de espadas", exact: true })).toBeVisible();
   await expect(page.locator("#cartas-mano .ap-elegida")).toHaveText(["3 de copas", "2 de copas"]);
   await expect(total).toHaveValue("5");
   await expect(feedback).toHaveText(primerError);

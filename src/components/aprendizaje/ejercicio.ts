@@ -3,6 +3,7 @@ import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
 import type { CardId } from "../../motor/cartas";
+import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";
 
 function boton(texto: string, accion: () => void, clase = "button") {
@@ -39,7 +40,7 @@ export function montarEjercicio(base: string) {
     consulta.open = false;
     sesionActual = sesion;
     avisoConsulta.hidden = !sesion;
-    elemento("carta-muestra").replaceChildren(mostrarCarta(base, muestra));
+    actualizarMuestra(elemento("carta-muestra"), base, muestra);
     elemento("rotulo-mano").textContent = tema.comparar ? "Cartas de la vuelta" : "Cartas de la mano";
     limpiar();
   }

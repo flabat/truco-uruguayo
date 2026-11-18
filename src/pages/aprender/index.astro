@@ -1,6 +1,7 @@
 ---
 import Site from "../../layouts/Site.astro";
 import Carta from "../../components/Carta.astro";
+import Muestra from "../../components/Muestra.astro";
 import Icon from "../../components/Icon.astro";
 import Practica from "../../components/aprendizaje/Practica.astro";
 import { temas } from "../../aprendizaje/lecciones";
@@ -27,7 +28,7 @@ import "../../components/aprendizaje/aprender.css";
             <div class="ap-abanico" aria-hidden="true">
               <Carta id="bastos-02" decorativa/><Carta id="espadas-01" decorativa/>
             </div>
-            <div class="ap-muestra-inicial"><Carta id="bastos-06"/><span>Muestra</span></div>
+            <Muestra id="muestra-inicial" carta="bastos-06" />
             <figcaption>La muestra queda boca arriba. Su palo determina las cinco piezas de esta mano.</figcaption>
           </figure>
         </div>
