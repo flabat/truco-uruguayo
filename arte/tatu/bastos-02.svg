@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="740" height="1144" viewBox="0 0 740 1144">
+  <title>bastos-02</title>
+  <desc>Baraja Tatú de estilo París. Fuente de dibujo: digitalización de GlyphEnjoyer, Cartas Tatú 50, Wikimedia Commons.</desc>
+  <use xlink:href="comun.svg#papel-tatu" />
+  <use xlink:href="comun.svg#marco-bastos" />
+  <g id="indices" inkscape:label="Índices" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#rango-2" transform="matrix(1.02941 0 0 0.97959 -3.000 -1.449)" />
+    <use xlink:href="comun.svg#rango-2" transform="matrix(-1.02941 0 0 -0.97959 745.000 1159.449)" />
+  </g>
+  <g id="composicion" inkscape:label="Composición del palo" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#motivo-bastos-2-1" />
+    <use xlink:href="comun.svg#motivo-bastos-2-2" />
+  </g>
+</svg>

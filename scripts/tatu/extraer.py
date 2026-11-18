@@ -9,7 +9,6 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
 SOURCE_SHA1 = "abc422357d20a5f442148eeda964a89d65fc4457"
 SAMPLES = ("copas-04", "copas-12", "copas-05", "espadas-01", "reverso")
 CANVAS = (384, 596)
@@ -38,13 +37,18 @@ def main():
     parser.add_argument("source", type=Path, help="PNG original de Wikimedia Commons")
     parser.add_argument("--samples", action="store_true", help="exportar solo las cinco muestras")
     parser.add_argument("--masters", type=Path, help="guardar además los PNG a resolución de origen")
-    parser.add_argument("--output", type=Path, default=ROOT / "public/img/cartas/tatu")
+    parser.add_argument("--output", type=Path, help="guardar copias WebP del escaneo para comparar")
     args = parser.parse_args()
+    if not (args.masters or args.output):
+        parser.error("Indicá --masters o --output para guardar los recortes de referencia.")
+    if args.output and args.output.resolve() == HERE.parents[1] / "public/img/cartas/tatu":
+        parser.error("Elegí otro directorio. Las imágenes del sitio se exportan desde los SVG.")
     with args.source.open("rb") as source:
         if hashlib.file_digest(source, "sha1").hexdigest() != SOURCE_SHA1:
             parser.error("La huella del PNG no coincide con la edición de los recortes.")
     crops = json.loads((HERE / "recortes.json").read_text())
-    args.output.mkdir(parents=True, exist_ok=True)
+    if args.output:
+        args.output.mkdir(parents=True, exist_ok=True)
     if args.masters:
         args.masters.mkdir(parents=True, exist_ok=True)
     with Image.open(args.source) as sheet:
@@ -52,8 +56,9 @@ def main():
             card = extract(sheet, crops[name])
             if args.masters:
                 card.save(args.masters / f"{name}.png")
-            web = ImageOps.pad(card, CANVAS, method=Image.Resampling.LANCZOS, color=(0, 0, 0, 0))
-            web.save(args.output / f"{name}.webp", quality=90, method=6)
+            if args.output:
+                web = ImageOps.pad(card, CANVAS, method=Image.Resampling.LANCZOS, color=(0, 0, 0, 0))
+                web.save(args.output / f"{name}.webp", quality=90, method=6)
 
 
 if __name__ == "__main__":

@@ -52,4 +52,4 @@ El [diseño de la ruta de aprendizaje](docs/aprendizaje/README.md) describe el m
 
 Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Después de instalar Chromium como indica la guía y con Python 3 disponible, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
 
-Las ilustraciones de ambiente se generaron para esta guía. La [baraja Tatú](scripts/tatu/README.md) usa recortes de una digitalización de GlyphEnjoyer y se puede volver a exportar desde la lámina original. Las fuentes tipográficas DM Sans y DM Serif Text se sirven con el sitio desde sus paquetes de Fontsource.
+Las ilustraciones de ambiente se generaron para esta guía. La [baraja Tatú](scripts/tatu/README.md) se dibujó a partir de la digitalización de GlyphEnjoyer. Sus 50 caras y el reverso tienen fuentes SVG editables en `arte/tatu/`. Después de editar, ejecutá `npm run cartas:generar` para actualizar los WebP del sitio. Las fuentes tipográficas DM Sans y DM Serif Text se sirven con el sitio desde sus paquetes de Fontsource.

@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="740" height="1144" viewBox="0 0 740 1144">
+  <title>copas-05</title>
+  <desc>Baraja Tatú de estilo París. Fuente de dibujo: digitalización de GlyphEnjoyer, Cartas Tatú 50, Wikimedia Commons.</desc>
+  <use xlink:href="comun.svg#papel-tatu" />
+  <use xlink:href="comun.svg#marco-copas" />
+  <g id="indices" inkscape:label="Índices" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#rango-5" transform="matrix(1.02941 0 0 0.97917 -1.971 3.542)" />
+    <use xlink:href="comun.svg#rango-5" transform="matrix(-1.02941 0 0 -1.00000 751.971 1161.000)" />
+  </g>
+  <g id="composicion" inkscape:label="Composición del palo" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#motivo-copas-5-1" />
+    <use xlink:href="comun.svg#motivo-copas-5-1" transform="matrix(1.00391 0 0 1.00000 -300.531 3.000)" />
+    <use xlink:href="comun.svg#motivo-copas-5-1" transform="matrix(1.00000 0 0 0.99660 -148.000 332.354)" />
+    <use xlink:href="comun.svg#motivo-copas-5-1" transform="matrix(1.00391 0 0 1.00000 -296.531 664.000)" />
+    <use xlink:href="comun.svg#motivo-copas-5-1" transform="matrix(1.00391 0 0 1.00000 -1.531 664.000)" />
+  </g>
+</svg>

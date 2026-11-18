@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="740" height="1144" viewBox="0 0 740 1144">
+  <title>oros-03</title>
+  <desc>Baraja Tatú de estilo París. Fuente de dibujo: digitalización de GlyphEnjoyer, Cartas Tatú 50, Wikimedia Commons.</desc>
+  <use xlink:href="comun.svg#papel-tatu" />
+  <use xlink:href="comun.svg#marco-oros" />
+  <g id="indices" inkscape:label="Índices" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#rango-3" transform="matrix(1.00000 0 0 0.97872 0.000 14.298)" />
+    <use xlink:href="comun.svg#rango-3" transform="matrix(-1.02941 0 0 -1.00000 741.059 1143.000)" />
+  </g>
+  <g id="composicion" inkscape:label="Composición del palo" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#motivo-oros-3-1" />
+    <use xlink:href="comun.svg#motivo-oros-3-2" />
+    <use xlink:href="comun.svg#motivo-oros-3-2" transform="matrix(0.99401 0 0 0.99699 -218.138 311.238)" />
+  </g>
+</svg>

@@ -5,10 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "prebuild": "npm run cartas:generar",
     "build": "astro build",
     "test:unit": "node --test \"tests/unit/*.test.ts\"",
     "check": "bash .github/scripts/check_site.sh",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "cartas:generar": "node scripts/tatu/generar.mjs",
+    "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
+    "cartas:exportar": "node scripts/tatu/generar.mjs --exportar"
   },
   "engines": {
     "node": ">=22.23.4"
@@ -19,6 +23,8 @@
     "astro": "7.4.12"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.1"
+    "@playwright/test": "1.65.1",
+    "@xmldom/xmldom": "0.9.12",
+    "sharp": "0.35.5"
   }
 }
