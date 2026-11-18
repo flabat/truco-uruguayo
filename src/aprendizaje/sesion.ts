@@ -3,6 +3,14 @@ import { erroresRecientes, progresoDe } from "./progreso.ts";
 import type { FuenteProgreso } from "./progreso.ts";
 import type { Evaluar, Intento, Leccion, Paso, ProveedorSituaciones, Respuesta, Situacion, SituacionVisible } from "./tipos.ts";
 
+/** Posición de una pausa en curso. Las respuestas ya registradas quedan en la fuente de progreso. */
+export interface Continuacion {
+  readonly indice: number;
+  readonly independiente: boolean;
+  readonly pista?: string;
+  readonly ayudaAlError?: string;
+}
+
 export interface Sesion<S extends SituacionVisible = SituacionVisible> {
   readonly leccion: Leccion;
   readonly situacion: S;
@@ -10,6 +18,7 @@ export interface Sesion<S extends SituacionVisible = SituacionVisible> {
   readonly completada: boolean;
   readonly pista: string | undefined;
   readonly intentos: readonly Intento[];
+  readonly continuacion: Continuacion;
   pedirPista(): string;
   responder(respuesta: Respuesta): Intento;
 }
@@ -30,14 +39,15 @@ function admite(paso: Paso, respuesta: Respuesta, situacion: SituacionVisible): 
 /** También abre una pausa didáctica con las cartas visibles de una mesa ya repartida. */
 export function iniciarSesion<S extends SituacionVisible>(
   leccion: Leccion, situacion: S, evaluar: Evaluar<S>, fuente: FuenteProgreso,
+  continuacion?: Continuacion,
 ): Sesion<S> {
   if (situacion.habilidad !== leccion.habilidad || !leccion.familias.includes(situacion.familia)) {
     throw new Error("La situación no corresponde a la habilidad y las familias de la lección.");
   }
-  let independiente = fuente.abrirSituacion(situacion);
-  let indice = 0;
-  let pista: string | undefined;
-  let ayudaAlError: string | undefined;
+  let independiente = continuacion?.independiente ?? fuente.abrirSituacion(situacion);
+  let indice = continuacion?.indice ?? 0;
+  let pista = continuacion?.pista;
+  let ayudaAlError = continuacion?.ayudaAlError;
   const intentos: Intento[] = [];
 
   function pasoPendiente(): Paso {
@@ -48,6 +58,7 @@ export function iniciarSesion<S extends SituacionVisible>(
 
   return {
     leccion, situacion, intentos,
+    get continuacion() { return { indice, independiente, pista, ayudaAlError }; },
     get pasoActual() { return leccion.pasos[indice]; },
     get completada() { return indice === leccion.pasos.length; },
     get pista() { return pista; },
