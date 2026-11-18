@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { comprobarMuestra, posicionEnTapete } from "./helpers/muestra.mjs";
 
 const boton = (page, name) => page.getByRole("button", { name, exact: true });
 const jugar = (page, carta) => boton(page, "Jugar " + carta).click();
@@ -34,6 +35,8 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await page.getByRole("link", { name: "Jugar una mano guiada" }).click();
   await expect(page).toHaveURL("aprender/mano/");
   await expect(page.locator("#turno-mesa")).toHaveText("Sos mano");
+  await comprobarMuestra(page, "copas-06");
+  const posicion = await posicionEnTapete(page);
   const visibles = await page.locator(".guiada img").evaluateAll((imgs) =>
     [...new Set(imgs.map((img) => img.src.split("/").at(-1)))].sort());
   expect(visibles).toEqual(["bastos-03.webp", "copas-02.webp", "copas-06.webp", "oros-05.webp", "reverso.webp"]);
@@ -66,6 +69,8 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await expect(page.locator("#guia-turno")).toContainText("La pareja rival va ganando con 3 de oros");
   await page.reload();
   await expect(page.getByRole("button", { name: /^Jugar / })).toHaveCount(2);
+  await comprobarMuestra(page, "copas-06");
+  expect(await posicionEnTapete(page)).toEqual(posicion);
   await jugar(page, "2 de copas");
   await jugar(page, "5 de oros");
   await expect(titulo(page, "La pareja rival ganó la mano")).toBeFocused();
@@ -78,12 +83,17 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await page.reload();
   await expect(titulo(page, "Jugada 1 de 12")).toBeVisible();
   await boton(page, "Anterior").click();
-  for (let i = 0; i < 12; i++) await boton(page, "Siguiente jugada").click();
+  for (let i = 0; i < 12; i++) {
+    await boton(page, "Siguiente jugada").click();
+    expect(await posicionEnTapete(page)).toEqual(posicion);
+  }
+  await comprobarMuestra(page, "copas-06");
   expect(await page.locator("#vueltas").innerText()).toEqual(resumen);
   await expect(boton(page, "Siguiente jugada")).toHaveCount(0);
   await boton(page, "Volver al resultado").click();
   await boton(page, "Repartir de nuevo").click();
   await page.reload();
+  await comprobarMuestra(page, "oros-02");
   await expect(page.locator(".asiento-0")).toContainText("Dador");
   await expect(page.locator(".asiento-1")).toContainText("Mano");
   await expect(titulo(page, "¿Tenés flor en esta mano?")).toBeVisible();

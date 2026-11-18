@@ -1,4 +1,5 @@
 ---
+import Muestra from "../Muestra.astro";
 import { asientos } from "./relato";
 ---
 <section class="tapete" aria-labelledby="estado-tapete">
@@ -6,13 +7,15 @@ import { asientos } from "./relato";
   <div class="tapete-asientos">
     {asientos.map((nombre, i) => (
       <div class={`asiento asiento-${i}`} role="group" aria-label={nombre}>
-        <h3>{nombre}</h3>
-        <span class="asiento-papel"></span>
+        <div>
+          <h3>{nombre}</h3>
+          <span class="asiento-papel"></span>
+        </div>
         <div class="asiento-cartas"></div>
       </div>
     ))}
-    <div class="tapete-muestra" role="group" aria-label="Muestra">
-      <h3>Muestra</h3><div id="muestra"></div>
+    <div class="tapete-muestra">
+      <Muestra id="muestra" />
     </div>
   </div>
 </section>

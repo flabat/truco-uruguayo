@@ -1,0 +1,65 @@
+---
+import { cartasPorId } from "../lib/cartas";
+import { url } from "../lib/guide";
+import type { CardId } from "../motor/cartas";
+
+interface Props {
+  id: string;
+  carta?: CardId;
+}
+const { id, carta } = Astro.props;
+---
+<div id={id} class="muestra" role="img" aria-labelledby={id + "-leyenda"}>
+  <div class="mazo" aria-hidden="true">
+    <div class="dorso"><img src={url("img/cartas/tatu/reverso.webp")} alt="" width="384" height="596" /></div>
+    <img class="frente" src={carta && url("img/cartas/tatu/" + carta + ".webp")} alt="" width="384" height="596" />
+  </div>
+  <div class="leyenda" id={id + "-leyenda"} aria-hidden="true">
+    <span class="rotulo">Muestra</span>
+    <strong class="nombre">{carta && cartasPorId.get(carta)!.nombre}</strong>
+  </div>
+</div>
+<style>
+  .muestra {
+    display: flex;
+    flex-direction: var(--direccion-muestra, column);
+    align-items: center;
+    gap: var(--espacio-muestra, 5px);
+    max-width: 100%;
+    text-align: var(--alineacion-muestra, center);
+  }
+  .leyenda { display: grid; gap: 1px; }
+  .rotulo {
+    font: 700 11px/1.4 var(--sans);
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #ecdfb4;
+  }
+  .nombre {
+    font: var(--fuente-muestra, 600 clamp(12px, 2vw, 14px)/1.25 var(--sans));
+  }
+  .mazo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    width: var(--ancho-mazo, 124px);
+    max-width: 100%;
+    filter: drop-shadow(0 2px 2px rgb(28 35 26 / 25%));
+  }
+  .frente, .dorso img {
+    width: calc(100% * 384 / 596);
+    height: auto;
+  }
+  .frente { grid-row: 1; }
+  /* El ancho del mazo atravesado coincide con el alto de la carta de frente. */
+  .dorso {
+    grid-row: 2;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 596 / 384;
+    margin-top: -50%;
+    display: grid;
+    place-items: center;
+  }
+  .dorso img { position: absolute; transform: rotate(90deg); }
+</style>

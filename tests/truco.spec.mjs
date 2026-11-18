@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { comprobarMuestra, posicionEnTapete } from "./helpers/muestra.mjs";
 
 const boton = (page, name) => page.getByRole("button", { name, exact: true });
 const titulo = (page, name) => page.getByRole("heading", { name, exact: true });
@@ -10,6 +11,8 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await expect(page.getByText(/Nadie tiene flor/)).toBeVisible();
   const misCartas = page.getByRole("group", { name: "Tus cartas" });
   const antes = await misCartas.textContent();
+  await comprobarMuestra(page, "bastos-10");
+  const posicion = await posicionEnTapete(page);
   const muestra = await page.locator("#muestra").textContent();
   await boton(page, "Cantar truco").press("Enter");
   await expect(titulo(page, "¿Qué carta jugás?")).toBeFocused();
@@ -29,15 +32,18 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await expect(page.locator("#turno-mesa")).toHaveText("Tu turno");
   await expect(page.locator("#guia-turno")).toContainText("Conserva el turno");
   await boton(page, "Siguiente acción").click();
+  await comprobarMuestra(page, "bastos-10");
+  expect(await posicionEnTapete(page)).toEqual(posicion);
   await expect(page.locator(".asiento-0")).toContainText("Rey de bastos");
   await boton(page, "Volver al resultado").click();
   await boton(page, "Repartir de nuevo").click();
   await expect(misCartas).not.toHaveText(antes);
   await expect(page.locator("#muestra")).not.toHaveText(muestra);
+  await comprobarMuestra(page);
   await boton(page, "Practicar la respuesta").click();
   await boton(page, "No quiero").click();
   await boton(page, "Repetir el ejemplo").click();
-  await expect(page.locator("#muestra")).toHaveText("Sota de bastos");
+  await expect(page.getByRole("img", { name: "Muestra Sota de bastos", exact: true })).toBeVisible();
 });
 
 test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida rival", async ({ page }) => {
