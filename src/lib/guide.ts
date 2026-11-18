@@ -34,7 +34,7 @@ export const groups = [
     title: "La partida",
     image: "mano",
     category: "El juego",
-    description: "Seguí el orden de las bazas, resolvé las pardas y llevá la cuenta de los tantos.",
+    description: "Seguí el orden de las vueltas, resolvé las pardas y llevá la cuenta de los tantos.",
     ids: ["bazas", "puntaje", "seis-jugadores", "senas"],
   },
   {
