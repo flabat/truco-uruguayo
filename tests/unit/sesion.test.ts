@@ -66,6 +66,26 @@ test("una lección con varios pasos acredita una sola situación al completarse"
   assert.throws(() => sesion.pedirPista(), /resuelta/);
 });
 
+test("consultar la regla entre pasos descarta solo el acierto independiente de esa mano", () => {
+  const fuente = crearFuenteProgreso(() => undefined);
+  const asistida = generarSesion(envido, 0, proveedor, fuente);
+  const intento = asistida.responder(seleccion);
+  asistida.consultarRegla();
+  assert.equal(asistida.pasoActual?.id, "cuenta");
+  assert.equal(asistida.pista, undefined);
+  assert.deepEqual(asistida.intentos, [intento]);
+  assert.equal(asistida.responder(total).correcta, true);
+
+  const siguiente = generarSesion(envido, 1, proveedor, fuente);
+  siguiente.responder(seleccion);
+  siguiente.responder(total);
+  siguiente.consultarRegla();
+  assert.deepEqual(progresoDe(fuente.actual, envido.habilidad).casos, [
+    { clave: asistida.situacion.clave, familia: "una-pieza", acreditado: false },
+    { clave: siguiente.situacion.clave, familia: "una-pieza", acreditado: true },
+  ]);
+});
+
 test("dos errores recientes en la habilidad activan la pista específica en la misma mano y paso", () => {
   const fuente = crearFuenteProgreso(() => undefined);
   const primera = generarSesion(envido, 0, proveedor, fuente);

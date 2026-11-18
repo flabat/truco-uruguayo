@@ -12,6 +12,7 @@ export interface Sesion<S extends SituacionVisible = SituacionVisible> {
   readonly intentos: readonly Intento[];
   pedirPista(): string;
   responder(respuesta: Respuesta): Intento;
+  consultarRegla(): void;
 }
 
 function admite(paso: Paso, respuesta: Respuesta, situacion: SituacionVisible): boolean {
@@ -81,6 +82,9 @@ export function iniciarSesion<S extends SituacionVisible>(
         }
       }
       return intento;
+    },
+    consultarRegla() {
+      if (indice < leccion.pasos.length) independiente = false;
     },
   };
 }
