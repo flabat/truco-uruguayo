@@ -79,6 +79,10 @@
         }
       },
       {
+        "heading": "Cómo contar el 2 y la perica",
+        "text": "Sale el 6 de oros de muestra. Tenés el 2 de oros, la sota de oros y el rey de copas. El 2 y la sota son piezas, así que tenés flor. A los 20 de base sumales 10 por el 2. La sota es la perica y aporta 7 (27 menos 20). El rey de copas vale 0. La flor suma 20 + 10 + 7 + 0 = 37 tantos."
+      },
+      {
         "heading": "Qué se anota",
         "text": "Una flor sin oposición le da 3 puntos a tu equipo, incluso si después pierde la mano. Dos compañeros con flor hacen collera y suman 6 si ningún rival tiene flor. Tres compañeros con flor hacen trillera y suman 9 si el otro equipo carece de flor. Cuando hay flores en los dos bandos se compara la mejor de cada equipo. Si empatan, gana el jugador más cercano al mano en el orden de juego."
       },
@@ -95,7 +99,8 @@
     "sources": [
       {"title": "Wikipedia · Puntos de la flor", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
       {"title": "Gran Aventura · Las flores y sus envites, arts. 14–20 y 27–33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Ludoteka · Flor y anulación del envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "ConectaGames · Valores para Flor o Envido y cálculo de la flor", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+      {"title": "Ludoteka · Flor (7 para la sota en la regla y 6 en el primer ejemplo)", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
       {"title": "Fernán Silva Valdés · «El truco», págs. 109–111", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/56489/1/leyenda_FSV_1936.pdf"}
     ],
     "variants": [
