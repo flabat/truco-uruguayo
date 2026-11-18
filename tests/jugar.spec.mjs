@@ -207,6 +207,30 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+test("reintenta una sesión temporalmente indisponible sin perder la invitación", async ({ page }) => {
+  let consultas = 0;
+  let ingresos = 0;
+  const lugares = [personas[0], personas[1], seat(2, "humano", "Clara"), seat(3, "vacio", null)];
+  await simular(page, (path) => {
+    if (path === "/api/jugador") {
+      consultas++;
+      return consultas === 1
+        ? { status: 503, json: { error: "Servicio temporalmente indisponible." } }
+        : { json: { id: "clara", nombre: "Clara" } };
+    }
+    if (path === "/api/invitaciones/" + token + "/unirse") ingresos++;
+    return { json: mesa("2v2", lugares, 2) };
+  });
+  await page.goto("jugar/?invitacion=" + token);
+  await expect(page.getByRole("alert")).toHaveText("Servicio temporalmente indisponible.");
+  await expect(page).toHaveURL(new RegExp("invitacion=" + token + "$"));
+  expect(ingresos).toBe(0);
+  await page.getByRole("button", { name: "Reintentar" }).click();
+  await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
+  await expect(page.getByText("Clara · Vos")).toBeVisible();
+  expect(ingresos).toBe(1);
+});
+
 test("crea un lugar para tres amigos y completa un asiento puntual", async ({ page }) => {
   await page.addInitScript(() => {
     Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
