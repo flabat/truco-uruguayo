@@ -46,6 +46,8 @@ Las páginas se editan en `src/pages/` y las reglas con sus fuentes en `src/data
 
 Una futura página de práctica puede incorporar un componente Astro con un `<script>` o una isla interactiva de React, Vue o Svelte. Las demás páginas siguen sirviéndose como HTML estático. [Interactividad en Astro](https://docs.astro.build/en/concepts/islands/)
 
+El [diseño de la ruta de aprendizaje](docs/aprendizaje/README.md) describe el motor de reglas, el simulador reproducible de parejas y la autoría de lecciones. El [plan por fases](docs/aprendizaje/plan.md) enlaza los issues y sus dependencias para implementar en paralelo.
+
 ## Trabajo en el repositorio
 
 Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Después de instalar Chromium como indica la guía y con Python 3 disponible, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
