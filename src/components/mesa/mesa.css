@@ -156,24 +156,43 @@
 }
 #pregunta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 #guia-turno, #aviso-mesa { font-size: clamp(14px, 1.4vw, 16px); }
-.mesa-naipes {
+.tapete .asiento-0 {
+  width: 100%;
+  flex-direction: column;
+  border-top: 1px solid #9cb49d;
+  padding: 8px 2px;
+}
+.tapete .asiento-0 .asiento-nombre,
+.tapete .asiento-0 .asiento-cartas, .mesa-naipes {
   display: flex;
-  align-items: start;
-  gap: clamp(4px, 1vw, 12px);
-  margin-block: 12px 8px;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(5px, 1vw, 12px);
 }
-.mesa-naipes .ap-carta {
-  color: var(--ink);
-  flex: 0 1 30%;
-  max-width: 100px;
+.tapete .asiento-0 .asiento-cartas { align-items: end; }
+.mesa-naipes { align-items: start; }
+.tapete .mesa-naipes .ap-carta {
+  flex: none;
+  margin: 0;
+  padding: 3px;
+  border: 2px solid transparent;
+  width: clamp(84px, 9.8vw, 124px);
 }
-.mesa-naipes img { box-shadow: 1px 2px 4px #4e432b33; }
-.mesa-naipes button:hover, .mesa-naipes .ap-elegida,
-.mesa-naipes [aria-pressed="true"] {
-  border-color: #907346;
-  background: #f3ebd8;
+.tapete .mesa-naipes .ap-carta img { width: 100%; }
+.tapete .mesa-naipes :is(button:hover, [aria-pressed="true"], .ap-elegida) {
+  border-color: var(--oro);
+  background: #173d2b;
 }
-.mesa-naipes button:focus-visible { outline-color: var(--accent); }
+.mesa-jugada small {
+  display: block;
+  color: var(--oro);
+  font-weight: 700;
+}
+.mesa-naipes:not(:empty) + .mesa-jugada {
+  border-left: 1px solid #9cb49d;
+  padding-left: clamp(8px, 1.2vw, 16px);
+}
+.mesa-naipes:empty { display: none; }
 #decisiones, #cuenta-mesa > div {
   display: flex;
   align-items: stretch;
@@ -203,6 +222,13 @@
 .mesa-consulta a { min-height: 44px; }
 @media (min-width: 780px) {
   .mesa-columnas { grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); }
+  .mesa-ejercicio {
+    grid-template-rows: 1fr auto auto 1fr;
+    grid-template-areas: "tapete ." "tapete consigna" "tapete controles" "tapete .";
+  }
+  .mesa-ejercicio > .tapete { grid-area: tapete; }
+  .mesa-consigna { grid-area: consigna; padding-bottom: 0; }
+  .mesa-controles { grid-area: controles; padding-top: 0; }
   .tapete { min-height: 415px; padding: 16px; }
   .tapete-asientos { gap: 8px 0; }
   .asiento { padding: 6px 8px; }
@@ -211,7 +237,6 @@
   .guiada { width: calc(100% - 24px); padding-top: 6px; }
   .mesa-portada { margin-bottom: 12px; }
   .mesa-portada p { font-size: 14px; }
-  .mesa-naipes .ap-carta { max-width: 78px; }
 }
 #siguiente-leccion, #leccion-truco > .text-link { margin-top: 14px; min-height: 44px; }
 #acciones-truco { padding-left: 1.6em; margin-block: 8px 14px; line-height: 1.55; }

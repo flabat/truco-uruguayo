@@ -35,6 +35,9 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await page.getByRole("link", { name: "Jugar una mano guiada" }).click();
   await expect(page).toHaveURL("aprender/mano/");
   await expect(page.locator("#turno-mesa")).toHaveText("Sos mano");
+  const mano = page.locator(".tapete").getByRole("group", { name: "Vos", exact: true })
+    .getByRole("group", { name: "Tus cartas" });
+  await expect(mano.locator(".ap-carta")).toHaveText(["2 de copas", "5 de oros", "3 de bastos"]);
   await comprobarMuestra(page, "copas-06");
   const posicion = await posicionEnTapete(page);
   const visibles = await page.locator(".guiada img").evaluateAll((imgs) =>
@@ -48,7 +51,7 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await page.keyboard.press("Enter");
   await expect(titulo(page, "¿Qué cartas entran en la cuenta?")).toBeFocused();
   await page.keyboard.press("Tab");
-  await expect(boton(page, "2 de copas")).toBeFocused();
+  await expect(boton(mano, "2 de copas")).toBeFocused();
   await page.keyboard.press("Space");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Space");
@@ -82,7 +85,10 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await expect(page.locator("#guia-turno")).toHaveText("Vos jugaste 3 de bastos.");
   await page.reload();
   await expect(titulo(page, "Jugada 1 de 12")).toBeVisible();
+  await expect(mano.locator(".ap-carta")).toHaveText(["2 de copas", "5 de oros"]);
+  await expect(mano.getByRole("button")).toHaveCount(0);
   await boton(page, "Anterior").click();
+  await expect(mano.locator(".ap-carta")).toHaveText(["2 de copas", "5 de oros", "3 de bastos"]);
   for (let i = 0; i < 12; i++) {
     await boton(page, "Siguiente jugada").click();
     expect(await posicionEnTapete(page)).toEqual(posicion);

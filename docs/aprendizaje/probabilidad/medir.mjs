@@ -126,7 +126,7 @@ async function pruebaLeccion() {
       return inicio;
     });
     const opciones = p.getByRole("group", { name: "Tus cartas en mano" }).getByRole("button");
-    const seleccion = await accionar(opciones.first(), ".prob-mano button[aria-pressed='true']");
+    const seleccion = await accionar(opciones.first(), ".mesa-naipes button[aria-pressed='true']");
     anotar("seleccionar.visual", seleccion.visual);
     await boton("Ver chances").click();
     const filas = ".prob-interactiva .prob-resultados tbody tr";
