@@ -27,3 +27,7 @@ node scripts/simular-mano.ts --semilla 1 --dador 0 --guardar - | node scripts/si
 ```
 
 Si conservás solo las primeras entradas de `jugadas` en el archivo, el relato se detiene en ese punto y muestra a qué asiento le toca jugar. Un arreglo vacío muestra la salida de la primera vuelta. Una jugada ilegal indica su posición en el historial, contando desde 1.
+
+## Comparar tres salidas
+
+Para probar cómo cambia la frecuencia de ganar al salir con una pieza, un 3 común o un 5 común, podés jugar las tres cartas sobre los mismos repartos de parejas. El estudio incluye los comandos, las decisiones del bot y una mano explicada vuelta por vuelta. [Estudio de la carta de salida](../investigacion/salidas/README.md)
