@@ -26,6 +26,8 @@ Usar módulos TypeScript puros, ejecutables en Node y en el navegador. La guía 
 
 **Información por asiento.** El controlador conoce la semilla, las manos y el registro completo. Cada bot y la interfaz de juego reciben solo la vista de su asiento. La semilla permitiría deducir cartas ajenas. Para probar el límite, dos repartos con las mismas cartas y acciones visibles deben inducir la misma elección del bot.
 
+**Cómo juegan el compañero y los rivales.** La política inicial abre cada vuelta con su carta más fuerte. Al responder, compara lo que ya se jugó con la muestra. Si el compañero supera a todos los rivales de la vuelta, tira la menor para guardar fuerza. En los demás casos juega la menor que supere al rival más fuerte. Si solo puede aspirar a una parda, la busca con la menor que empate, o tira la menor si el compañero ya emparda. Si la vuelta está perdida, también tira la menor. Entre cartas propias de igual fuerza elige la primera en el orden canónico del mazo. El aprendiz puede jugar cualquiera de sus cartas en su turno.
+
 **Registro V1.** JSON con `version`, `versionReglas`, `versionReparto`, `semilla`, `dador` y `jugadas` en orden, cada una con asiento y carta. Incluye las jugadas del aprendiz y de los tres bots. Un replay vuelve a repartir y aplica las jugadas registradas con el motor de esa versión. Un prefijo válido reconstruye una mano parcial. Una acción ilegal informa su posición. Un formato, regla o reparto desconocido devuelve un error explícito. Los cambios incompatibles requieren otra versión y una decisión sobre la lectura de la anterior.
 
 ## Opciones y consecuencias
