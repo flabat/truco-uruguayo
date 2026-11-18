@@ -5,6 +5,7 @@ import type { CardId } from "../../motor/cartas";
 import { mostrarCarta } from "../aprendizaje/cartas";
 import { asientos, nombre, pareja, resultadoMano, resultadoVuelta, situacionDeJuego, ultimaJugada } from "./relato";
 import { boton, pintarTapete } from "./tapete";
+import { montarConsultaChances } from "./consulta-chances";
 
 function pintarHistorial({ mesa }: VistaGuiada) {
   const lista = document.getElementById("vueltas")!;
@@ -38,6 +39,7 @@ export function montarMesa() {
   const total = el("total-mesa") as HTMLInputElement;
   const cartas = el("mis-cartas");
   const pista = el("pista-mesa");
+  const chances = montarConsultaChances(el("consulta-chances"));
   const consulta = document.querySelector<HTMLDetailsElement>(".mesa-consulta")!;
   new MutationObserver(() => {
     if (consulta.open) juego.consultarRegla();
@@ -69,6 +71,7 @@ export function montarMesa() {
   function pintar(enfocar = false) {
     const vista = juego.vista();
     const { mesa, paso, reproduccion } = vista;
+    chances.mostrarTurno(!paso && mesa.turno === mesa.asiento ? mesa : null);
     const enJuego = !paso && !reproduccion && mesa.turno !== null;
     pintarTapete(base, mesa, { enReparto: !!paso, finDeVuelta: !!reproduccion });
     el("siguiente-leccion").hidden = !!paso || !!reproduccion || mesa.turno !== null;

@@ -3,6 +3,7 @@ import Site from "../../layouts/Site.astro";
 import Icon from "../../components/Icon.astro";
 import { url } from "../../lib/guide";
 import Tapete from "../../components/mesa/Tapete.astro";
+import { textosProbabilidad } from "../../aprendizaje/probabilidad/escenas";
 import "../../components/aprendizaje/aprender.css";
 import "../../components/mesa/mesa.css";
 ---
@@ -23,6 +24,28 @@ import "../../components/mesa/mesa.css";
           <p id="guia-turno"></p>
           <div class="mesa-naipes" id="mis-cartas" role="group" aria-label="Tus cartas"></div>
           <div id="decisiones"></div>
+          <div id="consulta-chances" hidden>
+            <button class="ap-link" type="button" id="comparar-mis-cartas" aria-expanded="false" aria-controls="panel-chances">Comparar mis cartas</button>
+            <section id="panel-chances" aria-label="Probabilidad de ganar la mano" hidden>
+              <p id="estado-chances" aria-live="polite" aria-atomic="true"></p>
+              <div id="resultado-chances" hidden>
+                <p id="metodo-chances"></p>
+                <table>
+                  <caption>Chances de que tu pareja gane la mano</caption>
+                  <thead><tr><th scope="col">Carta</th><th scope="col">Chances</th><th scope="col">Manos ganadas</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+                <details id="diferencias-chances">
+                  <summary>Cómo se calculó</summary>
+                  <p>{textosProbabilidad.informacion} {textosProbabilidad.politica}</p>
+                  <p id="explicacion-chances"></p>
+                  <ul></ul>
+                </details>
+              </div>
+              <button id="reintentar-chances" class="ap-link" type="button" hidden>Volver a calcular</button>
+              <a class="text-link" href={url("aprender/probabilidad/")}>Practicar la lección de probabilidad <Icon name="arrow" size={15}/></a>
+            </section>
+          </div>
           <a id="siguiente-leccion" class="text-link" href={url("aprender/truco/")} hidden>Siguiente lección · Cantar y responder al truco <Icon name="arrow" size={16}/></a>
           <form id="cuenta-mesa" hidden>
             <label for="total-mesa">Tu total</label>
@@ -48,3 +71,21 @@ import "../../components/mesa/mesa.css";
   import { montarMesa } from "../../components/mesa/mesa";
   montarMesa();
 </script>
+
+<style>
+  #panel-chances {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  #panel-chances p, #panel-chances details { margin: 0 0 10px; }
+  #panel-chances table { width: 100%; border-collapse: collapse; margin-block: 12px; }
+  #panel-chances caption { text-align: left; margin-bottom: 6px; }
+  #panel-chances th, #panel-chances :global(tbody th), #panel-chances :global(td) {
+    text-align: left;
+    padding: 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: .875rem;
+  }
+  #panel-chances ul { padding-left: 1.25em; }
+</style>
