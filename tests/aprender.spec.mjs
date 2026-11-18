@@ -234,9 +234,12 @@ test("los cinco temas recorren tres ejemplos sin crédito y permiten practicar c
       for (const id of ejemplo.cartas) expect(nombres).toContain(cartasPorId.get(id).nombre);
       await page.keyboard.press("Tab");
       await expect(practicar).toBeFocused();
-      const caja = await practicar.boundingBox();
-      const mesa = await page.locator(".ap-mesa").boundingBox();
-      expect(caja.y + caja.height).toBeLessThanOrEqual(mesa.y);
+      // El foco puede desplazar la página entre dos lecturas de coordenadas.
+      const { finBoton, inicioMesa } = await practicar.evaluate(boton => ({
+        finBoton: boton.getBoundingClientRect().bottom,
+        inicioMesa: document.querySelector(".ap-mesa").getBoundingClientRect().top,
+      }));
+      expect(finBoton).toBeLessThanOrEqual(inicioMesa);
       await page.keyboard.press("Tab");
       await expect(otro).toBeFocused();
       for (const control of [otro, practicar]) {
