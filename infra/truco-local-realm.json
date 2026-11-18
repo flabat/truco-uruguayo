@@ -1,0 +1,27 @@
+{
+  "realm": "truco-local",
+  "enabled": true,
+  "displayName": "Truco Oriental (local)",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "users": [
+    {
+      "username": "prueba",
+      "enabled": true,
+      "firstName": "Jugador",
+      "lastName": "Local",
+      "email": "prueba@example.test",
+      "emailVerified": true,
+      "clientRoles": {
+        "account": ["manage-account", "view-profile"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "truco-local",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

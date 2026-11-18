@@ -14,14 +14,25 @@ import { url } from "../../lib/guide";
       <p id="etapa" class="eyebrow"></p>
       <h2 id="consigna" tabindex="-1"></h2>
       <p id="instruccion"></p>
+      <div class="ap-acciones ap-acciones-ejemplo">
+        <button id="ir-a-practicar" class="button" type="button" hidden>Ir a practicar</button>
+        <button id="repetir-demostracion" class="quiet-link ap-link" type="button" hidden><Icon name="turn" size={16} /> Repetir demostración</button>
+      </div>
     </div>
     <div class="ap-mesa">
+      <template id="gesto-demostracion">
+        <svg class="ap-gesto" aria-hidden="true" viewBox="0 0 48 48" width="48" height="48">
+          <circle cx="13" cy="13" r="10" fill="none" stroke="#fff6d6" stroke-width="3" />
+          <path d="m13 13 3 25 6-7 7 11 6-4-7-10 10-2z" fill="#fff6d6" stroke="#263b30" stroke-width="2.5" stroke-linejoin="round" />
+        </svg>
+      </template>
       <div class="ap-muestra">
         <Muestra id="carta-muestra" />
       </div>
       <div class="ap-mano">
         <h3 id="rotulo-mano">Cartas de la mano</h3>
         <div id="cartas-mano" role="group" aria-labelledby="rotulo-mano"></div>
+        <span id="empate-demostracion" class="ap-opcion ap-empate" hidden>Empatan</span>
       </div>
     </div>
     <div class="ap-respuesta">

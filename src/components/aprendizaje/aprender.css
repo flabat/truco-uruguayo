@@ -185,6 +185,9 @@
 #instruccion {
   font-size: 14px;
 }
+.ap-acciones-ejemplo:has(#ir-a-practicar:not([hidden])) {
+  margin-top: 12px;
+}
 #instruccion:empty {
   display: none;
 }
@@ -255,11 +258,58 @@ button.ap-carta:hover,
   color: #1d3529;
   font-weight: 700;
 }
+.ap-gesto {
+  display: none;
+  position: absolute;
+  top: 43%;
+  left: 42%;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px #24382b80);
+  transform-origin: 25% 25%;
+}
+[data-demostracion="muestra"] #carta-muestra .frente {
+  outline: 3px solid #f0db9c;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+[data-demostracion="muestra"] #carta-muestra .nombre {
+  color: #fff1bd;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+[data-demostracion="eleccion"] .ap-gesto {
+  display: block;
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-demostracion="eleccion"] .ap-gesto {
+    animation: ap-tocar 850ms ease-out both;
+  }
+  @keyframes ap-tocar {
+    0% { opacity: 0; transform: translate(14px, 10px); }
+    35%, 100% { opacity: 1; transform: none; }
+    65% { transform: scale(.83); }
+  }
+}
+.ap-empate {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 8px 0 0 3px;
+}
+.ap-empate.ap-elegida {
+  background: #edf1e4;
+  border-color: #45654a;
+  padding-right: 32px;
+}
+[data-demostracion]:not([data-demostracion="resultado"]) #ejemplo-resuelto > span {
+  visibility: hidden;
+}
 .ap-carta:focus-visible {
   outline: 3px solid white;
   outline-offset: 1px;
 }
-.ap-respuesta .button,
+.ap-ejercicio .button,
 .ap-opcion,
 .ap-link {
   border: 0;
@@ -370,5 +420,20 @@ button.ap-carta:hover,
     padding: 0 0 10px;
     border-right: 0;
     border-bottom: 1px solid #708570;
+  }
+  /* En la demostración, el gesto y la muestra se leen juntos incluso a 320 px. */
+  [data-demostracion] .ap-mesa {
+    flex-direction: row;
+    align-items: start;
+    padding: 14px 8px;
+  }
+  [data-demostracion] .ap-muestra {
+    --direccion-muestra: column;
+    --alineacion-muestra: center;
+    --espacio-muestra: 5px;
+    flex: 0 0 29%;
+    padding: 0 7px 0 0;
+    border-right: 1px solid #708570;
+    border-bottom: 0;
   }
 }

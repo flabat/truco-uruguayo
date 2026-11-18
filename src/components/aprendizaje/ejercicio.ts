@@ -1,10 +1,11 @@
-import type { Tema } from "../../aprendizaje/lecciones";
+import type { Ejemplo, Tema } from "../../aprendizaje/lecciones";
 import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
 import type { CardId } from "../../motor/cartas";
 import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";
+import { demostrarComparacion } from "./demostracion";
 
 function boton(texto: string, accion: () => void, clase = "button") {
   const boton = document.createElement("button");
@@ -18,6 +19,7 @@ function boton(texto: string, accion: () => void, clase = "button") {
 export function montarEjercicio(base: string) {
   const elemento = (id: string) => document.getElementById(id)!;
   const consigna = elemento("consigna");
+  const irAPracticar = elemento("ir-a-practicar") as HTMLButtonElement;
   const opciones = elemento("opciones");
   const continuacion = elemento("continuacion");
   const cuenta = elemento("cuenta") as HTMLFormElement;
@@ -28,12 +30,19 @@ export function montarEjercicio(base: string) {
   const consulta = document.querySelector<HTMLDetailsElement>(".ap-consulta")!;
   const avisoConsulta = elemento("aviso-consulta");
   let sesionActual: Sesion | undefined;
+  let cancelarDemostracion: (() => void) | undefined;
+
+  function cerrarEjemplo() {
+    cancelarDemostracion?.();
+    cancelarDemostracion = undefined;
+  }
   // El navegador puede agrupar los eventos toggle si se abre y cierra la regla enseguida.
   new MutationObserver(() => {
     if (consulta.open) sesionActual?.consultarRegla();
   }).observe(consulta, { attributeFilter: ["open"] });
 
   function preparar(tema: Tema, muestra: CardId, sesion?: Sesion) {
+    cerrarEjemplo();
     elemento("titulo-practica").textContent = tema.titulo;
     elemento("regla").textContent = tema.regla;
     elemento("capitulo").setAttribute("href", base + "reglas/" + tema.capitulo + "/");
@@ -46,6 +55,8 @@ export function montarEjercicio(base: string) {
   }
 
   function limpiar() {
+    irAPracticar.hidden = true;
+    irAPracticar.onclick = null;
     opciones.replaceChildren();
     continuacion.replaceChildren();
     feedback.replaceChildren();
@@ -53,23 +64,32 @@ export function montarEjercicio(base: string) {
     ejemplo.hidden = true;
   }
 
-  function mostrarEjemplo(tema: Tema, empezar: () => void) {
-    const { muestra, cartas, detalle } = tema.ejemplo;
+  function mostrarEjemplo(
+    tema: Tema, caso: Ejemplo, empezar: () => void, otro: () => void,
+    { demostrar, enfocarPregunta }: { demostrar: boolean; enfocarPregunta: boolean },
+  ) {
+    const { muestra, cartas, detalle } = caso;
     preparar(tema, muestra);
     elemento("etapa").textContent = "Ejemplo resuelto";
     consigna.textContent = tema.pasos[0].consigna;
-    elemento("instruccion").textContent = "La muestra queda boca arriba y su palo determina las piezas. " + tema.orientacion;
-    mano.replaceChildren(...cartas.map((carta) => mostrarCarta(base, carta)));
+    elemento("instruccion").textContent = demostrar ? "Mirá cómo se elige la carta."
+      : "La muestra queda boca arriba y su palo determina las piezas. " + tema.orientacion;
+    const cartasVisibles = cartas.map((carta) => mostrarCarta(base, carta));
+    mano.replaceChildren(...cartasVisibles);
     ejemplo.hidden = false;
     ejemplo.textContent = detalle;
     // Para las cuentas, mostrar siempre los sumandos y el resultado que devuelve el motor.
-    if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
+    if (demostrar) {
+      cancelarDemostracion = demostrarComparacion(caso, cartasVisibles, ejemplo);
+    } else if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
       const cuentaResuelta = document.createElement("strong");
       cuentaResuelta.textContent = explicarSituacion(tema.habilidad, cartas, muestra);
       ejemplo.prepend(cuentaResuelta);
     }
-    continuacion.append(boton("Probar con otra mano", empezar));
-    elemento("titulo-practica").focus();
+    irAPracticar.hidden = false;
+    irAPracticar.onclick = empezar;
+    continuacion.append(boton("Ver otro ejemplo", otro, "ap-link"));
+    (enfocarPregunta ? consigna : elemento("titulo-practica")).focus();
   }
 
   function practicar(tema: Tema, sesion: Sesion, siguiente: string, continuar: () => void, actualizarAvance: () => void) {
@@ -159,5 +179,5 @@ export function montarEjercicio(base: string) {
     mostrarPaso();
   }
 
-  return { mostrarEjemplo, practicar };
+  return { mostrarEjemplo, practicar, cerrarEjemplo };
 }

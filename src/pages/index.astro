@@ -1,6 +1,7 @@
 ---
 import Site from "../layouts/Site.astro";
 import Icon from "../components/Icon.astro";
+import Jugador from "../components/Jugador.astro";
 import { groups, url } from "../lib/guide";
 const facts = [
   { icon: "deck", label: "Baraja española", value: "40 cartas" },
@@ -43,6 +44,7 @@ const facts = [
             Ver la baraja <Icon name="arrow" size={15} />
           </a>
         </div>
+        {import.meta.env.PUBLIC_MULTIJUGADOR === "1" && <Jugador />}
       </div>
       <div class="hero-art">
         <img

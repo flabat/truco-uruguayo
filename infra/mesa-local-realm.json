@@ -1,0 +1,91 @@
+{
+  "realm": "mesa-local",
+  "enabled": true,
+  "displayName": "Truco Oriental",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "truco-web",
+      "name": "Truco Oriental",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "${authBaseUrl}",
+      "redirectUris": [
+        "/api/auth/callback"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+  "users": [
+    {
+      "id": "2e98a700-1205-4e9b-8161-000000000001",
+      "username": "ana",
+      "enabled": true,
+      "firstName": "Ana",
+      "lastName": "Local",
+      "email": "ana@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "truco-local",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2e98a700-1205-4e9b-8161-000000000002",
+      "username": "bruno",
+      "enabled": true,
+      "firstName": "Bruno",
+      "lastName": "Local",
+      "email": "bruno@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "truco-local",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2e98a700-1205-4e9b-8161-000000000003",
+      "username": "clara",
+      "enabled": true,
+      "firstName": "Clara",
+      "lastName": "Local",
+      "email": "clara@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "truco-local",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "2e98a700-1205-4e9b-8161-000000000004",
+      "username": "diego",
+      "enabled": true,
+      "firstName": "Diego",
+      "lastName": "Local",
+      "email": "diego@example.test",
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "truco-local",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

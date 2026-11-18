@@ -11,3 +11,7 @@ for pages_url in https://example.org/ https://example.org/truco-uruguayo/; do
   python3 .github/scripts/check_cards.py dist
   PAGES_URL="$pages_url" npm exec -- playwright test
 done
+
+if [[ "${CHECK_STACK:-0}" == 1 ]]; then
+  npm run check:stack
+fi
