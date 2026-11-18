@@ -19,7 +19,10 @@ test("la consulta es libre en el ejemplo y el resultado, y cuenta como ayuda dur
   await expect(aviso).toBeHidden();
   await regla.click();
   await expect(page.locator("#regla")).toContainText("Dos cartas del mismo puesto empatan");
-  await boton("Probar con otra mano").click();
+  await expect(avance).toHaveText("Sin practicar");
+  await boton("Ver otro ejemplo").click();
+  await expect(avance).toHaveText("Sin practicar");
+  await boton("Ir a practicar").click();
   await expect(page.locator("#regla")).toBeHidden();
   await expect(aviso).toBeVisible();
   await boton("Rey de copas").click();
@@ -49,7 +52,7 @@ test("la consulta es libre en el ejemplo y el resultado, y cuenta como ayuda dur
 test("al cerrar el capítulo se retoman las cartas, la cuenta y los intentos en el mismo paso", async ({ page }) => {
   await page.goto("aprender/?tema=contar-envido");
   const boton = (name) => page.getByRole("button", { name, exact: true });
-  await boton("Probar con otra mano").click();
+  await boton("Ir a practicar").click();
   await boton("3 de copas").click();
   await boton("2 de copas").click();
   await boton("Confirmar cartas").click();

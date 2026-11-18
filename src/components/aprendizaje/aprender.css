@@ -185,6 +185,10 @@
 #instruccion {
   font-size: 14px;
 }
+#ir-a-practicar {
+  min-height: 44px;
+  margin-top: 12px;
+}
 #instruccion:empty {
   display: none;
 }

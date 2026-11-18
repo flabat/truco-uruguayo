@@ -18,6 +18,7 @@ function boton(texto: string, accion: () => void, clase = "button") {
 export function montarEjercicio(base: string) {
   const elemento = (id: string) => document.getElementById(id)!;
   const consigna = elemento("consigna");
+  const irAPracticar = elemento("ir-a-practicar") as HTMLButtonElement;
   const opciones = elemento("opciones");
   const continuacion = elemento("continuacion");
   const cuenta = elemento("cuenta") as HTMLFormElement;
@@ -46,6 +47,8 @@ export function montarEjercicio(base: string) {
   }
 
   function limpiar() {
+    irAPracticar.hidden = true;
+    irAPracticar.onclick = null;
     opciones.replaceChildren();
     continuacion.replaceChildren();
     feedback.replaceChildren();
@@ -53,7 +56,9 @@ export function montarEjercicio(base: string) {
     ejemplo.hidden = true;
   }
 
-  function mostrarEjemplo(tema: Tema, { muestra, cartas, detalle }: Ejemplo, empezar: () => void) {
+  function mostrarEjemplo(
+    tema: Tema, { muestra, cartas, detalle }: Ejemplo, empezar: () => void, otro: () => void, enfocarPregunta: boolean,
+  ) {
     preparar(tema, muestra);
     elemento("etapa").textContent = "Ejemplo resuelto";
     consigna.textContent = tema.pasos[0].consigna;
@@ -67,8 +72,10 @@ export function montarEjercicio(base: string) {
       cuentaResuelta.textContent = explicarSituacion(tema.habilidad, cartas, muestra);
       ejemplo.prepend(cuentaResuelta);
     }
-    continuacion.append(boton("Probar con otra mano", empezar));
-    elemento("titulo-practica").focus();
+    irAPracticar.hidden = false;
+    irAPracticar.onclick = empezar;
+    continuacion.append(boton("Ver otro ejemplo", otro, "ap-link"));
+    (enfocarPregunta ? consigna : elemento("titulo-practica")).focus();
   }
 
   function practicar(tema: Tema, sesion: Sesion, siguiente: string, continuar: () => void, actualizarAvance: () => void) {
