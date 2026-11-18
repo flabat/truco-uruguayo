@@ -24,6 +24,8 @@ La galería ya contiene los nombres e imágenes Tatú. El motor modela las 40 ca
 
 **Repetir o repartir.** Una pista permite volver a intentar la situación actual. Un replay reconstruye esa partida con sus jugadas originales. «Repartir de nuevo» elige otro reparto, evita repetir el anterior y rota el dador. Cada comportamiento tiene su propia prueba.
 
+**Consultar la regla.** La consulta es libre en el ejemplo resuelto y al repasar una mano terminada. Durante un desafío, abrir «Regla para esta mano» cuenta como ayuda porque muestra información como el orden completo de las cartas. Podés terminar esa mano y probar otra para sumar un acierto sin ayuda. El capítulo completo se abre en otra pestaña. Al cerrarla volvés al mismo paso con tus cartas y tus intentos.
+
 ## Cómo agregar una lección
 
 La ruta publicada ofrece cinco temas abiertos. El recorrido inicial empieza con una comparación y sigue con una decisión de flor. Cada tema presenta una mano resuelta antes de repartir para practicar. El ejemplo explica las cartas y, cuando corresponde, muestra los sumandos del motor. Solo las manos de práctica aportan al progreso.

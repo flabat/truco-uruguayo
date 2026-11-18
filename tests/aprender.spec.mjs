@@ -87,10 +87,8 @@ test("cuenta envido por pasos, con pista al error y mano nueva en el mismo tema"
   await expect(page.getByRole("status")).toContainText("20 + 3 + 2 = 25");
   await boton(page, "Otra mano").click();
   await expect(boton(page, "4 de espadas")).toBeVisible();
-  await page.getByText("Regla para esta mano", { exact: true }).click();
-  await expect(enlace(page, "Leer el capítulo completo")).toHaveAttribute("href", /reglas\/envido\/$/);
-  await enlace(page, "Leer el capítulo completo").click();
-  await expect(page).toHaveURL("reglas/envido/");
+  await page.locator("summary").filter({ hasText: "Regla para esta mano" }).click();
+  await expect(enlace(page, "Leer el capítulo completo en otra pestaña")).toHaveAttribute("href", /reglas\/envido\/$/);
 });
 
 for (const siete of ["7 de oros", "7 de copas"]) {
