@@ -5,6 +5,7 @@ import { evaluarTantos, type ResultadoTantos } from "../../motor/tantos.ts";
 import type { Evaluacion, Paso, Respuesta, SituacionVisible } from "../tipos.ts";
 
 const lista = new Intl.ListFormat("es-UY");
+const alternativas = new Intl.ListFormat("es-UY", { type: "disjunction" });
 
 function nombre(carta: CardId): string {
   return cartasPorId.get(carta)!.nombre.toLowerCase();
@@ -43,14 +44,23 @@ const motivo: Record<ResultadoTantos["forma"], string> = {
   "tres-palos-distintos": "Hay envido porque las tres cartas son de palos distintos y ninguna es pieza.",
 };
 
-function cuenta(tantos: ResultadoTantos): string {
-  return tantos.desgloses.map(({ base, aportes }) => {
-    const sumandos = aportes.map(({ tantos }) => tantos);
-    if (base) sumandos.unshift(base);
-    const valores = aportes.map(({ carta, tantos }) => `${nombre(carta)} (${tantos})`).join(", ");
-    if (sumandos.length === 1) return `Solo cuenta ${conArticulo(aportes[0].carta)}, que vale ${tantos.total}.`;
-    return `Con ${valores} se obtiene ${sumandos.join(" + ")} = ${tantos.total}.`;
-  }).join(" ");
+function cuenta({ desgloses, total }: ResultadoTantos): string {
+  const { base, aportes } = desgloses[0];
+  if (desgloses.length > 1) {
+    // En un empate de envido cada selección tiene una carta común, sola o con la misma pieza.
+    const comunes = desgloses.flatMap(({ aportes }) => aportes.filter((aporte) => aporte.pieza === null));
+    const opciones = alternativas.format(comunes.map(({ carta }) => conArticulo(carta)));
+    const pieza = aportes.find((aporte) => aporte.pieza !== null);
+    if (pieza) {
+      return `Podés combinar ${conArticulo(pieza.carta)} con ${opciones}. En ambos casos sumás ${pieza.tantos} + ${comunes[0].tantos} = ${total}.`;
+    }
+    return `Contás una sola carta. Con ${opciones} hacés ${total} de envido.`;
+  }
+  if (aportes.length === 1) return `Solo cuenta ${conArticulo(aportes[0].carta)}, que vale ${total}.`;
+  const sumandos = aportes.map(({ tantos }) => tantos);
+  if (base) sumandos.unshift(base);
+  const valores = aportes.map(({ carta, tantos }) => `${nombre(carta)} (${tantos})`).join(", ");
+  return `Con ${valores} se obtiene ${sumandos.join(" + ")} = ${total}.`;
 }
 
 export function explicarSituacion(habilidad: string, cartas: readonly CardId[], muestra: CardId): string {
