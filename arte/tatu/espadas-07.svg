@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:xlink="http://www.w3.org/1999/xlink" width="740" height="1144" viewBox="0 0 740 1144">
+  <title>espadas-07</title>
+  <desc>Baraja Tatú de estilo París. Fuente de dibujo: digitalización de GlyphEnjoyer, Cartas Tatú 50, Wikimedia Commons.</desc>
+  <use xlink:href="comun.svg#papel-tatu" />
+  <use xlink:href="comun.svg#marco-espadas" />
+  <g id="indices" inkscape:label="Índices" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#rango-7" transform="matrix(1.00000 0 0 1.00000 0.000 0.000)" />
+    <use xlink:href="comun.svg#rango-7" transform="matrix(-0.96774 0 0 -1.02222 741.613 1169.756)" />
+  </g>
+  <g id="composicion" inkscape:label="Composición del palo" inkscape:groupmode="layer">
+    <use xlink:href="comun.svg#motivo-espadas-7-1" />
+    <use xlink:href="comun.svg#motivo-espadas-7-1" transform="matrix(-1.01075 0 0 -1.00235 540.978 632.240)" />
+    <use xlink:href="comun.svg#motivo-espadas-7-1" transform="matrix(-0.99462 0 0 -1.00235 935.511 633.240)" />
+    <use xlink:href="comun.svg#motivo-espadas-7-4" />
+    <use xlink:href="comun.svg#motivo-espadas-7-1" transform="matrix(1.00000 0 0 1.00000 202.000 530.000)" />
+    <use xlink:href="comun.svg#motivo-espadas-7-1" transform="matrix(1.00000 0 0 1.00235 -198.000 532.760)" />
+    <use xlink:href="comun.svg#motivo-espadas-7-1" transform="matrix(-0.99462 0 0 -1.00000 743.511 1164.000)" />
+  </g>
+</svg>

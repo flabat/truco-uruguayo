@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+npm run cartas:verificar
 npm run test:unit
 
 for pages_url in https://example.org/ https://example.org/truco-uruguayo/; do
