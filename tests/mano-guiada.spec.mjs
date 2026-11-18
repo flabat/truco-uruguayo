@@ -226,11 +226,10 @@ test("el análisis opcional conserva la mano y el progreso, y comparte cifras co
   await page.getByRole("link", { name: "Volver a aprender" }).click();
   await page.getByRole("link", { name: /Probabilidad de ganar la mano/ }).click();
   await expect(page).toHaveURL("aprender/probabilidad/");
-  await boton(page, "Predecir 3 de bastos").click();
-  await boton(page, "Comparar las cartas").click();
+  await boton(page, "Ver chances").click();
   const otra = page.getByRole("table", { name: "Victorias de tu pareja por carta jugada" });
   await expect(otra).toBeVisible({ timeout: 20000 });
-  expect(await otra.locator("tbody tr").allTextContents()).toEqual(filas);
+  expect((await otra.locator("tbody tr").allTextContents()).toSorted()).toEqual(filas.toSorted());
 });
 
 test("jugar o mover el replay cancela el cálculo y descarta la respuesta de un turno anterior", async ({ page }) => {

@@ -2,7 +2,17 @@
 
 Se verificó el sitio estático del commit [fb457cc](https://github.com/flabat/truco-uruguayo/commit/fb457cc). Aprender ofrece la lección avanzada y la mesa de parejas permite consultar el mismo cálculo antes de tirar una carta. Los seis cambios jugables están integrados. [Información y mundos](https://github.com/flabat/truco-uruguayo/pull/70) · [Cálculo por carta](https://github.com/flabat/truco-uruguayo/pull/71) · [Escenas y controlador](https://github.com/flabat/truco-uruguayo/pull/69) · [Worker](https://github.com/flabat/truco-uruguayo/pull/72) · [Lección en React](https://github.com/flabat/truco-uruguayo/pull/73) · [Consulta en la mano](https://github.com/flabat/truco-uruguayo/pull/75)
 
-## Contraste numérico
+## Selección en el tapete · issue #76
+
+Con la muestra 6 de copas se confirmó el 2 tanto con las cifras ocultas como con un worker demorado. En los 20.000 repartos del estudio, el 2 ganó 12.023 manos y el 3 de bastos ganó 13.779. En la segunda vuelta se confirmó el 5 de oros tras consultar sus 0 victorias en 1.175 repartos. Seleccionar otra carta, mostrar las cifras y volver a ocultarlas conservaron el mismo pedido, el turno y el orden del reparto. [Apertura a 1280 px](../capturas/probabilidad-seleccion-1280.jpg) · [Segunda vuelta antes del cambio](../capturas/probabilidad-1280.jpg) · [Segunda vuelta actual a 1280 px](../capturas/probabilidad-segunda-1280.jpg) · [Segunda vuelta a 320 px](../capturas/probabilidad-segunda-320.jpg)
+
+En la apertura se jugó el 3 de bastos, después el 2 de copas y finalmente el 5 de oros. En el cursor 0 de 12, «Vos» conservaba las tres cartas y los demás asientos mostraban nueve dorsos. En el cursor 1, el 3 quedó bajo «Jugada» y las otras dos cartas siguieron boca arriba. Retroceder restituyó las tres en su orden inicial. El panel pasó a vuelta 2 en el cursor 4 y volvió a vuelta 1 al retroceder a 3. [Jugada 0 a 320 px](../capturas/probabilidad-repaso-0-320.jpg) · [Jugada 1 a 320 px](../capturas/probabilidad-repaso-1-320.jpg)
+
+Al repartir desde la segunda escena con semilla 217, la muestra pasó a ser la sota de bastos. Se pudo elegir el 6 de bastos con las cifras ocultas. La prueba de otra mano llega hasta el cierre y la prueba de fallo permite jugar tras un reintento. En Chromium se recorrieron los controles con Tab, Espacio y Enter. Se comprobó el foco tras confirmar, tras recibir una comparación y al entrar al repaso. La tabla a 320 px quedó dentro del ancho de la página. [Mano nueva a 1280 px](../capturas/probabilidad-otra-mano-1280.jpg) · [Recorridos de navegador](../../../tests/probabilidad.spec.mjs)
+
+Con Node 24, `npm ci`, `TEST_PORT=49776 npm run check` y `git diff --check` pasaron 117 pruebas unitarias y 70 de navegador en cada base. En diez corridas de Chromium 159 a 360 × 780 px, con el perfil CDP 4× de página descrito abajo, el p95 fue de 59,4 ms desde la selección hasta la respuesta visual, 30,6 ms al cancelar y 82,9 ms desde abrir el segundo ejemplo hasta recibir el resultado exacto. Al reabrir la misma posición, revelar la tabla tomó 1,5 ms de p95. [Instrumento actualizado](medir.mjs)
+
+## Contraste numérico de la primera entrega
 
 | Control | Procedimiento y resultado |
 | --- | --- |
@@ -19,7 +29,7 @@ En Chromium a 320 y 1280 px se eligió el 5 de oros por teclado, se compararon l
 
 Las pruebas de navegador también bloquean el worker, fuerzan una respuesta tardía, verifican que una predicción no juega la carta y recorren otra mano. La mesa guiada conserva el turno y el registro de progreso al consultar. Una referencia editorial se muestra con su método y su denominador en la posición correspondiente. La práctica sin referencia permite continuar o reintentar. [Pruebas de la isla](../../../tests/probabilidad.spec.mjs) · [Pruebas de la mano](../../../tests/mano-guiada.spec.mjs) · [Pruebas de cancelación y caché](../../../tests/unit/probabilidad-worker.test.ts)
 
-## Rendimiento del sitio compilado
+## Rendimiento del sitio compilado en fb457cc
 
 Equipo Apple M5, macOS 27.2.1 arm64, Node 24.22.1 y Chromium headless 159.0.8154.6. Se sirvió el build por HTTP local bajo `/truco-uruguayo/`. En cada una de las diez corridas por caso se abrió un contexto nuevo a 360 × 780 px con caché HTTP deshabilitada. El perfil de práctica usa `repartir(217, 3)`, principia antes de la primera carta y analiza 4.096 mundos con semilla pública 29. La segunda vuelta usa su posición editorial exacta de 1.175 mundos. Se tomaron la mediana y el p95 por rango más próximo (con diez observaciones, el máximo).
 
@@ -42,7 +52,7 @@ La carga inicial se mide antes de consultar. El intervalo del worker incluye cre
 
 Como control adicional, se repitieron las diez corridas con un proceso Chromium aislado y sin el limitador CDP. Después de `load`, se identificaron exclusivamente sus procesos de tipo `renderer` mediante `SystemInfo.getProcessInfo`. Se alternaron 5 ms habilitados y 15 ms suspendidos hasta cerrar cada página, restaurando su ejecución al terminar. La fracción de tiempo habilitada medida fue del 26,3 % en la mediana. Este control sintético también limitó al worker. El p95 desde el clic hasta la tabla fue **1.788,9 ms** en práctica y **161,9 ms** en la segunda vuelta. Seleccionar y cancelar dieron **67,2 ms** y **46,6 ms** de p95. La red local y la emulación describen este ensayo concreto. Otros equipos y navegadores pueden dar tiempos distintos.
 
-## Descarga
+## Descarga en fb457cc
 
 Se registraron las solicitudes de JS y CSS y se midieron sus cuerpos con gzip. La suma de esos recursos antes de consultar fue **18.275 bytes** en Aprender, **28.577** en la mano guiada y **88.297** en la lección avanzada. La primera consulta sumó **4.083 bytes** del worker en ambas interfaces. El renderizador de la isla (65.804 bytes) y el módulo de React (3.009 bytes) se cargaron sólo en la lección. El total de la lección después de consultar fue **92.380 bytes**. HTML, imágenes y fuentes quedan fuera de estas sumas.
 
