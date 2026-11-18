@@ -1,0 +1,6 @@
+# Trabajo en Truco Oriental
+
+- Antes de editar, buscá el issue, los PR (incluidos los borradores) y las ramas relacionadas. Para cualquier cambio versionado, reservá el issue en GitHub creando `codex/issue-<número>` desde `main` con una operación exclusiva de creación. Si la rama existe, coordiná la continuación con quien la lleva. Si GitHub no está disponible, podés investigar y preparar el plan.
+- Usá un worktree o checkout aislado por sesión. Conservá los cambios ajenos y actualizá el PR existente si estás retomando un trabajo. Integrá cambios en `main` mediante PR.
+- Antes de pedir revisión, ejecutá `npm ci` y `npm run check`. Agregá las pruebas o comprobaciones del comportamiento que cambia y registrá los resultados en el PR.
+- Para los pasos de reserva, traspaso, revisión y publicación, seguí [CONTRIBUTING.md](CONTRIBUTING.md).
