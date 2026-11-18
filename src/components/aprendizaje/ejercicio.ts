@@ -5,6 +5,7 @@ import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
 import type { CardId } from "../../motor/cartas";
 import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";
+import { demostrarComparacion } from "./demostracion";
 
 function boton(texto: string, accion: () => void, clase = "button") {
   const boton = document.createElement("button");
@@ -29,12 +30,19 @@ export function montarEjercicio(base: string) {
   const consulta = document.querySelector<HTMLDetailsElement>(".ap-consulta")!;
   const avisoConsulta = elemento("aviso-consulta");
   let sesionActual: Sesion | undefined;
+  let cancelarDemostracion: (() => void) | undefined;
+
+  function cerrarEjemplo() {
+    cancelarDemostracion?.();
+    cancelarDemostracion = undefined;
+  }
   // El navegador puede agrupar los eventos toggle si se abre y cierra la regla enseguida.
   new MutationObserver(() => {
     if (consulta.open) sesionActual?.consultarRegla();
   }).observe(consulta, { attributeFilter: ["open"] });
 
   function preparar(tema: Tema, muestra: CardId, sesion?: Sesion) {
+    cerrarEjemplo();
     elemento("titulo-practica").textContent = tema.titulo;
     elemento("regla").textContent = tema.regla;
     elemento("capitulo").setAttribute("href", base + "reglas/" + tema.capitulo + "/");
@@ -57,17 +65,23 @@ export function montarEjercicio(base: string) {
   }
 
   function mostrarEjemplo(
-    tema: Tema, { muestra, cartas, detalle }: Ejemplo, empezar: () => void, otro: () => void, enfocarPregunta: boolean,
+    tema: Tema, caso: Ejemplo, empezar: () => void, otro: () => void,
+    { demostrar, enfocarPregunta }: { demostrar: boolean; enfocarPregunta: boolean },
   ) {
+    const { muestra, cartas, detalle } = caso;
     preparar(tema, muestra);
     elemento("etapa").textContent = "Ejemplo resuelto";
     consigna.textContent = tema.pasos[0].consigna;
-    elemento("instruccion").textContent = "La muestra queda boca arriba y su palo determina las piezas. " + tema.orientacion;
-    mano.replaceChildren(...cartas.map((carta) => mostrarCarta(base, carta)));
+    elemento("instruccion").textContent = demostrar ? "Mirá cómo se elige la carta."
+      : "La muestra queda boca arriba y su palo determina las piezas. " + tema.orientacion;
+    const cartasVisibles = cartas.map((carta) => mostrarCarta(base, carta));
+    mano.replaceChildren(...cartasVisibles);
     ejemplo.hidden = false;
     ejemplo.textContent = detalle;
     // Para las cuentas, mostrar siempre los sumandos y el resultado que devuelve el motor.
-    if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
+    if (demostrar) {
+      cancelarDemostracion = demostrarComparacion(caso, cartasVisibles, ejemplo);
+    } else if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
       const cuentaResuelta = document.createElement("strong");
       cuentaResuelta.textContent = explicarSituacion(tema.habilidad, cartas, muestra);
       ejemplo.prepend(cuentaResuelta);
@@ -165,5 +179,5 @@ export function montarEjercicio(base: string) {
     mostrarPaso();
   }
 
-  return { mostrarEjemplo, practicar };
+  return { mostrarEjemplo, practicar, cerrarEjemplo };
 }
