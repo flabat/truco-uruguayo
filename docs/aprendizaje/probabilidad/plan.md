@@ -4,6 +4,8 @@ La entrega permite predecir, comparar y jugar cada carta legal de un turno, prim
 
 ## Orden y propiedad de los cambios
 
+Las seis entregas de implementación están en `main`. La [verificación integrada](validacion.md) enlaza los PR y registra los resultados numéricos, la carga, el rendimiento y las comprobaciones de accesibilidad.
+
 El [PR de diseño se sigue en #59](https://github.com/flabat/truco-uruguayo/issues/59). Al integrarlo, dos agentes pueden empezar en paralelo por #61 y #63. Cada fila corresponde a un subissue de #60. Los bloqueos también están cargados en GitHub.
 
 | Issue | Entrega y archivos a cargo | Se integra después de |

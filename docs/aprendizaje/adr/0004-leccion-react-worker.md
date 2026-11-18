@@ -1,6 +1,6 @@
 # ADR 4 · Isla de React para la lección y cálculo de probabilidades en un worker
 
-**Estado.** Propuesta para el primer incremento de probabilidades. [Diseño de la lección](../probabilidad/README.md) · [Implementación y mediciones](../probabilidad/plan.md)
+**Estado.** Decisión implementada. La [isla de React](https://github.com/flabat/truco-uruguayo/pull/73) y la [consulta en la mesa guiada](https://github.com/flabat/truco-uruguayo/pull/75) comparten el [cliente del worker](https://github.com/flabat/truco-uruguayo/pull/72). [Diseño de la lección](../probabilidad/README.md) · [Mediciones del build integrado](../probabilidad/validacion.md)
 
 ## Contexto y decisión
 
