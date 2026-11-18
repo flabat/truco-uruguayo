@@ -16,6 +16,7 @@
 .j-crear fieldset { border: 0; padding: 0; margin: 1.5rem 0; }
 .j-crear legend, .j-invita label { display: block; margin-bottom: .65rem; font-size: .87rem; font-weight: 700; }
 .j-modos, .j-acciones, .j-cantos { display: flex; gap: .6rem; flex-wrap: wrap; }
+.j-recuperar { margin-top: 1rem; align-items: center; gap: 1rem; }
 .j-modos label { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; flex: 1; cursor: pointer; min-width: 115px; }
 .j-modos label.elegido { background: #e9efe5; border-color: #55775d; }
 .j-modos input { accent-color: var(--ink); margin: 0; }

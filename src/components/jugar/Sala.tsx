@@ -287,7 +287,7 @@ export default function Sala({ base }: { base: string }) {
   const [mesa, abrir] = useState("");
   const [invitacion, invitar] = useState("");
   const [volver, regresar] = useState("/jugar/");
-  const [error, avisar] = useState("");
+  const [error, avisar] = useState<Error | null>(null);
   const [anterior, recordar] = useState<string | null>(null);
   const [avisoMesa, informar] = useState("");
   useEffect(() => {
@@ -319,7 +319,7 @@ export default function Sala({ base }: { base: string }) {
       } catch (e) {
         if (!vigente) return;
         if (e instanceof ErrorMesa && e.status === 401) identificar(null);
-        else avisar(mensajeDe(e));
+        else avisar(e instanceof Error ? e : new Error(mensajeDe(e)));
       }
     }
     void entrar();
@@ -341,14 +341,20 @@ export default function Sala({ base }: { base: string }) {
       </header>
       {error ? (
         <div className="j-panel">
-          <p role="alert">{error}</p>
-          <a className="j-link" href={base + "jugar/"}>
-            Volver al salón
-          </a>{" "}
-          ·{" "}
-          <a className="j-link" href={base + "aprender/mano/"}>
-            Jugar una mano guiada
-          </a>
+          <p role="alert">{mensajeDe(error)}</p>
+          <div className="j-acciones j-recuperar">
+            {(!(error instanceof ErrorMesa) || error.status >= 500 || [408, 429].includes(error.status)) && (
+              <button className="button" onClick={() => location.reload()}>
+                Reintentar
+              </button>
+            )}
+            <a className="j-link" href={base + "jugar/"}>
+              Volver al salón
+            </a>
+            <a className="j-link" href={base + "aprender/mano/"}>
+              Jugar una mano guiada
+            </a>
+          </div>
         </div>
       ) : jugador === undefined ? (
         <p role="status">{invitacion ? "Abriendo la invitación…" : "Consultando tu sesión…"}</p>
