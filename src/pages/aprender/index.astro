@@ -1,0 +1,59 @@
+---
+import Site from "../../layouts/Site.astro";
+import Carta from "../../components/Carta.astro";
+import Icon from "../../components/Icon.astro";
+import Practica from "../../components/aprendizaje/Practica.astro";
+import { temas } from "../../aprendizaje/lecciones";
+import { url } from "../../lib/guide";
+import "../../components/aprendizaje/aprender.css";
+---
+<Site title="Aprender con las cartas" description="Practicá el truco uruguayo con ejemplos, manos nuevas y pistas de jerarquía, piezas, flor y envido." active="aprender">
+  <div id="aprendizaje" data-base={url("")}>
+    <div id="ruta">
+      <section class="ap-portada">
+        <div class="shell ap-intro">
+          <div>
+            <p class="eyebrow hero-kicker"><span aria-hidden="true"></span> Ruta de aprendizaje</p>
+            <h1 tabindex="-1">Aprendé con <em>las cartas.</em></h1>
+            <p id="bienvenida">En tus primeros cinco minutos, probá qué carta gana una vuelta y descubrí si tenés flor. A tu ritmo, con una mano por vez.</p>
+            <div class="ap-acciones">
+              <a data-ruta id="inicio-principal" class="button" href="?modo=inicio"><span>Empezar con un ejemplo</span><Icon name="arrow" size={17}/></a>
+              <a class="quiet-link" href="#temas">Elegir un tema <Icon name="down" size={16}/></a>
+            </div>
+            <a data-ruta id="volver-inicio" class="quiet-link" href="?modo=inicio" hidden>Volver a los primeros cinco minutos</a>
+          </div>
+          <figure class="ap-vineta">
+            <div class="ap-abanico" aria-hidden="true">
+              <Carta id="bastos-02" decorativa/><Carta id="espadas-01" decorativa/>
+            </div>
+            <div class="ap-muestra-inicial"><Carta id="bastos-06"/><span>Muestra</span></div>
+            <figcaption>La muestra queda boca arriba. Su palo determina las cinco piezas de esta mano.</figcaption>
+          </figure>
+        </div>
+      </section>
+      <section class="shell ap-temas" id="temas" aria-labelledby="titulo-temas">
+        <h2 id="titulo-temas">Elegí qué practicar</h2>
+        <p>Podés entrar a cualquier tema. El avance se guarda en este navegador.</p>
+        <div class="ap-listado">
+          {temas.map((tema) => (
+            <a data-ruta class="ap-tema" href={`?tema=${tema.id}`}>
+              <div><h3>{tema.titulo}</h3><p>{tema.resumen}</p><small data-avance={tema.id}>Sin practicar</small></div>
+              <Icon name="arrow" size={19}/>
+            </a>
+          ))}
+          <a data-ruta class="ap-tema ap-mezcla" href="?modo=mixta">
+            <div><h3>Práctica mixta</h3><p>Alterná entre los temas que viste. Los que más te costaron vuelven más seguido.</p></div>
+            <Icon name="arrow" size={19}/>
+          </a>
+        </div>
+        <p class="ap-criterio">Un tema figura como aprendido al resolver tres manos nuevas al primer intento y sin pista, en al menos dos tipos de situación.</p>
+      </section>
+    </div>
+    <Practica />
+    <noscript><p class="shell">Activá JavaScript para practicar. También podés <a class="text-link" href={url("reglas/")}>leer las reglas de la mesa</a>.</p></noscript>
+  </div>
+</Site>
+<script>
+  import { iniciarRuta } from "../../components/aprendizaje/ruta";
+  iniciarRuta();
+</script>

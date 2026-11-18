@@ -12,11 +12,12 @@ import "../styles/site.css";
 interface Props {
   title: string;
   description: string;
-  active?: "inicio" | "reglas" | "fuentes";
+  active?: "inicio" | "aprender" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
 const pages = [
   { name: "Inicio", path: "", key: "inicio" },
+  { name: "Aprender", path: "aprender/", key: "aprender" },
   { name: "Reglas del Truco", path: "reglas/", key: "reglas" },
   { name: "Fuentes", path: "fuentes/", key: "fuentes" },
 ];

@@ -26,10 +26,14 @@ La galería ya contiene los nombres e imágenes Tatú. El motor modela las 40 ca
 
 ## Cómo agregar una lección
 
-1. Elegir un identificador estable, la habilidad y las familias de casos que ejercita. Una lección de reconocer flor necesita manos con flor y sin ella.
-2. Elegir interacciones que la interfaz ya sepa mostrar, como seleccionar cartas, decidir si hay flor o ingresar un total. Agregar el texto en español de Uruguay, pistas y la referencia al capítulo correspondiente.
-3. Conectar la generación y la corrección al motor. Una definición de lección puede combinar pasos existentes. Una familia realmente nueva aporta su generador y sus pruebas. Una interacción nueva incorpora un control reutilizable.
-4. Probar al menos una respuesta válida, una confusión plausible y una mano fresca tras la pista. La integración de las primeras lecciones debe demostrar que reconocer flor se puede agregar sin modificar el simulador.
+La ruta publicada ofrece cinco temas abiertos. El recorrido inicial empieza con una comparación y sigue con una decisión de flor. Cada tema presenta una mano resuelta antes de repartir para practicar. El ejemplo explica las cartas y, cuando corresponde, muestra los sumandos del motor. Solo las manos de práctica aportan al progreso.
+
+Para agregar una lección centrada en una flor aparente:
+
+1. Partí de `reconocerFlor` en el [catálogo de lecciones](../../src/aprendizaje/lecciones/index.ts). Dale un `id` propio, conservá la habilidad `reconocer-flor` y elegí la familia `flor-aparente`. En esa familia una pieza acompaña a dos cartas de palos distintos. El [generador](../../src/aprendizaje/generadores/index.ts) prepara las manos y el [evaluador](../../src/aprendizaje/generadores/evaluacion.ts) corrige la decisión y explica los errores.
+2. Escribí el título, el resumen y la orientación. Para el ejemplo podés usar muestra de 6 de bastos con 4 de bastos, 7 de copas y as de espadas. Explicá por qué falta flor. Conservá el capítulo `flor` y el paso `decidir-flor`, que ya muestra «Tengo flor» y «Sin flor». Para una lección de cuenta se pueden combinar `elegir-cartas` y `responder-total`.
+3. Agregá la definición a `temas`. La lista y la práctica por tema leen ese catálogo. Las lecciones de una misma habilidad comparten su historial. La práctica mixta elige por habilidad y usa la primera definición de esa habilidad.
+4. Probá la respuesta correcta, un error seguido de pista y una mano distinta al repetir. Hay un [ejemplo ejecutable de esta ampliación](../../tests/unit/lecciones.test.ts) y [pruebas de los controles en escritorio y móvil](../../tests/aprender.spec.mjs). Ejecutá `npm run check` para comprobar ambos montajes del sitio.
 
 ## Límites de la primera entrega
 
