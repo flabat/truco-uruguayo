@@ -181,6 +181,13 @@ test("jugar mientras calcula y mover el cursor descartan las respuestas anterior
   const primera = await page.evaluate(() => window.demorados[0].posicion);
   expect(Object.keys(primera).sort()).toEqual(["asiento", "cartas", "dador", "jugadas", "muestra", "version"]);
   expect(primera.jugadas).toEqual([]);
+
+  await boton(page, "La salida").click();
+  await boton(page, "Ver chances").click();
+  await boton(page, "Cancelar el cálculo").focus();
+  await page.evaluate(() => window.demorados.at(-1).tarde());
+  await expect(tabla(page)).toBeVisible();
+  await expect(boton(page, "Ocultar chances")).toBeFocused();
 });
 
 test.describe("ejemplo estático", () => {

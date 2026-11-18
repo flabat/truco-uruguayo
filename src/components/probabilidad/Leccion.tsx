@@ -16,6 +16,7 @@ export default function Leccion({ base }: { base: string }) {
   const [intento, reintentar] = useState(0);
   const titulo = useRef<HTMLHeadingElement>(null);
   const botonChances = useRef<HTMLButtonElement>(null);
+  const botonCancelar = useRef<HTMLButtonElement>(null);
   const primeraCarta = useRef<HTMLButtonElement>(null);
   const enfocar = useRef(false);
   const id = useId();
@@ -25,7 +26,10 @@ export default function Leccion({ base }: { base: string }) {
   const propio = mesa.turno === 0;
 
   useEffect(() => {
-    if (mesa.turno === 0) cliente.consultar(posicionPublica(mesa), estado => informar({ mesa, estado }));
+    if (mesa.turno === 0) cliente.consultar(posicionPublica(mesa), estado => {
+      if (estado.tipo !== "calculando" && botonCancelar.current === document.activeElement) botonChances.current?.focus();
+      informar({ mesa, estado });
+    });
     return () => cliente.cancelar();
   }, [cliente, mesa, intento]);
 
@@ -115,7 +119,7 @@ export default function Leccion({ base }: { base: string }) {
         </div>}
         <div id={id + "-comparacion"} hidden={!revelada}>
           <p className="prob-aviso" role="status" aria-atomic="true">{aviso}</p>
-          {consulta?.tipo === "calculando" && <button type="button" className="ap-link" onClick={() => {
+          {consulta?.tipo === "calculando" && <button type="button" ref={botonCancelar} className="ap-link" onClick={() => {
             cliente.cancelar();
             informar({ mesa, estado: { tipo: "cancelado" } });
             botonChances.current?.focus();
