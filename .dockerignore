@@ -1,0 +1,13 @@
+**
+!package.json
+!package-lock.json
+!astro.config.mjs
+!src/
+!src/**
+!public/
+!public/**
+!arte/
+!arte/**
+!scripts/
+!scripts/tatu/
+!scripts/tatu/**
