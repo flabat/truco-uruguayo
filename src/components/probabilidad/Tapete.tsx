@@ -33,15 +33,15 @@ export function Tapete({ mesa, enRepaso, base, seleccionada, seleccionar, primer
         const quedan = 3 - jugadas.filter(jugada => jugada.asiento === i).length;
         const activo = mesa.turno === i;
         return <div key={i} className={"asiento asiento-" + i + (activo ? " asiento-activo" : "")} role="group" aria-label={etiqueta}>
-          <div className="prob-asiento-nombre"><h3>{etiqueta}</h3><span className="asiento-papel">{mesa.mano === i ? "Mano" : mesa.dador === i ? "Dador" : ""}</span></div>
+          <div className="asiento-nombre"><h3>{etiqueta}</h3><span className="asiento-papel">{mesa.mano === i ? "Mano" : mesa.dador === i ? "Dador" : ""}</span></div>
           <div className="asiento-cartas">
-            {i === 0 && mesa.cartas.length > 0 && <div className="prob-mano" role="group" aria-label="Tus cartas en mano">
+            {i === 0 && mesa.cartas.length > 0 && <div className="mesa-naipes" role="group" aria-label="Tus cartas en mano">
               {mesa.cartas.map((propia, n) => activo
                 ? <button type="button" className="ap-carta" key={propia} ref={n === 0 ? primeraCarta : undefined}
                     aria-pressed={seleccionada === propia} onClick={() => seleccionar(propia)}>{naipe(propia)}</button>
                 : <div className="ap-carta" key={propia}>{naipe(propia)}</div>)}
             </div>}
-            {carta ? <div className="prob-jugada">
+            {carta ? <div className="mesa-jugada">
                 {i === 0 && <small>Jugada</small>}
                 <div className="ap-carta">{naipe(carta)}</div>
               </div>

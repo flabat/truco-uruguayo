@@ -50,43 +50,8 @@
   align-content: start;
   row-gap: clamp(8px, 1.2vw, 16px);
 }
-.prob-interactiva .tapete .ap-carta img {
+.prob-interactiva .mesa-jugada .ap-carta img {
   width: clamp(49px, 6.4vw, 82px);
-}
-.prob-interactiva .asiento-0 {
-  width: 100%;
-  flex-direction: column;
-  border-top: 1px solid #9cb49d;
-  padding: 8px 2px;
-}
-.prob-interactiva .asiento-0 .prob-asiento-nombre,
-.prob-interactiva .asiento-0 .asiento-cartas, .prob-mano {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(5px, 1vw, 12px);
-}
-.prob-interactiva .asiento-0 .asiento-cartas { align-items: end; }
-.prob-interactiva .prob-mano .ap-carta {
-  flex: none;
-  margin: 0;
-  padding: 3px;
-  border: 2px solid transparent;
-  width: clamp(84px, 9.8vw, 124px);
-}
-.prob-interactiva .prob-mano .ap-carta img { width: 100%; }
-.prob-interactiva .prob-mano button:is(:hover, [aria-pressed="true"]) {
-  border-color: var(--oro);
-  background: #173d2b;
-}
-.prob-jugada small {
-  display: block;
-  color: var(--oro);
-  font-weight: 700;
-}
-.prob-mano + .prob-jugada {
-  border-left: 1px solid #9cb49d;
-  padding-left: clamp(8px, 1.2vw, 16px);
 }
 .prob-muestra {
   display: grid;

@@ -53,9 +53,10 @@ export function pintarTapete(base: string, mesa: VistaAsiento, { enReparto, finD
     asiento.classList.toggle("asiento-activo", !cerrada && !anuncio && !enReparto && turno === i);
     asiento.classList.toggle("asiento-ganador", !!ganador);
     asiento.querySelector(".asiento-papel")!.textContent = papeles.join(" · ");
-    const cartas = asiento.querySelector(".asiento-cartas")!;
+    const cartas = asiento.querySelector(".cartas-vuelta")!;
     cartas.replaceChildren();
     const jugada = vuelta.jugadas.find((j) => j.asiento === i);
+    if (i === 0) asiento.querySelector<HTMLElement>(".mesa-jugada")!.hidden = !jugada;
     if (jugada) cartas.append(mostrarCarta(base, jugada.carta));
     else if (i !== 0) cartas.append(abanico(base, 3 - jugadas.filter((j) => j.asiento === i).length));
   });

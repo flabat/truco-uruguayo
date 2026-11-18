@@ -126,23 +126,20 @@ export function montarMesa() {
       decisiones.append(boton("Repartir de nuevo", repartir), boton("Reproducir la mano", () => avanzarReplay(0), "ap-opcion"));
     }
 
-    if (paso || enJuego || reproduccion) {
-      for (const id of mesa.cartas) {
-        let accion: (() => void) | undefined;
-        if (enJuego) accion = () => { if (juego.jugar(id)) pintar(true); };
-        if (confirmar) accion = () => {
-          const seleccion = juego.marcar(id);
-          carta.setAttribute("aria-pressed", String(seleccion.includes(id)));
-          confirmar!.disabled = !seleccion.length;
-        };
-        const carta = mostrarCarta(base, id, accion);
-        if (confirmar) carta.setAttribute("aria-pressed", String(vista.seleccion.includes(id)));
-        if (paso?.tipo === "responder-total" && vista.seleccion.includes(id)) carta.classList.add("ap-elegida");
-        if (enJuego) carta.setAttribute("aria-label", "Jugar " + nombre(id));
-        cartas.append(carta);
-      }
+    for (const id of mesa.cartas) {
+      let accion: (() => void) | undefined;
+      if (enJuego) accion = () => { if (juego.jugar(id)) pintar(true); };
+      if (confirmar) accion = () => {
+        const seleccion = juego.marcar(id);
+        carta.setAttribute("aria-pressed", String(seleccion.includes(id)));
+        confirmar!.disabled = !seleccion.length;
+      };
+      const carta = mostrarCarta(base, id, accion);
+      if (confirmar) carta.setAttribute("aria-pressed", String(vista.seleccion.includes(id)));
+      if (paso?.tipo === "responder-total" && vista.seleccion.includes(id)) carta.classList.add("ap-elegida");
+      if (enJuego) carta.setAttribute("aria-label", "Jugar " + nombre(id));
+      cartas.append(carta);
     }
-    cartas.hidden = !cartas.childElementCount;
     mostrarAviso(vista);
     const tema = temas.find((t) => t.titulo === vista.tema);
     el("regla-mesa").textContent = tema?.regla ?? (enJuego ? comparar.regla :

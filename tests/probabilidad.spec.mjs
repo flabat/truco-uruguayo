@@ -83,14 +83,14 @@ test("tres vueltas y repaso 0 → 1 → 0 de 12 conservan muestra, orden y priva
   await expect(panel(page)).toContainText("Vuelta 1 · Turno del rival de la derecha");
   await expect(mano(page).getByRole("button")).toHaveCount(0);
   await expect(mano(page).locator(".ap-carta")).toHaveText(["2 de copas", "5 de oros"]);
-  await expect(page.locator(".asiento-0 .prob-jugada")).toContainText("Jugada3 de bastos");
+  await expect(page.locator(".asiento-0 .mesa-jugada")).toContainText("Jugada3 de bastos");
   await expect(otras).toHaveCount(9);
   expect(await otras.evaluateAll(imgs => imgs.every(img => img.src.endsWith("/reverso.webp")))).toBe(true);
   await expect(frente).toHaveAttribute("src", srcMuestra);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
   await boton(page, "Anterior").press("Enter");
   await expect(mano(page).getByRole("button")).toHaveText(apertura);
-  await expect(page.locator(".asiento-0 .prob-jugada")).toHaveCount(0);
+  await expect(page.locator(".asiento-0 .mesa-jugada")).toHaveCount(0);
   for (let i = 0; i < 4; i++) await boton(page, "Siguiente jugada").click();
   await expect(panel(page)).toContainText("Vuelta 2");
   await boton(page, "Anterior").click();
