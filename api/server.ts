@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import pg from "pg";
 import { migrate } from "./migrate.ts";
 import { crearAuth } from "./auth.ts";
+import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas } from "./mesas.ts";
 
 const pool = new pg.Pool({
@@ -11,6 +12,7 @@ const pool = new pg.Pool({
 pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", error.message));
 await migrate(pool);
 const web = new URL(process.env.WEB_ORIGIN!);
+const partidas = crearPartidas(pool, web);
 const mesas = crearRutasMesas(pool, web);
 const auth = crearAuth(pool, {
   web,
@@ -24,7 +26,8 @@ const server = createServer(async (request, response) => {
   if (request.url?.startsWith("/api/")) {
     try {
       const ruta = request.url.split("?")[0];
-      if (esRutaMesas(ruta)) await mesas(request, response);
+      if (esRutaPartida(ruta)) await partidas.atender(request, response);
+      else if (esRutaMesas(ruta)) await mesas(request, response);
       else await auth(request, response);
     } catch {
       response.writeHead(503).end("El servicio de jugadores no está disponible.");
