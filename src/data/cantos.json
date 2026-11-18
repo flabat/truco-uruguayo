@@ -80,7 +80,7 @@
       },
       {
         "heading": "Qué se anota",
-        "text": "Una flor sin oposición le da 3 puntos a tu equipo, incluso si después pierde las bazas. Dos compañeros con flor hacen collera y suman 6 si ningún rival tiene flor. Tres compañeros con flor hacen trillera y suman 9 si el otro equipo carece de flor. Cuando hay flores en los dos bandos se compara la mejor de cada equipo. Si empatan, gana el jugador más cercano al mano en el orden de juego."
+        "text": "Una flor sin oposición le da 3 puntos a tu equipo, incluso si después pierde la mano. Dos compañeros con flor hacen collera y suman 6 si ningún rival tiene flor. Tres compañeros con flor hacen trillera y suman 9 si el otro equipo carece de flor. Cuando hay flores en los dos bandos se compara la mejor de cada equipo. Si empatan, gana el jugador más cercano al mano en el orden de juego."
       },
       {
         "heading": "Cómo contestar a otra flor",
@@ -113,11 +113,11 @@
   {
     "id": "truco",
     "title": "Truco, retruco y vale cuatro",
-    "intro": "Ganar las bazas vale un punto de entrada. Cuando te toca jugar, podés gritar «truco» y ofrecer jugar por dos. El rival decide si acepta, cede o sube la apuesta.",
+    "intro": "Ganar la mano vale un punto de entrada. Cuando te toca jugar, podés gritar «truco» y ofrecer jugar por dos. El rival decide si acepta, cede o sube la apuesta.",
     "blocks": [
       {
         "heading": "Los puntos en juego",
-        "text": "Si rechazan, termina la mano y quien hizo el último desafío anota el valor anterior. Si aceptan, la mano sigue y sus puntos son para quien gane las bazas.",
+        "text": "Si rechazan, termina la mano y quien hizo el último desafío anota el valor anterior. Si aceptan, la mano sigue y el equipo que la gane se lleva los puntos del desafío.",
         "table": {
           "headers": ["Desafío", "Si quieren", "Si dicen «no quiero»"],
           "rows": [["Truco", "2", "1"], ["Retruco", "3", "2"], ["Vale cuatro", "4", "3"]]

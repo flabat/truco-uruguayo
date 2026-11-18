@@ -41,11 +41,11 @@
   {
     "id": "jerarquia",
     "title": "La jerarquía de las cartas",
-    "intro": "Para saber qué carta gana una baza, mirá primero la muestra. Hasta el as de espada pierde frente a cualquiera de las cinco piezas.",
+    "intro": "Para saber qué carta gana una vuelta, mirá primero la muestra. Hasta el as de espada pierde frente a cualquiera de las cinco piezas.",
     "blocks": [
       {
         "heading": "Las cinco piezas",
-        "text": "Solo son piezas las cartas de este cuadro que coinciden con el palo de la muestra. Leé de arriba hacia abajo. El caballo vence a la sota en una baza, aunque ambos aportan el mismo valor al envido.",
+        "text": "Solo son piezas las cartas de este cuadro que coinciden con el palo de la muestra. Leé de arriba hacia abajo. El caballo vence a la sota en una vuelta, aunque ambos aportan el mismo valor al envido.",
         "table": {
           "headers": ["Orden", "Pieza", "Valor de envido"],
           "rows": [["1.ª", "2", "30"], ["2.ª", "4", "29"], ["3.ª", "5", "28"], ["4.ª", "11 · caballo o perico", "27"], ["5.ª", "10 · sota o perica", "27"]]
@@ -81,23 +81,23 @@
   },
   {
     "id": "bazas",
-    "title": "Las bazas y las pardas",
-    "intro": "Una baza es una vuelta en la que cada jugador activo tira una carta. Con las tres cartas de un reparto se pueden jugar hasta tres bazas.",
+    "title": "Cómo se gana la mano",
+    "intro": "Con las tres cartas de cada reparto se juegan hasta tres vueltas. Si ganás la primera y la segunda sale parda, ganás la mano.",
     "blocks": [
       {
-        "heading": "Ganar la mano",
-        "text": "El mano abre la primera baza. Cada jugador elige una de sus cartas y la juega a su turno. La carta de mayor jerarquía gana la baza para su equipo y quien la tiró abre la vuelta siguiente. Al ganar dos bazas, el equipo cobra el truco. Si ganó las dos primeras, ya puede entregar las cartas."
+        "heading": "Cómo se juega una vuelta",
+        "text": "Una vuelta, también llamada «baza», es la jugada en la que cada participante que sigue en la mano tira una carta. El mano abre la primera. Quien tira la carta de mayor jerarquía gana esa vuelta para su equipo y abre la siguiente. El equipo que gana dos vueltas cobra el truco. Si gana las dos primeras, la mano termina ahí."
       },
       {
         "heading": "Resolver un empate",
-        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una baza. Dos cartas iguales de compañeros pueden ganar juntas frente a rivales con cartas menores. Si emparda la primera, vuelve a salir el mano.",
+        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una vuelta. Dos cartas iguales de compañeros pueden ganar juntas frente a rivales con cartas menores. Si emparda la primera, vuelve a salir el mano.",
         "table": {
           "headers": ["Qué pasó", "Cómo se decide"],
           "rows": [
             ["Primera parda", "Quien gane la segunda gana la mano."],
-            ["Primera y segunda pardas", "Decide la tercera baza."],
+            ["Primera y segunda pardas", "Decide la tercera."],
             ["Segunda parda, con ganador en la primera", "Gana quien hizo la primera."],
-            ["Una baza para cada equipo", "Decide la tercera. Si sale parda, gana quien hizo la primera."],
+            ["Una vuelta ganada por cada equipo", "Decide la tercera. Si sale parda, gana quien hizo la primera."],
             ["Las tres pardas", "Gana el equipo del mano."]
           ]
         }
@@ -108,9 +108,10 @@
       }
     ],
     "sources": [
-      {"title": "Gran Aventura · Bazas y salida de juego, arts. 55–59 y 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Ludoteka · Truco y baza parda", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
-      {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"}
+      {"title": "Gran Aventura · Vueltas y salida de juego, arts. 55–59 y 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Ludoteka · Truco y pardas", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
+      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
     ]
   },
   {
@@ -124,7 +125,7 @@
       },
       {
         "heading": "Qué se anota",
-        "text": "Hay tantos por el truco y, según los cantos de la mano, por el envido o la flor. Pueden cobrarlos equipos distintos. Por ejemplo, si ganás un envido de dos y el rival gana las bazas sin haber gritado truco, anotás dos y el rival anota uno."
+        "text": "Hay tantos por el truco y, según los cantos de la mano, por el envido o la flor. Pueden cobrarlos equipos distintos. Por ejemplo, si ganás un envido de dos y el rival gana la mano sin haber gritado truco, anotás dos y el rival anota uno."
       },
       {
         "heading": "El chico y el partido",
