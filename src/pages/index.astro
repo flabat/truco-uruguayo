@@ -1,7 +1,7 @@
 ---
 import Site from "../layouts/Site.astro";
 import Icon from "../components/Icon.astro";
-import { groups, ruleUrl, url } from "../lib/guide";
+import { groups, url } from "../lib/guide";
 const facts = [
   { icon: "deck", label: "Baraja española", value: "40 cartas" },
   { icon: "players", label: "Jugadores", value: "2, 4 o 6" },
@@ -36,7 +36,7 @@ const facts = [
             <Icon name="book" size={19} />
             Leer las reglas <Icon name="arrow" size={17} />
           </a>
-          <a class="quiet-link" href={ruleUrl("jerarquia")}>
+          <a class="quiet-link" href={url("baraja/")}>
             Ver la baraja <Icon name="arrow" size={15} />
           </a>
         </div>

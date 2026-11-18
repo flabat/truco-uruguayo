@@ -11,6 +11,7 @@ export interface Rule {
   title: string;
   intro: string;
   blocks: {
+    id?: string;
     heading: string;
     text: string;
     items?: string[];

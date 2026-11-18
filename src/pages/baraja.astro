@@ -1,0 +1,65 @@
+---
+import Site from "../layouts/Site.astro";
+import Carta from "../components/Carta.astro";
+import Icon from "../components/Icon.astro";
+import { baraja, extras } from "../lib/cartas";
+import { ruleUrl, url } from "../lib/guide";
+
+const grupos = [...baraja, { id: "extras", nombre: "Comodines y reverso", cartas: extras }];
+---
+<Site title="La baraja Tatú" description="Mirá las 50 cartas de la baraja española Tatú, palo por palo, y el reverso del mazo.">
+  <div class="page-intro">
+    <div class="shell">
+      <p class="crumb"><a href={url()}>Inicio</a><Icon name="chevron" size={12} /> La baraja</p>
+      <h1>La baraja Tatú</h1>
+      <p>Cuatro palos de doce cartas y dos comodines. Para jugar al truco, separá los ochos, los nueves y los comodines. Te quedan 40 cartas.</p>
+    </div>
+  </div>
+  <div class="shell index-layout">
+    <aside class="side-index">
+      <p class="eyebrow">En el mazo</p>
+      <nav aria-label="Palos y comodines">
+        {grupos.map((grupo) => <a href={"#" + grupo.id}>{grupo.nombre}<Icon name="down" size={14} /></a>)}
+      </nav>
+    </aside>
+    <div class="atlas">
+      {grupos.map((grupo) => (
+        <section id={grupo.id} aria-labelledby={"titulo-" + grupo.id}>
+          <h2 id={"titulo-" + grupo.id}>{grupo.nombre}</h2>
+          <ul>
+            {grupo.cartas.map((carta) => (
+              <li>
+                <a href={url("img/cartas/tatu/" + carta.id + ".webp")} aria-label={"Ampliar " + carta.nombre.toLowerCase()}>
+                  <Carta id={carta.id} decorativa />
+                  <span>{carta.nombre}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+      <a class="text-link" href={ruleUrl("jerarquia") + "#rey-pieza"}>Ver cómo la muestra cambia la jerarquía <Icon name="arrow" size={16} /></a>
+      <a class="credit" href={url("fuentes/#baraja")}>Fuente de las imágenes</a>
+    </div>
+  </div>
+</Site>
+<style>
+  .atlas { min-width: 0; }
+  .atlas section { margin-bottom: 36px; }
+  .atlas h2 { margin: 0 0 16px; font-size: clamp(28px, 3vw, 38px); }
+  .atlas ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 110px), 1fr));
+    gap: 18px 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .atlas li a { display: block; text-align: center; }
+  .atlas span { display: block; margin-top: 6px; font-size: 0.83rem; font-weight: 600; }
+  .atlas a:hover span, .credit { text-decoration: underline; text-underline-offset: 3px; }
+  .credit { display: block; margin-top: 18px; font-size: 0.8rem; color: var(--muted); }
+  @media (max-width: 700px) {
+    .atlas ul { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+  }
+</style>

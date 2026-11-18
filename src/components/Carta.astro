@@ -1,0 +1,28 @@
+---
+import { cartasPorId } from "../lib/cartas";
+import { url } from "../lib/guide";
+
+interface Props {
+  id: string;
+  decorativa?: boolean;
+}
+const { id, decorativa = false } = Astro.props;
+const carta = cartasPorId.get(id);
+if (!carta) throw new Error("Carta desconocida: " + id);
+---
+<img
+  class="carta-tatu"
+  src={url("img/cartas/tatu/" + carta.id + ".webp")}
+  alt={decorativa ? "" : carta.nombre}
+  width="384"
+  height="596"
+  loading="lazy"
+  decoding="async"
+/>
+<style>
+  img {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 2px 2px rgb(28 35 26 / 20%));
+  }
+</style>

@@ -52,6 +52,7 @@
         }
       },
       {
+        "id": "rey-pieza",
         "heading": "Cuándo el rey es pieza",
         "text": "Si la muestra es una de las cinco piezas, el rey de ese palo ocupa exactamente su lugar. Con el 4 de copas de muestra, el 12 de copas vence al 5 de copas, pierde ante el 2 de copas y vale 29 para el envido. Con el 6 de copas de muestra, ese mismo rey conserva su rango común."
       },
