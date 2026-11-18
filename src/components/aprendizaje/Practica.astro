@@ -1,0 +1,44 @@
+---
+import Icon from "../Icon.astro";
+import { url } from "../../lib/guide";
+---
+<section id="practica" class="shell ap-practica" hidden aria-labelledby="titulo-practica">
+  <a data-ruta class="quiet-link ap-volver" href={url("aprender/")}><span aria-hidden="true">←</span> Todos los temas</a>
+  <header>
+    <p id="modo" class="eyebrow"></p>
+    <h1 id="titulo-practica" tabindex="-1"></h1>
+  </header>
+  <div class="ap-ejercicio">
+    <div class="ap-cabecera">
+      <p id="etapa" class="eyebrow"></p>
+      <h2 id="consigna" tabindex="-1"></h2>
+      <p id="instruccion"></p>
+    </div>
+    <div class="ap-mesa">
+      <div class="ap-muestra">
+        <h3>Muestra</h3>
+        <div id="carta-muestra"></div>
+      </div>
+      <div class="ap-mano">
+        <h3 id="rotulo-mano">Cartas de la mano</h3>
+        <div id="cartas-mano" role="group" aria-labelledby="rotulo-mano"></div>
+      </div>
+    </div>
+    <div class="ap-respuesta">
+      <div id="opciones" class="ap-acciones"></div>
+      <form id="cuenta" hidden>
+        <label for="tantos">Tu total</label>
+        <div><input id="tantos" name="tantos" type="number" min="0" max="9007199254740991" step="1" inputmode="numeric" required/><button class="button">Comprobar total</button></div>
+      </form>
+      <p id="ejemplo-resuelto" hidden></p>
+      <div id="feedback" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="continuacion" class="ap-acciones"></div>
+    </div>
+  </div>
+  <details class="ap-consulta">
+    <summary>Regla para esta mano</summary>
+    <p id="regla"></p>
+    <a id="capitulo" class="text-link">Leer el capítulo completo <Icon name="arrow" size={15}/></a>
+  </details>
+  <p id="avance-actual"></p>
+</section>

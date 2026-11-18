@@ -225,6 +225,7 @@ input:focus-visible {
 }
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 25px;
   margin-top: 24px;
@@ -969,7 +970,7 @@ tbody tr:nth-child(even) {
     order: 3;
     width: 100%;
     justify-content: center;
-    gap: 9vw;
+    gap: clamp(10px, 4vw, 30px);
     margin-top: 8px;
   }
   .site-nav a {
