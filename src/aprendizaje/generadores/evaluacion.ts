@@ -75,12 +75,24 @@ function error(explicacion: string, pista: string): Evaluacion {
   return { correcta: false, explicacion, pista };
 }
 
+function pistaMismoNumero(cartas: readonly CardId[], ganadora: CardId, muestra: CardId): string {
+  if (pieza(ganadora, muestra) === null) {
+    return `Buscá ${lista.format(cartas.map(conArticulo))} en la jerarquía. El palo distingue las matas y define el orden entre ellas.`;
+  }
+  if (rangoDe(ganadora) === 12) return `Salió ${conArticulo(muestra)} de muestra. El rey de ese palo ocupa su lugar como pieza.`;
+  return `La muestra es ${conArticulo(muestra)}. Mirá cuál de las dos cartas es pieza por ser de ese palo.`;
+}
+
 function evaluarFuerza(cartas: readonly CardId[], muestra: CardId, elegidas: readonly CardId[]): Evaluacion {
   const fuertes = masFuertes(cartas, muestra);
   if (mismaSeleccion(elegidas, fuertes)) {
     return { correcta: true, explicacion: explicarSituacion("comparar-cartas", cartas, muestra) };
   }
   if (fuertes.length === 2) return error("Revisá si una supera a la otra.", "Si ocupan el mismo puesto, elegí «Empatan».");
+  const [a, b] = cartas;
+  if (rangoDe(a) === rangoDe(b)) {
+    return error("Coinciden en el número. Fijate en los palos.", pistaMismoNumero(cartas, fuertes[0], muestra));
+  }
   const pista = cartas.some((carta) => pieza(carta, muestra) !== null)
     ? "Mirá cuál es pieza y qué lugar ocupa entre las piezas."
     : "Consultá primero las matas y después el orden de las cartas comunes.";

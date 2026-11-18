@@ -19,7 +19,13 @@ function elegir(s: SituacionVisible, cartas: readonly CardId[]) {
   return evaluarRespuesta(s, seleccion, { tipo: "elegir-cartas", cartas });
 }
 
+function comparacionFija(cartas: readonly [CardId, CardId], muestra: CardId): SituacionVisible {
+  const clave = claveSituacion(muestra, cartas);
+  return { habilidad: "comparar-cartas", familia: "mesa", id: clave, clave, cartas, muestra, explicacion: "" };
+}
+
 test("cada familia genera casos legales y reproducibles, con respuesta confirmada por las reglas", () => {
+  assert.ok(familiasPorHabilidad["comparar-cartas"].includes("mismo-numero-distinta-fuerza"));
   for (const [habilidad, familias] of Object.entries(familiasPorHabilidad)) {
     for (const familia of familias) {
       const claves = new Set<string>();
@@ -42,7 +48,12 @@ test("cada familia genera casos legales y reproducibles, con respuesta confirmad
           const fuerza = compararCartas(a, b, muestra);
           const gana = fuerza > 0 ? a : b;
           if (familia === "empate") assert.equal(fuerza, 0);
-          else {
+          else if (familia === "mismo-numero-distinta-fuerza") {
+            assert.equal(rangoDe(a), rangoDe(b));
+            assert.notEqual(paloDe(a), paloDe(b));
+            assert.notEqual(fuerza, 0);
+            assert.equal(elegir(s, cartas).correcta, false);
+          } else {
             assert.notEqual(fuerza, 0);
             const pierde = gana === a ? b : a;
             assert.equal(Math.sign(rangoDe(gana) - rangoDe(pierde)), familia === "gana-el-mayor" ? 1 : -1);
@@ -78,6 +89,36 @@ test("cada familia genera casos legales y reproducibles, con respuesta confirmad
       }
       assert.ok(claves.size >= 16, `Poca variedad en ${habilidad}/${familia}`);
     }
+  }
+});
+
+test("el 2 de bastos le gana al 2 de oros con muestra de bastos y empatan con muestra de copas", () => {
+  const cartas = ["oros-02", "bastos-02"] as const;
+  const duelo = comparacionFija(cartas, "bastos-06");
+  assert.ok(elegir(duelo, ["bastos-02"]).correcta);
+  assert.equal(elegir(duelo, ["oros-02"]).correcta, false);
+  const empate = elegir(duelo, cartas);
+  assert.equal(empate.correcta, false);
+  assert.match(empate.pista!, /bastos/);
+  assert.match(empate.pista!, /pieza/);
+
+  const conCopas = comparacionFija(cartas, "copas-06");
+  assert.ok(elegir(conCopas, cartas).correcta);
+  for (const carta of cartas) assert.equal(elegir(conCopas, [carta]).correcta, false);
+});
+
+test("la pista distingue al rey sustituto, una mata frente a una común y el orden entre dos matas", () => {
+  for (const [muestra, ganadora, otra, pista] of [
+    ["copas-04", "copas-12", "oros-12", /rey.*(ocupa|sustituye)/i],
+    ["bastos-06", "oros-07", "copas-07", /matas/],
+    ["copas-06", "espadas-01", "bastos-01", /matas/],
+  ] as const) {
+    const duelo = comparacionFija([otra, ganadora], muestra);
+    assert.ok(elegir(duelo, [ganadora]).correcta);
+    const error = elegir(duelo, [otra]);
+    assert.equal(error.correcta, false);
+    assert.match(error.pista!, pista);
+    assert.ok(error.pista!.includes(paloDe(ganadora)));
   }
 });
 
