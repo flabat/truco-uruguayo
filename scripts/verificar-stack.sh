@@ -9,8 +9,10 @@ export TRUCO_BIND=127.0.0.1 TRUCO_HOST=localhost WEB_PORT=0 API_PORT=0
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 
 cleanup() {
-  if [[ $? != 0 ]]; then "${compose[@]}" logs --tail=60 >&2; fi
+  local status=$?
+  if [[ $status != 0 ]]; then "${compose[@]}" logs --tail=60 >&2; fi
   "${compose[@]}" down --volumes --rmi local
+  exit "$status"
 }
 trap cleanup EXIT
 
