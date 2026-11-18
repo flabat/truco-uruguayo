@@ -186,7 +186,6 @@
   font-size: 14px;
 }
 #ir-a-practicar {
-  min-height: 44px;
   margin-top: 12px;
 }
 #instruccion:empty {
@@ -263,7 +262,7 @@ button.ap-carta:hover,
   outline: 3px solid white;
   outline-offset: 1px;
 }
-.ap-respuesta .button,
+.ap-ejercicio .button,
 .ap-opcion,
 .ap-link {
   border: 0;
