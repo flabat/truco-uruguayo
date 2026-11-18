@@ -93,6 +93,10 @@ export function montarMesa() {
   const total = el("total-mesa") as HTMLInputElement;
   const cartas = el("mis-cartas");
   const pista = el("pista-mesa");
+  const consulta = document.querySelector<HTMLDetailsElement>(".mesa-consulta")!;
+  new MutationObserver(() => {
+    if (consulta.open) juego.consultarRegla();
+  }).observe(consulta, { attributeFilter: ["open"] });
 
   function responder(respuesta: Respuesta) {
     if (juego.responder(respuesta)) {
@@ -127,6 +131,8 @@ export function montarMesa() {
     cartas.replaceChildren();
     cuenta.hidden = paso?.tipo !== "responder-total";
     pista.hidden = !paso;
+    consulta.open = false;
+    el("aviso-consulta-mesa").hidden = !paso;
     const guia = el("guia-turno");
     const momento = el("momento");
     let confirmar: HTMLButtonElement | undefined;

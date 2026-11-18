@@ -122,6 +122,9 @@ export function crearMesaGuiada({
       return { mesa: vistaPara(mesa, 0), paso: sesion?.pasoActual, tema: sesion?.leccion.titulo,
         pista: sesion?.pista, seleccion: [...seleccion], mensaje, reproduccion };
     },
+    consultarRegla() {
+      if (sesion) { sesion.consultarRegla(); guardar(); }
+    },
     pedirPista() {
       if (sesion) { sesion.pedirPista(); guardar(); }
     },

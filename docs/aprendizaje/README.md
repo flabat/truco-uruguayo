@@ -24,13 +24,15 @@ La galería ya contiene los nombres e imágenes Tatú. El motor modela las 40 ca
 
 **Repetir o repartir.** Una pista permite volver a intentar la situación actual. Un replay reconstruye esa partida con sus jugadas originales. «Repartir de nuevo» elige otro reparto, evita repetir el anterior y rota el dador. Cada comportamiento tiene su propia prueba.
 
+**Consultar la regla.** La consulta es libre en el ejemplo resuelto y al repasar una mano terminada. Durante un desafío, abrir «Regla para esta mano» cuenta como ayuda porque muestra información como el orden completo de las cartas. Podés terminar esa mano y probar otra para sumar un acierto sin ayuda. El capítulo completo se abre en otra pestaña. Al cerrarla volvés al mismo paso con tus cartas y tus intentos.
+
 ## Jugar en la mesa de parejas
 
 En **Aprender**, elegí **Jugar una mano guiada**. La primera vez sos mano. Frente a vos se sienta tu compañero, con un rival a cada lado. Los dorsos indican cuántas cartas les quedan. Cada carta jugada aparece junto al asiento que la tiró.
 
 Primero decidí si tenés flor. Marcá las cartas que cuentan para tu flor o tu envido y escribí el total. Podés pedir una pista y volver a intentar sobre el mismo reparto. Después, tocá una carta de tu mano para jugarla. Con el teclado, usá Tab para elegir el control y Enter o Espacio para activar una carta. Los otros tres asientos juegan hasta que te toca de nuevo o se define la mano. En **Vueltas jugadas**, abrí una vuelta para consultar el orden de sus cartas.
 
-Al terminar, **Reproducir la mano** te deja avanzar y retroceder por las jugadas originales. **Repartir de nuevo** pasa el mazo un asiento a la derecha y cambia el reparto. Al recargar o volver desde las reglas en la misma pestaña, se retoma el paso, el turno o la jugada de la reproducción. La pestaña conserva la mesa mientras el navegador permita guardarla. El progreso por habilidad se guarda por separado en el dispositivo.
+Al terminar, **Reproducir la mano** te deja avanzar y retroceder por las jugadas originales. **Repartir de nuevo** pasa el mazo un asiento a la derecha y cambia el reparto. Al recargar o volver a la mesa en la misma pestaña, se retoma el paso, el turno o la jugada de la reproducción. La pestaña conserva la mesa mientras el navegador permita guardarla. El progreso por habilidad se guarda por separado en el dispositivo.
 
 ## Cómo agregar una lección
 

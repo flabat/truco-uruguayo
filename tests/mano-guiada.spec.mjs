@@ -139,3 +139,31 @@ test("si el compañero ya gana se puede jugar cualquiera de las dos cartas", asy
   await page.locator("#vueltas summary").last().click();
   await expect(page.locator("#vueltas ol").last()).toContainText("Vos · rey de oros");
 });
+
+test("consultar la regla conserva las cartas y la ayuda tras volver o recargar", async ({ page }) => {
+  await semillaFija(page, 830838);
+  await page.goto("aprender/mano/");
+  const regla = page.locator(".mesa-consulta summary");
+  await expect(regla).toContainText("cuenta como ayuda");
+  await regla.press("Enter");
+  await expect(page.locator("#regla-mesa")).toContainText("Hay flor con tres cartas");
+  await page.reload();
+  await boton(page, "Sin flor").click();
+  await seleccionar(page, ["2 de copas", "5 de oros"]);
+  await page.getByRole("spinbutton").fill("35");
+  await regla.press("Enter");
+  const abierta = page.waitForEvent("popup");
+  await page.getByRole("link", { name: "Leer el capítulo completo en otra pestaña" }).press("Enter");
+  const capitulo = await abierta;
+  await expect(capitulo).toHaveURL("reglas/envido/");
+  await capitulo.close();
+  await expect(page.getByRole("spinbutton")).toHaveValue("35");
+  await expect(page.locator("#mis-cartas .ap-elegida")).toHaveText(["2 de copas", "5 de oros"]);
+  await page.reload();
+  await contar(page, 35);
+  await expect(page.locator("#aviso-consulta-mesa")).toBeHidden();
+  await page.getByRole("link", { name: "Volver a aprender" }).click();
+  for (const tema of ["reconocer-flor", "contar-envido"]) {
+    await expect(page.locator(`[data-avance="${tema}"]`)).toContainText("En práctica · 0 manos resueltas");
+  }
+});

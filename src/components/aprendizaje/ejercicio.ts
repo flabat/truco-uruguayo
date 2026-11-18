@@ -24,12 +24,21 @@ export function montarEjercicio(base: string) {
   const ejemplo = elemento("ejemplo-resuelto");
   const feedback = elemento("feedback");
   const mano = elemento("cartas-mano");
+  const consulta = document.querySelector<HTMLDetailsElement>(".ap-consulta")!;
+  const avisoConsulta = elemento("aviso-consulta");
+  let sesionActual: Sesion | undefined;
+  // El navegador puede agrupar los eventos toggle si se abre y cierra la regla enseguida.
+  new MutationObserver(() => {
+    if (consulta.open) sesionActual?.consultarRegla();
+  }).observe(consulta, { attributeFilter: ["open"] });
 
-  function preparar(tema: Tema, muestra: CardId) {
+  function preparar(tema: Tema, muestra: CardId, sesion?: Sesion) {
     elemento("titulo-practica").textContent = tema.titulo;
     elemento("regla").textContent = tema.regla;
     elemento("capitulo").setAttribute("href", base + "reglas/" + tema.capitulo + "/");
-    document.querySelector<HTMLDetailsElement>(".ap-consulta")!.open = false;
+    consulta.open = false;
+    sesionActual = sesion;
+    avisoConsulta.hidden = !sesion;
     elemento("carta-muestra").replaceChildren(mostrarCarta(base, muestra));
     elemento("rotulo-mano").textContent = tema.comparar ? "Cartas de la vuelta" : "Cartas de la mano";
     limpiar();
@@ -64,7 +73,7 @@ export function montarEjercicio(base: string) {
 
   function practicar(tema: Tema, sesion: Sesion, siguiente: string, continuar: () => void, actualizarAvance: () => void) {
     const { cartas, muestra } = sesion.situacion;
-    preparar(tema, muestra);
+    preparar(tema, muestra, sesion);
     let seleccion = new Set<CardId>();
 
     function responder(respuesta: Respuesta) {
@@ -140,6 +149,7 @@ export function montarEjercicio(base: string) {
           feedback.textContent = "Pista · " + sesion.pedirPista();
         }, "ap-link"));
       } else {
+        avisoConsulta.hidden = true;
         continuacion.append(boton(siguiente, continuar));
       }
       if (paso?.tipo === "responder-total") tantos.focus();
