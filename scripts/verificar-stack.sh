@@ -22,10 +22,9 @@ url() { echo "http://$("${compose[@]}" port "$1" "$2")"; }
 
 up
 web=$(url web 80)
-api=$(url api 3001)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F 'Truco uruguayo' >/dev/null
-curl -fsS "$api/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
+curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)
@@ -45,7 +44,7 @@ sql "CREATE TABLE juego.prueba_persistencia (valor text); INSERT INTO juego.prue
 migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'")
 [[ -n "$migration" ]]
 "${compose[@]}" stop db
-[[ $(curl -sS -o /dev/null -w '%{http_code}' "$api/health") == 503 ]]
+[[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
 up
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
