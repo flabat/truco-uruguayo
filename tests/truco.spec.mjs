@@ -65,10 +65,19 @@ test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida r
   const imagenes = mano.locator("img");
   await expect(imagenes).toHaveCount(3);
   await expect(page.locator(".mesa-panel img")).toHaveCount(0);
-  const asiento = await vos.boundingBox();
+  // El scroll suave tras devolver el foco puede avanzar entre dos llamadas a Playwright.
+  const { asiento, cartas } = await vos.evaluate(async elemento => {
+    const imagenes = [...elemento.querySelectorAll('[aria-label="Tus cartas"] img')];
+    await Promise.all(imagenes.map(imagen => imagen.decode()));
+    await document.fonts.ready;
+    return {
+      asiento: elemento.getBoundingClientRect().toJSON(),
+      cartas: imagenes.map(imagen => imagen.getBoundingClientRect().toJSON()),
+    };
+  });
+  expect(cartas).toHaveLength(3);
   let bordeAnterior = asiento.x;
-  for (const imagen of await imagenes.all()) {
-    const carta = await imagen.boundingBox();
+  for (const carta of cartas) {
     expect(carta.width).toBeGreaterThanOrEqual(44);
     expect(carta.x).toBeGreaterThanOrEqual(bordeAnterior);
     expect(carta.y).toBeGreaterThanOrEqual(asiento.y);
