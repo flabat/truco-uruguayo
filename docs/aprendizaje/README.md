@@ -42,6 +42,8 @@ Al terminar podés repetir el ejemplo, cambiar de papel o pedir otro reparto sin
 
 ## Cómo agregar una lección
 
+El [diseño para variar los ejemplos resueltos](ejemplos/README.md) y su [plan de implementación](ejemplos/plan.md) describen la próxima evolución de los cinco temas, con aperturas sencillas, repaso al volver y acceso directo a la práctica.
+
 La ruta publicada ofrece cinco temas abiertos. El recorrido inicial empieza con una comparación y sigue con una decisión de flor. Cada tema presenta una mano resuelta antes de repartir para practicar. El ejemplo explica las cartas y, cuando corresponde, muestra los sumandos del motor. Solo las manos de práctica aportan al progreso.
 
 Para agregar una lección centrada en una flor aparente:
