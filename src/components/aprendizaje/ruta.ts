@@ -1,7 +1,6 @@
-import { comparar, reconocerFlor, temas, type Tema } from "../../aprendizaje/lecciones";
-import { claveSituacion, proveedorSituaciones } from "../../aprendizaje/generadores";
+import { elegirApertura, comparar, reconocerFlor, temas, type Tema } from "../../aprendizaje/lecciones";
+import { generarPractica } from "../../aprendizaje/lecciones/practica";
 import { crearFuenteProgreso, elegirHabilidad, estaAprendida, progresoDe } from "../../aprendizaje/progreso";
-import { generarSesion } from "../../aprendizaje/sesion";
 import { montarEjercicio } from "./ejercicio";
 
 export function iniciarRuta() {
@@ -56,14 +55,7 @@ export function iniciarRuta() {
 
     function empezar() {
       const semilla = crypto.getRandomValues(new Uint32Array(1))[0];
-      // El ejemplo resuelto también debe quedar fuera de las manos nuevas, sin acreditar progreso.
-      const ejemplo = claveSituacion(tema.ejemplo.muestra, tema.ejemplo.cartas);
-      const proveedor = {
-        ...proveedorSituaciones,
-        generar: (solicitud: Parameters<typeof proveedorSituaciones.generar>[0]) =>
-          proveedorSituaciones.generar({ ...solicitud, recientes: [...solicitud.recientes, ejemplo] }),
-      };
-      const sesion = generarSesion(tema, semilla, proveedor, fuente);
+      const sesion = generarPractica(tema, semilla, fuente);
       actualizarAvance();
       let siguiente = "Otra mano";
       if (modo === "inicio") siguiente = tema === comparar ? "Seguir con reconocer flor" : "Seguir con práctica mixta";
@@ -74,7 +66,7 @@ export function iniciarRuta() {
         else abrirMixta();
       }, actualizarAvance);
     }
-    if (conEjemplo) ejercicio.mostrarEjemplo(tema, empezar);
+    if (conEjemplo) ejercicio.mostrarEjemplo(tema, elegirApertura(tema), empezar);
     else empezar();
   }
 
