@@ -1,4 +1,4 @@
-import type { Tema } from "../../aprendizaje/lecciones";
+import type { Ejemplo, Tema } from "../../aprendizaje/lecciones";
 import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
@@ -53,8 +53,7 @@ export function montarEjercicio(base: string) {
     ejemplo.hidden = true;
   }
 
-  function mostrarEjemplo(tema: Tema, empezar: () => void) {
-    const { muestra, cartas, detalle } = tema.ejemplo;
+  function mostrarEjemplo(tema: Tema, { muestra, cartas, detalle }: Ejemplo, empezar: () => void) {
     preparar(tema, muestra);
     elemento("etapa").textContent = "Ejemplo resuelto";
     consigna.textContent = tema.pasos[0].consigna;

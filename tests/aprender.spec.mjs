@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { temas } from "../src/aprendizaje/lecciones/index.ts";
+import { cartasPorId } from "../src/lib/cartas.ts";
+import { explicarSituacion } from "../src/aprendizaje/generadores/evaluacion.ts";
 
 // Solo fijamos la fuente de semillas. Cada mano pasa por el generador, la sesión y el evaluador reales.
 async function semillas(page, ...valores) {
@@ -22,6 +25,22 @@ async function empezarTema(page, id) {
   await page.goto("aprender/?tema=" + id);
   await expect(page.getByText("Ejemplo resuelto", { exact: true })).toBeVisible();
   await boton(page, "Probar con otra mano").click();
+}
+
+for (const [indice, azar] of [0, 0.99].entries()) {
+  test(`primera visita muestra la apertura ${indice + 1} de cada tema con sus cartas y explicación`, async ({ page }) => {
+    await page.addInitScript((valor) => { Math.random = () => valor; }, azar);
+    for (const tema of temas) {
+      await page.goto("aprender/?tema=" + tema.id);
+      const { muestra, cartas, detalle } = tema.ejemplos[indice];
+      await expect(page.getByRole("img", { name: "Muestra " + cartasPorId.get(muestra).nombre })).toBeVisible();
+      await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas.map((id) => cartasPorId.get(id).nombre));
+      await expect(page.locator("#ejemplo-resuelto")).toContainText(detalle);
+      if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
+        await expect(page.locator("#ejemplo-resuelto strong")).toHaveText(explicarSituacion(tema.habilidad, cartas, muestra));
+      }
+    }
+  });
 }
 
 test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", async ({ page }) => {
@@ -149,8 +168,9 @@ test("flor con piezas en pantalla angosta y sin almacenamiento", async ({ page }
   await semillas(page, 2);
   const imagenes = new Set();
   page.on("request", (req) => { if (req.url().includes("/img/cartas/tatu/")) imagenes.add(req.url()); });
+  await page.addInitScript(() => { Math.random = () => 0; });
   await page.goto("aprender/?tema=contar-flor");
-  await expect(page.locator("#ejemplo-resuelto")).toContainText("20 + 9 + 7 + 3 = 39");
+  await expect(page.locator("#ejemplo-resuelto")).toContainText("20 + 7 + 3 + 1 = 31");
   await boton(page, "Probar con otra mano").click();
   for (const nombre of ["Caballo de espadas", "7 de oros", "4 de espadas"]) {
     const carta = boton(page, nombre);
