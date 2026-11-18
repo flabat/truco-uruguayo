@@ -19,6 +19,10 @@ export interface Cobro {
   motivo: "truco" | "flor" | "envido";
   asiento?: Asiento;
   tantoGanador?: number;
+  comparacionFlor?: {
+    indiceAccion: number;
+    participantes: readonly { asiento: Asiento; total: number }[];
+  };
 }
 
 export interface EstadoOnline {
@@ -119,17 +123,17 @@ function plenaFlor(estado: EstadoOnline, equipo: Equipo) {
   return 3 * estado.flores.filter(a => equipoPorAsiento[a] === equipo).length;
 }
 
-function compararTantos(estado: EstadoOnline, flor: boolean) {
+function tantosEnOrden(estado: EstadoOnline, flor: boolean) {
   const participantes = enOrden(estado).filter(a => !flor || estado.flores.includes(a));
-  // Ante igualdad queda el primero en el orden original de esta mano.
-  return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }))
-    .reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
+  return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }));
 }
 
 function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   const oferta = estado.lateral!;
   const flor = estado.flores.length > 0;
-  const ganador = querido ? compararTantos(estado, flor) : null;
+  const participantes = querido ? tantosEnOrden(estado, flor) : null;
+  // Ante igualdad queda el primero en el orden original de esta mano.
+  const ganador = participantes?.reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
   const equipo = equipoPorAsiento[ganador?.asiento ?? oferta.asiento];
   let tantos = querido ? oferta.valor : oferta.anterior;
   if (flor) {
@@ -137,7 +141,8 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
     tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
   }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
-    ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });
+    ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }),
+    ...(flor && participantes && { comparacionFlor: { indiceAccion: estado.acciones.length - 1, participantes } }) });
   estado.lateral = null;
   estado.lateralCerrado = true;
   estado.respuestaEnvido = null;
