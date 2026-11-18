@@ -162,16 +162,28 @@
       {
         "heading": "Anotar los duelos",
         "text": "Al terminar cada duelo, los tantos van al marcador de los equipos. La alternancia entre redondilla y pico a pico se usa mientras los dos equipos estén en malas. Cuando uno llega a buenas, los siguientes repartos son redondillas."
+      },
+      {
+        "heading": "Una flor por lado en el pico a pico",
+        "text": "Tu equipo lleva 2 tantos y el rival, 4. La muestra es el as de oro. Tenés el 5, el 6 y el 7 de copa (38 de flor). Tu rival tiene el 2, el 3 y el 4 de basto (29 de flor). Los dos cantan flor y se acepta la contraflor al resto sin envites previos. ¿Cuánto anota tu equipo por ganar ese canto?",
+        "table": {
+          "headers": ["Fuente", "Regla del duelo", "Qué anotás"],
+          "rows": [
+            ["Wikipedia", "6 tantos de envite y 3 por cada flor.", "6 + 3 + 3 = 12 tantos. Pasás de 2 a 14."],
+            ["Gran Aventura", "Al puntero le faltan 36 para llegar a 40. El resto tiene un tope de 10.", "10 + 3 + 3 = 16 tantos. Pasás de 2 a 18."],
+            ["Canelón Chico (2026)", "15 tantos por la contraflor al resto en el torneo a 50.", "Queda por confirmar si esos 15 incluyen las dos flores o si se suman aparte."]
+          ]
+        }
       }
     ],
     "variants": [
       {
         "title": "La falta y el resto en el pico a pico",
-        "text": "Wikipedia asigna 6 tantos a la falta y 12 a la contraflor al resto (6 del desafío y 6 de las flores). En las Canelonchiqueadas de 2026, la contraflor al resto del pico a pico valía 15. Gran Aventura fija un tope de 10 para los envites de falta y resto, con las flores contabilizadas según su propio reglamento. Conviene fijar estos valores junto con la meta del partido.",
+        "text": "Si el duelo es sin flor y se quiere una falta envido directa, Wikipedia le asigna 6 tantos y Gran Aventura le pone un tope de 10. En el torneo de a seis de Canelón Chico, quien gana la falta en malas llega a 25. El club menciona los 15 solo al tratar la contraflor al resto en pico a pico. Antes de repartir, acuerden cuánto vale la falta y cómo se cuentan las flores al querer el resto.",
         "sources": [
           {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
-          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
-          {"title": "Gran Aventura · Arts. 31 y 86", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+          {"title": "Gran Aventura · Arts. 4, 20, 23–26, 31, 33 y 86 (archivo de 2011)", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, Truco uruguayo, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
         ]
       }
     ],
