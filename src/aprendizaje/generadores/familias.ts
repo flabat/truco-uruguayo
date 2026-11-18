@@ -3,7 +3,7 @@ import { compararCartas } from "../../motor/jerarquia.ts";
 import { evaluarTantos } from "../../motor/tantos.ts";
 
 export const familiasPorHabilidad = {
-  "comparar-cartas": ["gana-el-mayor", "gana-el-menor", "empate"],
+  "comparar-cartas": ["gana-el-mayor", "gana-el-menor", "empate", "mismo-numero-distinta-fuerza"],
   "reconocer-piezas": ["con-pieza", "sin-pieza", "rey-sustituto", "rey-comun"],
   "reconocer-flor": ["tres-del-mismo-palo", "sin-flor", "flor-con-pieza", "flor-aparente"],
   "contar-envido": ["dos-del-mismo-palo", "tres-palos-distintos", "una-pieza", "selecciones-equivalentes"],
@@ -31,10 +31,12 @@ export function pertenece(familia: Familia, cartas: readonly CardId[], muestra: 
   switch (familia) {
     case "gana-el-mayor":
     case "gana-el-menor":
+    case "mismo-numero-distinta-fuerza":
     case "empate": {
       const [a, b] = cartas;
       const fuerza = compararCartas(a, b, muestra);
       if (familia === "empate") return fuerza === 0;
+      if (familia === "mismo-numero-distinta-fuerza") return rangoDe(a) === rangoDe(b) && fuerza !== 0;
       const coincideConElNumero = fuerza * (rangoDe(a) - rangoDe(b));
       return familia === "gana-el-mayor" ? coincideConElNumero > 0 : coincideConElNumero < 0;
     }
