@@ -1,11 +1,30 @@
 import { readdir, readFile } from "node:fs/promises";
+import { setTimeout as esperar } from "node:timers/promises";
 import type { Pool } from "pg";
 
 const migrations = new URL("./migrations/", import.meta.url);
+const transitorios = new Set(["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EAI_AGAIN", "57P03", "08001", "08006"]);
+
+async function conectar(pool: Pool) {
+  for (let intento = 0; ; intento++) {
+    try {
+      return await pool.connect();
+    } catch (error) {
+      // pg-pool comunica su plazo de conexión sin un código de PostgreSQL.
+      const transitorio = error instanceof Error && (
+        ("code" in error && transitorios.has(String(error.code))) ||
+        error.message === "Connection terminated due to connection timeout" ||
+        error.message === "timeout exceeded when trying to connect"
+      );
+      if (!transitorio || intento === 4) throw error;
+      await esperar(250 * 2 ** intento);
+    }
+  }
+}
 
 export async function migrate(pool: Pool) {
   const files = (await readdir(migrations)).filter(file => file.endsWith(".sql")).sort();
-  const client = await pool.connect();
+  const client = await conectar(pool);
   try {
     await client.query("BEGIN");
     // Otra instancia que arranque a la vez espera hasta que el esquema esté listo.

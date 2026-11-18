@@ -22,10 +22,9 @@ url() { echo "http://$("${compose[@]}" port "$1" "$2")"; }
 
 up
 web=$(url web 80)
-api=$(url api 3001)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F 'Truco uruguayo' >/dev/null
-curl -fsS "$api/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
+curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)
@@ -33,6 +32,10 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
 node scripts/verificar-identidad.mjs "$issuer"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
+"${compose[@]}" exec -T api node --input-type=module - iniciar < scripts/verificar-vivo.mjs
+node scripts/verificar-juego-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
 jugadores=$(sql "$consulta_jugadores")
 
@@ -41,10 +44,12 @@ sql "CREATE TABLE juego.prueba_persistencia (valor text); INSERT INTO juego.prue
 migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'")
 [[ -n "$migration" ]]
 "${compose[@]}" stop db
-[[ $(curl -sS -o /dev/null -w '%{http_code}' "$api/health") == 503 ]]
+[[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
 up
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
+"${compose[@]}" exec -T api node --input-type=module - reinicio < scripts/verificar-mesas.mjs
+"${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-vivo.mjs
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 [[ $(sql "$consulta_jugadores") == "$jugadores" ]]
 [[ $(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'") == "$migration" ]]

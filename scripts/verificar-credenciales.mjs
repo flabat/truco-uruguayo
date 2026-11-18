@@ -30,25 +30,41 @@ const app = await servir((req, res) => auth(req, res));
 auth = crearAuth(pool, {
   web: app.url, callback: new URL("/api/auth/callback", app.url), issuer, backend: issuer, local: true,
 });
+async function iniciar(volver) {
+  const url = new URL("/api/auth/login", app.url);
+  if (volver) url.searchParams.set("volver", volver);
+  const login = await fetch(url, { redirect: "manual" });
+  return { params: new URL(login.headers.get("location")).searchParams, cookie: login.headers.getSetCookie()[0].split(";")[0] };
+}
+async function completar(params, cookies, emisor = issuer.href, audiencia = "truco-web") {
+  const now = Math.floor(Date.now() / 1000);
+  claims = { iss: emisor, aud: audiencia, sub: "local-fixture", nonce: params.get("nonce"), iat: now, exp: now + 60 };
+  const callback = new URL("/api/auth/callback", app.url);
+  callback.search = new URLSearchParams({ code: "codigo-local", state: params.get("state") });
+  return fetch(callback, { redirect: "manual", headers: { cookie: cookies } });
+}
 try {
   for (const [emisor, audiencia, esperado] of [
     [issuer.href, "truco-web", 303],
     [issuer.href + "-otro", "truco-web", 401],
     [issuer.href, "otra-aplicacion", 401],
   ]) {
-    const login = await fetch(new URL("/api/auth/login", app.url), { redirect: "manual" });
-    const params = new URL(login.headers.get("location")).searchParams;
-    const now = Math.floor(Date.now() / 1000);
-    claims = { iss: emisor, aud: audiencia, sub: "local-fixture", nonce: params.get("nonce"), iat: now, exp: now + 60 };
-    const callback = new URL("/api/auth/callback", app.url);
-    callback.search = new URLSearchParams({ code: "codigo-local", state: params.get("state") });
-    const result = await fetch(callback, { redirect: "manual", headers: {
-      cookie: login.headers.getSetCookie()[0].split(";")[0],
-    } });
+    const { params, cookie } = await iniciar();
+    const result = await completar(params, cookie, emisor, audiencia);
     assert.equal(result.status, esperado);
     assert.equal(result.headers.getSetCookie().some(c => c.startsWith("truco_sesion=")), esperado === 303);
   }
   console.log("Solo el emisor y la audiencia acordados obtuvieron una sesión.");
+
+  const destinos = ["/jugar/?invitacion=primera", "/jugar/?mesa=segunda", "https://example.org/"];
+  const intentos = await Promise.all(destinos.map(iniciar));
+  const cookies = intentos.map(i => i.cookie).join("; ");
+  for (const i of [1, 0, 2]) {
+    const result = await completar(intentos[i].params, cookies);
+    assert.equal(result.status, 303);
+    assert.equal(result.headers.get("location"), new URL(i === 2 ? "/#jugador" : destinos[i], app.url).href);
+  }
+  console.log("Dos ingresos en pestañas independientes recuperaron su destino y el regreso externo se descartó.");
 } finally {
   await pool.end();
   app.server.close();

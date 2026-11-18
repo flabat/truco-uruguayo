@@ -1,3 +1,6 @@
+---
+import { url } from "../lib/guide";
+---
 <div class="jugador" id="jugador">
   <form action="/api/auth/login" method="get" hidden data-ingreso>
     <button class="button" type="submit">Ingresar al juego</button>
@@ -5,6 +8,7 @@
   <div hidden data-cuenta>
     <strong data-nombre></strong>
     <p>ID de jugador <code data-id></code></p>
+    <a class="button" href={url("jugar/")}>Jugar al truco</a>
     <form action="/api/auth/logout" method="post"><button class="quiet-link" type="submit">Cerrar sesión</button></form>
   </div>
   <span role="status" data-estado>Consultando la sesión…</span>
@@ -42,5 +46,6 @@
   [data-cuenta] { border-inline-start: 2px solid var(--accent); padding-inline-start: 1rem; }
   .jugador p { margin: .25rem 0; font-size: .85rem; color: var(--body); }
   .jugador code { display: block; overflow-wrap: anywhere; }
+  .jugador a { margin-block: .5rem; }
   .jugador .quiet-link { padding: .4rem 0; background: transparent; color: var(--ink); }
 </style>

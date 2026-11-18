@@ -1,0 +1,221 @@
+import { equipoPorAsiento, type Asiento, type Equipo, type RepartoOnline } from "./reparto.ts";
+import type { EstadoMano, Jugada } from "./mano.ts";
+import { evaluarTantos } from "./tantos.ts";
+
+type CantoTruco = "truco" | "retruco" | "vale-cuatro";
+type CantoEnvido = "envido" | "real-envido" | "falta-envido";
+type CantoFlor = "flor" | "con-flor-envido" | "contraflor-al-resto";
+type CantoLateral = CantoEnvido | CantoFlor;
+type Canto = CantoTruco | CantoLateral;
+export type TipoAccionOnline = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta";
+export type AccionOnline = ({ tipo: "carta" } & Jugada)
+  | { tipo: Exclude<TipoAccionOnline, "carta">; asiento: Asiento };
+
+export interface Oferta<T extends Canto = Canto> { tipo: T; asiento: Asiento }
+interface Envite extends Oferta<CantoLateral> { valor: number; anterior: number }
+export interface Cobro {
+  equipo: Equipo;
+  tantos: number;
+  motivo: "truco" | "flor" | "envido";
+  asiento?: Asiento;
+  tantoGanador?: number;
+}
+
+export interface EstadoOnline {
+  mano: EstadoMano<RepartoOnline>;
+  puntosInicio: readonly [number, number];
+  meta: number;
+  acciones: readonly AccionOnline[];
+  cobros: readonly Cobro[];
+  resultado: { equipo: Equipo; tantos: number; motivo: "vueltas" | "rechazo" | "flor" | "envido" } | null;
+  valorTruco: number;
+  trucoPendiente: Oferta<CantoTruco> | null;
+  ultimoCantorTruco: Asiento | null;
+  lateral: Envite | null;
+  lateralCerrado: boolean;
+  flores: readonly Asiento[];
+  consultaFlor: readonly Asiento[];
+  respuestaEnvido: "quiero" | "no-quiero" | null;
+  rechazoTruco: boolean;
+}
+
+const nivelesTruco = ["truco", "retruco", "vale-cuatro"] as const;
+const inicioEnvido = ["envido", "real-envido", "falta-envido"] as const;
+
+export function tantosPropios(estado: EstadoOnline, asiento: Asiento) {
+  const { manos, muestra } = estado.mano.reparto;
+  const { modalidad, total } = evaluarTantos(manos[asiento], muestra);
+  return { modalidad, total };
+}
+
+function enOrden(estado: EstadoOnline): Asiento[] {
+  const { mano, manos } = estado.mano.reparto;
+  return manos.map((_, i) => ((mano + i) % manos.length) as Asiento);
+}
+
+export function aDecidir(estado: EstadoOnline): Asiento[] {
+  if (estado.resultado) return [];
+  if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
+  const oferta = estado.lateral ?? estado.trucoPendiente;
+  if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
+  const posibles = estado.flores.length && estado.lateral ? estado.flores : enOrden(estado);
+  return posibles.filter(a => equipoPorAsiento[a] !== equipoPorAsiento[oferta.asiento]);
+}
+
+function subidasEnvido(estado: EstadoOnline, tipo: CantoLateral): CantoEnvido[] {
+  if (tipo === "falta-envido") return [];
+  if (tipo === "real-envido") return ["falta-envido"];
+  return estado.acciones.filter(a => a.tipo === "envido").length === 1
+    ? ["envido", "real-envido", "falta-envido"] : ["real-envido", "falta-envido"];
+}
+
+/** Solo se inspeccionan las cartas del asiento que pide su lista de acciones. */
+export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccionOnline[] {
+  if (!aDecidir(estado).includes(asiento)) return [];
+  const debeFlor = !estado.lateralCerrado && !estado.flores.includes(asiento)
+    && tantosPropios(estado, asiento).modalidad === "flor";
+  if (debeFlor) return ["flor"];
+  if (estado.consultaFlor.length) return ["paso-flor"];
+
+  const lado = estado.lateral;
+  if (lado) {
+    if (!estado.flores.length) return ["quiero", "no-quiero", ...subidasEnvido(estado, lado.tipo)];
+    const opciones: TipoAccionOnline[] = ["quiero", "no-quiero"];
+    if (lado.tipo === "flor") opciones.push("con-flor-envido");
+    if (lado.tipo !== "contraflor-al-resto") opciones.push("contraflor-al-resto");
+    return opciones;
+  }
+
+  const oferta = estado.trucoPendiente;
+  const legales: TipoAccionOnline[] = oferta ? ["quiero", "no-quiero"] : ["carta"];
+  const proximo = nivelesTruco[estado.valorTruco - 1 + (oferta ? 1 : 0)];
+  if (proximo && (estado.ultimoCantorTruco === null
+      || equipoPorAsiento[estado.ultimoCantorTruco] !== equipoPorAsiento[asiento])) legales.push(proximo);
+  if (!estado.lateralCerrado && estado.mano.restantes[asiento].length === 3
+      && estado.valorTruco === 1 && (!oferta || oferta.tipo === "truco")) legales.push(...inicioEnvido);
+  return legales;
+}
+
+function cobrar(estado: EstadoOnline, cobro: Cobro, cierre?: "vueltas" | "rechazo") {
+  estado.cobros = [...estado.cobros, cobro];
+  const { equipo, tantos } = cobro;
+  const acumulado = estado.cobros.reduce((total, c) => total + (c.equipo === equipo ? c.tantos : 0), estado.puntosInicio[equipo]);
+  if (cierre) estado.resultado = { equipo, tantos, motivo: cierre };
+  else if (acumulado >= estado.meta && cobro.motivo !== "truco") estado.resultado = { equipo, tantos, motivo: cobro.motivo };
+}
+
+export function cobrarVueltas(estado: EstadoOnline, equipo: Equipo) {
+  cobrar(estado, { equipo, tantos: estado.valorTruco, motivo: "truco" }, "vueltas");
+}
+
+function cobrarRechazoTruco(estado: EstadoOnline) {
+  const equipo = equipoPorAsiento[estado.trucoPendiente!.asiento];
+  cobrar(estado, { equipo, tantos: estado.valorTruco, motivo: "truco" }, "rechazo");
+  estado.rechazoTruco = false;
+  estado.trucoPendiente = null;
+}
+
+function plenaFlor(estado: EstadoOnline, equipo: Equipo) {
+  return 3 * estado.flores.filter(a => equipoPorAsiento[a] === equipo).length;
+}
+
+function compararTantos(estado: EstadoOnline, flor: boolean) {
+  const participantes = enOrden(estado).filter(a => !flor || estado.flores.includes(a));
+  // Ante igualdad queda el primero en el orden original de esta mano.
+  return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }))
+    .reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
+}
+
+function liquidarLateral(estado: EstadoOnline, querido: boolean) {
+  const oferta = estado.lateral!;
+  const flor = estado.flores.length > 0;
+  const ganador = querido ? compararTantos(estado, flor) : null;
+  const equipo = equipoPorAsiento[ganador?.asiento ?? oferta.asiento];
+  let tantos = querido ? oferta.valor : oferta.anterior;
+  if (flor) {
+    // El resto querido se lleva todas las flores. En los otros casos suman las propias.
+    tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
+  }
+  cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
+    ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });
+  estado.lateral = null;
+  estado.lateralCerrado = true;
+  estado.respuestaEnvido = null;
+  if (!estado.resultado && estado.rechazoTruco) cobrarRechazoTruco(estado);
+}
+
+function sinDeclaracion(estado: EstadoOnline) {
+  // Determinado solo por actos públicos. No saltar asientos mirando sus cartas.
+  return enOrden(estado).filter(a => !estado.acciones.some(j => j.asiento === a));
+}
+
+function terminarConsultas(estado: EstadoOnline) {
+  if (estado.consultaFlor.length) return;
+  if (estado.flores.length && estado.lateral?.tipo === "flor") {
+    if (estado.flores.every(a => equipoPorAsiento[a] === equipoPorAsiento[estado.flores[0]])) {
+      liquidarLateral(estado, false);
+    }
+    // Con cantores en ambos equipos se abre la respuesta a la primera flor.
+    return;
+  }
+  if (estado.respuestaEnvido) liquidarLateral(estado, estado.respuestaEnvido === "quiero");
+  else if (estado.rechazoTruco) cobrarRechazoTruco(estado);
+}
+
+function consultarFlores(estado: EstadoOnline) {
+  estado.consultaFlor = estado.lateralCerrado ? [] : sinDeclaracion(estado);
+  terminarConsultas(estado);
+}
+
+/** Se trabaja sobre la copia del estado creada por aplicarOnline. */
+export function resolverCanto(estado: EstadoOnline, accion: Exclude<AccionOnline, { tipo: "carta" }>) {
+  const { tipo, asiento } = accion;
+  const falta = estado.meta - Math.max(...estado.puntosInicio);
+  switch (tipo) {
+    case "truco":
+    case "retruco":
+    case "vale-cuatro":
+      estado.valorTruco = nivelesTruco.indexOf(tipo) + 1;
+      estado.trucoPendiente = { tipo, asiento };
+      estado.ultimoCantorTruco = asiento;
+      break;
+    case "envido":
+    case "real-envido":
+    case "falta-envido": {
+      const anterior = estado.lateral?.valor ?? 0;
+      const valor = tipo === "falta-envido" ? Math.max(falta, anterior) : anterior + (tipo === "real-envido" ? 3 : 2);
+      estado.lateral = { tipo, asiento, anterior: Math.max(1, anterior), valor };
+      break;
+    }
+    case "flor":
+      if (!estado.flores.length) estado.lateral = { tipo, asiento, anterior: 0, valor: 0 };
+      estado.respuestaEnvido = null;
+      estado.flores = [...estado.flores, asiento];
+      consultarFlores(estado);
+      break;
+    case "paso-flor":
+      estado.consultaFlor = estado.consultaFlor.slice(1);
+      terminarConsultas(estado);
+      break;
+    case "con-flor-envido":
+    case "contraflor-al-resto": {
+      const anterior = estado.lateral!.valor;
+      estado.lateral = { tipo, asiento, anterior, valor: tipo === "con-flor-envido" ? 2 : Math.max(falta, anterior) };
+      break;
+    }
+    case "quiero":
+    case "no-quiero":
+      if (estado.lateral && estado.flores.length) liquidarLateral(estado, tipo === "quiero");
+      else if (estado.lateral) {
+        estado.respuestaEnvido = tipo;
+        consultarFlores(estado);
+      } else if (tipo === "quiero") {
+        estado.valorTruco++;
+        estado.trucoPendiente = null;
+      } else {
+        estado.rechazoTruco = true;
+        consultarFlores(estado);
+      }
+      break;
+  }
+}

@@ -1,0 +1,106 @@
+.juego { max-width: 1120px; padding-block: clamp(20px, 4vw, 48px) 64px; }
+.juego .button, .j-sec { border: 1px solid transparent; min-height: 44px; }
+.juego button:disabled { cursor: default; }
+.juego button:disabled:not(.j-mano button) { opacity: .57; }
+.j-link { color: var(--accent); font-weight: 650; font-size: .94rem; text-decoration: underline; text-underline-offset: .2em; }
+.j-titulo { margin-bottom: clamp(20px, 3vw, 34px); }
+.j-titulo h1 { font: 400 clamp(44px, 6vw, 74px)/1.05 var(--serif); letter-spacing: -.045em; margin: 12px 0 0; }
+.j-titulo h1 em { color: var(--accent); font-weight: 400; }
+.juego h2 { font-size: clamp(25px, 3vw, 39px); letter-spacing: -.035em; line-height: 1.12; }
+.juego p { line-height: 1.5; color: var(--body); }
+.j-panel, .j-asientos, .j-jugada-panel { padding: clamp(18px, 3.2vw, 38px); background: #fffdf6; }
+.j-panel > p, .j-panel form, .j-jugada-panel p { margin-top: .65rem; }
+.j-panel > p:empty { margin: 0; }
+.j-volver { display: inline-block; color: var(--accent); font-weight: 650; margin-bottom: 1.3rem; text-underline-offset: .2em; }
+.j-crear, .j-espera, .j-partida { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; display: grid; grid-template-columns: 1.1fr 1fr; }
+.j-crear fieldset { border: 0; padding: 0; margin: 1.5rem 0; }
+.j-crear legend, .j-invita label { display: block; margin-bottom: .65rem; font-size: .87rem; font-weight: 700; }
+.j-modos, .j-acciones, .j-cantos { display: flex; gap: .6rem; flex-wrap: wrap; }
+.j-recuperar { margin-top: 1rem; align-items: center; gap: 1rem; }
+.j-modos label { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; flex: 1; cursor: pointer; min-width: 115px; }
+.j-modos label.elegido { background: #e9efe5; border-color: #55775d; }
+.j-modos input { accent-color: var(--ink); margin: 0; }
+.j-modos strong, .j-modos small, .j-lugar small { display: block; }
+.j-modos small, .j-lugar small, .j-ayuda { color: var(--muted); font-size: .84rem; }
+.j-sec { border-color: #b6bbab; padding: 9px 14px; color: var(--ink); font-weight: 650; background: #fffdf7; border-radius: 5px; font-size: .9rem; }
+.j-sec:enabled:hover { background: #f0eddf; border-color: #6e775e; }
+.j-ilustracion, .j-tapete { color: #fff8e7; background: radial-gradient(ellipse at 48% 38%, #3a614a, #244936 67%, #1c392d); }
+.j-ilustracion { display: grid; place-items: center; isolation: isolate; position: relative; min-height: 240px; }
+.j-ilustracion:before, .j-puestos:before { content: ""; position: absolute; border: 1px solid #dbcc8f42; border-radius: 50%; inset: 14% 6%; z-index: -1; }
+.j-ilustracion img { grid-area: 1 / 1; width: clamp(76px, 9vw, 126px); box-shadow: 1px 4px 9px #13271e70; border-radius: 4px; }
+.j-ilustracion img:first-child { transform: translateX(-60%) rotate(-15deg); }
+.j-ilustracion img:last-child { transform: translateX(60%) rotate(15deg); }
+.j-barra { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; margin-bottom: 14px; flex-wrap: wrap; }
+.j-barra span { font-weight: 650; }
+.j-aviso { padding: 10px 14px; background: #f6e7c5; border-inline-start: 3px solid #a66d26; margin: 0 0 10px; }
+.j-invita { margin-top: 1.5rem; }
+.j-invita > div { display: flex; gap: .5rem; flex-wrap: wrap; }
+.j-invita input { min-width: 6rem; flex: 1 1 12rem; padding: 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--body); }
+.j-invita span { display: block; margin-top: .4rem; font-size: .85rem; }
+.j-asientos { background: #f1efe2; }
+.j-asientos h2 { margin-bottom: 14px; }
+.j-lugar { display: flex; align-items: center; gap: .6rem; min-height: 60px; padding: 8px 0; border-top: 1px solid var(--line); }
+.j-lugar > div { flex: 1; overflow-wrap: anywhere; }
+.j-numero { width: 1.85rem; height: 1.85rem; flex: none; display: grid; place-items: center; color: var(--ink); border: 1px solid #99a58f; border-radius: 50%; font-size: .88rem; }
+.j-tanteador { display: flex; align-items: center; gap: clamp(14px, 5vw, 50px); margin-bottom: 12px; border-block: 1px solid var(--line); padding: 10px 0; }
+.j-tanteador > div { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.j-tanteador strong { font: 400 1.8rem/1 var(--serif); font-variant-numeric: tabular-nums; }
+.j-meta { color: var(--muted); margin-right: auto; font-size: .85rem; }
+.j-partida { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+.j-tapete { padding: clamp(10px, 2vw, 22px); min-width: 0; }
+.j-tapete header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 10px; border-bottom: 1px solid #83988288; }
+.j-tapete header strong { font: 400 1.5rem var(--serif); }
+.j-tapete header span, .j-persona span { color: #f0dfb4; font-size: .78rem; }
+.j-puestos { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-areas: "frente frente frente" "izquierda muestra derecha" "vos vos vos"; grid-template-rows: minmax(72px,auto) minmax(120px,auto) auto; justify-items: center; align-items: center; text-align: center; position: relative; isolation: isolate; gap: 5px 0; padding-top: 6px; }
+.j-puestos:before { inset: 12% 5% 20%; }
+.j-frente {grid-area:frente;} .j-derecha {grid-area:derecha;} .j-izquierda {grid-area:izquierda;} .j-vos {grid-area:vos;}
+.j-puesto { min-width: 0; max-width: 100%; }
+.j-persona { display: grid; gap: 2px; line-height: 1.1; overflow-wrap: anywhere; }
+.j-persona b { font-size: clamp(.83rem,1.6vw,1rem); }
+.j-dorsos { display: flex; align-items: center; justify-content: center; padding-top: 7px; }
+.j-dorsos img { width: clamp(18px, 2.5vw, 28px); height: auto; border-radius: 2px; box-shadow: 0 2px 3px #173423; }
+.j-dorsos img + img { margin-left: -10px; }
+.j-jugada img { width: clamp(36px,5vw,52px); height: auto; margin: 4px auto; border-radius: 3px; }
+.j-muestra { grid-area: muestra; display: grid; justify-items: center; min-width: 0; }
+.j-muestra > div { display: grid; place-items: center; width: clamp(60px,11vw,100px); }
+.j-muestra img { grid-area: 1 / 1; width: 62%; height: auto; border-radius: 3px; }
+.j-muestra img.j-mazo { transform: translateY(22%) rotate(90deg); }
+.j-muestra small { color: #e6d099; font-weight: 650; font-size: .7rem; margin-top: 5px; }
+.j-muestra strong { font-size: .8rem; }
+.j-mano { display: flex; justify-content: center; gap: clamp(4px,1vw,12px); margin: 5px auto 0; }
+.j-mano button { width: clamp(62px, 7.7vw, 86px); border: 1px solid transparent; border-radius: 4px; background: none; color: #fff8e5; padding: 3px; font-size: .73rem; font-weight: 650; line-height: 1.15; }
+.j-mano button:enabled { background: #ffffff10; border-color: #dcc79a99; }
+.j-mano button:enabled:hover, .j-mano button:focus-visible { background: #ffffff2b; outline-color: #f0c47d; border-color: #f0c47d; }
+.j-mano img { display: block; width: 100%; height: auto; border-radius: 3px; box-shadow: 0 2px 4px #122b1b; }
+.j-mano span { display: block; padding: 4px 0; }
+.j-jugada-panel { align-self: stretch; min-width: 0; }
+.j-jugada-panel .button { margin-top: .65rem; }
+.j-cuenta { display: grid; gap: 6px; margin: 1rem 0; font-size: .88rem; }
+.j-cuenta div { display: flex; justify-content: space-between; gap: 6px; }
+.j-cuenta dt { color: var(--muted); } .j-cuenta dd { font-weight: 650; margin: 0; }
+.j-cantos .button { margin-top: 0; }
+.j-opciones { border: 0; padding: 0; margin: .8rem 0 0; min-width: 0; }
+.j-opciones legend { font-size: .82rem; font-weight: 700; margin-bottom: .4rem; }
+.j-reserva { font-size: .9rem; font-style: italic; }
+.j-lances, .j-vueltas { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: .8rem; }
+.j-lances h3 { font-size: 1.15rem; }
+.j-lances ul { margin: .5rem 0 0; padding-left: 1.2rem; }
+.j-lances li, .j-vueltas { font-size: .85rem; }
+.j-vueltas { padding-left: 0; list-style: none; line-height: 1.65; }
+.j-vueltas summary { cursor: pointer; padding-block: .2rem; }
+.j-vueltas ul { padding-left: 1.4rem; color: var(--body); }
+.j-historia { margin: 1rem 0; font-size: .95rem; }
+.j-historia summary { padding-block: .5rem; font-weight: 650; }
+.j-historia li { margin-block:.3rem; }
+@media (max-width: 760px) {
+  .j-crear,.j-espera,.j-partida { grid-template-columns: minmax(0,1fr); }
+  .j-ilustracion { display: none; }
+  .j-jugada-panel { order: -1; }
+  .j-tanteador { gap: .75rem; flex-wrap: wrap; }
+  .j-tanteador div { gap: .35rem; }
+  .j-tanteador strong { font-size: 1.5rem; }
+  .j-sec { padding: 8px 10px; }
+  .j-cuenta { margin: .65rem 0; }
+  .j-tapete { padding: 10px; }
+  .j-puestos { grid-template-rows: minmax(62px,auto) minmax(108px,auto) auto; }
+}

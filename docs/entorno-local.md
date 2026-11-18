@@ -13,9 +13,9 @@ docker compose up --build --wait
 | PostgreSQL | Ejecutá `docker compose exec db psql -U truco -d truco`. El puerto de la base queda dentro de la red de Compose. |
 | Identidad de prueba | Abrí [la cuenta de Keycloak](http://localhost:8080/realms/truco-local/account/) con el usuario `prueba` y la contraseña `truco-local`. El [documento de descubrimiento OIDC](http://localhost:8080/realms/truco-local/.well-known/openid-configuration) publica el emisor y las URLs de autorización, tokens y claves. |
 
-## Entrar al juego con cuatro jugadores
+## Jugar una partida
 
-Abrí [la portada del juego](http://localhost:8081/#jugador) y elegí **Ingresar al juego**. Usá uno de estos cuatro usuarios de desarrollo. Todos usan la contraseña `truco-local`.
+Abrí [Jugar al truco](http://localhost:8081/jugar/) y elegí **Ingresar al juego**. También podés entrar desde la portada y seguir **Jugar al truco**. Usá uno de estos cuatro usuarios de desarrollo. Todos usan la contraseña `truco-local`.
 
 | Jugador | Usuario |
 | --- | --- |
@@ -24,7 +24,14 @@ Abrí [la portada del juego](http://localhost:8081/#jugador) y elegí **Ingresar
 | Clara | `clara` |
 | Diego | `diego` |
 
-Usá cuatro dispositivos o cuatro perfiles independientes del navegador. Las pestañas de un mismo perfil comparten sesión. Después del ingreso, la portada muestra el nombre y el ID de jugador. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador. La creación de mesas por invitación se sigue en [#96](https://github.com/flabat/truco-uruguayo/issues/96).
+1. Elegí **1 contra 1** para un duelo o **2 contra 2** para jugar en parejas. **Jugar con computadoras** completa todos los lugares y reparte. Para invitar amigos, elegí **Crear mesa** y **Copiar invitación**.
+2. Cada persona abre el enlace compartido e ingresa con su cuenta. Los asientos se ocupan en orden y los equipos se alternan. En parejas, el primer y el tercer asiento forman un equipo. El anfitrión también puede agregar una computadora en cualquier lugar libre para armar equipos mixtos. La partida empieza al ocuparse el último asiento.
+3. En el tapete ves tus cartas, la muestra, las cartas jugadas y el tanteador. Cuando te toque, elegí una carta o un canto disponible. Las respuestas y las jugadas se actualizan para todos. Al terminar la mano, **Repartir otra mano** conserva el tanteador. La partida termina cuando un equipo llega a 40 tantos.
+4. Si se corta la conexión, la mesa espera la reconexión antes de aceptar nuevas jugadas desde ese navegador. Podés recargar la página o abrir otra vez el enlace de invitación con tu misma cuenta. En ese perfil, **Volver a mi mesa** también retoma la mesa más reciente.
+
+Usá dispositivos o perfiles independientes del navegador para probar diferentes jugadores. Las pestañas de un mismo perfil comparten sesión. Después del ingreso, la portada muestra el nombre y el ID de jugador. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador.
+
+El diseño del chat de voz opcional de la mesa se sigue en [#102](https://github.com/flabat/truco-uruguayo/issues/102).
 
 Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloak importa el nuevo realm `mesa-local` junto al realm de prueba existente y la API aplica la migración a PostgreSQL. Nginx recibe el retorno del proveedor en `/api/auth/callback` y lo pasa a la API. El código se canjea dentro de Compose. El navegador recibe una cookie de sesión HTTP-only y las credenciales de desarrollo pertenecen a Keycloak. La compilación estática para GitHub Pages sigue ofreciendo la guía y la práctica individual.
 
@@ -51,7 +58,7 @@ Si Docker ya reconoce los plugins, omití los enlaces. Para retomar el perfil m�
 - `docker compose ps` muestra el estado. `docker compose logs api identidad` muestra los registros.
 - `docker compose down` detiene los servicios y conserva los volúmenes. Volvé a arrancar con `docker compose up --build --wait`. Al iniciar, la API aplica en una transacción los SQL pendientes de `api/migrations/` en orden de nombre. Podés consultar el registro con `docker compose exec db psql -U truco -c 'TABLE schema_migrations'`.
 - **Empezar de cero borra los datos locales.** Usá `docker compose down --volumes` solo cuando quieras descartar la base y las cuentas de prueba. Al arrancar de nuevo se crean los volúmenes y se importa el realm.
-- Con los requisitos habituales de desarrollo y Docker en marcha, `npm run check:stack` crea un proyecto Compose de prueba, verifica la portada, la API y el emisor OIDC, desconecta la base, recrea los contenedores y comprueba la fecha de migración y un dato persistido. Al terminar elimina sus propios volúmenes. Usá `TEST_OIDC_PORT` si su puerto 18080 está ocupado.
+- Con Node.js 24, las dependencias de `npm ci`, Chromium de Playwright y Docker en marcha, `npm run check:stack` crea un proyecto Compose desechable. Cuatro perfiles independientes de Chromium entran por invitación, juegan por vueltas, responden al truco a la vez y continúan después de reiniciar la API y PostgreSQL. También se prueban un duelo a 40 y mesas con computadoras. La verificación recrea los contenedores y comprueba los datos del volumen antes de eliminar su propio entorno. Podés cambiar sus puertos con `TEST_WEB_PORT` (18081) y `TEST_OIDC_PORT` (18080).
 
 ## Acceso desde otro dispositivo
 
@@ -61,4 +68,4 @@ El arranque normal publica los tres puertos en la interfaz local. En una red de 
 TRUCO_BIND=0.0.0.0 TRUCO_HOST=192.168.1.20 docker compose up --build --wait
 ```
 
-Desde el otro equipo usá `http://192.168.1.20:8081/#jugador`. El navegador tiene que poder alcanzar los puertos web y OIDC en el anfitrión. Los valores de `WEB_PORT`, `API_PORT` y `OIDC_PORT` permiten elegir otros puertos. Si un equipo también participa desde el propio anfitrión, puede abrir la misma URL. Para un grupo recurrente elegí un nombre LAN estable, resoluble por todos los dispositivos. La identidad OIDC se vincula por emisor y sujeto, por lo que cambiar el nombre o puerto público del emisor crea un espacio de identidades distinto. Volver al emisor original recupera sus jugadores.
+Desde todos los equipos, incluido el anfitrión, abrí `http://192.168.1.20:8081/jugar/` sustituyendo la IP por la de tu equipo. Creá la mesa desde esa dirección para que el enlace de invitación contenga el mismo anfitrión. El navegador de cada participante debe poder alcanzar los puertos de la web (8081) y de Keycloak (8080). Nginx reenvía las peticiones de juego y WebSocket a la API dentro de Compose. Los valores de `WEB_PORT`, `API_PORT` y `OIDC_PORT` permiten elegir otros puertos. Para un grupo recurrente elegí un nombre LAN estable, resoluble por todos los dispositivos. La identidad OIDC se vincula por emisor y sujeto, por lo que cambiar el nombre o puerto público del emisor crea un espacio de identidades distinto. Volver al emisor original recupera sus jugadores.
