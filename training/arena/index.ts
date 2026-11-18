@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mazo } from "../../src/motor/cartas.ts";
-import { aDecidir, aplicarOnline, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
+import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento, Equipo, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
 import { seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
   type RefereeHand, type Score, type SeatObservation, type Signal } from "../contracts/index.ts";
-import { decodeMove, observe } from "../seat/index.ts";
+import { observe } from "../seat/index.ts";
+import { commitTurn, signalRules as publicSignals } from "../signals/index.ts";
 
 export const streamVersion = "sha256-counter-u32be-v1";
 
@@ -122,16 +123,6 @@ export function sample(probabilities: readonly number[], length: number, uniform
   return last;
 }
 
-function resolveTurn(state: EstadoOnline, seat: Asiento, id: ActionId, rules?: SignalRules) {
-  const {move, signal} = rules ? rules.decode(id) : {move: id as Move, signal: undefined};
-  const step = aplicarOnline(state, decodeMove(move, seat));
-  if (!step.ok) throw new Error("Acción rechazada por el árbitro: " + step.error);
-  const action = step.estado.acciones.at(-1)!;
-  const awards = step.estado.cobros.slice(state.cobros.length);
-  const turn: PublicTurn = signal === undefined ? {action, awards} : {signal, action, awards};
-  return {state: step.estado, turn};
-}
-
 function scoreOf(state: EstadoOnline): Score {
   const points: [number, number] = [...state.puntosInicio];
   for (const award of state.cobros) points[award.equipo] += award.tantos;
@@ -139,7 +130,8 @@ function scoreOf(state: EstadoOnline): Score {
 }
 
 export function playMatch(options: MatchOptions): MatchRecord {
-  const {format, seed, pair, leg, signalRules} = options;
+  const {format, seed, pair, leg} = options;
+  const signalRules = options.signalRules ?? (format === "pairs-senas" ? publicSignals : undefined);
   natural(seed, "seed"); natural(pair, "pair");
   if (leg !== 0 && leg !== 1) throw new RangeError("Manga inválida.");
   checkSignals(format, signalRules);
@@ -162,7 +154,7 @@ export function playMatch(options: MatchOptions): MatchRecord {
       const probabilities = actors[seat].decide(observation, legal);
       const id = legal[sample(probabilities, legal.length, sampling[seat]() / 0x100000000)];
       options.onDecision?.({hand, seat, observation, action: id, probabilities, state});
-      const step = resolveTurn(state, seat, id, signalRules);
+      const step = commitTurn(state, seat, format, id);
       turns.push(step.turn);
       state = step.state;
     }
@@ -175,6 +167,7 @@ export function playMatch(options: MatchOptions): MatchRecord {
 /** Re-run committed commands independently of policy decisions. Validate the referee deal when given the seed. */
 export function replayMatch(record: MatchRecord, seed?: number, rules?: SignalRules): Score {
   const {format, pair, leg} = record;
+  rules ??= format === "pairs-senas" ? publicSignals : undefined;
   checkSignals(format, rules);
   natural(pair, "pair");
   assert.ok(leg === 0 || leg === 1);
@@ -195,7 +188,7 @@ export function replayMatch(record: MatchRecord, seed?: number, rules?: SignalRu
       const base = turn.action.tipo === "carta" ? turn.action.carta : turn.action.tipo;
       const id: ActionId = turn.signal ? `${turn.signal}/${base}` : base;
       if (rules) assert.ok(viewFor(state, seat, format, history, rules).legalActions.includes(id));
-      const step = resolveTurn(state, seat, id, rules);
+      const step = commitTurn(state, seat, format, id);
       assert.deepEqual(step.turn, turn);
       state = step.state;
       history.push(step.turn);
