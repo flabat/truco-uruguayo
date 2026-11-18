@@ -1,0 +1,63 @@
+name: truco-local
+services:
+  web:
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+    ports:
+      - "${TRUCO_BIND:-127.0.0.1}:${WEB_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgres://truco:truco-local@db:5432/truco
+    ports:
+      - "${TRUCO_BIND:-127.0.0.1}:${API_PORT:-3001}:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: truco
+      POSTGRES_USER: truco
+      POSTGRES_PASSWORD: truco-local
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "truco", "-d", "truco"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  identidad:
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_HOSTNAME: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
+    ports:
+      - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:8080"
+    volumes:
+      - identidad:/opt/keycloak/data
+      - ./infra/truco-local-realm.json:/opt/keycloak/data/import/truco-local-realm.json:ro
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/truco-local/.well-known/openid-configuration HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3; read -r status <&3; [[ $$status == *' 200 '* ]]"]
+      interval: 5s
+      timeout: 4s
+      start_period: 30s
+      retries: 30
+
+volumes:
+  postgres:
+  identidad:
