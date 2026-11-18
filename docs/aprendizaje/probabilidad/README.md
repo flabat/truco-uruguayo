@@ -1,6 +1,6 @@
 # ¿Con qué carta tiene más chances de ganar la mano tu pareja?
 
-**Primera lección de probabilidad.** El aprendiz mira la mesa, predice qué carta conviene, compara las alternativas y recién entonces juega. Al terminar puede volver al momento de la decisión. La medida es la probabilidad de que su pareja gane la **mano completa** de truco uruguayo 2 contra 2, dadas las cartas que podía conocer en ese momento y la forma de jugar acordada para los cuatro asientos. [Decisión estadística](../adr/0003-probabilidad-condicionada.md) · [Decisión de interfaz](../adr/0004-leccion-react-worker.md) · [Plan e issues](plan.md) · [Resultados verificados](validacion.md)
+**Primera lección de probabilidad.** El aprendiz elige en el tapete. Puede confirmar su jugada enseguida, consultar las chances de su pareja antes de tirar o volver a esa decisión en el repaso. La medida es la probabilidad de que su pareja gane la **mano completa** de truco uruguayo 2 contra 2, dadas las cartas que podía conocer en ese momento y la forma de jugar acordada para los cuatro asientos. [Decisión estadística](../adr/0003-probabilidad-condicionada.md) · [Decisión de interfaz](../adr/0004-leccion-react-worker.md) · [Plan e issues](plan.md) · [Resultados verificados](validacion.md)
 
 ## Qué va a poder explicar el aprendiz
 
@@ -12,7 +12,7 @@ La unidad de práctica es una **decisión de carta**. Participan vos (asiento 0)
 
 ## Primera decisión · salir o guardar la pieza
 
-Sos mano. Tenés **2 de copas, 3 de bastos y 5 de oros**. La muestra es el **6 de copas**. El 2 de copas es la pieza mayor y asegura la primera vuelta. Antes de tirar, elegí una predicción: «¿Con cuál pensás que tu pareja gana más manos?». Ofrecer las tres cartas por su nombre y en orden estable. Al revelar, mostrar las tres sobre los mismos 20.000 repartos ocultos posibles.
+Sos mano. Tenés **2 de copas, 3 de bastos y 5 de oros**. La muestra es el **6 de copas**. El 2 de copas es la pieza mayor y asegura la primera vuelta. El tapete conserva el orden del reparto. Si abrís «Ver chances», la tabla compara las tres salidas sobre los mismos 20.000 repartos posibles.
 
 | Carta de salida | Manos que ganó la pareja | Presentación al aprendiz |
 | --- | ---: | ---: |
@@ -43,11 +43,11 @@ El rival ya tiene una vuelta y está ganando la segunda con el 5 de copas, una p
 | Momento | Acción del aprendiz y respuesta de la lección |
 | --- | --- |
 | Entrar | Desde Aprender se puede abrir directamente `/aprender/probabilidad/`. Mostrar el objetivo, quién juega con quién, la muestra y el caso de apertura. El ejemplo editorial también se puede leer con JavaScript desactivado. |
-| Predecir | Elegir una carta como hipótesis. La carta sigue en la mano. «Comparar las cartas» revela las cifras. En la consulta libre de la mesa guiada se puede ver la comparación directamente. |
-| Comparar | Mostrar una fila por carta legal con nombre, probabilidad de ganar la mano y denominador común. Seleccionar otra fila cambia la explicación y el contraste con la predicción. «Cómo se calculó» explica qué se conoce, política, método y, cuando corresponda, margen en puntos porcentuales. |
-| Jugar | «Jugar [nombre]» confirma una sola carta. Los otros asientos avanzan con el motor hasta el turno del aprendiz o el cierre. En un nuevo turno se puede abrir otro análisis. En un turno con una sola carta se puede explicar su probabilidad, sin sugerir una elección. |
-| Repasar | En el resultado, separar «Así terminó esta mano» de «Esto podías saber cuando elegiste». Retroceder recupera la vista pública de ese prefijo. El repaso permite consultar las opciones que eran legales y volver al presente. La comparación nunca agrega jugadas al historial. |
-| Transferir | Abrir el segundo ejercicio aunque el reparto jugado haya seguido otra línea. Luego «Practicar con otra mano» crea un reparto V1 nuevo. La predicción y la victoria real son ocasiones de reflexión y no suman aciertos a las habilidades existentes. |
+| Elegir | Las cartas propias están boca arriba junto a «Vos». Se puede elegir con puntero, Tab y Enter o Espacio. La marca en la carta y el nombre en «Jugar» indican la selección. |
+| Consultar | Cada turno propio inicia una comparación. «Ver chances» muestra el resultado en el orden de la mano y «Ocultar chances» lo vuelve a guardar. Cambiar de carta actualiza la explicación. Las cifras describen las victorias de tu pareja con estos bots. |
+| Jugar | «Jugar [nombre]» confirma una sola carta. Los otros asientos avanzan con el motor hasta el turno del aprendiz o el cierre. La confirmación está disponible aunque el cálculo siga pendiente, se haya cancelado o falle. En un turno con una sola carta se puede explicar su probabilidad, sin sugerir una elección. |
+| Repasar | Retroceder recupera la vista pública de ese prefijo. Una carta jugada vuelve a la mano si se retrocede a su turno. Se pueden explorar las alternativas y volver al presente con la jugada y la selección originales. |
+| Transferir | Abrir el segundo ejercicio aunque el reparto jugado haya seguido otra línea. «La salida» y «La segunda vuelta» se agrupan en «Ejemplos guiados». «Repartir otra mano» crea un reparto V1 nuevo. El panel indica la vuelta en juego o en el cursor. La predicción y la victoria real son ocasiones de reflexión y no suman aciertos a las habilidades existentes. |
 
 El caso editorial de apertura se puede jugar con el reparto V1 de semilla **830838**, dador 3. El caso editorial intermedio proviene del muestreo del **estudio 44**, que tiene un generador distinto. Asociar ese escenario a su definición versionada y a las jugadas confirmadas. El replay V1 del motor corresponde a repartos generados por `repartir`. En ambos casos el proveedor de análisis recibe sólo la vista proyectada hasta el cursor. [Estudio original](../../investigacion/salidas/README.md) · [Replay V1](../../../src/motor/replay.ts)
 

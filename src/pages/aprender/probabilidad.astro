@@ -23,14 +23,17 @@ const apertura = presentarResultado(referenciaEditorial(aperturaEditorial)!, "re
       <section class="prob-resultados">
         <h2>{escenas.salida.titulo}</h2>
         <p>{escenas.salida.consigna}</p>
-        <table>
-          <caption>Manos ganadas por tu pareja en los mismos {apertura.denominador}</caption>
-          <thead><tr><th scope="col">Carta</th><th scope="col">Probabilidad</th><th scope="col">Victorias</th></tr></thead>
-          <tbody>{apertura.filas.map(fila => <tr>
-            <th scope="row">{fila.nombre}</th><td>{fila.porcentaje}</td><td>{fila.victorias}</td>
-          </tr>)}</tbody>
-        </table>
-        <p>{escenas.salida.explicacion} {textosProbabilidad.politica}</p>
+        <details>
+          <summary>Ver chances de la salida</summary>
+          <table>
+            <caption>Manos ganadas por tu pareja en los mismos {apertura.denominador}</caption>
+            <thead><tr><th scope="col">Carta</th><th scope="col">Probabilidad</th><th scope="col">Victorias</th></tr></thead>
+            <tbody>{apertura.filas.map(fila => <tr>
+              <th scope="row">{fila.nombre}</th><td>{fila.porcentaje}</td><td>{fila.victorias}</td>
+            </tr>)}</tbody>
+          </table>
+          <p>{escenas.salida.explicacion} {textosProbabilidad.politica}</p>
+        </details>
         <p>Activá JavaScript para comparar durante la mano, jugar una carta y repasar cada decisión.</p>
       </section>
     </noscript>
