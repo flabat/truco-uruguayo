@@ -4,7 +4,7 @@ import { versionReparto, type RepartoV1 } from "../../motor/reparto.ts";
 export type Escena = "salida" | "segunda" | "practica";
 
 export const textosProbabilidad = {
-  objetivo: "Elegí una carta y compará las chances de que vos y tu compañero ganen la mano completa.",
+  objetivo: "Elegí una carta en el tapete. Podés jugarla directamente o mirar antes las chances de que tu pareja gane la mano.",
   politica: "Cada carta se prueba sobre los mismos repartos posibles. Después de tu elección, los cuatro asientos siguen la estrategia de los jugadores automáticos de esta mesa.",
   informacion: "Usamos tus cartas, la muestra y las jugadas vistas hasta ese turno. Las jugadas del compañero y de los rivales dan pistas sobre qué cartas podían tener.",
   unidad: "Ganar una vuelta acerca a tu pareja a ganar la mano. El porcentaje cuenta las manos completas que gana tu pareja.",

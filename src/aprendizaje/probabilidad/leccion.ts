@@ -1,17 +1,16 @@
 import type { CardId } from "../../motor/cartas.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada, type VistaAsiento } from "../../motor/mano.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../../motor/mano.ts";
 import { avanzarHastaAprendiz } from "../../motor/parejas.ts";
 import { repartir, type RepartoV1 } from "../../motor/reparto.ts";
 import { segundaDelEstudioV1, semillaSalidaV1, type Escena } from "./escenas.ts";
 
-interface Decision {
-  prediccion: CardId | null;
-  inspeccionada: CardId | null;
-  revelada: boolean;
-}
-
-function nuevaDecision(): Decision {
-  return { prediccion: null, inspeccionada: null, revelada: false };
+function nuevaDecision(estado: EstadoMano) {
+  return {
+    mesa: vistaPara(estado, 0),
+    seleccionada: null as CardId | null,
+    prediccion: null as CardId | null,
+    revelada: false,
+  };
 }
 
 function jugadasDe(estado: EstadoMano) {
@@ -38,87 +37,65 @@ function otraMano(anterior: RepartoV1, semilla: number) {
 
 interface Opciones {
   azar?: () => number;
-  analizar?: (mesa: VistaAsiento) => void;
 }
 
 export function crearLeccionProbabilidad({
   azar = () => crypto.getRandomValues(new Uint32Array(1))[0],
-  analizar,
 }: Opciones = {}) {
   let escena: Escena = "salida";
   let presente = iniciarMano(repartir(semillaSalidaV1, 3));
   let cursor: number | null = null;
-  let repaso: EstadoMano | null = null;
-  let decisionViva = nuevaDecision();
-  let decisionRepaso = nuevaDecision();
+  let decisionViva = nuevaDecision(presente);
+  let decisionRepaso: ReturnType<typeof nuevaDecision> | null = null;
 
-  function visible() {
-    return repaso ?? presente;
-  }
   function decision() {
-    return repaso ? decisionRepaso : decisionViva;
-  }
-  function elegible(carta: CardId) {
-    const estado = visible();
-    return estado.turno === 0 && estado.restantes[0].includes(carta);
+    return decisionRepaso ?? decisionViva;
   }
 
   return {
     vista() {
-      const mesa = vistaPara(visible(), 0);
+      const actual = decision();
       const total = jugadasDe(presente).length;
       const posicion = cursor ?? total;
       const ejemplo = escena !== "practica" && posicion === 0 ? "salida"
         : escena === "segunda" && posicion === segundaDelEstudioV1.jugadas.length ? "segunda" : null;
-      const eleccion = decision();
-      const fase = repaso ? "repaso" : mesa.turno === null ? "resultado"
-        : eleccion.revelada ? "comparacion" : "prediccion";
-      return { escena, ejemplo, fase, mesa, ...eleccion, cursor, total } as const;
+      return { escena, ejemplo, ...actual, cursor, total } as const;
     },
 
-    predecir(carta: CardId) {
-      if (repaso || decisionViva.revelada || !elegible(carta)) return false;
-      decisionViva.prediccion = carta;
-      return true;
-    },
-
-    comparar() {
-      const estado = visible();
-      if (estado.turno !== 0) return false;
+    seleccionar(carta: CardId) {
       const actual = decision();
-      if (!repaso && !actual.prediccion && estado.restantes[0].length > 1) return false;
-      actual.inspeccionada ??= actual.prediccion ?? estado.restantes[0][0];
-      actual.revelada = true;
-      analizar?.(vistaPara(estado, 0));
+      if (actual.mesa.turno !== 0 || !actual.mesa.cartas.includes(carta)) return false;
+      actual.seleccionada = carta;
       return true;
     },
 
-    inspeccionar(carta: CardId) {
-      if (!decision().revelada || !elegible(carta)) return false;
-      decision().inspeccionada = carta;
+    alternarChances() {
+      const actual = decision();
+      if (actual.mesa.turno !== 0) return false;
+      if (!actual.revelada) actual.prediccion = actual.seleccionada;
+      actual.revelada = !actual.revelada;
       return true;
     },
 
     confirmar() {
-      if (repaso || !decisionViva.inspeccionada) return false;
-      const paso = jugarCarta(presente, { asiento: 0, carta: decisionViva.inspeccionada });
+      if (decisionRepaso || !decisionViva.seleccionada) return false;
+      const paso = jugarCarta(presente, { asiento: 0, carta: decisionViva.seleccionada });
       if (!paso.ok) return false;
       presente = avanzarHastaAprendiz(paso.estado);
-      decisionViva = nuevaDecision();
+      decisionViva = nuevaDecision(presente);
       return true;
     },
 
     reproducir(posicion: number | null) {
       if (posicion === null) {
         cursor = null;
-        repaso = null;
+        decisionRepaso = null;
         return true;
       }
       const jugadas = jugadasDe(presente);
       if (!Number.isInteger(posicion) || posicion < 0 || posicion > jugadas.length) return false;
-      repaso = reproducirPrefijo(presente.reparto, jugadas.slice(0, posicion));
+      decisionRepaso = nuevaDecision(reproducirPrefijo(presente.reparto, jugadas.slice(0, posicion)));
       cursor = posicion;
-      decisionRepaso = nuevaDecision();
       return true;
     },
 
@@ -128,8 +105,8 @@ export function crearLeccionProbabilidad({
       if (nueva === "practica") presente = otraMano(presente.reparto, azar());
       escena = nueva;
       cursor = null;
-      repaso = null;
-      decisionViva = nuevaDecision();
+      decisionRepaso = null;
+      decisionViva = nuevaDecision(presente);
     },
   };
 }

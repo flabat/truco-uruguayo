@@ -1,10 +1,18 @@
-.prob-escenas, .prob-acciones {
+.prob-escenas, .prob-botones, .prob-acciones {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 .prob-escenas {
-  margin: 18px 0 12px;
+  align-items: end;
+  gap: 14px 28px;
+  margin: 18px 0 14px;
+}
+.prob-escenas strong {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 14px;
 }
 .prob-escenas button {
   border: 1px solid var(--line);
@@ -19,14 +27,66 @@
   border-color: var(--ink);
   color: var(--paper);
 }
+.prob-escenas [aria-pressed="true"]::before { content: "✓ " / ""; }
+.prob-escenas .prob-repartir {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent);
+  border-color: currentColor;
+}
 .prob-interactiva :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
+.prob-interactiva .tapete :focus-visible { outline: 3px solid white; }
 .prob-turno {
-  font-size: 12px;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 700;
+}
+.prob-interactiva .tapete-asientos {
+  grid-template-rows: auto auto auto;
+  align-content: start;
+  row-gap: clamp(8px, 1.2vw, 16px);
+}
+.prob-interactiva .tapete .ap-carta img {
+  width: clamp(49px, 6.4vw, 82px);
+}
+.prob-interactiva .asiento-0 {
+  width: 100%;
+  flex-direction: column;
+  border-top: 1px solid #9cb49d;
+  padding: 8px 2px;
+}
+.prob-interactiva .asiento-0 .prob-asiento-nombre,
+.prob-interactiva .asiento-0 .asiento-cartas, .prob-mano {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(5px, 1vw, 12px);
+}
+.prob-interactiva .asiento-0 .asiento-cartas { align-items: end; }
+.prob-interactiva .prob-mano .ap-carta {
+  flex: none;
+  margin: 0;
+  padding: 3px;
+  border: 2px solid transparent;
+  width: clamp(84px, 9.8vw, 124px);
+}
+.prob-interactiva .prob-mano .ap-carta img { width: 100%; }
+.prob-interactiva .prob-mano button:is(:hover, [aria-pressed="true"]) {
+  border-color: var(--oro);
+  background: #173d2b;
+}
+.prob-jugada small {
+  display: block;
   color: var(--oro);
-  text-align: right;
+  font-weight: 700;
+}
+.prob-mano + .prob-jugada {
+  border-left: 1px solid #9cb49d;
+  padding-left: clamp(8px, 1.2vw, 16px);
 }
 .prob-muestra {
   display: grid;
@@ -64,17 +124,18 @@
   place-items: center;
 }
 .prob-dorso img { position: absolute; transform: rotate(90deg); }
-.prob-interactiva .abanico-mesa img { height: auto; align-self: start; }
+.prob-interactiva .abanico-mesa img { width: clamp(24px, 3vw, 40px); height: auto; align-self: start; }
 .prob-interactiva .mesa-panel h2 { font-size: clamp(24px, 3.2vw, 39px); }
+.prob-interactiva .mesa-panel { align-self: start; }
 .prob-interactiva .mesa-panel p { line-height: 1.5; }
-.prob-interactiva .prob-eleccion { margin-bottom: 10px; }
+.prob-interactiva .mesa-panel .prob-acciones { margin-block: 14px; }
 .prob-aviso:not(:empty), .prob-contraste {
   margin-top: 14px;
   padding: 8px 12px;
   border-left: 3px solid #a18758;
   background: #f3eddf;
 }
-.prob-acciones [aria-disabled="true"], .prob-acciones :disabled {
+.prob-acciones :disabled {
   opacity: .65;
   cursor: default;
 }
@@ -82,7 +143,7 @@
   max-width: 72ch;
   margin-top: 22px;
 }
-.prob-resultados h2 { font: 400 clamp(25px, 3vw, 36px)/1.15 var(--serif); }
+.prob-resultados :is(h2, h3) { font: 400 clamp(25px, 3vw, 36px)/1.15 var(--serif); }
 .prob-resultados p, .prob-historial li { line-height: 1.55; }
 .prob-resultados table {
   width: 100%;
@@ -90,26 +151,39 @@
   font-variant-numeric: tabular-nums;
   margin: 12px 0;
 }
-.prob-resultados table caption { text-align: left; color: var(--muted); font-size: 14px; }
+.prob-resultados caption.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .prob-resultados td, .prob-resultados th {
   padding: 8px 6px;
   text-align: right;
   border-bottom: 1px solid var(--line);
 }
 .prob-resultados tr > :first-child { text-align: left; }
-.prob-resultados .prob-fila { background: #f1ecde; }
-.prob-resultados th button {
-  font: inherit;
-  color: inherit;
-  text-decoration: underline;
-  text-underline-offset: .2em;
-  background: transparent;
-  border: 0;
-  padding: 0;
-  min-height: 44px;
-}
+.prob-resultados .prob-fila { background: #ede6d2; }
+.prob-resultados .prob-fila th { box-shadow: inset 3px 0 #8a673a; }
 .prob-historial ol { padding-left: 1.8em; }
 .prob-interactiva details { margin-top: 8px; }
+@media (min-width: 780px) {
+  .prob-interactiva .mesa-columnas {
+    align-items: start;
+    column-gap: 18px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+  .prob-interactiva .tapete { border-radius: 14px; }
+  .prob-interactiva .mesa-panel {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: #fffdf6;
+    padding: clamp(18px, 2vw, 28px);
+  }
+}
 @media (max-width: 480px) {
   .prob-resultados table { font-size: 14px; }
   .prob-escenas button { padding: 6px 10px; }

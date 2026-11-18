@@ -110,36 +110,35 @@ async function pruebaLeccion() {
   try {
     await p.locator("astro-island:not([ssr])").first().waitFor({ state: "attached" });
     renderizadorReact = new URL(await p.locator("astro-island").getAttribute("renderer-url"), p.url()).href;
-    assert.equal(await p.evaluate(() => window.pedidos.length), 0);
-    recursos.set("leccion antes de consultar", new Set(porPagina.get(p)));
+    await p.waitForFunction(() => window.pedidos.length === 1);
     const boton = name => p.getByRole("button", { name, exact: true });
-    const segunda = boton("La segunda vuelta");
-    const comparar = boton("Comparar las cartas");
-    const opciones = p.getByRole("button", { name: /^Predecir / });
-    await segunda.click();
-    const seleccion = await accionar(opciones.first(), "button[aria-label^='Predecir'][aria-pressed='true']");
-    anotar("seleccionar.visual", seleccion.visual);
-    const frio = await accionar(comparar, ".prob-interactiva .prob-resultados tbody tr");
-    const [pedido] = await p.evaluate(() => window.pedidos);
-    assert.equal(pedido.mundos, 1175);
-    anotar("segunda.worker", pedido.ms);
-    anotar("segunda.frio", frio.dom);
-    await segunda.click();
-    await opciones.first().click();
-    const cache = await accionar(comparar, ".prob-interactiva .prob-resultados tbody tr");
-    anotar("segunda.cache", cache.dom);
-    assert.equal(await p.evaluate(() => window.pedidos.length), 1);
-
-    await boton("La salida").click();
-    await opciones.first().click();
-    await comparar.click();
+    await boton("Ver chances").click();
     const cancelar = boton("Cancelar el cálculo");
-    await cancelar.waitFor({ state: "visible" });
-    // Marca sólo ese control para observar que el render lo retira al cancelar.
     await cancelar.evaluate(el => el.dataset.midiendo = "cancelar");
     const cancelacion = await accionar(cancelar, '[data-midiendo="cancelar"]', false);
     anotar("cancelar.visual", cancelacion.visual);
-    assert.ok(await comparar.evaluate(el => el === document.activeElement));
+    assert.ok(await boton("Ocultar chances").evaluate(el => el === document.activeElement));
+
+    const segunda = boton("La segunda vuelta");
+    const inicio = await segunda.evaluate(el => {
+      const inicio = performance.now();
+      el.click();
+      return inicio;
+    });
+    const opciones = p.getByRole("group", { name: "Tus cartas en mano" }).getByRole("button");
+    const seleccion = await accionar(opciones.first(), ".prob-mano button[aria-pressed='true']");
+    anotar("seleccionar.visual", seleccion.visual);
+    await boton("Ver chances").click();
+    const filas = ".prob-interactiva .prob-resultados tbody tr";
+    await p.locator(filas).first().waitFor();
+    const pedido = await p.evaluate(() => window.pedidos.at(-1));
+    assert.equal(pedido.mundos, 1175);
+    anotar("segunda.worker", pedido.ms);
+    anotar("segunda.desdeEntrada", pedido.inicio + pedido.ms - inicio);
+    await segunda.click();
+    const cache = await accionar(boton("Ver chances"), filas);
+    anotar("segunda.cache", cache.dom);
+    assert.equal(await p.evaluate(() => window.pedidos.length), 2);
     const worker = new URL(pedido.url);
     assert.ok(worker.pathname.startsWith(base.pathname));
     recursos.get("leccion").add(worker.href);
