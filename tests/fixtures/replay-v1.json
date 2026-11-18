@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "versionReglas": 1,
+  "versionReparto": 1,
+  "semilla": 217,
+  "dador": 3,
+  "jugadas": [
+    { "asiento": 0, "carta": "bastos-12" },
+    { "asiento": 1, "carta": "espadas-11" },
+    { "asiento": 2, "carta": "oros-05" },
+    { "asiento": 3, "carta": "bastos-06" },
+    { "asiento": 0, "carta": "espadas-06" },
+    { "asiento": 1, "carta": "copas-07" },
+    { "asiento": 2, "carta": "bastos-07" },
+    { "asiento": 3, "carta": "bastos-11" },
+    { "asiento": 3, "carta": "oros-03" },
+    { "asiento": 0, "carta": "copas-11" },
+    { "asiento": 1, "carta": "oros-11" },
+    { "asiento": 2, "carta": "espadas-03" }
+  ]
+}
