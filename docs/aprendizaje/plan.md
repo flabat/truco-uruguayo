@@ -1,6 +1,10 @@
 # Entrega por fases y sesiones concurrentes
 
-La primera meta ejecutable es pasar de una semilla a un reparto, jugar una mano completa de cuatro asientos y reproducirla. La meta de producto añade lecciones abiertas, práctica adaptada a la persona y una mesa guiada que se pueda volver a jugar. [Seguimiento general](https://github.com/flabat/truco-uruguayo/issues/15) · [Diseño](README.md) · [ADR del motor](adr/0001-motor-y-replay.md) · [ADR de aprendizaje](adr/0002-lecciones-y-progreso.md)
+## Cierre del primer tramo
+
+El seguimiento #15 cerró con sus 16 subissues completados. Desde la terminal se puede jugar, guardar y reproducir una mano de parejas. En el navegador se puede practicar por tema o mezclar habilidades, contar los tantos en la mesa guiada, jugar hasta el cierre y repartir de nuevo con otro dador. Se verificaron el teclado, las vistas móvil y de escritorio y las dos rutas base del sitio. [Verificación de cierre](https://github.com/flabat/truco-uruguayo/issues/15#issuecomment-6970184141) · [Simulador](simular.md) · [Guía de la ruta y la mesa](README.md)
+
+El mapa, el orden de las sesiones y los criterios de aceptación que siguen conservan el plan original. Las ADR enlazan los contratos que quedaron en `main`. [ADR del motor](adr/0001-motor-y-replay.md) · [ADR de aprendizaje](adr/0002-lecciones-y-progreso.md)
 
 ## Mapa de entregas
 
@@ -8,7 +12,7 @@ Las dependencias son las mínimas para implementar desde `main`. La fase expresa
 
 | Fase | Issue y entrega | Requiere integración de | Propiedad principal |
 | --- | --- | --- | --- |
-| 1 | [#16](https://github.com/flabat/truco-uruguayo/issues/16) Cartas, piezas y descubrimiento de pruebas | Puede comenzar | `motor/cartas.ts` y check común |
+| 1 | [#16](https://github.com/flabat/truco-uruguayo/issues/16) Cartas, piezas y descubrimiento de pruebas | Sin dependencias previas | `motor/cartas.ts` y check común |
 | 1 | [#17](https://github.com/flabat/truco-uruguayo/issues/17) Comparación de cartas | [#16](https://github.com/flabat/truco-uruguayo/issues/16) | `motor/jerarquia.ts` |
 | 1 | [#18](https://github.com/flabat/truco-uruguayo/issues/18) Flor, envido y desgloses | [#16](https://github.com/flabat/truco-uruguayo/issues/16) | `motor/tantos.ts` |
 | 1 | [#19](https://github.com/flabat/truco-uruguayo/issues/19) Semilla y reparto | [#16](https://github.com/flabat/truco-uruguayo/issues/16) | `motor/reparto.ts` |
@@ -42,8 +46,6 @@ Un issue abierto está disponible para reserva cuando se hayan integrado sus dep
 
 Cada PR ejecuta las comprobaciones de contribución. Las pruebas unitarias utilizan ejemplos calculados a mano además de invariantes del motor. Las pruebas de navegador cubren los pasos que dependen del DOM, el teclado y la persistencia. El cierre del seguimiento general requiere una mano reproducible desde terminal y un nuevo reparto desde el flujo guiado integrado en la ruta.
 
-## Decisiones que quedan para el siguiente tramo
+## Seguimientos posteriores al primer tramo
 
-La fase posterior podrá sumar apuestas y respuestas a cantos, con sus reglas y variantes documentadas antes de puntuar un partido. El análisis de probabilidades podrá ensayar políticas sobre los mismos repartos y comparar salidas teniendo en cuenta el asiento y las cartas visibles. Estas investigaciones parten del hito de terminal y tienen un alcance propio. [Reglas de cantos](../../src/data/cantos.json)
-
-Los seguimientos posteriores tienen su propio criterio de inicio. El [estudio de la salida](https://github.com/flabat/truco-uruguayo/issues/29) depende del hito de terminal y el [diseño de los cantos](https://github.com/flabat/truco-uruguayo/issues/30) parte de la mano guiada.
+El estudio de la salida compara tres cartas sobre los mismos repartos del simulador. La lección de cantos parte de la mano guiada y tiene su propio diseño y seguimiento de implementación. [Estudio de la salida #29](https://github.com/flabat/truco-uruguayo/issues/29) · [Diseño de los cantos #30](https://github.com/flabat/truco-uruguayo/issues/30) · [Lección de cantos #52](https://github.com/flabat/truco-uruguayo/issues/52)
