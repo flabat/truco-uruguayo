@@ -94,6 +94,10 @@
         }
       },
       {
+        "heading": "Cómo contar el 2 y la perica",
+        "text": "Sale el 6 de oros de muestra. Tenés el 2 de oros, la sota de oros y el rey de copas. El 2 y la sota son piezas, así que tenés flor. A los 20 de base sumales 10 por el 2. La sota es la perica y aporta 7 (27 menos 20). El rey de copas vale 0. La flor suma 20 + 10 + 7 + 0 = 37 tantos."
+      },
+      {
         "heading": "Qué se anota",
         "text": "Una flor sin oposición le da 3 puntos a tu equipo, incluso si después pierde la mano. Dos compañeros con flor hacen collera y suman 6 si ningún rival tiene flor. Tres compañeros con flor hacen trillera y suman 9 si el otro equipo carece de flor. Cuando hay flores en los dos bandos se compara la mejor de cada equipo. Si empatan, gana el jugador más cercano al mano en el orden de juego."
       },
@@ -103,24 +107,48 @@
         "items": [
           "«La mía, flor». En la modalidad que recoge Wikipedia, se comparan las flores al terminar la mano y la mejor cobra 3.",
           "«Con flor envido». Si quieren el envite simple, se comparan los tantos en ese momento. La mejor suma 5, tres de su flor y dos del envite. Si rechazan ese primer envite, el cantor cobra sus 3.",
-          "«Contraflor al resto». Eleva la apuesta. Antes de aceptarla conviene saber cuánto vale el resto en esa mesa."
+          "«Contraflor al resto». Si el rival acepta, cobra quien tiene la mejor flor. Acuerden antes del reparto cómo se anota el resto."
         ]
+      },
+      {
+        "heading": "Cómo anotar una contraflor al resto",
+        "text": "En un mano a mano a 40, A lleva 34 y B lleva 22. Cada uno canta una flor. Se acepta el resto directo y B muestra la mejor flor. Así queda el tanteador al cobrar ese canto, antes de contar el truco.",
+        "table": {
+          "headers": ["Regla de la mesa", "Qué cobra B", "Tanteador (A–B)"],
+          "rows": [
+            ["El chico entero (ConectaGames y Quiero Truco)", "B llega a la meta. Le faltaban 40 − 22 = 18 tantos.", "34–40. Gana B."],
+            ["Solo el resto (tabla de Wikipedia)", "A va primero y le faltan 40 − 34 = 6. B suma 22 + 6 = 28.", "34–28. Sigue el chico."],
+            ["El resto y las flores (Gran Aventura)", "B cobra 6 del resto, 3 de su flor y 3 de la de A. Suma 22 + 12 = 34.", "34–34. Sigue el chico."]
+          ]
+        }
       }
     ],
     "sources": [
       {"title": "Wikipedia · Puntos de la flor", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
       {"title": "Gran Aventura · Las flores y sus envites, arts. 14–20 y 27–33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Ludoteka · Flor y anulación del envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+      {"title": "ConectaGames · Valores para Flor o Envido y cálculo de la flor", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+      {"title": "Ludoteka · Flor (7 para la sota en la regla y 6 en el primer ejemplo)", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
       {"title": "Fernán Silva Valdés · «El truco», págs. 109–111", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/56489/1/leyenda_FSV_1936.pdf"}
     ],
     "variants": [
       {
-        "title": "¿El resto gana la partida?",
-        "text": "ConectaGames adjudica el partido a quien gana la contraflor al resto. Wikipedia le asigna la distancia del puntero a la meta. Gran Aventura además suma el valor de las flores de ambos bandos al envite aceptado. Si el que va atrás gana la contraflor, las tres reglas pueden dar resultados distintos.",
+        "title": "¿Cuándo se juega el chico entero?",
+        "text": "En ConectaGames y Quiero Truco gana el chico quien muestra la mejor flor, aunque vaya perdiendo. Fernán Silva Valdés recuerda ese sentido del canto en una estancia junto al arroyo Casupá. En la tabla de Wikipedia, quien gana cobra lo que le falta al puntero. Gran Aventura calcula esa distancia al cierre de la mano anterior y descuenta los envites ya aceptados en la mano actual. Al jugar contra flor, el ganador cobra además 3 por cada flor de ambos bandos.",
         "sources": [
           {"title": "ConectaGames · Flor", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+          {"title": "Quiero Truco · Flor contra flor", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
+          {"title": "Fernán Silva Valdés · «El truco», pág. 111 (1936)", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/56489/1/leyenda_FSV_1936.pdf"},
           {"title": "Wikipedia · Contraflor al resto", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
-          {"title": "Gran Aventura · Arts. 31 y 33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+          {"title": "Gran Aventura · Arts. 20, 23, 25, 26, 31 y 33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+        ]
+      },
+      {
+        "title": "La contraflor al resto en torneos uruguayos",
+        "text": "En las Canelonchiqueadas de 2026 se jugó a 30 en parejas y a 50 de a seis. Para el juego ordinario, el reglamento en PDF da la partida al ganador de la contraflor si está en buenas. El resumen web del club da la partida al ganador sin distinguir entre buenas y malas. A 40, ambas lecturas darían el chico a B, que ya está en buenas con 22. Queda por documentar qué cobró en ese torneo quien ganó en malas. En Expo Prado, las bases piden que las parejas acuerden las condiciones al empezar.",
+        "sources": [
+          {"title": "Club Canelón Chico · Reglamento 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Club Canelón Chico · Resumen web, Juegos de cartas", "url": "https://canelonchiqueadas.com.uy/#reglamento"},
+          {"title": "Expo Prado · Bases del campeonato de truco, pág. 1", "url": "https://web.archive.org/web/20240711235721id_/https://www.expoprado.com/wp-content/uploads/2018/08/CAMPEONATO-DE-TRUCO-Bases-y-condiciones-1.pdf#page=1"}
         ]
       }
     ]
@@ -152,7 +180,15 @@
       },
       {
         "heading": "Echar los perros",
-        "text": "Es una modalidad que la mesa puede acordar. Antes de ver sus cartas, un equipo propone jugar la falta, el resto y el truco de una vez. El rival mira las suyas y dice «en ley» si tiene flor o «a punto» si juega el envido. Contesta por separado el envite que corresponda y el truco. Por ejemplo, «a punto, paso y quiero» rechaza la falta y acepta el truco."
+        "text": "En ConectaGames, un equipo puede decir «a ley de juego, todo dicho» antes del próximo reparto para ofrecer la falta envido, la contraflor al resto y el truco. El rival mira sus cartas y responde «en ley» si tiene flor o «a punto» si no tiene. Por ejemplo, «a punto, paso y quiero» rechaza la falta y acepta el truco. ConectaGames deja sin precisar qué tanteador habilita el canto y quién tiene prioridad si ambos lo anuncian.",
+        "table": {
+          "headers": ["Antes de repartir, en un chico a 40", "Gran Aventura", "Quiero Truco"],
+          "rows": [
+            ["15 a 10", "El equipo de 15 puede anunciarlo. Si los dos lo piden, tiene prioridad el de 10.", "Ninguno puede. Ambos siguen en malas."],
+            ["20 a 19", "Cualquiera puede. Si los dos lo piden, tiene prioridad el de 19.", "Sólo puede el de 19. Su rival ya entró en buenas al llegar a 20."],
+            ["20 a 20", "Si los dos lo piden, tiene prioridad el equipo del mano.", "Ninguno puede. Los dos están en buenas, pero ninguno va perdiendo."]
+          ]
+        }
       }
     ],
     "sources": [
@@ -165,10 +201,18 @@
     "variants": [
       {
         "title": "Quién puede echar los perros",
-        "text": "Quiero Truco reserva el canto para el equipo que va perdiendo y exige que el rival ya esté en buenas. Gran Aventura permite que lo proponga cualquiera antes de que salga la muestra. Si los dos lo piden, tiene prioridad quien pierde y, en empate, el equipo del mano.",
+        "text": "En Gran Aventura, cualquiera de los equipos puede decir «a ley de juego» antes de poner la muestra, con cualquier tanteador. Sólo uno puede hacerlo por ronda. Si los dos lo piden, tiene prioridad el que va perdiendo y, en caso de empate, el equipo del mano. El que anuncia puede decir «todo dicho» o elegir los envites que permite el artículo 73. En Quiero Truco, sólo puede activar la opción el equipo que va perdiendo, con el acuerdo de todos sus integrantes y el rival ya en buenas. Rige desde el reparto siguiente.",
         "sources": [
-          {"title": "Quiero Truco · Echar los perros", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
-          {"title": "Gran Aventura · Arts. 71–72", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+          {"title": "Gran Aventura · Arts. 4 y 70–73", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+          {"title": "Quiero Truco · El tanteador y Echar los perros", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"}
+        ]
+      },
+      {
+        "title": "Los perros en Expo Prado y las Canelonchiqueadas",
+        "text": "En Expo Prado 2018, las parejas rivales debían acordar las condiciones de juego al comenzar el campeonato. En las Canelonchiqueadas 2026, el reglamento remite a las reglas tradicionales para lo que deja sin detallar. Ninguna de esas bases especifica qué equipo puede anunciar el canto, en qué momento ni quién tiene prioridad si ambos lo piden.",
+        "sources": [
+          {"title": "Expo Prado 2018 · Bases del campeonato, «Logística», pág. 1", "url": "https://web.archive.org/web/20240711235721id_/https://www.expoprado.com/wp-content/uploads/2018/08/CAMPEONATO-DE-TRUCO-Bases-y-condiciones-1.pdf#page=1"},
+          {"title": "Canelonchiqueadas 2026 · Reglamento, «Truco uruguayo», pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
         ]
       }
     ]
