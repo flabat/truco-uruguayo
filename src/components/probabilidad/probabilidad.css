@@ -1,0 +1,116 @@
+.prob-escenas, .prob-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.prob-escenas {
+  margin: 18px 0 12px;
+}
+.prob-escenas button {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 14px;
+  min-height: 44px;
+  background: #fffdf6;
+  color: var(--ink);
+}
+.prob-escenas [aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.prob-interactiva :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.prob-turno {
+  font-size: 12px;
+  color: var(--oro);
+  text-align: right;
+}
+.prob-muestra {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  text-align: center;
+  gap: 2px;
+}
+.prob-muestra small {
+  color: #ecdfb4;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.prob-muestra strong { font-size: 14px; }
+.prob-mazo {
+  width: var(--ancho-mazo, 124px);
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  margin-bottom: 3px;
+  filter: drop-shadow(0 2px 2px rgb(28 35 26 / 25%));
+}
+.prob-frente, .prob-dorso img { width: calc(100% * 384 / 596); height: auto; }
+.prob-frente { grid-row: 1; }
+.prob-dorso {
+  position: relative;
+  grid-row: 2;
+  width: 100%;
+  aspect-ratio: 596 / 384;
+  margin-top: -50%;
+  display: grid;
+  place-items: center;
+}
+.prob-dorso img { position: absolute; transform: rotate(90deg); }
+.prob-interactiva .abanico-mesa img { height: auto; align-self: start; }
+.prob-interactiva .mesa-panel h2 { font-size: clamp(24px, 3.2vw, 39px); }
+.prob-interactiva .mesa-panel p { line-height: 1.5; }
+.prob-interactiva .prob-eleccion { margin-bottom: 10px; }
+.prob-aviso:not(:empty), .prob-contraste {
+  margin-top: 14px;
+  padding: 8px 12px;
+  border-left: 3px solid #a18758;
+  background: #f3eddf;
+}
+.prob-acciones [aria-disabled="true"], .prob-acciones :disabled {
+  opacity: .65;
+  cursor: default;
+}
+.prob-resultados, .prob-historial {
+  max-width: 72ch;
+  margin-top: 22px;
+}
+.prob-resultados h2 { font: 400 clamp(25px, 3vw, 36px)/1.15 var(--serif); }
+.prob-resultados p, .prob-historial li { line-height: 1.55; }
+.prob-resultados table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  margin: 12px 0;
+}
+.prob-resultados table caption { text-align: left; color: var(--muted); font-size: 14px; }
+.prob-resultados td, .prob-resultados th {
+  padding: 8px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+}
+.prob-resultados tr > :first-child { text-align: left; }
+.prob-resultados .prob-fila { background: #f1ecde; }
+.prob-resultados th button {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: .2em;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  min-height: 44px;
+}
+.prob-historial ol { padding-left: 1.8em; }
+.prob-interactiva details { margin-top: 8px; }
+@media (max-width: 480px) {
+  .prob-resultados table { font-size: 14px; }
+  .prob-escenas button { padding: 6px 10px; }
+}
