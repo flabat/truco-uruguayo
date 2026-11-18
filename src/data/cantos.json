@@ -92,8 +92,20 @@
         "items": [
           "«La mía, flor». En la modalidad que recoge Wikipedia, se comparan las flores al terminar la mano y la mejor cobra 3.",
           "«Con flor envido». Si quieren el envite simple, se comparan los tantos en ese momento. La mejor suma 5, tres de su flor y dos del envite. Si rechazan ese primer envite, el cantor cobra sus 3.",
-          "«Contraflor al resto». Eleva la apuesta. Antes de aceptarla conviene saber cuánto vale el resto en esa mesa."
+          "«Contraflor al resto». Si el rival acepta, cobra quien tiene la mejor flor. Acuerden antes del reparto cómo se anota el resto."
         ]
+      },
+      {
+        "heading": "Cómo anotar una contraflor al resto",
+        "text": "En un mano a mano a 40, A lleva 34 y B lleva 22. Cada uno canta una flor. Se acepta el resto directo y B muestra la mejor flor. Así queda el tanteador al cobrar ese canto, antes de contar el truco.",
+        "table": {
+          "headers": ["Regla de la mesa", "Qué cobra B", "Tanteador (A–B)"],
+          "rows": [
+            ["El chico entero (ConectaGames y Quiero Truco)", "B llega a la meta. Le faltaban 40 − 22 = 18 tantos.", "34–40. Gana B."],
+            ["Solo el resto (tabla de Wikipedia)", "A va primero y le faltan 40 − 34 = 6. B suma 22 + 6 = 28.", "34–28. Sigue el chico."],
+            ["El resto y las flores (Gran Aventura)", "B cobra 6 del resto, 3 de su flor y 3 de la de A. Suma 22 + 12 = 34.", "34–34. Sigue el chico."]
+          ]
+        }
       }
     ],
     "sources": [
@@ -105,12 +117,23 @@
     ],
     "variants": [
       {
-        "title": "¿El resto gana la partida?",
-        "text": "ConectaGames adjudica el partido a quien gana la contraflor al resto. Wikipedia le asigna la distancia del puntero a la meta. Gran Aventura además suma el valor de las flores de ambos bandos al envite aceptado. Si el que va atrás gana la contraflor, las tres reglas pueden dar resultados distintos.",
+        "title": "¿Cuándo se juega el chico entero?",
+        "text": "En ConectaGames y Quiero Truco gana el chico quien muestra la mejor flor, aunque vaya perdiendo. Fernán Silva Valdés recuerda ese sentido del canto en una estancia junto al arroyo Casupá. En la tabla de Wikipedia, quien gana cobra lo que le falta al puntero. Gran Aventura calcula esa distancia al cierre de la mano anterior y descuenta los envites ya aceptados en la mano actual. Al jugar contra flor, el ganador cobra además 3 por cada flor de ambos bandos.",
         "sources": [
           {"title": "ConectaGames · Flor", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
+          {"title": "Quiero Truco · Flor contra flor", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
+          {"title": "Fernán Silva Valdés · «El truco», pág. 111 (1936)", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/56489/1/leyenda_FSV_1936.pdf"},
           {"title": "Wikipedia · Contraflor al resto", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_de_la_flor"},
-          {"title": "Gran Aventura · Arts. 31 y 33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+          {"title": "Gran Aventura · Arts. 20, 23, 25, 26, 31 y 33", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+        ]
+      },
+      {
+        "title": "La contraflor al resto en torneos uruguayos",
+        "text": "En las Canelonchiqueadas de 2026 se jugó a 30 en parejas y a 50 de a seis. Para el juego ordinario, el reglamento en PDF da la partida al ganador de la contraflor si está en buenas. El resumen web del club da la partida al ganador sin distinguir entre buenas y malas. A 40, ambas lecturas darían el chico a B, que ya está en buenas con 22. Queda por documentar qué cobró en ese torneo quien ganó en malas. En Expo Prado, las bases piden que las parejas acuerden las condiciones al empezar.",
+        "sources": [
+          {"title": "Club Canelón Chico · Reglamento 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Club Canelón Chico · Resumen web, Juegos de cartas", "url": "https://canelonchiqueadas.com.uy/#reglamento"},
+          {"title": "Expo Prado · Bases del campeonato de truco, pág. 1", "url": "https://web.archive.org/web/20240711235721id_/https://www.expoprado.com/wp-content/uploads/2018/08/CAMPEONATO-DE-TRUCO-Bases-y-condiciones-1.pdf#page=1"}
         ]
       }
     ]
