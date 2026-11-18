@@ -1,0 +1,63 @@
+---
+import Site from "../../layouts/Site.astro";
+import Icon from "../../components/Icon.astro";
+import { url } from "../../lib/guide";
+import { asientos } from "../../components/mesa/relato";
+import "../../components/aprendizaje/aprender.css";
+import "../../components/mesa/mesa.css";
+---
+<Site title="Mesa de parejas" description="Reconocé la flor, contá tus tantos y jugá una mano completa de truco uruguayo con tu compañero y dos rivales." active="aprender">
+  <article class="shell guiada" data-base={url("")}>
+    <header class="mesa-portada">
+      <a class="quiet-link" href={url("aprender/")}><span aria-hidden="true">←</span> Volver a aprender</a>
+      <h1>Mesa de <em>parejas</em></h1>
+      <p>Jugás con el compañero de enfrente. Los otros tres asientos juegan sus propias cartas.</p>
+    </header>
+    <noscript><p>Activá JavaScript para jugar o <a class="text-link" href={url("reglas/bazas/")}>leé cómo se gana la mano</a>.</p></noscript>
+    <div id="mesa-guiada" hidden>
+      <div class="mesa-columnas">
+        <section class="tapete" aria-labelledby="estado-tapete">
+          <header class="tapete-cabecera"><h2 id="estado-tapete"></h2><span id="turno-mesa"></span></header>
+          <div class="tapete-asientos">
+            {asientos.map((nombre, i) => (
+              <div class={`asiento asiento-${i}`} role="group" aria-label={nombre}>
+                <h3>{nombre}</h3>
+                <span class="asiento-papel"></span>
+                <div class="asiento-cartas"></div>
+              </div>
+            ))}
+            <div class="tapete-muestra" role="group" aria-label="Muestra">
+              <h3>Muestra</h3><div id="muestra"></div>
+            </div>
+          </div>
+        </section>
+        <section class="mesa-panel" aria-labelledby="pregunta">
+          <p class="eyebrow" id="momento"></p>
+          <h2 id="pregunta" tabindex="-1"></h2>
+          <p id="guia-turno"></p>
+          <div class="mesa-naipes" id="mis-cartas" role="group" aria-label="Tus cartas"></div>
+          <div id="decisiones"></div>
+          <form id="cuenta-mesa" hidden>
+            <label for="total-mesa">Tu total</label>
+            <div><input id="total-mesa" type="number" min="0" max="9007199254740991" step="1" required inputmode="numeric"/><button class="button">Comprobar total</button></div>
+          </form>
+          <p id="aviso-mesa" role="status" aria-atomic="true"></p>
+          <button class="ap-link" id="pista-mesa" type="button">Pedir una pista</button>
+        </section>
+      </div>
+      <section class="mesa-historial" aria-labelledby="titulo-historial" hidden>
+        <h2 id="titulo-historial">Vueltas jugadas</h2>
+        <ol id="vueltas"></ol>
+      </section>
+      <details class="mesa-consulta">
+        <summary>Consultar la regla <small id="aviso-consulta-mesa" hidden>(cuenta como ayuda)</small></summary>
+        <p id="regla-mesa"></p>
+        <a class="text-link" id="leer-regla" target="_blank" rel="noopener">Leer el capítulo completo en otra pestaña <Icon name="arrow" size={15}/></a>
+      </details>
+    </div>
+  </article>
+</Site>
+<script>
+  import { montarMesa } from "../../components/mesa/mesa";
+  montarMesa();
+</script>

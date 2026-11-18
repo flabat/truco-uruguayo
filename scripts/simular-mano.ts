@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import type { CardId } from "../src/motor/cartas.ts";
-import { elegirJugada } from "../src/motor/jugadores.ts";
+import { avanzarHastaAprendiz } from "../src/motor/parejas.ts";
 import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../src/motor/mano.ts";
 import { repartir } from "../src/motor/reparto.ts";
 import { capturarReplay, reproducirReplay } from "../src/motor/replay.ts";
@@ -14,14 +14,13 @@ const roles = ["aprendiz", "rival", "compañero", "rival"] as const;
 const parejas = ["0 y 2", "1 y 3"] as const;
 
 function simular(semilla: number, dador: number): EstadoMano {
-  let estado = iniciarMano(repartir(semilla, dador));
-  while (estado.turno !== null) {
+  let estado = avanzarHastaAprendiz(iniciarMano(repartir(semilla, dador)));
+  while (estado.turno === 0) {
     const asiento = estado.turno;
-    const vista = vistaPara(estado, asiento);
-    const carta = asiento === 0 ? vista.cartas[0] : elegirJugada(vista);
+    const carta = vistaPara(estado, asiento).cartas[0];
     const paso = jugarCarta(estado, { asiento, carta });
     if (!paso.ok) throw new Error(`Jugada del asiento ${asiento} rechazada (${paso.error}).`);
-    estado = paso.estado;
+    estado = avanzarHastaAprendiz(paso.estado);
   }
   return estado;
 }
