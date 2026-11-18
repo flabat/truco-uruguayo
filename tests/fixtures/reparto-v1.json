@@ -1,0 +1,13 @@
+{
+  "versionReparto": 1,
+  "semilla": 0,
+  "dador": 2,
+  "mano": 3,
+  "manos": [
+    ["copas-01", "bastos-05", "copas-03"],
+    ["oros-07", "oros-01", "espadas-10"],
+    ["copas-04", "oros-06", "copas-02"],
+    ["espadas-03", "copas-05", "espadas-01"]
+  ],
+  "muestra": "copas-07"
+}
