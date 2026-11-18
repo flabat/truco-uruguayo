@@ -209,3 +209,5 @@
   .mesa-portada p { font-size: 14px; }
   .mesa-naipes .ap-carta { max-width: 78px; }
 }
+#siguiente-leccion, #leccion-truco > .text-link { margin-top: 14px; min-height: 44px; }
+#acciones-truco { padding-left: 1.6em; margin-block: 8px 14px; line-height: 1.55; }

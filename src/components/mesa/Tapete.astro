@@ -1,0 +1,18 @@
+---
+import { asientos } from "./relato";
+---
+<section class="tapete" aria-labelledby="estado-tapete">
+  <header class="tapete-cabecera"><h2 id="estado-tapete"></h2><span id="turno-mesa"></span></header>
+  <div class="tapete-asientos">
+    {asientos.map((nombre, i) => (
+      <div class={`asiento asiento-${i}`} role="group" aria-label={nombre}>
+        <h3>{nombre}</h3>
+        <span class="asiento-papel"></span>
+        <div class="asiento-cartas"></div>
+      </div>
+    ))}
+    <div class="tapete-muestra" role="group" aria-label="Muestra">
+      <h3>Muestra</h3><div id="muestra"></div>
+    </div>
+  </div>
+</section>
