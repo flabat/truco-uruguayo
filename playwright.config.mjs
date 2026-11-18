@@ -6,6 +6,7 @@ const baseURL = new URL(path, `http://127.0.0.1:${port}`).href;
 
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: "**/unit/**",
   workers: 2,
   use: { baseURL },
   projects: [
