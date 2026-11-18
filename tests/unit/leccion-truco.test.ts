@@ -49,7 +49,8 @@ test("otro reparto cambia el problema visible sin flor y se puede recuperar el e
       const antes = juego.vista().mesa;
       juego.repetir("otro-reparto");
       const despues = juego.vista().mesa;
-      assert.notDeepEqual([despues.muestra, ...despues.cartas], [antes.muestra, ...antes.cartas]);
+      assert.notEqual(despues.muestra, antes.muestra);
+      assert.notDeepEqual(despues.cartas.toSorted(), antes.cartas.toSorted());
       const { replay } = JSON.parse(almacen.getItem("truco-oriental.leccion-truco.v2")!);
       const reparto = repartir(replay.semilla, replay.dador);
       assert.ok(reparto.manos.every((m) => evaluarTantos(m, reparto.muestra).modalidad === "envido"));
@@ -58,5 +59,18 @@ test("otro reparto cambia el problema visible sin flor y se puede recuperar el e
     juego.repetir("ejemplo");
     assert.deepEqual(juego.vista().mesa.cartas, fijas);
     juego.repetir("otro-papel");
+  }
+});
+
+test("se descarta tanto la muestra repetida como la misma terna con otra muestra", () => {
+  const ejemplo = repartir(217, 3);
+  assert.equal(repartir(42, 3).muestra, ejemplo.muestra);
+  assert.deepEqual(repartir(15135, 3).manos[0], ejemplo.manos[0]);
+  for (const inicio of [42, 15135]) {
+    const juego = crearLeccionTruco({ azar: () => inicio, obtenerAlmacen: () => undefined });
+    juego.repetir("otro-reparto");
+    const { mesa } = juego.vista();
+    assert.notEqual(mesa.muestra, ejemplo.muestra);
+    assert.notDeepEqual(mesa.cartas.toSorted(), ejemplo.manos[0].toSorted());
   }
 });

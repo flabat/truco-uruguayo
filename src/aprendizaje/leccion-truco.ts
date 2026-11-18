@@ -4,7 +4,6 @@ import { equipoPorAsiento, repartir, type Asiento, type RepartoV1 } from "../mot
 import { capturarTruco, reproducirTruco } from "../motor/replay-truco.ts";
 import { evaluarTantos } from "../motor/tantos.ts";
 import { aplicarAccion, iniciarTruco, resultadoTruco, type AccionTruco, type EstadoTruco } from "../motor/truco.ts";
-import { claveSituacion } from "./generadores/index.ts";
 
 const ejemplo = 217;
 const clave = "truco-oriental.leccion-truco.v2";
@@ -22,12 +21,14 @@ function envidoCobrado({ manos, muestra, mano }: RepartoV1) {
 }
 
 function otraSemilla(anterior: RepartoV1, inicio: number) {
-  const propia = claveSituacion(anterior.muestra, anterior.manos[0]);
-  // Dos repartos comprobados completan la búsqueda aun con una fuente de azar repetida.
-  const candidatas = Array.from({ length: 24 }, (_, i) => (inicio + i) >>> 0).concat(2, 4);
+  // Las tres alternativas finales tienen distintas muestras y ternas propias en ambos papeles.
+  // El reparto anterior puede descartar una por la muestra y otra por las cartas.
+  const candidatas = Array.from({ length: 24 }, (_, i) => (inicio + i) >>> 0).concat(2, 4, 5);
   for (const semilla of candidatas) {
     const reparto = repartir(semilla, anterior.dador);
-    if (claveSituacion(reparto.muestra, reparto.manos[0]) !== propia && envidoCobrado(reparto)) return semilla;
+    if (reparto.muestra === anterior.muestra) continue;
+    if (reparto.manos[0].every((carta) => anterior.manos[0].includes(carta))) continue;
+    if (envidoCobrado(reparto)) return semilla;
   }
   throw new Error("No se encontró otra mano sin flor.");
 }

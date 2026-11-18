@@ -4,7 +4,9 @@ const boton = (page, name) => page.getByRole("button", { name, exact: true });
 const titulo = (page, name) => page.getByRole("heading", { name, exact: true });
 
 test("el quiero del rival conserva las cartas y la reproducción explica el turno y el tanteo", async ({ page }) => {
-  await page.goto("aprender/truco/");
+  await page.goto("aprender/");
+  await page.getByRole("link", { name: /Cantar y responder al truco/ }).click();
+  await expect(page).toHaveURL("aprender/truco/");
   await expect(page.getByText(/Nadie tiene flor/)).toBeVisible();
   const misCartas = page.getByRole("group", { name: "Tus cartas" });
   const antes = await misCartas.textContent();
@@ -30,7 +32,8 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await expect(page.locator(".asiento-0")).toContainText("Rey de bastos");
   await boton(page, "Volver al resultado").click();
   await boton(page, "Repartir de nuevo").click();
-  expect([await misCartas.textContent(), await page.locator("#muestra").textContent()]).not.toEqual([antes, muestra]);
+  await expect(misCartas).not.toHaveText(antes);
+  await expect(page.locator("#muestra")).not.toHaveText(muestra);
   await boton(page, "Practicar la respuesta").click();
   await boton(page, "No quiero").click();
   await boton(page, "Repetir el ejemplo").click();

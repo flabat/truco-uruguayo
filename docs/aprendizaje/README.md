@@ -36,7 +36,7 @@ Al terminar, **Reproducir la mano** te deja avanzar y retroceder por las jugadas
 
 ## Practicar el primer truco
 
-Al terminar una mano guiada, elegí **Siguiente lección · Cantar y responder al truco**. La primera vez sos mano y el envido ya se cobró. Podés tirar una carta o cantar antes de jugar. Si cantás, el rival quiere y te toca tirar. Con **Practicar la respuesta**, el rival es mano y te canta a vos. Si querés, él conserva la salida y la pareja que gane cobra dos tantos. Si decís «no quiero», la pareja rival cobra uno en ese momento.
+Al terminar una mano guiada, elegí **Siguiente lección · Cantar y responder al truco**. También podés entrar directamente desde **Elegí qué practicar** en la ruta. La primera vez sos mano y el envido ya se cobró. Podés tirar una carta o cantar antes de jugar. Si cantás, el rival quiere y te toca tirar. Con **Practicar la respuesta**, el rival es mano y te canta a vos. Si querés, él conserva la salida y la pareja que gane cobra dos tantos. Si decís «no quiero», la pareja rival cobra uno en ese momento.
 
 Al terminar podés repetir el ejemplo, cambiar de papel o pedir otro reparto sin flor. **Reproducir la mano** te permite volver al canto, a la respuesta y a cada carta para ver cuándo cambió el turno. La pestaña recuerda en qué paso estabas. Estas decisiones de juego no llevan nota. [Ejemplo con las cartas, las vueltas y los tantos](cantos/README.md)
 
