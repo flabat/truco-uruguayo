@@ -32,7 +32,7 @@ PAGES_URL=https://example.org/truco-uruguayo/ npm run preview
 3. En **Actions → Publicar en GitHub Pages**, elegí **Run workflow** sobre `main`. Repetí este paso cuando quieras publicar otra versión.
 4. Abrí la URL que aparece en el entorno `github-pages` al terminar el despliegue.
 
-El flujo recibe la URL de GitHub Pages y configura la ruta base de Astro. Sirve tanto para un sitio bajo `/<repositorio>/` como para una dirección en la raíz de un dominio. La publicación se inicia manualmente. GitHub Free admite Pages en repositorios públicos. Para publicar desde este repositorio privado se necesita un plan compatible. [Disponibilidad por plan](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#who-can-use-this-feature) [Documentación de GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+El flujo recibe la URL de GitHub Pages y configura la ruta base de Astro. Sirve tanto para un sitio bajo `/<repositorio>/` como para una dirección en la raíz de un dominio. La publicación se inicia manualmente. GitHub Free admite Pages en repositorios públicos. [Disponibilidad por plan](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#who-can-use-this-feature) [Documentación de GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
 
 ## Dominio propio
 
@@ -48,6 +48,6 @@ Una futura página de práctica puede incorporar un componente Astro con un `<sc
 
 ## Trabajo en el repositorio
 
-Desarrollá los cambios en una rama y abrí un pull request contra `main`. La verificación de GitHub Actions compila el sitio bajo la ruta del proyecto y comprueba enlaces internos, anclas e imágenes. Para proponer una corrección de reglas, incluí el artículo del reglamento o la página de la fuente y explicá qué cambia en una mano concreta. Las diferencias documentadas tienen seguimiento en los [issues del repositorio](https://github.com/flabat/truco-uruguayo/issues).
+Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Con Python 3 instalado, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
 
 Las ilustraciones se generaron para esta guía. Las fuentes tipográficas DM Sans y DM Serif Text se sirven con el sitio desde sus paquetes de Fontsource.

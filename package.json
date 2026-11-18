@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "check": "bash .github/scripts/check_site.sh",
     "preview": "astro preview"
   },
   "engines": {
