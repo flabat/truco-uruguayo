@@ -110,7 +110,7 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
   function upgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {
     const destruir = () => socket.destroy();
     socket.on("error", destruir);
-    const mesa = ruta.exec(req.url ?? "")?.[1];
+    const mesa = ruta.exec(req.url ?? "")?.[1].toLowerCase();
     if (!mesa) return httpError(socket, 404);
     if (req.headers.origin !== web.origin) return httpError(socket, 403);
     if (!req.headers["sec-websocket-protocol"]?.split(",").some(p => p.trim() === protocolo)) return httpError(socket, 400);
@@ -138,7 +138,7 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
 
   function alCambiar(mesa: string) {
     // El aviso no incluye datos de la mesa. Cada cliente relee su vista autenticada.
-    for (const { ws } of mesas.get(mesa) ?? []) enviar(ws, { tipo: "actualizar" });
+    for (const { ws } of mesas.get(mesa.toLowerCase()) ?? []) enviar(ws, { tipo: "actualizar" });
   }
 
   function cerrar() {
