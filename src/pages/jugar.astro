@@ -1,0 +1,12 @@
+---
+import Site from "../layouts/Site.astro";
+import Sala from "../components/jugar/Sala";
+import { url } from "../lib/guide";
+import "../components/jugar/jugar.css";
+---
+<Site active="jugar" title="Jugar al truco" description="Creá una mesa de truco uruguayo para jugar mano a mano o en parejas, con amigos o computadoras.">
+  <article class="shell juego">
+    <Sala base={url("")} client:load />
+    <noscript>Para entrar a una mesa, activá JavaScript.</noscript>
+  </article>
+</Site>
