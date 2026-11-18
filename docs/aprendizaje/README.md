@@ -47,6 +47,6 @@ Para agregar una lección centrada en una flor aparente:
 
 ## Límites de la primera entrega
 
-Los tantos de una mano enseñan qué se puede cantar. El resultado de las vueltas identifica al equipo que gana la mano. La siguiente parte de la ruta podrá introducir cantar truco, quiero y no quiero y el tanteador de apuestas. El estudio de probabilidades podrá comparar políticas de salida en repartos reproducibles. Para comparar mesas de dos y cuatro jugadores habrá que definir además el modo mano a mano. La primera entrega juega cuatro asientos.
+Los tantos de una mano enseñan qué se puede cantar. El resultado de las vueltas identifica al equipo que gana la mano. La [lección posterior de cantos](cantos/README.md) detalla quién puede cantar truco, cómo responder y cuánto se cobra por esa mano. El estudio de probabilidades podrá comparar políticas de salida en repartos reproducibles. Para comparar mesas de dos y cuatro jugadores habrá que definir además el modo mano a mano. La primera entrega juega cuatro asientos.
 
 El sitio conserva la consulta rápida de reglas. Los dos registros explican las decisiones y los costos de mantenimiento. [ADR 1 · Motor y replay](adr/0001-motor-y-replay.md) · [ADR 2 · Lecciones y progreso](adr/0002-lecciones-y-progreso.md)
