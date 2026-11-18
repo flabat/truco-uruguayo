@@ -1,0 +1,38 @@
+# ADR 4 · Isla de React para la lección y cálculo de probabilidades en un worker
+
+**Estado.** Propuesta para el primer incremento de probabilidades. [Diseño de la lección](../probabilidad/README.md) · [Implementación y mediciones](../probabilidad/plan.md)
+
+## Contexto y decisión
+
+En la mesa actual, Astro entrega los asientos y TypeScript actualiza el DOM desde la vista del juego. Ese enfoque ya resuelve la mano guiada. En la lección de probabilidad, una interacción coordina la selección hipotética, el estado real, los resultados asíncronos de varias cartas y el cursor de repaso. Un clic en «Comparar» debe actualizar juntos la mesa, la tabla y la explicación, sin convertir la predicción en una jugada.
+
+Usar **una isla de React** en la nueva ruta para los controles que comparten esa decisión. Astro conserva el documento, la navegación y el ejemplo editorial estático. El motor y el controlador de la sesión son TypeScript puro. Ejecutar el análisis intensivo en un Web Worker de módulo cargado al primer pedido. Añadir la integración oficial compatible con la versión de Astro del repositorio, fijar las versiones en el lockfile y usar hidratación `client:load` para el ejercicio principal. El componente debe admitir render estático sin tocar `window`, storage ni Worker durante el build. [Islas en Astro](https://docs.astro.build/en/concepts/islands/) · [Integración de React](https://docs.astro.build/en/guides/integrations-guide/react/) · [Web Workers](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API/Using_web_workers)
+
+| Parte | Qué controla | Qué cruza el límite |
+| --- | --- | --- |
+| Controlador de lección | Reparto jugable, pasado confirmado, fase del ejercicio y cursor. Distingue predicción, carta que se inspecciona y carta confirmada. Reutiliza motor y replay. | Vista pública del cursor actual, cartas e interacciones autorizadas. |
+| Isla de React | Render del tapete, botones, comparación, explicación, navegación y foco. Puede usar un reductor o suscribirse al controlador. Hay un dueño de la jugada y el historial. | Comandos de intención al controlador. El cálculo llega por el cliente del worker. |
+| Cliente del análisis | Clave canónica, perfil, pedido activo, caché de resultados completos por versión y cancelación. Lo consume también la mesa Astro. | Mensajes serializables de solicitud, progreso y resultado. |
+| Worker y biblioteca de cálculo | Construcción de mundos compatibles, ejecución por lotes y estadística. El mismo módulo puro se puede invocar desde Node. | Sólo posición pública y opciones de cálculo. Devuelve conteos diagnósticos y resultados agregados. |
+| Adaptador en la mano guiada | Abre una consulta de sólo lectura sobre la vista ya existente. Cierra o invalida al cambiar de turno, reparto o cursor. | Llama al mismo cliente. La entrada a la guía por sí sola no descarga React ni inicia el cálculo. |
+
+## Ciclo de un pedido
+
+1. El aprendiz elige una predicción y abre «Comparar». El controlador congela la posición pública del instante y ofrece todas sus cartas legales. El perfil elegido por clave pública es el mismo en la isla, el panel y el repaso.
+2. El cliente busca un resultado completo con la misma clave y versiones. En un acierto lo devuelve enseguida. Para un pedido nuevo, genera un `requestId` creciente por instancia. Crea el worker con una URL de módulo resuelta por Vite, por ejemplo `new Worker(new URL("./worker.ts", import.meta.url), { type: "module" })`. Esto debe funcionar en la raíz y bajo `/truco-uruguayo/`.
+3. El worker recibe `{requestId, clave, posicion, perfil}`. Puede comunicar mundos procesados por lotes. Un mensaje final lleva `{requestId, clave, resultado}`. El cliente comprueba ambos identificadores y que la posición siga activa antes de mostrarlo. En espera, el usuario puede cancelar o jugar. Las cifras que ordenan opciones aparecen juntas al finalizar.
+4. Un nuevo prefijo, un reparto, salir de la ruta o desmontar el consumidor cancela el trabajo. La estrategia inicial puede llamar a `terminate()` y crear otro worker bajo demanda. Una implementación cooperativa debe ceder al bucle de eventos entre lotes para procesar la cancelación. Un pedido anterior nunca puede sustituir al resultado actual, aunque ambas respuestas lleguen al revés.
+5. Conservar como máximo **16 resultados finales por consumidor** en memoria, descartando el menos reciente. Al cerrar una sesión se pueden liberar todos. Los abortos y errores son reintentables. No persistir mundos simulados, semilla del juego ni porcentajes en el almacén de progreso. La mano guiada conserva su contrato de reanudación existente.
+6. Ante fallo de carga, presupuesto agotado o respuesta incompatible, conservar las acciones de juego. Sólo una referencia editorial con clave, método, política, perfil y versión coincidentes puede reemplazar un cálculo fallido. Identificarla como «cálculo de referencia» y mostrar el denominador. Fuera de esos casos ofrecer reintento o continuar. El HTML editorial ofrece el ejemplo de apertura incluso cuando no se puede iniciar la isla.
+
+## Render del tapete
+
+Cada representación recibe la misma forma pública para la muestra, asientos, cartas visibles, nombres y estado de turno. Aprovechar las reglas CSS de la mesa, recursos Tatú y funciones puras compartibles. Si se extrae una preparación de datos común, conservar sus pruebas y el comportamiento de las dos mesas actuales. El render de React es declarativo dentro de su raíz. Los identificadores de rótulos y descripciones son únicos por instancia. Los renderizadores Astro/TypeScript que usan `document.getElementById` requieren limitar sus búsquedas al contenedor antes de montarlos en paralelo. La comparación por carta se presenta en una sola tabla accesible, así que el primer incremento puede usar una sola representación del tapete. [Tapete existente](../../../src/components/mesa/Tapete.astro) · [Actualización de los asientos](../../../src/components/mesa/tapete.ts)
+
+El repaso puede reconstruir la partida real desde su propio registro para proyectar el prefijo. El worker recibe esa proyección en un mensaje nuevo. Una jugada futura conocida en el controlador no entra en la caché, la semilla de análisis ni el mensaje. La confirmación avanza el motor una sola vez, incluso si se pulsa dos veces o termina el worker al mismo tiempo. Los nombres completos de las cartas, `aria-pressed` cuando corresponde y un único anuncio de estado conservan la lectura por teclado y lector de pantalla.
+
+## Opciones y consecuencias
+
+**Seguir con Astro y TypeScript para toda la pantalla** reduce las dependencias y es adecuado para la consulta pequeña de la mano guiada. En la lección avanzada los resultados tardíos, la predicción y el replay obligarían a sincronizar manualmente más regiones del DOM. **Migrar todas las mesas a React** daría un único renderizador, pero ampliaría la descarga, el riesgo de regresiones y el alcance antes de validar el nuevo formato. La isla acotada permite medir su coste y su beneficio en una lección completa.
+
+**Precalcular sólo dos tablas** da una excelente primera carga y un respaldo editorial. No alcanza para un reparto nuevo o una decisión posterior cualquiera. **Simular en el hilo principal** simplifica el prototipo, pero compite con el teclado y la selección de cartas. Un servicio remoto agregaría latencia, operación y una dependencia externa al sitio estático. La decisión combina un cálculo local reutilizable, referencias verificadas y mediciones del coste de JavaScript, tiempo de respuesta y cancelación antes de extender React a otras rutas. No requiere decidir una migración de CSS.
