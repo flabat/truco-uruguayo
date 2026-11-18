@@ -30,6 +30,7 @@ export function iniciarRuta() {
   }
 
   function mostrarRuta(enfocar: boolean) {
+    ejercicio.cerrarEjemplo();
     ejemploVisible = null;
     practica.hidden = true;
     ruta.hidden = false;
@@ -79,7 +80,9 @@ export function iniciarRuta() {
     function mostrarEjemplo(id?: string, enfocarPregunta = false) {
       const ejemplo = seleccionarEjemplo(tema, id);
       guardarEntrada({ modo, tema: tema.id, id: ejemplo.id });
-      ejercicio.mostrarEjemplo(tema, ejemplo, empezar, () => mostrarEjemplo(undefined, true), enfocarPregunta);
+      ejercicio.mostrarEjemplo(tema, ejemplo, empezar, () => mostrarEjemplo(undefined, true), {
+        demostrar: modo === "inicio" && tema === comparar, enfocarPregunta,
+      });
     }
     if (conEjemplo) mostrarEjemplo(restaurarId);
     else empezar();

@@ -3,6 +3,7 @@ import { temas } from "../src/aprendizaje/lecciones/index.ts";
 import { claveSituacion } from "../src/aprendizaje/generadores/index.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import { explicarSituacion } from "../src/aprendizaje/generadores/evaluacion.ts";
+import { paloDe } from "../src/motor/cartas.ts";
 
 // Solo fijamos la fuente de semillas. Cada mano pasa por el generador, la sesión y el evaluador reales.
 async function semillas(page, ...valores) {
@@ -28,11 +29,11 @@ async function empezarTema(page, id) {
   await boton(page, "Ir a practicar").click();
 }
 
-async function comprobarEjemplo(page, tema, ejemplo) {
-  const { muestra, cartas, detalle } = ejemplo;
+async function comprobarEjemplo(page, tema, ejemplo, explicacion = ejemplo.detalle) {
+  const { muestra, cartas } = ejemplo;
   await expect(page.getByRole("img", { name: "Muestra " + cartasPorId.get(muestra).nombre })).toBeVisible();
   await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas.map((id) => cartasPorId.get(id).nombre));
-  await expect(page.locator("#ejemplo-resuelto")).toContainText(detalle);
+  await expect(page.locator("#ejemplo-resuelto")).toContainText(explicacion);
   if (tema.pasos.some((paso) => paso.tipo === "responder-total")) {
     await expect(page.locator("#ejemplo-resuelto strong")).toHaveText(explicarSituacion(tema.habilidad, cartas, muestra));
   }
@@ -78,6 +79,7 @@ test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", a
 
   await boton(page, "Seguir con reconocer flor").click();
   await expect(page.getByRole("heading", { level: 1, name: "Reconocer flor" })).toBeFocused();
+  await expect(boton(page, "Repetir demostración")).toBeHidden();
   await boton(page, "Ir a practicar").click();
   await boton(page, "Tengo flor").click();
   await boton(page, "Pedir una pista").click();
@@ -226,6 +228,7 @@ test("los cinco temas recorren tres ejemplos sin crédito y permiten practicar c
     const otro = boton(page, "Ver otro ejemplo");
     for (const ejemplo of tema.ejemplos) {
       await comprobarEjemplo(page, tema, ejemplo);
+      await expect(boton(page, "Repetir demostración")).toBeHidden();
       await expect(page.locator("#avance-actual")).toHaveText("Sin practicar");
       const nombres = await page.getByRole("group", { name: /Cartas de la/ }).ariaSnapshot();
       for (const id of ejemplo.cartas) expect(nombres).toContain(cartasPorId.get(id).nombre);
@@ -331,7 +334,8 @@ test("la entrada inicial y mixta usan el mismo ciclo que cada tema y restauran s
   await elegirTema(page, comparar);
   await enlace(page, "Todos los temas").click();
   await enlace(page, "Empezar con un ejemplo").click();
-  await comprobarEjemplo(page, comparar, comparar.ejemplos[1]);
+  const apertura = comparar.ejemplos[1];
+  await comprobarEjemplo(page, comparar, apertura, explicarSituacion(comparar.habilidad, apertura.cartas, apertura.muestra));
   await boton(page, "Ir a practicar").click();
   await boton(page, "Empatan").click();
   await boton(page, "Seguir con reconocer flor").click();
@@ -368,4 +372,159 @@ test("saltar al contenido conserva el ejemplo o el desafío activo", async ({ pa
   await saltar.press("Enter");
   await expect(page.locator("#etapa")).toContainText("Tu turno");
   await expect(page.locator("#cartas-mano .ap-carta")).toHaveText(cartas);
+});
+
+async function abrirDemostracion(page, dimensiones) {
+  await page.setViewportSize(dimensiones);
+  await page.addInitScript(() => { Math.random = () => 0; });
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  await page.goto("aprender/?modo=inicio");
+}
+
+test("la demostración señala la muestra, elige ambas ganadoras y enseña Empatan", async ({ page, isMobile }) => {
+  await abrirDemostracion(page, { width: isMobile ? 320 : 1280, height: 812 });
+  const [tema] = temas;
+  const repetir = boton(page, "Repetir demostración");
+  const practicar = boton(page, "Ir a practicar");
+  const objetivo = page.locator(".ap-ejercicio .ap-elegida");
+  const panel = page.locator(".ap-ejercicio");
+  const gesto = page.locator(".ap-gesto");
+  const mesa = page.locator(".ap-mesa");
+  for (const [i, caso] of tema.ejemplos.entries()) {
+    const esperada = ["2 de bastos", "4 de oros", "Empatan"][i];
+    const explicacion = explicarSituacion(tema.habilidad, caso.cartas, caso.muestra);
+    await comprobarEjemplo(page, tema, caso, explicacion);
+    await mesa.scrollIntoViewIfNeeded();
+    await expect(panel).toHaveAttribute("data-demostracion", "muestra");
+    await expect(page.locator("#ejemplo-resuelto strong")).toContainText(paloDe(caso.muestra));
+    await expect(page.locator("#carta-muestra .frente")).toHaveCSS("outline-style", "solid");
+    await expect(page.locator("#ejemplo-resuelto > span")).toBeHidden();
+    await page.clock.runFor(1500);
+    await expect(gesto).toBeVisible();
+    const destino = gesto.locator("..");
+    await expect(destino).toHaveText(esperada);
+    await expect(page.locator("#carta-muestra")).toBeInViewport({ ratio: 0.9 });
+    await expect(gesto).toBeInViewport({ ratio: 0.9 });
+    for (const elemento of [page.locator("#carta-muestra"), ...await page.locator("#cartas-mano .ap-carta").all(),
+      gesto, destino, practicar, repetir, boton(page, "Ver otro ejemplo")]) {
+      const caja = await elemento.boundingBox();
+      expect(caja.x).toBeGreaterThanOrEqual(0);
+      expect(caja.x + caja.width).toBeLessThanOrEqual(page.viewportSize().width);
+    }
+    await page.clock.runFor(1200);
+    await expect(objetivo).toHaveText(esperada);
+    await expect(gesto).toBeHidden();
+    await expect(page.locator("#ejemplo-resuelto > span")).toBeVisible();
+    await expect(page.locator("#ejemplo-resuelto > span")).toHaveText(explicacion);
+
+    await page.keyboard.press("Tab");
+    await expect(practicar).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(repetir).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(panel).toHaveAttribute("data-demostracion", "muestra");
+    await page.clock.runFor(3000);
+    await expect(repetir).toBeFocused();
+    await expect(objetivo).toHaveText(esperada);
+    expect(await page.evaluate(() => history.state.ejemplo.id)).toBe(caso.id);
+    await page.keyboard.press("Tab");
+    await expect(boton(page, "Ver otro ejemplo")).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#consigna")).toBeFocused();
+  }
+  await enlace(page, "Todos los temas").click();
+  await expect(page.locator('[data-avance="comparar-cartas"]')).toHaveText("Sin practicar");
+  expect(await page.evaluate(() => localStorage.getItem("truco-oriental.aprendizaje"))).toBeNull();
+});
+
+test("practicar a mitad del gesto reparte una sola mano y leer después conserva el acierto", async ({ page }) => {
+  await semillas(page, 2);
+  await abrirDemostracion(page, { width: 320, height: 740 });
+  const mesa = page.locator(".ap-mesa");
+  await mesa.scrollIntoViewIfNeeded();
+  await expect(page.locator(".ap-ejercicio")).toHaveAttribute("data-demostracion", "muestra");
+  await page.clock.runFor(1500);
+  await expect(page.locator(".ap-gesto")).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(boton(page, "Ir a practicar")).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#consigna")).toBeFocused();
+  await page.clock.runFor(5000);
+  await expect(page.locator("#etapa")).toContainText("Tu turno");
+  await expect(page.locator("[data-demostracion], .ap-gesto, .ap-elegida")).toHaveCount(0);
+  await expect(page.locator("#ejemplo-resuelto")).toBeHidden();
+  await boton(page, "Empatan").click();
+  const progreso = () => page.evaluate(() => localStorage.getItem("truco-oriental.aprendizaje"));
+  const conAcierto = await progreso();
+  const casos = JSON.parse(conAcierto).habilidades[0].casos;
+  expect(casos).toHaveLength(1);
+  expect(casos[0].acreditado).toBe(true);
+  expect(temas[0].ejemplos.map(({ muestra, cartas }) => claveSituacion(muestra, cartas))).not.toContain(casos[0].clave);
+
+  await enlace(page, "Todos los temas").click();
+  await enlace(page, "Volver a los primeros cinco minutos").click();
+  await boton(page, "Repetir demostración").click();
+  await boton(page, "Ver otro ejemplo").click();
+  const id = await page.evaluate(() => history.state.ejemplo.id);
+  await page.reload();
+  expect(await page.evaluate(() => history.state.ejemplo.id)).toBe(id);
+  await boton(page, "Repetir demostración").click();
+  await page.goBack();
+  await page.clock.runFor(4000);
+  await expect(page.locator("[data-demostracion]")).toHaveCount(0);
+  await expect(page.locator('[data-avance="comparar-cartas"]')).toContainText("1 mano resuelta sin ayuda");
+  await page.goForward();
+  expect(await page.evaluate(() => history.state.ejemplo.id)).toBe(id);
+  const caso = temas[0].ejemplos.find((caso) => caso.id === id);
+  await comprobarEjemplo(page, temas[0], caso, explicarSituacion(temas[0].habilidad, caso.cartas, caso.muestra));
+  expect(await progreso()).toBe(conAcierto);
+});
+
+test("espera al tapete y no se relanza al volver a desplazarlo", async ({ page }) => {
+  await abrirDemostracion(page, { width: 320, height: 220 });
+  const panel = page.locator(".ap-ejercicio");
+  const mesa = page.locator(".ap-mesa");
+  await page.clock.runFor(4000);
+  await expect(panel).toHaveAttribute("data-demostracion", "espera");
+  await expect(boton(page, "Ir a practicar")).toBeEnabled();
+  await mesa.scrollIntoViewIfNeeded();
+  await expect(panel).toHaveAttribute("data-demostracion", "muestra");
+  await page.clock.runFor(3000);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(mesa).not.toBeInViewport();
+  await mesa.scrollIntoViewIfNeeded();
+  await expect(mesa).toBeInViewport();
+  await expect(panel).toHaveAttribute("data-demostracion", "resultado");
+
+  await boton(page, "Repetir demostración").click();
+  await page.clock.runFor(1800);
+  await boton(page, "Ver otro ejemplo").click();
+  await mesa.scrollIntoViewIfNeeded();
+  await expect(panel).toHaveAttribute("data-demostracion", "muestra");
+  await page.clock.runFor(800); // Vencería el temporizador del ejemplo anterior.
+  await expect(panel).toHaveAttribute("data-demostracion", "muestra");
+  await page.clock.runFor(2000);
+  await expect(page.locator(".ap-elegida")).toHaveText("4 de oros");
+});
+
+test("movimiento reducido presenta la elección y su explicación de inmediato", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await abrirDemostracion(page, { width: 320, height: 700 });
+  for (const caso of temas[0].ejemplos) {
+    const explicacion = explicarSituacion(temas[0].habilidad, caso.cartas, caso.muestra);
+    await comprobarEjemplo(page, temas[0], caso, explicacion);
+    await expect(page.locator(".ap-ejercicio")).toHaveAttribute("data-demostracion", "resultado");
+    await expect(page.locator("#ejemplo-resuelto > span")).toBeVisible();
+    await expect(page.locator(".ap-elegida")).toBeVisible();
+    await boton(page, "Repetir demostración").press("Enter");
+    await expect(page.locator(".ap-gesto")).toBeHidden();
+    await expect(page.locator("#ejemplo-resuelto > span")).toBeVisible();
+    await boton(page, "Ver otro ejemplo").click();
+  }
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await boton(page, "Repetir demostración").click();
+  await expect(page.locator(".ap-ejercicio")).toHaveAttribute("data-demostracion", "muestra");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator(".ap-ejercicio")).toHaveAttribute("data-demostracion", "resultado");
 });
