@@ -19,7 +19,7 @@
       },
       {
         "heading": "Dar vuelta la muestra",
-        "text": "Dejá la siguiente carta boca arriba, a la vista junto al mazo. Su palo determina las cinco piezas de esta mano. La persona a la derecha de quien repartió es mano y juega primero. Quien repartió es pie y cierra la primera vuelta."
+        "text": "La siguiente carta es la muestra. Se suele dejar boca arriba debajo del mazo, con el número y el palo a la vista. Su palo determina las cinco piezas de esta mano. La persona a la derecha de quien repartió es mano y juega primero. Quien repartió es pie y cierra la primera vuelta."
       }
     ],
     "variants": [
@@ -52,6 +52,7 @@
         }
       },
       {
+        "id": "rey-pieza",
         "heading": "Cuándo el rey es pieza",
         "text": "Si la muestra es una de las cinco piezas, el rey de ese palo ocupa exactamente su lugar. Con el 4 de copas de muestra, el 12 de copas vence al 5 de copas, pierde ante el 2 de copas y vale 29 para el envido. Con el 6 de copas de muestra, ese mismo rey conserva su rango común."
       },

@@ -12,7 +12,7 @@ import "../styles/site.css";
 interface Props {
   title: string;
   description: string;
-  active: "inicio" | "reglas" | "fuentes";
+  active?: "inicio" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
 const pages = [
