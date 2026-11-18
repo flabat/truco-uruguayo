@@ -165,7 +165,15 @@
       },
       {
         "heading": "Echar los perros",
-        "text": "Es una modalidad que la mesa puede acordar. Antes de ver sus cartas, un equipo propone jugar la falta, el resto y el truco de una vez. El rival mira las suyas y dice «en ley» si tiene flor o «a punto» si juega el envido. Contesta por separado el envite que corresponda y el truco. Por ejemplo, «a punto, paso y quiero» rechaza la falta y acepta el truco."
+        "text": "En ConectaGames, un equipo puede decir «a ley de juego, todo dicho» antes del próximo reparto para ofrecer la falta envido, la contraflor al resto y el truco. El rival mira sus cartas y responde «en ley» si tiene flor o «a punto» si no tiene. Por ejemplo, «a punto, paso y quiero» rechaza la falta y acepta el truco. ConectaGames deja sin precisar qué tanteador habilita el canto y quién tiene prioridad si ambos lo anuncian.",
+        "table": {
+          "headers": ["Antes de repartir, en un chico a 40", "Gran Aventura", "Quiero Truco"],
+          "rows": [
+            ["15 a 10", "El equipo de 15 puede anunciarlo. Si los dos lo piden, tiene prioridad el de 10.", "Ninguno puede. Ambos siguen en malas."],
+            ["20 a 19", "Cualquiera puede. Si los dos lo piden, tiene prioridad el de 19.", "Sólo puede el de 19. Su rival ya entró en buenas al llegar a 20."],
+            ["20 a 20", "Si los dos lo piden, tiene prioridad el equipo del mano.", "Ninguno puede. Los dos están en buenas, pero ninguno va perdiendo."]
+          ]
+        }
       }
     ],
     "sources": [
@@ -178,10 +186,18 @@
     "variants": [
       {
         "title": "Quién puede echar los perros",
-        "text": "Quiero Truco reserva el canto para el equipo que va perdiendo y exige que el rival ya esté en buenas. Gran Aventura permite que lo proponga cualquiera antes de que salga la muestra. Si los dos lo piden, tiene prioridad quien pierde y, en empate, el equipo del mano.",
+        "text": "En Gran Aventura, cualquiera de los equipos puede decir «a ley de juego» antes de poner la muestra, con cualquier tanteador. Sólo uno puede hacerlo por ronda. Si los dos lo piden, tiene prioridad el que va perdiendo y, en caso de empate, el equipo del mano. El que anuncia puede decir «todo dicho» o elegir los envites que permite el artículo 73. En Quiero Truco, sólo puede activar la opción el equipo que va perdiendo, con el acuerdo de todos sus integrantes y el rival ya en buenas. Rige desde el reparto siguiente.",
         "sources": [
-          {"title": "Quiero Truco · Echar los perros", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"},
-          {"title": "Gran Aventura · Arts. 71–72", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+          {"title": "Gran Aventura · Arts. 4 y 70–73", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+          {"title": "Quiero Truco · El tanteador y Echar los perros", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"}
+        ]
+      },
+      {
+        "title": "Los perros en Expo Prado y las Canelonchiqueadas",
+        "text": "En Expo Prado 2018, las parejas rivales debían acordar las condiciones de juego al comenzar el campeonato. En las Canelonchiqueadas 2026, el reglamento remite a las reglas tradicionales para lo que deja sin detallar. Ninguna de esas bases especifica qué equipo puede anunciar el canto, en qué momento ni quién tiene prioridad si ambos lo piden.",
+        "sources": [
+          {"title": "Expo Prado 2018 · Bases del campeonato, «Logística», pág. 1", "url": "https://web.archive.org/web/20240711235721id_/https://www.expoprado.com/wp-content/uploads/2018/08/CAMPEONATO-DE-TRUCO-Bases-y-condiciones-1.pdf#page=1"},
+          {"title": "Canelonchiqueadas 2026 · Reglamento, «Truco uruguayo», pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
         ]
       }
     ]
