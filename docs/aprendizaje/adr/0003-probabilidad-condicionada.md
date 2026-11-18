@@ -1,6 +1,6 @@
 # ADR 3 · Probabilidad de ganar la mano desde la información del aprendiz
 
-**Estado.** Propuesta para la lección de parejas. Implementación y ratificación en [#60](https://github.com/flabat/truco-uruguayo/issues/60). Continúa las decisiones sobre motor, vista por asiento y replay de la [ADR 1](0001-motor-y-replay.md) y el [estudio de salidas](../../investigacion/salidas/README.md).
+**Estado.** Decisión implementada. Los [mundos compatibles](https://github.com/flabat/truco-uruguayo/pull/70) y el [cálculo pareado](https://github.com/flabat/truco-uruguayo/pull/71) están integrados. La [verificación independiente](../probabilidad/validacion.md) contrasta las dos escenas y once posiciones de práctica. Continúa las decisiones sobre motor, vista por asiento y replay de la [ADR 1](0001-motor-y-replay.md) y el [estudio de salidas](../../investigacion/salidas/README.md).
 
 ## Pregunta y modelo
 

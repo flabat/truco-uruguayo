@@ -1,6 +1,6 @@
 # ¿Con qué carta tiene más chances de ganar la mano tu pareja?
 
-**Diseño propuesto para la primera lección de probabilidad.** El aprendiz mira la mesa, predice qué carta conviene, compara las alternativas y recién entonces juega. Al terminar puede volver al momento de la decisión. La medida es la probabilidad de que su pareja gane la **mano completa** de truco uruguayo 2 contra 2, dadas las cartas que podía conocer en ese momento y la forma de jugar acordada para los cuatro asientos. [Decisión estadística](../adr/0003-probabilidad-condicionada.md) · [Decisión de interfaz](../adr/0004-leccion-react-worker.md) · [Plan e issues](plan.md)
+**Primera lección de probabilidad.** El aprendiz mira la mesa, predice qué carta conviene, compara las alternativas y recién entonces juega. Al terminar puede volver al momento de la decisión. La medida es la probabilidad de que su pareja gane la **mano completa** de truco uruguayo 2 contra 2, dadas las cartas que podía conocer en ese momento y la forma de jugar acordada para los cuatro asientos. [Decisión estadística](../adr/0003-probabilidad-condicionada.md) · [Decisión de interfaz](../adr/0004-leccion-react-worker.md) · [Plan e issues](plan.md) · [Resultados verificados](validacion.md)
 
 ## Qué va a poder explicar el aprendiz
 
