@@ -1,0 +1,9 @@
+**
+!api/
+!api/*.ts
+!api/package*.json
+!api/migrations/
+!api/migrations/*.sql
+!src/
+!src/motor/
+!src/motor/*.ts

@@ -33,6 +33,7 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
 node scripts/verificar-identidad.mjs "$issuer"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
 jugadores=$(sql "$consulta_jugadores")
 
