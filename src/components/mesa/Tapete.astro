@@ -7,8 +7,10 @@ import { asientos } from "./relato";
   <div class="tapete-asientos">
     {asientos.map((nombre, i) => (
       <div class={`asiento asiento-${i}`} role="group" aria-label={nombre}>
-        <h3>{nombre}</h3>
-        <span class="asiento-papel"></span>
+        <div>
+          <h3>{nombre}</h3>
+          <span class="asiento-papel"></span>
+        </div>
         <div class="asiento-cartas"></div>
       </div>
     ))}

@@ -50,9 +50,11 @@
   position: relative;
   isolation: isolate;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-areas: ". frente ." "izq muestra der" ". vos .";
+  grid-template-areas: "frente frente frente" "izq muestra der" "vos vos vos";
+  /* Reservar la carta del compañero mantiene fija la muestra al pasar del abanico a la jugada. */
+  grid-template-rows: minmax(clamp(92px, 14vw, 138px), auto) auto auto;
   gap: 4px 0;
-  align-content: center;
+  align-content: start;
   align-items: center;
   justify-items: center;
   padding: 8px 0 0;
@@ -73,6 +75,7 @@
 .asiento-3 { grid-area: izq; }
 .tapete-muestra {
   grid-area: muestra;
+  align-self: start;
   --ancho-mazo: clamp(90px, 21vw, 128px);
   width: 100%;
 }
@@ -93,6 +96,11 @@
   display: block;
 }
 .asiento-papel:empty { display: none; }
+.asiento-0, .asiento-2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .asiento-activo, .asiento-ganador {
   border-color: #d6bd82;
   background: #244433;
@@ -107,6 +115,7 @@
   margin-right: 5px;
 }
 .asiento-cartas { display: grid; justify-items: center; }
+.asiento-cartas:empty { display: none; }
 .tapete .ap-carta {
   font-size: clamp(11px, 1.25vw, 13px);
   padding: 0;
@@ -114,6 +123,7 @@
   margin-top: 3px;
   max-width: 95px;
 }
+.tapete :is(.asiento-0, .asiento-2) .ap-carta { max-width: none; }
 .tapete .ap-carta span { margin-top: 3px; }
 .tapete .ap-carta img {
   width: clamp(36px, 5.5vw, 59px);
