@@ -119,12 +119,15 @@ function Invitacion({ enlace }: { enlace: string }) {
       await navigator.clipboard.writeText(enlace);
       avisar("Invitación copiada.");
     } catch {
+      input.current?.focus();
       input.current?.select();
-      avisar(
-        document.execCommand("copy")
-          ? "Invitación copiada."
-          : "Enlace seleccionado. Copialo para compartirlo.",
-      );
+      let copiada = false;
+      try {
+        copiada = document.execCommand?.("copy") ?? false;
+      } catch {
+        /* El usuario puede copiar el texto seleccionado manualmente. */
+      }
+      avisar(copiada ? "Invitación copiada." : "Enlace seleccionado. Copialo para compartirlo.");
     }
   }
   return (
