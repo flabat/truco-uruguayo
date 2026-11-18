@@ -5,7 +5,7 @@ import { repartir } from "../motor/reparto.ts";
 import { capturarReplay, reproducirReplay } from "../motor/replay.ts";
 import { evaluarTantos } from "../motor/tantos.ts";
 import { claveSituacion, evaluarRespuesta } from "./generadores/index.ts";
-import { pertenece } from "./generadores/familias.ts";
+import { familiasPorHabilidad, pertenece } from "./generadores/familias.ts";
 import { reconocerFlor, temas, type Tema } from "./lecciones/index.ts";
 import { crearFuenteProgreso } from "./progreso.ts";
 import { iniciarSesion, type Continuacion, type Sesion } from "./sesion.ts";
@@ -52,25 +52,22 @@ export function crearMesaGuiada({
   obtenerAlmacen = (): Almacen | undefined => globalThis.sessionStorage,
 } = {}) {
   let almacen: Almacen | undefined;
-  let guardado: ReturnType<typeof recuperar>;
   try {
     almacen = obtenerAlmacen();
-    const texto = almacen?.getItem(claveMesa);
-    if (texto) guardado = recuperar(texto);
-  } catch { /* Una pestaña con el almacenamiento bloqueado o ilegible puede jugar igual. */ }
+  } catch { /* La pestaña puede jugar con el almacenamiento bloqueado. */ }
 
-  let estado = guardado?.estado ?? iniciarMano(repartir(semilla(), 3));
-  let pausa: Pausa = guardado ? guardado.pausa : "flor";
-  let cursor = guardado?.cursor ?? null;
-  let seleccion: CardId[] = guardado?.seleccion ?? [];
-  let mensaje = guardado?.mensaje ?? "";
+  let estado: EstadoMano;
+  let pausa: Pausa = "flor";
+  let cursor: number | null = null;
+  let seleccion: CardId[] = [];
+  let mensaje = "";
   let sesion: Sesion<SituacionVisible> | undefined;
 
   function abrirPausa(continuacion?: Continuacion) {
     if (!pausa) return;
     const tema = temaDe(pausa, estado);
     const { cartas, muestra } = vistaPara(estado, 0);
-    const familia = tema.familias.find((f) => pertenece(f as Parameters<typeof pertenece>[0], cartas, muestra))!;
+    const familia = familiasPorHabilidad[tema.habilidad].find((f) => pertenece(f, cartas, muestra))!;
     const clave = claveSituacion(muestra, cartas);
     sesion = iniciarSesion(tema, { id: tema.id + "/" + clave, clave, habilidad: tema.habilidad,
       familia, cartas, muestra, explicacion: "" }, evaluarRespuesta, fuente, continuacion);
@@ -84,10 +81,34 @@ export function crearMesaGuiada({
     } catch { almacen = undefined; }
   }
 
-  abrirPausa(guardado?.continuacion);
-  guardar();
+  function reanudar() {
+    let guardado: ReturnType<typeof recuperar>;
+    try {
+      const texto = almacen?.getItem(claveMesa);
+      if (texto) guardado = recuperar(texto);
+    } catch { /* Un registro ilegible se puede reemplazar con un reparto nuevo. */ }
+    if (!guardado) return false;
+    ({ estado, pausa, cursor, seleccion, mensaje } = guardado);
+    sesion = undefined;
+    abrirPausa(guardado.continuacion);
+    return true;
+  }
+
+  if (!reanudar()) {
+    estado = iniciarMano(repartir(semilla(), 3));
+    abrirPausa();
+    guardar();
+  }
 
   return {
+    reanudar,
+    marcar(carta: CardId) {
+      if (sesion?.pasoActual?.tipo === "elegir-cartas" && sesion.situacion.cartas.includes(carta)) {
+        seleccion = seleccion.includes(carta) ? seleccion.filter((c) => c !== carta) : [...seleccion, carta];
+        guardar();
+      }
+      return [...seleccion];
+    },
     vista() {
       let mesa = estado;
       let reproduccion = null;
