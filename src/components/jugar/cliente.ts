@@ -154,15 +154,21 @@ export function useMesa(id: string) {
       };
     }
 
+    function sinRed() {
+      setConectada(false);
+      socket?.close();
+    }
     refrescar.current = leer;
     void leer();
     window.addEventListener("online", leer);
+    window.addEventListener("offline", sinRed);
     window.addEventListener("pageshow", leer);
     return () => {
       cancel.abort();
       clearTimeout(timer);
       socket?.close();
       window.removeEventListener("online", leer);
+      window.removeEventListener("offline", sinRed);
       window.removeEventListener("pageshow", leer);
     };
   }, [ruta]);

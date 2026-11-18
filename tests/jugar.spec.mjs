@@ -208,6 +208,10 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
 });
 
 test("crea un lugar para tres amigos y completa un asiento puntual", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    Object.defineProperty(document, "execCommand", { value: undefined, configurable: true });
+  });
   let lugares = [personas[0], ...[1, 2, 3].map((n) => seat(n, "vacio", null))];
   let jugador = yo;
   const sockets = await simular(page, (path, req) => {
@@ -226,7 +230,8 @@ test("crea un lugar para tres amigos y completa un asiento puntual", async ({ pa
     new RegExp(token + "$"),
   );
   await page.getByRole("button", { name: "Copiar invitación" }).click();
-  await expect(page.getByText(/Invitación copiada|Enlace seleccionado/)).toBeVisible();
+  await expect(page.getByText("Enlace seleccionado. Copialo para compartirlo.")).toBeVisible();
+  await expect(page.getByLabel("Enlace de invitación")).toBeFocused();
   await page.getByRole("button", { name: "Agregar computadora al asiento 3" }).click();
   await expect(page.getByText("Faltan 2 jugadores para repartir.")).toBeVisible();
   lugares[1] = personas[1];
