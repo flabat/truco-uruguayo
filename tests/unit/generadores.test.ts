@@ -194,6 +194,17 @@ test("el runner ofrece empate explícito, conserva la misma mano al pedir pista 
   assert.equal(ganadora.responder({ tipo: "elegir-cartas", cartas: ganadora.situacion.cartas }).correcta, false);
 });
 
+test("la cuenta distingue entre una única carta de mayor valor y dos sietes empatados", () => {
+  for (const [familia, semilla, total, explicacion] of [
+    ["tres-palos-distintos", 1, 5, "Solo cuenta el 5 de oros, que vale 5."],
+    ["selecciones-equivalentes", 3, 7, "Contás una sola carta. Con el 7 de oros o el 7 de copas hacés 7 de envido."],
+  ] as const) {
+    const s = generarSituacion({ habilidad: "contar-envido", familia, semilla, recientes: [] });
+    assert.ok(s.explicacion.endsWith(explicacion));
+    assert.deepEqual(evaluarRespuesta(s, cuenta, { tipo: "responder-total", total }), { correcta: true, explicacion });
+  }
+});
+
 test("las dos parejas empatadas con figuras que aportan cero completan selección y total por separado", () => {
   const leccion: Leccion = {
     id: "tantos", titulo: "Contar envido", capitulo: "envido", habilidad: "contar-envido",
@@ -213,13 +224,18 @@ test("las dos parejas empatadas con figuras que aportan cero completan selecció
     assert.doesNotMatch(intento.explicacion, /29/);
     assert.equal(sesion.responder({ tipo: "responder-total", total: 4 }).correcta, false);
     assert.match(sesion.pedirPista(), /aporta 29/);
-    assert.ok(sesion.responder({ tipo: "responder-total", total: 29 }).correcta);
+    const resultado = sesion.responder({ tipo: "responder-total", total: 29 });
+    assert.ok(resultado.correcta);
+    assert.equal(resultado.explicacion,
+      "Podés combinar el 4 de bastos con el caballo de copas o el rey de espadas. En ambos casos sumás 29 + 0 = 29.");
     assert.ok(sesion.completada);
   }
 
   const tresFiguras = { ...situacion, muestra: "oros-06" as const, cartas: ["copas-11", "espadas-12", "bastos-10"] as const };
   for (const figura of tresFiguras.cartas) assert.ok(elegir(tresFiguras, [figura]).correcta);
   assert.equal(elegir(tresFiguras, tresFiguras.cartas).correcta, false);
+  assert.equal(evaluarRespuesta(tresFiguras, cuenta, { tipo: "responder-total", total: 0 }).explicacion,
+    "Contás una sola carta. Con el caballo de copas, el rey de espadas o la sota de bastos hacés 0 de envido.");
 });
 
 test("las pistas atienden al número más alto, al rey sustituto, a la flor aparente y a los 20 de base", () => {
