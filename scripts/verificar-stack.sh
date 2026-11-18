@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 # Un proyecto exclusivo mantiene las pruebas y sus volúmenes fuera de la mesa local.
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
-export TRUCO_BIND=127.0.0.1 TRUCO_HOST=localhost WEB_PORT=0 API_PORT=0
+export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 
 cleanup() {
@@ -23,7 +23,7 @@ url() { echo "http://$("${compose[@]}" port "$1" "$2")"; }
 up
 web=$(url web 80)
 api=$(url api 3001)
-issuer="http://localhost:$OIDC_PORT/realms/truco-local"
+issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F 'Truco uruguayo' >/dev/null
 curl -fsS "$api/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
@@ -31,6 +31,10 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)
 ' "$issuer"
 node scripts/verificar-identidad.mjs "$issuer"
+node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
+consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
+jugadores=$(sql "$consulta_jugadores")
 
 # El dato y la fecha original permiten detectar tanto pérdida de volumen como reaplicación.
 sql "CREATE TABLE juego.prueba_persistencia (valor text); INSERT INTO juego.prueba_persistencia VALUES ('conservado')"
@@ -41,6 +45,8 @@ migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-jueg
 "${compose[@]}" down
 up
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
+node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
+[[ $(sql "$consulta_jugadores") == "$jugadores" ]]
 [[ $(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'") == "$migration" ]]
 curl -fsS "$(url api 3001)/health"
 echo ' · Arranque, identidad, migraciones y persistencia verificados.'

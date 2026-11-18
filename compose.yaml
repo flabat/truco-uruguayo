@@ -6,6 +6,7 @@ services:
       dockerfile: infra/web.Dockerfile
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${WEB_PORT:-8081}:80"
+      - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:80"
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
       interval: 5s
@@ -16,6 +17,11 @@ services:
     build: ./api
     environment:
       DATABASE_URL: postgres://truco:truco-local@db:5432/truco
+      LOCAL_OIDC: "1"
+      WEB_ORIGIN: http://${TRUCO_HOST:-localhost}:${WEB_PORT:-8081}
+      OIDC_CALLBACK: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/api/auth/callback
+      OIDC_ISSUER: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/realms/mesa-local
+      OIDC_BACKEND: http://identidad:8080/realms/mesa-local
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${API_PORT:-3001}:3001"
     depends_on:
@@ -46,11 +52,10 @@ services:
     command: ["start-dev", "--import-realm"]
     environment:
       KC_HOSTNAME: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
-    ports:
-      - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:8080"
     volumes:
       - identidad:/opt/keycloak/data
       - ./infra/truco-local-realm.json:/opt/keycloak/data/import/truco-local-realm.json:ro
+      - ./infra/mesa-local-realm.json:/opt/keycloak/data/import/mesa-local-realm.json:ro
     healthcheck:
       test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/8080; printf 'GET /realms/truco-local/.well-known/openid-configuration HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3; read -r status <&3; [[ $$status == *' 200 '* ]]"]
       interval: 5s

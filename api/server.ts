@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import pg from "pg";
 import { migrate } from "./migrate.ts";
+import { crearAuth } from "./auth.ts";
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -8,8 +9,24 @@ const pool = new pg.Pool({
 });
 pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", error.message));
 await migrate(pool);
+const web = new URL(process.env.WEB_ORIGIN!);
+const auth = crearAuth(pool, {
+  web,
+  callback: new URL(process.env.OIDC_CALLBACK ?? "/api/auth/callback", web),
+  issuer: new URL(process.env.OIDC_ISSUER!),
+  backend: new URL(process.env.OIDC_BACKEND!),
+  local: process.env.LOCAL_OIDC === "1",
+});
 
 const server = createServer(async (request, response) => {
+  if (request.url?.startsWith("/api/")) {
+    try {
+      await auth(request, response);
+    } catch {
+      response.writeHead(503).end("El servicio de jugadores no está disponible.");
+    }
+    return;
+  }
   if (request.method !== "GET" || request.url !== "/health") {
     response.writeHead(404).end();
     return;
