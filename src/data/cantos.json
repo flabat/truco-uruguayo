@@ -35,8 +35,15 @@
         "text": "Aceptado el envite, el mano declara cuánto tiene. Si el tanto de tu rival te gana, podés decir «son buenas». Entre jugadores empatados gana el que sea más mano, es decir, quien esté primero en el orden del reparto. Para acreditar el tanto ganador, mostrá las cartas antes de mezclarlas con el mazo."
       },
       {
-        "heading": "Cuánto vale la falta",
-        "text": "La regla de Gran Aventura toma el tanteador del que va primero. Si juegan a 40 y están 32 a 28, la falta directa vale 8. Si la gana el equipo que tiene 28, queda en 36. Si la gana el que tiene 32, completa el chico."
+        "heading": "Cuánto vale la falta en redondilla",
+        "text": "En una redondilla de a seis a 50, A lleva 32 tantos y B lleva 19. A canta falta envido directa, sin envites previos. B dice «quiero» y gana el envite. ¿Cuántos tantos se anota?",
+        "table": {
+          "headers": ["Regla de la mesa", "Tantos que cobra B", "Cómo quedan"],
+          "rows": [
+            ["Cuenta del puntero (Gran Aventura, adaptada a 50)", "A va primero. Le faltan 50 − 32 = 18 para ganar. B suma esos 18 a sus 19.", "A 32, B 37"],
+            ["Cuenta del ganador (Canelonchiqueadas 2026)", "B ganó el envite y está en malas. Le faltan 25 − 19 = 6 para entrar en buenas.", "A 32, B 25"]
+          ]
+        }
       },
       {
         "heading": "Si los tantos cantados no coinciden",
@@ -45,16 +52,24 @@
     ],
     "sources": [
       {"title": "Ludoteka · Envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
-      {"title": "Gran Aventura · Arts. 14, 22–25 y 38–47", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+      {"title": "Gran Aventura · Arts. 4, 14, 22–25 y 38–47", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
       {"title": "Wikipedia · Puntos del envido", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_del_envido"}
     ],
     "variants": [
       {
         "title": "Qué tanteador determina la falta",
-        "text": "En las Canelonchiqueadas de 2026, en una redondilla de a seis a 50, quien gana la falta en malas llega a 25. Si ya está en buenas, gana la partida. ConectaGames habla de los tantos que le faltan «al rival para ganar», sin explicar el caso en que quien canta lleva la delantera. Acordá qué cuenta usa la mesa antes del reparto.",
+        "text": "Gran Aventura toma los tantos del puntero al cierre de la ronda anterior en sus chicos a 40. Ludoteka usa el mismo criterio a 30. En las Canelonchiqueadas de a seis a 50, mirá con cuántos tantos empezó el ganador del envite. Si tenía 24, cobra uno y entra en buenas con 25. Con 25 o más ya está en buenas y gana la partida.",
         "sources": [
-          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
-          {"title": "Ludoteka · Cálculo sobre el puntero", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+          {"title": "Gran Aventura · Arts. 4 y 23–25", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
+          {"title": "Ludoteka · Envido la falta", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
+          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
+        ]
+      },
+      {
+        "title": "A quién llama «rival» ConectaGames",
+        "text": "El blog de ConectaGames de 2015 cuenta la falta desde el puntero. Su ayuda actual dice «los puntos que faltan al rival para ganar». Queda por precisar cuántos tantos cobra el equipo que va atrás cuando el puntero canta la falta y pierde el envite.",
+        "sources": [
+          {"title": "ConectaGames · Toques o Envidos (2015)", "url": "https://conectagamesblog.wordpress.com/2015/12/17/reglas-del-truco-uruguayo/"},
           {"title": "ConectaGames · Envido o toques", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"}
         ]
       }
