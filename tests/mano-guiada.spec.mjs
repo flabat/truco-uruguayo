@@ -182,3 +182,100 @@ test("consultar la regla conserva las cartas y la ayuda tras volver o recargar",
     await expect(page.locator(`[data-avance="${tema}"]`)).toContainText("En práctica · 0 manos resueltas");
   }
 });
+
+async function turnoDeApertura(page) {
+  await page.goto("aprender/mano/");
+  await expect(boton(page, "Comparar mis cartas")).toBeHidden();
+  await boton(page, "Sin flor").click();
+  await seleccionar(page, ["2 de copas", "5 de oros"]);
+  await expect(boton(page, "Comparar mis cartas")).toBeHidden();
+  await contar(page, 35);
+}
+
+test("el análisis opcional conserva la mano y el progreso, y comparte cifras con la lección", async ({ page }) => {
+  await semillaFija(page, 830838);
+  const workers = [];
+  page.on("worker", worker => workers.push(worker.url()));
+  await turnoDeApertura(page);
+  const guardado = () => page.evaluate(() => [sessionStorage.getItem("truco-oriental.mano-guiada.v1"),
+    localStorage.getItem("truco-oriental.aprendizaje")]);
+  const inicial = await guardado();
+  expect(workers).toEqual([]);
+  await expect(page.locator("astro-island")).toHaveCount(0);
+  const abrir = boton(page, "Comparar mis cartas");
+  await abrir.focus();
+  await abrir.press("Enter");
+  const tabla = page.getByRole("table", { name: "Chances de que tu pareja gane la mano" });
+  await expect(tabla).toBeVisible({ timeout: 20000 });
+  await expect(tabla.getByRole("row", { name: /3 de bastos/ })).toContainText("13.779 de 20.000");
+  await expect(page.locator("#metodo-chances")).toContainText("Estimación por simulación");
+  expect(workers.length).toBe(1);
+  await expect(boton(page, "Cerrar comparación")).toBeFocused();
+  await page.locator("#diferencias-chances summary").press("Enter");
+  await expect(page.locator("#diferencias-chances li")).toHaveCount(3);
+  await expect(page.locator("#diferencias-chances")).toContainText("8,78 puntos porcentuales");
+  const filas = await tabla.locator("tbody tr").allTextContents();
+  await boton(page, "Cerrar comparación").press("Enter");
+  await expect(abrir).toBeFocused();
+  await expect(tabla).toBeHidden();
+  expect(await guardado()).toEqual(inicial);
+  await expect(page.getByRole("button", { name: /^Jugar / })).toHaveCount(3);
+  await abrir.press("Enter");
+  await expect(tabla).toBeVisible();
+  expect(workers.length).toBe(1);
+  await page.getByRole("link", { name: "Volver a aprender" }).click();
+  await page.getByRole("link", { name: /Probabilidad de ganar la mano/ }).click();
+  await expect(page).toHaveURL("aprender/probabilidad/");
+  await boton(page, "Predecir 3 de bastos").click();
+  await boton(page, "Comparar las cartas").click();
+  const otra = page.getByRole("table", { name: "Victorias de tu pareja por carta jugada" });
+  await expect(otra).toBeVisible({ timeout: 20000 });
+  expect(await otra.locator("tbody tr").allTextContents()).toEqual(filas);
+});
+
+test("jugar o mover el replay cancela el cálculo y descarta la respuesta de un turno anterior", async ({ page }) => {
+  await semillaFija(page, 830838);
+  await page.addInitScript(() => {
+    window.pedidosChances = [];
+    window.Worker = class {
+      postMessage(pedido) {
+        const entregar = this.onmessage;
+        this.registro = { pedido, cancelado: false, terminar: () => entregar({ data: {
+          tipo: "resultado", requestId: pedido.requestId, clave: pedido.clave, resultado: { tipo: "incompatible" },
+        } }) };
+        window.pedidosChances.push(this.registro);
+      }
+      terminate() { this.registro.cancelado = true; }
+    };
+  });
+  await turnoDeApertura(page);
+  const abrir = boton(page, "Comparar mis cartas");
+  await abrir.click();
+  await jugar(page, "3 de bastos");
+  await expect(page.locator("#panel-chances")).toBeHidden();
+  await abrir.click();
+  const pedidos = await page.evaluate(() => {
+    const [antes, ahora] = window.pedidosChances;
+    antes.terminar();
+    return { cancelado: antes.cancelado, antes: antes.pedido.posicion, ahora: ahora.pedido.posicion };
+  });
+  expect(pedidos.cancelado).toBe(true);
+  expect(pedidos.antes.jugadas).toHaveLength(0);
+  expect(pedidos.ahora.jugadas.length).toBeGreaterThan(0);
+  expect(Object.keys(pedidos.ahora).sort()).toEqual(["asiento", "cartas", "dador", "jugadas", "muestra", "version"]);
+  await expect(page.locator("#estado-chances")).toHaveText("Calculando las chances de tu pareja…");
+  await expect(page.locator("#resultado-chances")).toBeHidden();
+  await jugar(page, "2 de copas");
+  await jugar(page, "5 de oros");
+  await expect(abrir).toBeHidden();
+  await boton(page, "Reproducir la mano").click();
+  await abrir.click();
+  expect(await page.evaluate(() => window.pedidosChances.at(-1).pedido.posicion)).toEqual(pedidos.antes);
+  await boton(page, "Siguiente jugada").click();
+  await expect(abrir).toBeHidden();
+  await page.reload();
+  await expect(page.locator("#consulta-chances")).toBeHidden();
+  await boton(page, "Volver al resultado").click();
+  await boton(page, "Repartir de nuevo").click();
+  await expect(page.locator("#consulta-chances")).toBeHidden();
+});
