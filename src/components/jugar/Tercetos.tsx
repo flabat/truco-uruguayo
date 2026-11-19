@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
-import { canto, Naipe, nombrar, Tanteador, tantos } from "./Tablero";
+import { AvisoFlor, canto, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
+import { Naipe, Tanteador } from "./Tablero";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import "./tercetos.css";
 
@@ -80,34 +81,35 @@ function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base
   );
 }
 
-function Historial({ acciones, cobros, vueltas, mesa }: Pick<VistaTercetos, "acciones" | "cobros" | "vueltas"> & { mesa: Mesa }) {
+function DetallesDelLance({ acciones = [], cobros, vueltas, nombre }: Pick<VistaTercetos, "cobros" | "vueltas"> & {
+  acciones?: VistaTercetos["acciones"]; nombre: (asiento: number) => string;
+}) {
   return <>
     {acciones.length > 0 && <ol aria-label="Jugadas y cantos">
-      {acciones.map((a, i) => <li key={i}>{mesa.asientos[a.asiento].nombre} {a.tipo === "carta"
-        ? "jugó " + nombrar(a.carta).toLowerCase()
-        : a.tipo === "mazo" ? "se fue al mazo" : `dijo «${canto[a.tipo]}»`}.</li>)}
+      {acciones.map((a, i) => <li key={i}>{descripcionDeJugada(a, nombre)}</li>)}
     </ol>}
     {vueltas.length > 0 && <ul aria-label="Vueltas terminadas">
       {vueltas.map((v, i) => <li key={i}>{i + 1}.ª vuelta · {v.resultado.tipo === "parda"
-        ? "Parda" : "Ganó " + mesa.asientos[v.resultado.asiento].nombre}.</li>)}
+        ? "Parda" : "Ganó " + nombre(v.resultado.asiento)}.</li>)}
     </ul>}
     {cobros.length > 0 && <ul aria-label="Tantos cobrados">
       {cobros.map((c, i) => <li key={i}>Equipo {c.equipo + 1} · {tantos(c.tantos)} por {c.motivo}
-        {c.tantoGanador != null && c.asiento != null && ` (${mesa.asientos[c.asiento].nombre} con ${c.tantoGanador})`}
+        {c.tantoGanador != null && c.asiento != null && ` (${nombre(c.asiento)} con ${c.tantoGanador})`}
         {c.valor != null && c.valor !== c.tantos && ` · valor del canto ${tantos(c.valor)}`}.</li>)}
     </ul>}
   </>;
 }
 
-function LanceCerrado({ lance, mesa }: { lance: ResumenLance; mesa: Mesa }) {
+function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre: (asiento: number) => string; esActual: boolean }) {
   return <details className="j-historia">
     <summary>{nombreDelLance(lance)} · Ganó el equipo {lance.resultado.equipo + 1} por {motivoDelCierre[lance.resultado.motivo]} · {lance.puntos.join(" a ")}</summary>
-    <Historial {...lance} mesa={mesa} />
+    <DetallesDelLance {...lance} acciones={esActual ? [] : lance.acciones} nombre={nombre} />
   </details>;
 }
 
 export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props) {
   const { vista, lance, historialLances } = partida;
+  const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   const titulo = palabra(mesa, partida);
   const encabezado = useRef<HTMLHeadingElement>(null);
@@ -125,7 +127,8 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
   const esFin = partida.ganadorPartida !== null;
   const cerrados = historialLances.at(-1);
   const ultimoCobro = vista.cobros.at(-1) ?? cerrados?.cobros.at(-1);
-  const finalEnHistorial = cerrados && cerrados.duelo === lance.duelo && cerrados.tipo === lance.tipo;
+  const esLanceActual = (l: LanceTercetos) => l.duelo === lance.duelo && l.tipo === lance.tipo;
+  const finalEnHistorial = cerrados && esLanceActual(cerrados);
   return <>
     <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={e => e === propio ? "Tu equipo" : "Rivales"} />
     <div className="j-partida j-seis" onClickCapture={e => {
@@ -144,20 +147,19 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
       <section className="j-jugada-panel">
         <div role="status" aria-atomic="true">
           <strong className="j-seis-lance">{nombreDelLance(lance)}{esPico && ` · ${rivales}`}</strong>
+          <AvisoFlor pendiente={vista.pendiente} porDeclararFlor={vista.porDeclararFlor} nombre={nombre} />
           <h2 ref={encabezado} tabIndex={-1}>{titulo}</h2>
           {vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
             ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
           {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
             <p>Cantá tu flor antes de jugar una carta.</p>}
-          {vista.pendiente && <p>{mesa.asientos[vista.pendiente.asiento].nombre} cantó {canto[vista.pendiente.tipo].toLowerCase()}.</p>}
+          {opciones.includes("paso-flor") && <p>No tenés flor en esta mano.</p>}
+          {vista.pendiente && (vista.pendiente.tipo !== "flor" || vista.porDeclararFlor == null) &&
+            <p>{nombre(vista.pendiente.asiento)} cantó {canto[vista.pendiente.tipo].toLowerCase()}.</p>}
           {vista.trucoPendiente && vista.pendiente && vista.pendiente.tipo !== vista.trucoPendiente.tipo &&
             <p>Queda pendiente el {canto[vista.trucoPendiente.tipo].toLowerCase()} de {mesa.asientos[vista.trucoPendiente.asiento].nombre}.</p>}
           {ultimoCobro && <p>Último cobro · Equipo {ultimoCobro.equipo + 1}, {tantos(ultimoCobro.tantos)} por {ultimoCobro.motivo}.</p>}
         </div>
-        {jugando && <dl className="j-cuenta">
-          <div><dt>Tus tantos</dt><dd>{jugando.tantosPropios.total} de {jugando.tantosPropios.modalidad}</dd></div>
-          <div><dt>Valor del truco</dt><dd>{tantos(vista.valorTruco)}</dd></div>
-        </dl>}
         {(opciones.includes("falta-envido") || vista.pendiente?.tipo === "falta-envido") && (
           <p className="j-seis-falta">Falta envido · Si gana tu equipo, cobra {tantos(vista.faltaPorEquipo[propio])}. Si ganan los rivales, cobran {tantos(vista.faltaPorEquipo[1 - propio])}.</p>
         )}
@@ -167,14 +169,20 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
         </div>}
         {esFin ? <a className="button" href={base + "jugar/"}>Crear otra mesa</a> : vista.estado === "terminado" &&
           <button className="button" disabled={bloqueada} onClick={() => jugar()}>Repartir otra mano</button>}
+        <HistorialDeMano key={`${partida.manoNumero}-${lance.duelo}`} acciones={vista.acciones} cobros={vista.cobros}
+          nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"} />
+        {jugando && <dl className="j-cuenta">
+          <div><dt>Tus tantos</dt><dd>{jugando.tantosPropios.total} de {jugando.tantosPropios.modalidad}</dd></div>
+          <div><dt>Valor del truco</dt><dd>{tantos(vista.valorTruco)}</dd></div>
+        </dl>}
+        <section className="j-seis-historial" aria-label="Historial del reparto">
+          {historialLances.map(l => <LanceCerrado key={l.duelo ?? "redondilla"} lance={l} nombre={nombre} esActual={esLanceActual(l)} />)}
+          {!finalEnHistorial && (vista.vueltas.length > 0 || vista.cobros.length > 0) && <details className="j-historia">
+            <summary>Vueltas y tantos de {esPico ? "este duelo" : "la redondilla"}</summary>
+            <DetallesDelLance cobros={vista.cobros} vueltas={vista.vueltas} nombre={nombre} />
+          </details>}
+        </section>
       </section>
     </div>
-    <section className="j-seis-historial" aria-label="Historial del reparto">
-      {historialLances.map(l => <LanceCerrado key={l.duelo ?? "redondilla"} lance={l} mesa={mesa} />)}
-      {!finalEnHistorial && vista.acciones.length > 0 && <details className="j-historia">
-        <summary>Ver jugadas y cantos de {esPico ? "este duelo" : "la redondilla"}</summary>
-        <Historial acciones={vista.acciones} cobros={vista.cobros} vueltas={vista.vueltas} mesa={mesa} />
-      </details>}
-    </section>
   </>;
 }

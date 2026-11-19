@@ -1,28 +1,10 @@
-import { Fragment, useEffect, useRef } from "react";
-import { cartasPorId } from "../../lib/cartas";
+import { useEffect, useRef } from "react";
+import { AvisoFlor, canto, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
 import type { VueltaCerrada } from "../../motor/mano";
 import type { VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
-
-export const canto = {
-  truco: "Truco",
-  retruco: "Retruco",
-  "vale-cuatro": "Vale cuatro",
-  envido: "Envido",
-  "real-envido": "Real envido",
-  "falta-envido": "Falta envido",
-  flor: "Flor",
-  "con-flor-envido": "Con flor envido",
-  "contraflor-al-resto": "Contraflor al resto",
-  quiero: "Quiero",
-  "no-quiero": "No quiero",
-  "paso-flor": "Sin flor",
-  mazo: "Irse al mazo",
-} satisfies Record<Exclude<Tipo, "carta">, string>;
-export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
-export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -160,7 +142,9 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
     const esTuTurno = porDeclararFlor === mesa.miAsiento;
     return {
       titulo: esTuTurno ? "Te toca declarar" : "Declara " + mesa.asientos[porDeclararFlor].nombre,
-      indicacion: esTuTurno ? "Indicá si tenés flor." : "Esperando su declaración de flor.",
+      indicacion: esTuTurno
+        ? legales.includes("paso-flor") ? "No tenés flor en esta mano." : "Cantá tu flor."
+        : "Esperando su declaración de flor.",
     };
   }
   if (pendiente) {
@@ -260,7 +244,6 @@ export function EnJuego({
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
   const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
-  const florQuerida = cobrados.find((c) => c.comparacionFlor);
   return (
     <>
       <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
@@ -296,6 +279,7 @@ export function EnJuego({
         </section>
         <section className="j-jugada-panel">
           <div role="status" aria-live="polite" aria-atomic="true">
+            <AvisoFlor pendiente={pendientes} porDeclararFlor={v.porDeclararFlor} nombre={nombre} />
             <h2 ref={encabezado} tabIndex={-1}>
               {titulo}
             </h2>
@@ -307,20 +291,6 @@ export function EnJuego({
               {nombre(v.trucoPendiente.asiento)}.
             </p>
           )}
-          {!resultado && (
-            <dl className="j-cuenta">
-              <div>
-                <dt>Tus tantos</dt>
-                <dd>
-                  {v.tantosPropios.total} de {v.tantosPropios.modalidad}
-                </dd>
-              </div>
-              <div>
-                <dt>Valor de la mano</dt>
-                <dd>{tantos(v.valorTruco)}</dd>
-              </div>
-            </dl>
-          )}
           {disponibles.map((grupo) => (
             <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
               {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
@@ -328,7 +298,7 @@ export function EnJuego({
                 {grupo.opciones.map((tipo) => (
                   <button
                     key={tipo}
-                    className={tipo === "quiero" ? "button" : "j-sec"}
+                    className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"}
                     disabled={bloqueada}
                     onClick={() => jugar({ tipo })}
                   >
@@ -348,6 +318,21 @@ export function EnJuego({
                 Repartir otra mano
               </button>
             )
+          )}
+          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} />
+          {!resultado && (
+            <dl className="j-cuenta">
+              <div>
+                <dt>Tus tantos</dt>
+                <dd>
+                  {v.tantosPropios.total} de {v.tantosPropios.modalidad}
+                </dd>
+              </div>
+              <div>
+                <dt>Valor de la mano</dt>
+                <dd>{tantos(v.valorTruco)}</dd>
+              </div>
+            </dl>
           )}
           {cobrados.length > 0 && (
             <section className="j-lances">
@@ -391,33 +376,6 @@ export function EnJuego({
           )}
         </section>
       </div>
-      {v.acciones.length > 0 && (
-        <details className="j-historia">
-          <summary>Ver jugadas y cantos de la mano</summary>
-          <ol>
-            {v.acciones.map((a, i) => (
-              <Fragment key={i}>
-                <li>
-                  {nombre(a.asiento)}{" "}
-                  {a.tipo === "carta"
-                    ? "jugó " + nombrar(a.carta).toLowerCase()
-                    : a.tipo === "mazo" ? "se fue al mazo" : "dijo «" + canto[a.tipo] + "»"}
-                  .
-                </li>
-                {florQuerida?.comparacionFlor?.indiceAccion === i && (
-                  <li>
-                    <strong>Flor querida.</strong>{" "}
-                    {new Intl.ListFormat("es-UY").format(
-                      florQuerida.comparacionFlor.participantes.map(({ asiento, total }) => nombre(asiento) + " cantó " + total),
-                    )}. Ganó {nombre(florQuerida.asiento!)} con {florQuerida.tantoGanador} de flor. El equipo{" "}
-                    {florQuerida.equipo + 1} sumó {tantos(florQuerida.tantos)} al tanteador.
-                  </li>
-                )}
-              </Fragment>
-            ))}
-          </ol>
-        </details>
-      )}
     </>
   );
 }

@@ -90,7 +90,6 @@
 .j-seis-historial ul { padding-inline-start: 1.4rem; }
 @media (max-width: 760px) {
   .j-seis { grid-template-columns: minmax(0, 1fr); }
-  .j-seis .j-jugada-panel { order: 0; }
   .j-seis-puestos {
     grid-template-areas: none;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
