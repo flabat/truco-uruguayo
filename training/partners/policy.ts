@@ -133,7 +133,7 @@ export function loadPartnerPolicy(artifact: Actor, seat: Asiento): Policy {
     decide = input => mcProbabilities(values, mcKeys(input), 0);
   } else throw new TypeError("Algoritmo desconocido.");
   return { id: artifact.kind + "-" + digest(artifact).slice(0, 16) + "-s" + seat, decide(obs, legal) {
-    if (obs.format !== artifact.format || obs.schema !== versions.observation) throw new Error("Observación incompatible.");
+    if (obs.format !== artifact.format || obs.view.asiento !== seat || obs.schema !== versions.observation) throw new Error("Observación incompatible.");
     return decide(encode(obs, legal));
   } };
 }
