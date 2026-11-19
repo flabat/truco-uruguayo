@@ -7,7 +7,7 @@ import test from "node:test";
 import { gunzipSync } from "node:zlib";
 import { formats, seatsFor } from "../../training/contracts/index.ts";
 import { incumbent } from "../../training/seat/index.ts";
-import { playMatch, replayMatch, sample, scheduledDeal } from "../../training/arena/index.ts";
+import { playMatch, playMatchAsync, replayMatch, sample, scheduledDeal } from "../../training/arena/index.ts";
 import { newRun, run, verify } from "../../training/arena/runs.ts";
 
 test("repartos por par y mano, rondas desde mano en las dos mesas", () => {
@@ -65,8 +65,9 @@ test("reanudar en un límite de chico reproduce el manifiesto y detecta corrupci
   assert.deepEqual(run(a, 3), {complete:false, verified:3});
   assert.deepEqual(run(a), run(b));
   const path = join(a, "manifest.json");
-  const selected = verify(path, {}, "pairs-senas-0-0");
-  assert.ok(selected.replay?.hands.some(h => h.turns.some(turn => turn.signal)));
+  const selected = verify(path, {}, "pairs-private-senas-0-0");
+  assert.ok(selected.replay);
+  assert.ok(selected.replay.hands.every(h => h.turns.every(turn => !Object.hasOwn(turn,"signal"))));
   assert.ok(!JSON.stringify(selected.replay).includes('"manos"'));
   const record = join(a, "matches", "duel-0-0.json.gz");
   const decoded = JSON.parse(gunzipSync(readFileSync(record)).toString());
@@ -93,4 +94,14 @@ test("un cambio de política permite reproducir lo confirmado y protege el torne
   newRun(pending, ["duel"], 1, 708);
   writeFileSync(join(pending, "plan.json"), recorded);
   assert.throws(() => run(pending), /política/);
+});
+
+test("la arena rechaza señas públicas antes de consultar al primer jugador", async t => {
+  const legacy = {format:"pairs-senas", seed:42, pair:0, leg:0} as const;
+  const dir = mkdtempSync(join(tmpdir(), "truco-privacidad-"));
+  t.after(() => rmSync(dir, {recursive:true, force:true}));
+  assert.throws(() => newRun(join(dir,"run"), [legacy.format], 1, 42), /entre compañeros/);
+  const unexpected = {id:"unexpected", decide() { throw new Error("actor consultado"); }};
+  assert.throws(() => playMatch({...legacy, policies:() => unexpected}), /entre compañeros/);
+  await assert.rejects(playMatchAsync({...legacy, responders:() => () => {throw new Error("actor consultado");}}), /entre compañeros/);
 });

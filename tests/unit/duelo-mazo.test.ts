@@ -120,6 +120,30 @@ test("el bluff y la entrega conservan la meta pactada al reconstruir el chico", 
   assert.deepEqual(replay, fin);
 });
 
+test("la flor querida revela también el total perdedor al decidir la salida del duelo", () => {
+  const acciones = [
+    { tipo: "flor", asiento: 0 }, { tipo: "flor", asiento: 1 }, { tipo: "quiero", asiento: 1 },
+    { tipo: "carta", asiento: 0, carta: "espadas-06" }, { tipo: "carta", asiento: 1, carta: "copas-04" },
+  ] as const;
+  const propias = ["copas-04", "copas-05", "oros-02"] as const;
+  // Con el 6 expuesto, estas son las cuatro parejas que completan 29 de flor.
+  for (const [a, b] of [
+    ["espadas-01", "espadas-02"], ["espadas-03", "espadas-10"],
+    ["espadas-03", "espadas-11"], ["espadas-03", "espadas-12"],
+  ] as const) {
+    const reparto = { ...dueloFlor.reparto, muestra: "oros-11", manos: [["espadas-06", a, b], propias] } as const;
+    const fila = { ...dueloFlor, reparto, acciones: [...acciones] };
+    const mano = restaurar(fila, "duel", 40, [0]);
+    const vista = vistaOnline(mano.estado, 1);
+    assert.deepEqual(vista.cobros[0].comparacionFlor?.participantes, [{ asiento: 0, total: 29 }, { asiento: 1, total: 39 }]);
+    assert.deepEqual(vista.legales, ["mazo", "truco"]);
+    assert.equal(confirmarComputadora(mano, "duel", 1, "copas-05").estado.resultado?.motivo, "mazo");
+    // Una partida anterior que dejó salir al humano se reproduce con su carta original.
+    const previa = restaurar({ ...fila, acciones: [...acciones, { tipo: "carta", asiento: 0, carta: a }] }, "duel", 40, [0]);
+    assert.equal(previa.estado.mano.vueltaActual?.jugadas[0].carta, a);
+  }
+});
+
 test("las 28 flores compatibles dan la misma decisión y una combinación ganable deja salir a Ana", () => {
   const { reparto } = dueloFlor;
   const expuesta = reparto.manos[0][0];

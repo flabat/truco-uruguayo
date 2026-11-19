@@ -11,6 +11,7 @@ import {
   type Modo,
 } from "./cliente";
 import { EnJuego } from "./Tablero";
+import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
 import { MesaConSenas } from "./Senas";
 import { usePresentacionVueltas } from "./presentacion-vueltas";
@@ -69,7 +70,7 @@ function AbrirMesa({
     avisar("");
     try {
       const mesa = await pedir<Mesa>("/api/mesas", {
-        modo, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-senas" }),
+        modo, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
       });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
@@ -118,7 +119,7 @@ function AbrirMesa({
           {modo === "2v2" && (
             <label className="j-habilitar-senas">
               <input type="checkbox" checked={senas} onChange={e => habilitarSenas(e.target.checked)} />
-              Permitir señas públicas
+              Permitir señas entre compañeros
             </label>
           )}
         </fieldset>
@@ -258,13 +259,14 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== "senas-publicas-v1";
+  const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
+  const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
   return (
     <div ref={tablero}>
       <div className="j-barra">
         <span>
-          {mesa.formato === "pairs-senas" ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
+          {versionSenas ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
         </span>
         <a className="j-link" href={base + "jugar/"}>
           Volver al salón
@@ -284,7 +286,7 @@ function MesaAbierta({
       {mesa.lista && partida?.vista ? (
         partida.formato === "triples" ? (
           <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
-        ) : mesa.formato === "pairs-senas" && partida.versionSenas === "senas-publicas-v1" ? (
+        ) : versionSenas && !versionDesconocida ? (
           <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
         ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
       ) : (

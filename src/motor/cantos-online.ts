@@ -39,6 +39,10 @@ export type ResumenLance = LanceTercetos & {
 };
 
 export interface EstadoOnline {
+  comparacionFlor?: {
+    indiceAccion: number;
+    participantes: readonly { asiento: Asiento; total: number }[];
+  };
   lance?: LanceTercetos;
   historialLances?: readonly ResumenLance[];
   mano: EstadoMano<RepartoOnline>;
@@ -166,17 +170,17 @@ function plenaFlor(estado: EstadoOnline, equipo: Equipo) {
   return 3 * estado.flores.filter(a => equipoDelAsiento(a) === equipo).length;
 }
 
-function compararTantos(estado: EstadoOnline, flor: boolean) {
+function tantosEnOrden(estado: EstadoOnline, flor: boolean) {
   const participantes = participantesDe(estado.mano).filter(a => !flor || estado.flores.includes(a));
-  // Ante igualdad queda el primero en el orden original de esta mano.
-  return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }))
-    .reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
+  return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }));
 }
 
 function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   const oferta = estado.lateral!;
   const flor = estado.flores.length > 0;
-  const ganador = querido ? compararTantos(estado, flor) : null;
+  const participantes = querido ? tantosEnOrden(estado, flor) : null;
+  // Ante igualdad queda el primero en el orden original de esta mano.
+  const ganador = participantes?.reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
   const equipo = equipoDelAsiento(ganador?.asiento ?? oferta.asiento);
   let tantos = querido ? oferta.valor : oferta.anterior;
   if (esTerceto(estado) && querido && oferta.tipo === "falta-envido") {
@@ -187,6 +191,9 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   } else if (flor) {
     // El resto querido se lleva todas las flores. En los otros casos suman las propias.
     tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
+  }
+  if (flor && participantes && !esTerceto(estado)) {
+    estado.comparacionFlor = { indiceAccion: estado.acciones.length - 1, participantes };
   }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
     ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });

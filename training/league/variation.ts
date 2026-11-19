@@ -9,7 +9,7 @@ import { digest } from "../partners/policy.ts";
 import { exportActor, initialize, optimizer, update, type Checkpoint } from "../partners/train.ts";
 import { field, interval, json, loadTeam, pairOutcomes, rate, save, sha, trainingSeeds } from "./development.ts";
 
-async function partners(run:string,format:"pairs"|"pairs-senas",seed:number,alternative:boolean,dir:string,games:number) {
+async function partners(run:string,format:"pairs"|"pairs-private-senas",seed:number,alternative:boolean,dir:string,games:number) {
   const config=json(join(run,format,"config.json"));
   const checkpoint=join(dir,"checkpoint");
   const cp:Checkpoint=existsSync(checkpoint)?json(checkpoint).state:initialize(format,seed,games,config.rate,config.batchMatches,"cpu");

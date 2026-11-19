@@ -1,14 +1,14 @@
 import type {Pool, PoolClient} from "pg";
 import { aDecidir, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
-import type { Move, SeatObservation } from "../training/contracts/index.ts";
+import { hasSignals, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
 import { elegirAccionTercetos } from "../src/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -51,8 +51,9 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
   const mano = restaurar(fila, formato, fila.meta, fila.humanos);
   const asiento = actor(mano, fila.humanos);
   if (asiento === undefined) return null;
-  const observacion = observe(mano.estado, asiento, formato, mano.turnos, vistaParaPolitica);
-  const decision = await servicio.decide(fila.politica, formato === "pairs-senas"
+  const historial = formato === "pairs-senas" ? turnosDeEquipo(mano.turnos, asiento) : mano.turnos;
+  const observacion = observe(mano.estado, asiento, formato, historial, vistaParaPolitica);
+  const decision = await servicio.decide(fila.politica, hasSignals(formato)
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
   return {
     asiento, politica: decision.policy, fallback: decision.fallback, latencia: decision.latencyMs,

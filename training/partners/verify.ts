@@ -9,7 +9,7 @@ import { main } from "./cli.ts";
 import { digest } from "./policy.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "truco-parejas-verificar-"));
-for (const format of ["pairs", "pairs-senas"]) {
+for (const format of ["pairs", "pairs-private-senas"]) {
   const whole = join(dir,format), partial = join(dir,format+"-resume");
   const args = ["--format",format,"--config","training/configs/"+format+"-local.json","--seed","40312","--matches","8"];
   await main([...args,"--run",whole]);

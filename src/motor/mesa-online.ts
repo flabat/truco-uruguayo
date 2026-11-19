@@ -116,14 +116,15 @@ export function anticiparAnteFlor(estado: EstadoOnline, humanos: readonly number
   const vistas = [muestra, ...propias, ...primera.jugadas.map(j => j.carta)];
   const [menor, mayor] = [...propias].sort((a, b) => compararCartas(a, b, muestra));
   const posibles = mazo.filter(carta => !vistas.includes(carta) && compararCartas(mayor, carta, muestra) > 0);
+  const totalRival = estado.comparacionFlor?.participantes.find(p => p.asiento === rival)?.total;
   const comparacion = estado.cobros.find(c => c.motivo === "flor" && c.tantoGanador !== undefined);
   // Basta un par compatible que permita ganar ambas vueltas para dejar salir al rival.
   for (const [i, a] of posibles.entries()) {
     for (const b of posibles.slice(i + 1)) {
       if (compararCartas(menor, a, muestra) <= 0 && compararCartas(menor, b, muestra) <= 0) continue;
       const tantos = evaluarTantos([expuesta, a, b], muestra);
-      if (tantos.modalidad !== "flor") continue;
-      if (comparacion?.tantoGanador !== undefined) {
+      if (tantos.modalidad !== "flor" || (totalRival !== undefined && tantos.total !== totalRival)) continue;
+      if (totalRival === undefined && comparacion?.tantoGanador !== undefined) {
         const ganador = comparacion.asiento === rival;
         const maximo = comparacion.tantoGanador;
         if (ganador ? tantos.total !== maximo
@@ -174,7 +175,7 @@ export interface VistaOnline extends VistaAsiento {
   readonly pendiente: Oferta | null;
   readonly trucoPendiente: EstadoOnline["trucoPendiente"];
   readonly porDeclararFlor: Asiento | null;
-  readonly cobros: readonly Cobro[];
+  readonly cobros: readonly (Cobro & Pick<EstadoOnline, "comparacionFlor">)[];
   readonly tantosPropios: ReturnType<typeof tantosPropios>;
 }
 
@@ -203,7 +204,11 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   if (estado.lance && (estado.resultado || !estado.lance.activos.includes(asiento))) {
     throw new RangeError("Ese asiento necesita la proyección pública de tercetos.");
   }
-  return privadaJugable(estado, asiento);
+  const vista = privadaJugable(estado, asiento);
+  if (!estado.comparacionFlor) return vista;
+  // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
+  const comparacionFlor = structuredClone(estado.comparacionFlor);
+  return { ...vista, cobros: vista.cobros.map(c => c.motivo === "flor" ? { ...c, comparacionFlor } : c) };
 }
 
 export interface VistaOnlineV1 extends VistaOnline {
