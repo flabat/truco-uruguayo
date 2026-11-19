@@ -126,7 +126,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
   await expect(page.getByRole("button", { name: "Jugar As de espadas" })).toBeEnabled();
   expect(bot).toBe(true);
-  await expect(page.getByRole("group", { name: "Tanteador" }).getByText("0 malas")).toHaveCount(2);
+  await expect(page.getByRole("group", { name: "Tanteador" }).getByText("0 malas", { exact: true })).toHaveCount(2);
   if (process.env.CAPTURAS_UI)
     await page.screenshot({
       path: process.env.CAPTURAS_UI + "/duelo-" + test.info().project.name + ".jpg",
