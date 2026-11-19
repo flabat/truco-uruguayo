@@ -146,3 +146,15 @@ test("las jugadas obligatorias actualizan el crítico y conservan la política a
   const obs=opening("pairs");
   assert.deepEqual(openSelfplay(exportSelfplay(learner)).decide(obs,obs.legalActions),openAnchored(anchor).decide(obs,obs.legalActions));
 });
+
+test("la calibración del duelo preserva el modelo congelado y aplica factores separados", async () => {
+  const {scaleDuelResidual}=await import("../../training/selfplay/learner.ts");
+  const source=createLearner(initial("duel")).actor;
+  source.weights.fill(0.5); source.updates=5;
+  const scaled=scaleDuelResidual(source,"v1",0.2,0.6);
+  assert.equal(scaled.weights[0],0.1);
+  assert.equal(scaled.weights.at(-1),0.3);
+  assert.equal(source.weights[0],0.5);
+  assert.throws(()=>scaleDuelResidual(source,"v1",2,1));
+  assert.throws(()=>scaleDuelResidual(createLearner(initial("pairs")).actor,"v1",1,1));
+});

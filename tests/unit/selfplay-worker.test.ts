@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initial, type CycleFormat } from "../../training/anchored/actor.ts";
 import { read, save } from "../../training/anchored/io.ts";
-import { openTrainingTeam, runSlice } from "../../training/selfplay/train.ts";
+import { openTrainingTeam, regressionWeight, runSlice } from "../../training/selfplay/train.ts";
 
 function fixture(format: CycleFormat) {
   const root=mkdtempSync(join(tmpdir(),"truco-league-worker-"));
@@ -97,4 +97,21 @@ test("solo un proceso puede escribir cada linaje y el presupuesto confirmado no 
     const second=runSlice(root,"pairs","a",{epoch:1,seconds:0.02});
     assert.deepEqual(first,second);
   } finally {rmSync(root,{recursive:true,force:true});}
+});
+
+test("los sondeos comparan al campeón en repartos iguales y reanudan sin repetirlos", () => {
+  assert(regressionWeight({pairs:100,mean:0.10})>regressionWeight());
+  assert(regressionWeight({pairs:100,mean:-0.10})<regressionWeight());
+  const format="pairs-private-senas", one=fixture(format), two=fixture(format);
+  try {
+    for (const root of [one,two]) save(join(root,"protocol.json"),{seed:"gap-test",sampler:"paired-regression-v1"});
+    const all=runSlice(one,format,"a",{epoch:1,seconds:0,games:100});
+    runSlice(two,format,"a",{epoch:1,seconds:0,games:53});
+    const resumed=runSlice(two,format,"a",{epoch:1,seconds:0,games:100});
+    assert.deepEqual(learned(resumed),learned(all));
+    assert.equal(resumed.contrast!.ordinal,5);
+    assert(Object.keys(resumed.contrast!.rows).some(id=>id.endsWith("/guest")));
+    assert(Object.values(resumed.contrast!.rows).every(row=>Math.abs(row.mean)<=1));
+    assert.equal(read(join(two,format,"a","progress.json")).probeGames,20);
+  } finally { for(const root of [one,two]) rmSync(root,{recursive:true,force:true}); }
 });
