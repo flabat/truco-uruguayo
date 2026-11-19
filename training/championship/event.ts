@@ -8,6 +8,7 @@ import { arch,cpus,release,totalmem } from "node:os";
 import { parseArgs } from "node:util";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { replayMatch } from "../arena/index.ts";
+import { publicReplay } from "../arena/runs.ts";
 import { summarize, type FamilyResult, type PairOutcome } from "../eval/statistics.ts";
 import { incumbent } from "../seat/index.ts";
 import { buildId, families, prepare, referee, roleAt, root, sha, type Field, type Receipt, type RoleDiagnostics } from "./field.ts";
@@ -75,7 +76,8 @@ export function decision(summary:ReturnType<typeof summarize>,fallback:number,li
   if(fallback>limit || summary.direct.upper<=0.5 || summary.families.some(f=>f.delta.upper<=-0.02)) return "failed";
   return summary.direct.lower>0.5 && summary.families.every(f=>f.delta.lower> -0.02) ? "pass" : "inconclusive";
 }
-export async function championship(dir:string,output:string,verifyOnly:boolean,expectedHash:string) {
+export async function championship(dir:string,output:string,verifyOnly:boolean,expectedHash:string,recordFile?:string) {
+  if (recordFile) assert.ok(verifyOnly,"El registro público se genera al verificar el evento terminado.");
   assert.match(expectedHash,/^[0-9a-f]{64}$/,"Copiá el hash del plan prerregistrado.");
   const planHash=sha(bytes(join(dir,"plan.json")));
   assert.equal(planHash,expectedHash,"El plan difiere del compromiso prerregistrado.");
@@ -172,11 +174,33 @@ export async function championship(dir:string,output:string,verifyOnly:boolean,e
   if(!verifyOnly && !existsSync(manifest)) publish(manifest,json({schema:"chico-championship-result-v1",report,files,
     elapsedMs:Math.round(performance.now()-start),runtime:{node:process.version,cpu:cpus()[0].model,arch:arch(),system:release(),memory:totalmem()}})+"\n");
   const saved=read(manifest); assert.deepEqual(saved.files,files);assert.deepEqual(saved.report,report);
+  if (recordFile) {
+    // Fix the example independently of its outcome: first candidate leg against the trained counter.
+    const lineup=field.format==="duel"?"fixed":"unseen";
+    const familyIndex=families(field).findIndex(f=>f.opponent==="counter" && f.lineup===lineup);
+    const packet=JSON.parse(gunzipSync(bytes(join(output,familyIndex+"-0.json.gz"))).toString());
+    const projectRecord={
+      schema:"public-championship-record-v1",revision:plan.revision,build:field.build,versions:field.versions,
+      planSha256:planHash,dealCommitment:plan.commitment,manifestSha256:sha(bytes(manifest)),
+      actors:Object.fromEntries(Object.entries({candidate:field.candidate,independent:field.independent,
+        counter:field.counter,...(field.partner && {partner:field.partner})}).map(([role,e])=>[role,{
+        id:e.id,lineage:e.lineage,trainingSeed:e.trainingSeed,sha256:e.sha256,pin:e.pin,
+      }])),
+      counterReceiptSha256:field.counter.trainingReceiptSha256,baselineSourceSha256:field.builtinHash,
+      thresholds:plan.thresholds,deadlineMs:field.deadlineMs,fallbackLimit:field.fallbackLimit,
+      sizing:plan.sizing,runtime:saved.runtime,elapsedMs:saved.elapsedMs,report,
+      example:{family:packet.family,arm:"candidate",pair:0,leg:0,replay:publicReplay(packet.records[0].match)},
+    };
+    mkdirSync(dirname(resolve(recordFile)),{recursive:true});
+    const contents=JSON.stringify(projectRecord,null,2)+"\n";
+    if (existsSync(recordFile)) assert.equal(bytes(recordFile).toString(),contents,"El registro público existente difiere.");
+    else publish(recordFile,contents);
+  }
   return report;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  const {positionals:[cmd],values}=parseArgs({allowPositionals:true,options:{bundle:{type:"string"},plan:{type:"string"},output:{type:"string"},expected:{type:"string"}}});
+  const {positionals:[cmd],values}=parseArgs({allowPositionals:true,options:{bundle:{type:"string"},plan:{type:"string"},output:{type:"string"},expected:{type:"string"},record:{type:"string"}}});
   if(cmd==="register" && values.bundle && values.output) console.log(json(await register(values.bundle,values.output)));
-  else if((cmd==="run"||cmd==="verify") && values.plan && values.output && values.expected) console.log(json(await championship(dirname(resolve(values.plan)),values.output,cmd==="verify",values.expected)));
+  else if((cmd==="run"||cmd==="verify") && values.plan && values.output && values.expected) console.log(json(await championship(dirname(resolve(values.plan)),values.output,cmd==="verify",values.expected,values.record)));
   else throw Error("register --bundle bundle.json --output plan-dir | run|verify --plan plan.json --expected SHA256 --output results-dir");
 }

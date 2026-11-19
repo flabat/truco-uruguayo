@@ -7,7 +7,7 @@ Sobre el checkout registrado con Node 24:
 ```sh
 node training/championship/event.ts register --bundle runs/league/championship-input/duel/bundle.json --output runs/final-duel/plan
 node training/championship/event.ts run --plan runs/final-duel/plan/plan.json --expected "$PLAN_SHA256" --output runs/final-duel/games
-node training/championship/event.ts verify --plan runs/final-duel/plan/plan.json --expected "$PLAN_SHA256" --output runs/final-duel/games
+node training/championship/event.ts verify --plan runs/final-duel/plan/plan.json --expected "$PLAN_SHA256" --output runs/final-duel/games --record runs/final-duel/publico.json
 ```
 
 Repetir para pairs y pairs-senas con directorios independientes. La ruta de entrada real queda en el registro de la liga. Registrar el hash del plan antes de correr el evento. Asigná a PLAN_SHA256 ese valor del registro independiente al correr o verificar los resultados. El campo se fija por código: V1, el cambio de falta en duelo, cinco estilos, el oponente independiente y el contrajugador. Los compañeros desconocidos rotan de asiento. Cada miembro del campo juega los cuatro chicos por secuencia (control y candidato, con ambos equipos). El servicio recibe la observación ordinaria y un uniforme del árbitro para muestrear la política. El actor nunca recibe la semilla de los repartos.
@@ -17,6 +17,8 @@ El registro usa 12 pares de desarrollo por familia para estimar varianza y costo
 El manifiesto conserva los hashes de los cuatro chicos por par, latencias y fallbacks efectivos, puntos por canto y un resumen de marcador. El resumen por banda toma una observación por chico y banda y permite contrastar la tasa observada con la referencia descriptiva basada en puntos faltantes. La calibración de la continuación aprendida y la decisión sobre búsqueda se registran aparte en #129. Los archivos de árbitro y las claves de repartos se conservan localmente. Para recuperar un evento interrumpido, repetir run en el mismo directorio. verify reproduce las jugadas confirmadas y recalcula el informe.
 
 Se exige un límite inferior directo mayor que 0,50 y un límite inferior del cambio por familia mayor que −0,02, junto con el límite de fallback y los controles de integridad. Un resultado fallido o inconcluso conserva V1. La activación local y la reversión se verifican con el registro del servicio de #131. Cada torneo solamente mide el campo informático registrado.
+
+La opción `--record` de `verify` escribe el manifiesto público con las identidades de los actores, el presupuesto, los resultados, los tiempos y un replay de mesa. El ejemplo se elige antes de conocer el resultado. Es la primera manga del candidato contra su contrajugador, con compañero desconocido en parejas. El archivo incluye las cartas jugadas, la muestra, las señas y los tantos que vieron los participantes. Los repartos completos se conservan en los registros locales del árbitro.
 
 ## Ensayo de activación y reversión
 

@@ -43,6 +43,7 @@ La liga local reúne tres semillas por formato. El campeonato fija los pesos de 
 - [Entrenadores de parejas y medición CPU/MPS](partners/README.md)
 - [Evaluación independiente y perfiles de regresión](eval/README.md)
 - [Continuación por tanteador y búsqueda](search/README.md)
+- [Liga de tres semillas, límites de tiempo y checkpoints](league/README.md)
 - [Campeonato y puerta de promoción](championship/README.md)
 - [Registro, activación y reversión local](../api/README-politicas.md)
 - [Registro de coordinación y pruebas por paquete](https://github.com/flabat/truco-uruguayo/issues/118)
