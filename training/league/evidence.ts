@@ -15,6 +15,9 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
   const timing=join(run,stage+"-telemetry.jsonl");
   const samples=existsSync(timing)?readFileSync(timing,"utf8").trim().split("\n")
     .filter(Boolean).map(line=>JSON.parse(line)).map(v=>v.seeds[format]).filter(Boolean):[];
+  const cpuSource=existsSync(join(run,stage+"-cpu-telemetry.jsonl"))?join(run,stage+"-cpu-telemetry.jsonl"):timing;
+  const cpuSamples=existsSync(cpuSource)?readFileSync(cpuSource,"utf8").trim().split("\n")
+    .filter(Boolean).map(line=>JSON.parse(line)).map(record=>record.seeds[format]).filter(Boolean):[];
   const report=json(join(run,"development",format,stage+".json"));
   const runs=trainingSeeds.map(seed=>{
     const dir=join(current,String(seed)), actor=join(dir,"actor.json"), checkpoint=join(dir,"checkpoint");
@@ -29,6 +32,15 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
     const measuredSeconds=profile.samples.filter((r:{seed:number})=>r.seed===seed).reduce((a:number,r:{seconds:number})=>a+r.seconds,0);
     const decisions=cp.counters?.prefixDecisions??cp.examples, old=start?.counters?.prefixDecisions??start?.examples??0;
     const memory=samples.filter(row=>Number(row.seed)===seed).map(row=>row.rssKiB);
+    const cumulative=new Map<string,number>();
+    let cpuSeconds=0;
+    for(const sample of cpuSamples.filter(row=>Number(row.seed)===seed)){
+      for(const [pid,seconds] of Object.entries(sample.cpuSecondsByPID??{}) as [string,number][]){
+        const prior=cumulative.get(pid);
+        if(prior!==undefined) cpuSeconds+=Math.max(0,seconds-prior);
+        cumulative.set(pid,seconds);
+      }
+    }
     const means=report.edges.filter((e:{left:string;right:string})=>e.left===String(seed)&&field.includes(e.right))
       .map((e:{right:string;interval:{mean:number}})=>({id:e.right,winRate:e.interval.mean})).sort((a:{winRate:number},b:{winRate:number})=>a.winRate-b.winRate);
     const tableEntries=format==="duel"?Object.keys(cp.rows).length:cp.values.reduce((n:number,s:object)=>n+Object.keys(s).length,0);
@@ -37,6 +49,7 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
       tableRowCapacity:cp.config?.buckets??null,verifiedActorBytes:readFileSync(actor).length,
       checkpointBytes:readFileSync(checkpoint).length,actorSha256:sha(actor),checkpointSha256:sha(checkpoint),
       measuredTrainerWallSeconds:measuredSeconds,measuredLaneHours:measuredSeconds/3600,
+      sampledCpuHoursLowerBound:cumulative.size?cpuSeconds/3600:null,
       completedUnitsPerMeasuredSecond:(completed-before)/measuredSeconds,decisionsPerMeasuredSecond:(decisions-old)/measuredSeconds,
       latestTrainerPeakRSSKiB:meta.maxRssKiB??null,sampledProcessTreePeakRSSKiB:memory.length?Math.max(...memory):null,
       memorySamples:memory.length,devMean:rate(outcomes(report,String(seed))),worstFamily:means[0],
@@ -45,6 +58,7 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
   const result={format,stage,runs,field,sourceRevision:json(join(run,"plan.json")).revision,developmentSeed:report.seed,
     developmentPairs:report.budget,developmentReportSha256:sha(join(run,"development",format,stage+".json")),
     throughputScope:"Completed chunks measured by the scheduler. Final interrupted batches may shorten recorded lane time.",
+    cpuScope:"Lower bound from CPU-time differences for each live PID on two successive samples; process startup/exit tails excluded.",
     memoryScope:"Sampled sum of RSS of trainer and descendants; shared mappings may be counted by two processes."};
   save(join(run,"evidence",format,stage+".json"),result);
   return result;

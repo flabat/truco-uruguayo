@@ -19,28 +19,43 @@ def write(path, obj):
     os.replace(tmp, path)
 
 
+def cpu_seconds(text):
+    days, _, rest = text.rpartition("-")
+    seconds = 0.0
+    for segment in rest.split(":"):
+        seconds = seconds * 60 + float(segment)
+    return seconds + 86400 * int(days or 0)
+
+
 def processes():
-    text = subprocess.check_output(["ps", "-axo", "pid=,ppid=,rss=,command="], text=True)
+    text = subprocess.check_output(["ps", "-axo", "pid=,ppid=,rss=,time=,command="], text=True)
     result = {}
     for line in text.splitlines():
-        fields = line.strip().split(None, 3)
-        if len(fields) == 4:
-            pid, parent, rss, cmd = fields
-            result[int(pid)] = (int(parent), int(rss), cmd)
+        fields = line.strip().split(None, 4)
+        if len(fields) == 5:
+            pid, parent, rss, cpu, cmd = fields
+            result[int(pid)] = (int(parent), int(rss), cmd, cpu_seconds(cpu))
     return result
 
 
 def sample(tree, pid, run):
-    def total_rss(root):
-        return tree[root][1] + sum(total_rss(child) for child, row in tree.items() if row[0] == root)
+    def members(root):
+        result = [root]
+        for child, row in tree.items():
+            if row[0] == root:
+                result.extend(members(child))
+        return result
     usage = {}
-    for child, (parent, _, cmd) in tree.items():
+    for child, (parent, _, cmd, _) in tree.items():
         if parent != pid:
             continue
         for fmt in FORMATS:
             prefix = str(run / fmt) + "/"
             if prefix in cmd:
-                usage[fmt] = {"rssKiB": total_rss(child), "seed": cmd.split(prefix)[1].split("/")[0].split()[0]}
+                group = members(child)
+                usage[fmt] = {"rssKiB": sum(tree[p][1] for p in group),
+                              "cpuSecondsByPID": {str(p):tree[p][3] for p in group},
+                              "seed": cmd.split(prefix)[1].split("/")[0].split()[0]}
     return usage
 
 
@@ -146,12 +161,21 @@ def main():
     cli.add_argument("--run",type=Path,required=True)
     cli.add_argument("--runtime",type=Path,required=True)
     cli.add_argument("--attach-profile",type=int)
+    cli.add_argument("--observe-pilot-cpu",action="store_true")
     args=cli.parse_args()
     run=args.run.resolve()
     plan=json.loads((run/"plan.json").read_text())
     revision=subprocess.check_output(["git","-C",args.runtime,"rev-parse","HEAD"],text=True).strip()
     if plan["revision"] != revision:
         raise RuntimeError("Se requiere el checkout fijado en el manifiesto.")
+    if args.observe_pilot_cpu:
+        signature = "training/league/cli.ts pilot --run " + str(run)
+        pids = [pid for pid, row in processes().items()
+                if signature in row[2] and Path(row[2].split()[0]).name == "node"]
+        if len(pids) != 1:
+            raise RuntimeError("Se necesita exactamente un piloto en ejecución.")
+        watch(run, "pilot-cpu", pids[0])
+        return
     with (run/"pilot-monitor.lock").open("a") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         if args.attach_profile:
