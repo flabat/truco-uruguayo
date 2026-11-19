@@ -3,9 +3,13 @@ import assert from "node:assert/strict";
 import {openActor} from "../../api/actor-registry.ts";
 import {playMatch} from "../../training/arena/index.ts";
 import {initial} from "../../training/anchored/actor.ts";
-import {incumbent} from "../../training/seat/index.ts";
+import {observe} from "../../training/seat/index.ts";
+import {iniciarOnline} from "../../src/motor/mesa-online.ts";
+import {commitTurn} from "../../training/signals/index.ts";
+import type {RepartoOnline} from "../../src/motor/reparto.ts";
+import type {PublicTurn} from "../../training/contracts/index.ts";
 import {createLearner,openSelfplay} from "../../training/selfplay/learner.ts";
-import {initialTeamMixture,openTeamMixture,teamContexts} from "../../training/selfplay/team-mixture.ts";
+import {initialTeamMixture,openTeamMixture,teamContext,teamContexts} from "../../training/selfplay/team-mixture.ts";
 
 for(const format of ["pairs","pairs-private-senas"] as const) {
   test(format+" admite el router en el servicio y reproduce la política final inicial",()=>{
@@ -32,13 +36,21 @@ for(const format of ["pairs","pairs-private-senas"] as const) {
     assert.throws(()=>openActor(model,"duel",0));
   });
 }
-test("la misma identidad de rival nunca entra al selector ni aparece en la exportación",()=>{
-  const a=initial("pairs");const model=initialTeamMixture(createLearner(a).actor,a);
-  const p=openTeamMixture(model);
-  const changed={...model,routes:{...model.routes}};
-  changed.routes.opening="anchor";const q=openTeamMixture(changed);
-  const game=playMatch({format:"pairs",seed:118121,pair:0,leg:0,policies:(s)=>s%2===0?p:q});
-  assert.ok(game.score.includes(40));
-  assert.equal(Object.hasOwn(model,"opponents"),false);
-  assert.equal(incumbent.id,"incumbent-online-v1");
+
+test("la cubierta del tercer asiento cuenta cartas desconocidas y protege al compañero",()=>{
+  const format="pairs";
+  const deal:RepartoOnline={versionReparto:"online-1",muestra:"copas-04",mano:0,dador:3,manos:[
+    ["oros-05","copas-12","bastos-03"],["bastos-04","espadas-07","oros-01"],
+    ["oros-02","espadas-05","bastos-01"],["copas-02","espadas-12","oros-06"]]};
+  const history:PublicTurn[]=[];
+  let state=iniciarOnline(deal);
+  for(const [seat,action] of [[0,"envido"],[1,"quiero"],[2,"paso-flor"],[3,"paso-flor"],
+    [0,"oros-05"],[1,"bastos-04"]] as const) {
+    const step=commitTurn(state,seat,format,action);state=step.state;history.push(step.turn);
+  }
+  const obs=observe(state,2,format,history), base=initial(format);
+  const model=initialTeamMixture(createLearner(base).actor,base);
+  model.routes[teamContext(obs)]="team";
+  const dist=openTeamMixture(model).decide(obs,obs.legalActions);
+  assert.equal(obs.legalActions[dist.indexOf(1)],"bastos-01");
 });
