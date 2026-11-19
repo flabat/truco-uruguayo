@@ -4,9 +4,13 @@ import type { Asiento, RepartoOnline } from "../../src/motor/reparto.ts";
 
 export const supportedFormats = ["duel", "pairs", "pairs-senas", "pairs-private-senas"] as const;
 export type Format = typeof supportedFormats[number];
-/** Calendario congelado de la liga v1; los nuevos ciclos usan activeFormats. */
-export const formats: readonly Format[] = ["duel", "pairs", "pairs-senas"];
 export const activeFormats = ["duel", "pairs", "pairs-private-senas"] as const;
+export const formats: readonly Format[] = activeFormats;
+export function requireTrainingFormat(format: unknown): asserts format is typeof activeFormats[number] {
+  if (!activeFormats.some(f => f === format)) {
+    throw new RangeError("Usá duel, pairs o pairs-private-senas. Las corridas solo admiten señas entre compañeros.");
+  }
+}
 export const seatsFor = (format: Format): 2 | 4 => format === "duel" ? 2 : 4;
 export const versions = {
   rules: "online-1", competition: "chico-40-v1", signals: "senas-publicas-v1",
@@ -15,13 +19,14 @@ export const versions = {
 } as const;
 // Fuera del manifiesto de versiones v1 para poder verificar los torneos archivados.
 export const teamSignalsVersion = "senas-equipo-v1";
+export const trainingVersions = {...versions, signals: teamSignalsVersion} as const;
 export const hasSignals = (format: Format) => format === "pairs-senas" || format === "pairs-private-senas";
 export function signalVersionFor(format: Format) {
   if (format === "pairs-private-senas") return teamSignalsVersion;
   return format === "pairs-senas" ? versions.signals : null;
 }
 export function canSeeSignal(format: Format, sender: Asiento, viewer?: Asiento): boolean {
-  return format === "pairs-senas" || format === "pairs-private-senas" && viewer !== undefined && sender % 2 === viewer % 2;
+  return hasSignals(format) && viewer !== undefined && sender % 2 === viewer % 2;
 }
 
 export type Score = readonly [number, number];

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { requireTrainingFormat } from "./contracts/index.ts";
 import { trainDuel } from "./duel/cli.ts";
 import { main as trainPartners } from "./partners/cli.ts";
 
@@ -12,9 +13,10 @@ if (typeof values.resume === "string") {
   if (format && format !== saved) throw new Error("El formato solicitado difiere del checkpoint.");
   format = saved;
 }
+requireTrainingFormat(format);
 if (format === "duel") {
   const result = trainDuel(args);
   console.log(JSON.stringify({actor:result.actor, iteration:result.iteration, artifacts:result.artifacts}));
-} else if (format === "pairs" || format === "pairs-senas" || format === "pairs-private-senas") {
+} else {
   await trainPartners(args);
-} else throw new Error("Elegí --format duel, pairs o pairs-private-senas, o un checkpoint con --resume.");
+}

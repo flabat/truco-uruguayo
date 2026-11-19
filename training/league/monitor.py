@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import time
 
-FORMATS = ("duel", "pairs", "pairs-senas")
+FORMATS = ("duel", "pairs", "pairs-private-senas")
 
 
 def write(path, obj):
@@ -135,6 +135,11 @@ def validate_profile(run, plan):
                 raise RuntimeError(f"Perfil interrumpido: {fmt} {seed} {seconds}s")
 
 
+def require_training_plan(plan):
+    if tuple(plan.get("formats", ())) != FORMATS:
+        raise ValueError("La liga requiere duelo, parejas y parejas con señas entre compañeros.")
+
+
 def timed_stage(run, phase, runtime, plan, selected):
     clock = run / (phase + "-clock.json")
     if not clock.exists():
@@ -162,9 +167,7 @@ def timed_stage(run, phase, runtime, plan, selected):
                     continue
                 if time.time() >= timing["deadlineUTC"] or quotas_met(run, phase, plan, selected):
                     break
-            args = ["node", "training/league/cli.ts", phase, "--run", run]
-            if tuple(selected) != FORMATS:
-                args.extend(["--formats", ",".join(selected)])
+            args = ["node", "training/league/cli.ts", phase, "--run", run, "--formats", ",".join(selected)]
             with (run / (phase + "-process.log")).open("a") as out:
                 child = None if pids else subprocess.Popen(args, cwd=runtime, stdout=out, stderr=out, start_new_session=True)
                 pid = pids[0] if pids else child.pid
@@ -212,6 +215,7 @@ def main():
             raise RuntimeError("Se necesita exactamente un piloto en ejecución.")
         watch(run, "pilot-cpu", pids[0])
         return
+    require_training_plan(plan)
     with (run/"pilot-monitor.lock").open("a") as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
         if args.attach_profile:

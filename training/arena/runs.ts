@@ -6,7 +6,7 @@ import { arch, cpus, platform, release, totalmem } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync, gunzipSync } from "node:zlib";
-import { canSeeSignal, hasSignals, supportedFormats, signals, versions, type ActionId, type Format, type Policy } from "../contracts/index.ts";
+import { requireTrainingFormat, canSeeSignal, hasSignals, supportedFormats, signals, trainingVersions, versions, type ActionId, type Format, type Policy } from "../contracts/index.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 import { playMatch, replayMatch, streamVersion, type MatchRecord, type SignalRules } from "./index.ts";
 
@@ -20,7 +20,7 @@ interface Plan {
   formats: Format[];
   pairs: number;
   seed: number;
-  versions: typeof versions;
+  versions: typeof versions | typeof trainingVersions;
   streams: typeof streamVersion;
   schedule: string;
   policies: Record<string, string>;
@@ -38,7 +38,7 @@ interface Manifest {
   fallback: number;
 }
 
-/** Exercises public gestures in smoke runs without giving a seat private information. */
+/** Exercises team gestures in smoke runs without giving a seat private information. */
 const signalProbe: Policy = {
   id: "arena-public-signals-probe-v1",
   decide(observation, actions) {
@@ -77,7 +77,7 @@ function entries(plan: Plan) {
 
 function validate(plan: Plan) {
   assert.equal(plan.schema, "arena-plan-v1");
-  assert.deepEqual(plan.versions, versions);
+  assert.deepEqual(plan.versions, plan.versions.signals === versions.signals ? versions : trainingVersions);
   assert.equal(plan.streams, streamVersion);
   assert.ok(Number.isSafeInteger(plan.seed) && plan.seed >= 0, "Semilla inválida.");
   assert.ok(Number.isSafeInteger(plan.pairs) && plan.pairs >= 1, "Cantidad de pares inválida.");
@@ -100,8 +100,9 @@ function immutableFile(path: string, bytes: Buffer | string) {
 }
 
 export function newRun(directory: string, selected: Format[], pairs: number, seed: number) {
+  selected.forEach(requireTrainingFormat);
   const plan: Plan = {
-    schema: "arena-plan-v1", formats: selected, pairs, seed, versions, streams: streamVersion,
+    schema: "arena-plan-v1", formats: selected, pairs, seed, versions:trainingVersions, streams: streamVersion,
     schedule: "mano=(pair+hand)%seats; every hand/deal shared across legs; team=leg uses falta challenger in duel or signal probe in signal formats; V1 elsewhere",
     ...sourceHashes(),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {cwd: root, encoding: "utf8"}).trim(),
@@ -140,6 +141,7 @@ function validateRecord(record: MatchRecord, schedule: {id: string; format: Form
 export function run(directory: string, limit = Infinity, adapters: Adapters = {}) {
   const plan = readPlan(directory);
   if (existsSync(join(directory, "manifest.json"))) return verify(join(directory, "manifest.json"), adapters);
+  plan.formats.forEach(requireTrainingFormat);
   assert.deepEqual({source: plan.source, policies: plan.policies}, sourceHashes(), "Cambió el código o la política del plan.");
   const started = performance.now();
   const receipts: Receipt[] = [];

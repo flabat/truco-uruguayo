@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { mazo } from "../../src/motor/cartas.ts";
 import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento, Equipo, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
-import { hasSignals, seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
+import { requireTrainingFormat, hasSignals, seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
   type RefereeHand, type Score, type SeatObservation, type Signal } from "../contracts/index.ts";
 import { observe } from "../seat/index.ts";
 import { commitTurn, signalRules as defaultSignals } from "../signals/index.ts";
@@ -134,6 +134,7 @@ type Request = Pick<Decision, "hand" | "seat" | "state" | "observation"> & {unif
 
 function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionId> {
   const {format, seed, pair, leg} = options;
+  requireTrainingFormat(format);
   const signalRules = options.signalRules ?? (hasSignals(format) ? defaultSignals : undefined);
   natural(seed, "seed"); natural(pair, "pair");
   if (leg !== 0 && leg !== 1) throw new RangeError("Manga inválida.");

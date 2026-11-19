@@ -17,7 +17,7 @@ PostgreSQL conserva el trabajo pendiente y la jugada confirmada. Al recomenzar, 
 Medí el formato en tu máquina con un actor y pares de chicos locales. El informe incluye los percentiles, la primera decisión, la tasa de fallback y la huella canónica del modelo.
 
 ```sh
-node scripts/medir-inferencia.ts pairs-senas /ruta/al/run/actor.json 24 8010131
+node scripts/medir-inferencia.ts pairs-private-senas /ruta/al/run/actor.json 24 8010131
 ```
 
 El campeonato puede usar `playMatchAsync` de `training/arena/index.ts` con un respondedor por asiento. Este recibe la observación y el número uniforme generado por el árbitro para ese asiento. Una llamada a `servicio.decide(pin, observacion, uniforme)` usa el mismo lector de pesos, la misma selección y el mismo plazo que la API. El entrenamiento y los contadores del árbitro quedan fuera del servicio.

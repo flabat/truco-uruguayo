@@ -9,7 +9,7 @@ import { createServing, type ServingDecision } from "../../api/serving.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { type MatchRecord, playMatchAsync, replayMatch, sample } from "../arena/index.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
-import { type Format, supportedFormats, type SeatObservation, seatsFor, versions } from "../contracts/index.ts";
+import { type Format, requireTrainingFormat, type SeatObservation, seatsFor, trainingVersions, versions } from "../contracts/index.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 
 export const deadlineMs = 200;
@@ -49,7 +49,7 @@ export interface Field {
   build: string;
   deadlineMs: number;
   fallbackLimit: number;
-  versions: typeof versions;
+  versions: typeof versions | typeof trainingVersions;
 }
 export function buildId() {
   const paths = execFileSync("git", ["ls-files", "-z", "src/motor", "api", "training"], { cwd: root }).toString()
@@ -65,7 +65,7 @@ export function checkArtifact(raw: Buffer, format: Format, expectedHash: string)
 export function prepare(bundlePath: string) {
   const b: Bundle = JSON.parse(readFileSync(bundlePath, "utf8"));
   assert.equal(b.schema, "league-championship-input-v1");
-  assert.ok(supportedFormats.includes(b.format));
+  requireTrainingFormat(b.format);
   const artifacts = new Map<string, Buffer>();
   function register(e: Entry): Registered {
     assert.ok(e.id && e.lineage && e.file && Number.isSafeInteger(e.trainingSeed));
@@ -134,7 +134,7 @@ export function prepare(bundlePath: string) {
     ...(partner && { partner }),
     deadlineMs,
     fallbackLimit,
-    versions,
+    versions: trainingVersions,
     build: buildId(),
     builtinHash: sha(readFileSync(join(root, "training/baselines/index.ts"))),
   };

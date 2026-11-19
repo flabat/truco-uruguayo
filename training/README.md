@@ -23,7 +23,7 @@ npm run train -- --format pairs-private-senas --config training/configs/pairs-pr
 npm run train -- --resume runs/primer-senas/checkpoint
 ```
 
-El checkpoint es privado y contiene el estado de entrenamiento. `actor.json` es la exportación que puede cargar el servicio. El formato histórico `pairs-senas` conserva la semántica del campeonato archivado. Cada actor de `pairs-private-senas` lleva la versión `senas-equipo-v1` y requiere una evaluación propia. Los checkpoints de parejas también producen `mc-actor.json` con el comparador de retornos Monte Carlo. Las interrupciones se retoman desde el último checkpoint completo. Cada formato y semilla usa su propio directorio.
+El checkpoint es privado y contiene el estado de entrenamiento. `actor.json` es la exportación que puede cargar el servicio. Las corridas nuevas y las reanudaciones con señas usan `pairs-private-senas`. Las transcripciones históricas de `pairs-senas` se pueden verificar desde las jugadas guardadas. Cada actor de `pairs-private-senas` lleva la versión `senas-equipo-v1` y requiere una evaluación propia. Los checkpoints de parejas también producen `mc-actor.json` con el comparador de retornos Monte Carlo. Las interrupciones se retoman desde el último checkpoint completo. Cada formato y semilla usa su propio directorio.
 
 ## Del torneo al campeonato
 

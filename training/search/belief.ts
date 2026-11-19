@@ -3,14 +3,14 @@ import { mazo, type CardId } from "../../src/motor/cartas.ts";
 import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
 import { sample } from "../arena/index.ts";
-import type { ActionId, Format, Move, PublicTurn, SeatObservation } from "../contracts/index.ts";
+import { hasSignals, canSeeSignal, type ActionId, type Format, type Move, type PublicTurn, type SeatObservation } from "../contracts/index.ts";
 import { observe } from "../seat/index.ts";
 import { commitTurn, signalRules } from "../signals/index.ts";
 import type { Field } from "./continuation.ts";
 
 export function seatView(state: EstadoOnline, seat: Asiento, format: Format, history: readonly PublicTurn[]) {
   const obs = observe(state, seat, format, history);
-  return format === "pairs-senas" ? { ...obs, legalActions: signalRules.legalActions(obs.legalActions as readonly Move[]) } : obs;
+  return hasSignals(format) ? { ...obs, legalActions: signalRules.legalActions(obs.legalActions as readonly Move[]) } : obs;
 }
 
 function slots(obs: SeatObservation) {
@@ -82,7 +82,12 @@ export function inferWorld(obs: SeatObservation, candidate: RepartoOnline, style
     if (seat !== obs.view.asiento && logLikelihood !== -Infinity) {
       const probabilities = styles(seat).decide(view, view.legalActions);
       sample(probabilities, view.legalActions.length, 0); // Valida toda la distribución de estilo.
-      logLikelihood += Math.log(probabilities[idx]);
+      // Ante un rival solo observamos la jugada. Sumamos todas las señas
+      // compatibles, incluido el silencio, para calcular su probabilidad.
+      const visible = !hasSignals(obs.format) || canSeeSignal(obs.format, seat, obs.view.asiento);
+      const likelihood = visible ? probabilities[idx] : view.legalActions.reduce((sum, action, i) =>
+        signalRules.decode(action).move === base ? sum + probabilities[i] : sum, 0);
+      logLikelihood += Math.log(likelihood);
     }
     const next = commitTurn(state, seat, obs.format, id);
     if (!isDeepStrictEqual(next.turn.awards, turn.awards)) return null;

@@ -1,3 +1,4 @@
+import { requireTrainingFormat } from "../training/contracts/index.ts";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { checkArtifact } from "../training/championship/field.ts";
@@ -6,8 +7,9 @@ import { duelStep, exportDuel, newDuel } from "../training/duel/train.ts";
 import { exportActor, initialize, trainingBatch } from "../training/partners/train.ts";
 
 const format = process.argv[2];
+requireTrainingFormat(format);
 const championship = process.env.TEST_CHAMPIONSHIP_ROOT;
-if (championship && (format === "duel" || format === "pairs" || format === "pairs-senas")) {
+if (championship) {
   const dir = join(championship, format);
   const { field } = JSON.parse(readFileSync(join(dir, "plan.json"), "utf8"));
   if (field.format !== format || field.candidate.file !== field.candidate.pin + ".json") {
@@ -29,11 +31,8 @@ if (championship && (format === "duel" || format === "pairs" || format === "pair
   });
   for (let i = 0; i < 2; i++) duelStep(state);
   console.log(JSON.stringify(exportDuel(state)));
-} else if (format === "pairs-private-senas") {
-  // Actor de prueba sobre el contrato nuevo, separado de los campeonatos históricos.
-  console.log(JSON.stringify(exportActor(initialize(format, 7, 2, .01, 2, "cpu"))));
-} else if (format === "pairs" || format === "pairs-senas") {
+} else {
   const state = initialize(format, 7, 2, .01, 2, "cpu");
   trainingBatch(state, 2);
   console.log(JSON.stringify(exportActor(state, true)));
-} else throw new Error("Formato desconocido.");
+}

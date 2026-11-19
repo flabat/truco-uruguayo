@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import { randomUUID } from "node:crypto";
-import { hasSignals, seatsFor, signalVersionFor, supportedFormats, type Format } from "../training/contracts/index.ts";
+import { hasSignals, seatsFor, signalVersionFor, requireTrainingFormat, type Format } from "../training/contracts/index.ts";
 import { resolverTurno } from "./bot-pendiente.ts";
 import { createServing, exampleSignalPin } from "./serving.ts";
 import { incumbent } from "../training/seat/index.ts";
@@ -8,7 +8,7 @@ import { avanzarEnsayo } from "./partidas.ts";
 
 /** Solo para un operador con acceso a PostgreSQL; la ruta pública de creación siempre sienta a su creador. */
 export async function crearEnsayo(pool: Pool, formato: Format, creador: string, pin?: string) {
-  if (!supportedFormats.includes(formato)) throw new RangeError("Formato desconocido.");
+  requireTrainingFormat(formato);
   const db = await pool.connect();
   try {
     await db.query("BEGIN");

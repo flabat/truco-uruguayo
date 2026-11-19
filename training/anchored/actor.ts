@@ -1,9 +1,9 @@
-import type {ActionId, Policy, SeatObservation} from "../contracts/index.ts";
+import {activeFormats, type ActionId, type Policy, type SeatObservation} from "../contracts/index.ts";
 import {incumbent} from "../seat/index.ts";
 import {duelAction, duelVariants} from "./duel.ts";
 import {partnerAction, partnerVariants} from "./partners.ts";
 
-export const cycleFormats = ["duel", "pairs", "pairs-private-senas"] as const;
+export const cycleFormats = activeFormats;
 export type CycleFormat = typeof cycleFormats[number];
 export const kind = "v1-anchored-score-bands-v1";
 export interface AnchoredActor {

@@ -5,7 +5,7 @@ import { setTimeout as esperar } from "node:timers/promises";
 import pg from "pg";
 import { crearEnsayo } from "./ensayos.ts";
 import { restaurar } from "./turnos.ts";
-import { hasSignals, supportedFormats, seatsFor } from "../training/contracts/index.ts";
+import { hasSignals, activeFormats, seatsFor } from "../training/contracts/index.ts";
 
 const pool = new pg.Pool({connectionString: process.env.DATABASE_URL});
 const {rows: [creador]} = await pool.query(`INSERT INTO juego.jugadores (emisor,sujeto,nombre)
@@ -13,7 +13,7 @@ const {rows: [creador]} = await pool.query(`INSERT INTO juego.jugadores (emisor,
 const mesas = [];
 const recuperado=process.argv[2]==="recuperado", aprendidos=process.argv[2]==="aprendidos";
 try {
-  for (const formato of (recuperado ? ["duel"] : supportedFormats)) {
+  for (const formato of (recuperado ? ["duel"] : activeFormats)) {
     const previa = recuperado && (await pool.query("SELECT * FROM juego.prueba_reinicio_actor")).rows[0];
     const id = previa ? previa.mesa : await crearEnsayo(pool, formato, creador.id);
     mesas.push(id);
