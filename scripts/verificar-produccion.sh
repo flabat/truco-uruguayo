@@ -32,7 +32,7 @@ dc=(docker compose --project-name "$project" --env-file /dev/null -f compose.pro
 cleanup() {
   local status=$?
   if ((status)); then "${dc[@]}" logs --tail=15 api identidad backup >&2 || true; fi
-  "${dc[@]}" down -v --remove-orphans >/dev/null
+  "${dc[@]}" down -v --remove-orphans --rmi local >/dev/null
   docker rm -fv "$project-almacen" >/dev/null
   docker network rm "$network" >/dev/null
   rm -rf "$tmp"

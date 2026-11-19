@@ -16,10 +16,14 @@ case "${1:-}" in
     # Admitir sólo la base recién inicializada. El esquema identidad ya existe vacío.
     tablas=$(psql -XAt -v ON_ERROR_STOP=1 -c "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT LIKE 'pg_%' AND n.nspname <> 'information_schema'")
     [ "$tablas" = 0 ] || { echo 'La restauración requiere una base nueva y vacía.' >&2; exit 1; }
-    temporal=$(mktemp)
-    trap 'rm -f "$temporal"' EXIT
-    restic dump "$2" /truco.dump > "$temporal"
-    pg_restore --clean --if-exists --single-transaction --exit-on-error --dbname="$PGDATABASE" "$temporal"
+    temporal=$(mktemp -d)
+    trap 'rm -rf "$temporal"' EXIT
+    restic dump "$2" /truco.dump > "$temporal/archivo"
+    pg_restore --file="$temporal/restaurar.sql" "$temporal/archivo"
+    # RESTRICT también protege contra una inicialización concurrente de Keycloak.
+    # El volcado crea sus objetos; una colisión revierte la transacción entera.
+    psql -X --single-transaction -v ON_ERROR_STOP=1 --dbname="$PGDATABASE" \
+      -c 'DROP SCHEMA identidad RESTRICT' -f "$temporal/restaurar.sql" >/dev/null
     ;;
   programar)
     while :; do

@@ -14,7 +14,7 @@ Se puede elegir un contexto Docker de dos CPU y 4 GiB con `DOCKER_CONTEXT`. El e
 
 ## Primera instalación
 
-1. En el VPS, prepará un checkout de la versión que vas a publicar. Apuntá el registro A del dominio a su IPv4. Si publicás un AAAA, comprobá también la ruta IPv6. Abrí TCP 80 y 443, y reservá SSH para la administración. Caddy obtiene y renueva el certificado automáticamente. La API, PostgreSQL, Keycloak y el servicio de copias quedan en la red de Docker. [HTTPS automático de Caddy](https://caddyserver.com/docs/automatic-https)
+1. En OVHcloud elegí **Distribution only → Ubuntu → 26.04 LTS**. Instalá Docker Engine y el complemento Compose desde el [repositorio oficial de Docker para Ubuntu](https://docs.docker.com/engine/install/ubuntu/). En el VPS, prepará un checkout de la versión que vas a publicar. Apuntá el registro A del dominio a su IPv4. Si publicás un AAAA, comprobá también la ruta IPv6. Abrí TCP 80 y 443, y reservá SSH para la administración. Caddy obtiene y renueva el certificado automáticamente. La API, PostgreSQL, Keycloak y el servicio de copias quedan en la red de Docker. [HTTPS automático de Caddy](https://caddyserver.com/docs/automatic-https)
 2. Prepará un repositorio de copias dedicado en otro servidor o cuenta de almacenamiento. Para un servidor REST usá `rest:https://copias.ejemplo/mesa/` y las dos credenciales REST. Para almacenamiento compatible con S3, creá primero el bucket y usá `s3:https://endpoint/bucket/prefijo`, con credenciales de lectura, escritura, listado y borrado limitadas al destino. La restauración local ejercita el protocolo REST. [Destinos de restic](https://restic.readthedocs.io/en/stable/030_preparing_a_new_repo.html)
 3. En un checkout nuevo, creá `.env` con el siguiente comando. Completá el dominio y el destino de las copias, y generá cinco secretos independientes con `openssl rand -hex 32`. Guardá una copia de la configuración, las credenciales del destino y la clave de restic en un gestor de secretos fuera del VPS. La clave de cifrado de restic es necesaria aun si conservás el bucket.
 
@@ -76,7 +76,7 @@ dc run --rm --no-deps backup restaurar ID_DE_LA_INSTANTANEA
 dc up -d --wait
 ```
 
-Elegí el ID de la copia verificada. La restauración requiere espacio temporal para descargar el volcado y espacio en PostgreSQL para reconstruirlo. Rechaza una base ocupada y aplica el volcado en una transacción. Para confirmar la recuperación, ingresá en una sesión nueva con una cuenta existente, volvé a su mesa y jugá otro turno. Caddy conserva los certificados entre reinicios en su volumen; en una máquina nueva los solicita de nuevo al resolver el DNS del sitio.
+Elegí el ID de la copia verificada. La restauración requiere espacio temporal para descargar el volcado y descomprimir su SQL, además de espacio en PostgreSQL para reconstruirlo. Rechaza una base ocupada y aplica el volcado en una transacción. Para confirmar la recuperación, ingresá en una sesión nueva con una cuenta existente, volvé a su mesa y jugá otro turno. Caddy conserva los certificados entre reinicios en su volumen; en una máquina nueva los solicita de nuevo al resolver el DNS del sitio.
 
 ## Actualizar la aplicación
 

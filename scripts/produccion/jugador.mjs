@@ -71,7 +71,7 @@ try {
   const notified = receive();
   const cmd = {id: randomUUID(), version: before.version};
   if (!before.vista.resultado) {
-    const tipo = ["flor","paso-flor","quiero","carta","no-quiero"].find(t => before.vista.legales.includes(t));
+    const tipo = ["flor","paso-flor","carta","no-quiero","quiero"].find(t => before.vista.legales.includes(t));
     assert.ok(tipo);
     cmd.accion = tipo === "carta" ? {tipo, carta: before.vista.cartas[0]} : {tipo};
   }
