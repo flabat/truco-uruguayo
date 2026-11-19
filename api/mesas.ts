@@ -6,7 +6,10 @@ import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
-type Modo = "1v1" | "2v2";
+type Modo = "1v1" | "2v2" | "3v3";
+export type FormatoMesa = Format | "triples";
+export const politicaTercetos = "tercetos-basica-v1";
+export const perfilTercetos = "tercetos-v1";
 interface RegistroMesa {
   id: string;
   modo: Modo;
@@ -24,7 +27,7 @@ export interface VistaMesa {
   modo: Modo;
   meta: number;
   creadorId: string;
-  formato: Format;
+  formato: FormatoMesa;
   politica: string;
   miAsiento: number;
   invitacion: string;
@@ -32,13 +35,13 @@ export interface VistaMesa {
   asientos: AsientoVista[];
 }
 
-const capacidad = (modo: Modo) => modo === "1v1" ? 2 : 4;
+const capacidad: Record<Modo, number> = { "1v1": 2, "2v2": 4, "3v3": 6 };
 const esId = (id: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
 const rutaMesa = /^\/api\/mesas\/([^/]+)(\/computadoras)?$/;
 const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)\/unirse$/;
 
 export function esRutaMesas(pathname: string) {
-  return pathname === "/api/mesas" || rutaMesa.test(pathname) || rutaInvitacion.test(pathname);
+  return pathname === "/api/modalidades" || pathname === "/api/mesas" || rutaMesa.test(pathname) || rutaInvitacion.test(pathname);
 }
 
 export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: string, web: URL): Promise<VistaMesa | null> {
@@ -55,7 +58,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   `, [id, jugadorId]);
   if (rows.length === 0) return null;
   const mesa = rows[0];
-  const asientos: AsientoVista[] = Array.from({ length: capacidad(mesa.modo) }, (_, asiento) => {
+  const asientos: AsientoVista[] = Array.from({ length: capacidad[mesa.modo as Modo] }, (_, asiento) => {
     const ocupado = rows.find(row => row.asiento === asiento);
     const tipo = !ocupado ? "vacio" : ocupado.computadora ? "computadora" : "humano";
     return {
@@ -70,14 +73,21 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
 }
 
 interface Cambio { id: string; cambiado: boolean }
-export function formatoMesa(modo: Modo, versionSenas: string | null): Format {
-  if (!versionSenas) return modo === "1v1" ? "duel" : "pairs";
+export function formatoMesa(modo: "1v1" | "2v2", versionSenas: string | null): Format;
+export function formatoMesa(modo: "3v3", versionSenas: string | null): "triples";
+export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMesa;
+export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMesa {
+  if (!versionSenas) {
+    if (modo === "3v3") return "triples";
+    return modo === "1v1" ? "duel" : "pairs";
+  }
   if (modo === "2v2" && versionSenas === versions.signals) return "pairs-senas";
   throw new Error("Versión de señas desconocida.");
 }
 
-async function crear(db: PoolClient, jugador: string, modo: unknown, formato: unknown, metaElegida: unknown): Promise<Cambio> {
-  if (modo !== "1v1" && modo !== "2v2") throw new ErrorPeticion(400, "Elegí 1v1 o 2v2.");
+async function crear(db: PoolClient, jugador: string, modo: unknown, formato: unknown, metaElegida: unknown, tercetos: boolean): Promise<Cambio> {
+  if (modo !== "1v1" && modo !== "2v2" && modo !== "3v3") throw new ErrorPeticion(400, "Modalidad de mesa desconocida.");
+  if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
   if (!esMetaDeChico(meta)) throw new ErrorPeticion(400, "Elegí un puntaje par válido para el chico.");
   const defaultFormat = formatoMesa(modo, null);
@@ -85,9 +95,10 @@ async function crear(db: PoolClient, jugador: string, modo: unknown, formato: un
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
   const token = randomBytes(24).toString("base64url");
-  const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica) VALUES ($1,$2,$3,$4,$5,
-    COALESCE((SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1')) RETURNING id`,
-    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null, meta, formato ?? defaultFormat]);
+  const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos) VALUES ($1,$2,$3,$4,$5,
+    COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8) RETURNING id`,
+    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null, meta, formato ?? defaultFormat,
+      modo === "3v3" ? politicaTercetos : null, modo === "3v3" ? perfilTercetos : null]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };
 }
@@ -97,7 +108,7 @@ async function unir(db: PoolClient, jugador: string, token: string): Promise<Cam
   if (!mesa) throw new ErrorPeticion(404, "La invitación no es válida.");
   const { rows } = await db.query("SELECT asiento, jugador FROM juego.asientos WHERE mesa=$1", [mesa.id]);
   if (rows.some(a => a.jugador === jugador)) return { id: mesa.id, cambiado: false };
-  const libres = Array.from({ length: capacidad(mesa.modo) }, (_, i) => i);
+  const libres = Array.from({ length: capacidad[mesa.modo] }, (_, i) => i);
   const asiento = libres.find(i => !rows.some(a => a.asiento === i));
   if (asiento === undefined) throw new ErrorPeticion(409, "La mesa ya está completa.");
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,$2,$3,false)", [mesa.id, asiento, jugador]);
@@ -112,7 +123,7 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   `, [id, jugador]);
   if (!mesa) throw new ErrorPeticion(404, "No se encontró la mesa.");
   if (mesa.creador !== jugador) throw new ErrorPeticion(403, "Solo quien creó la mesa puede sumar computadoras.");
-  if (typeof asiento !== "number" || !Number.isInteger(asiento) || asiento < 0 || asiento >= capacidad(mesa.modo)) {
+  if (typeof asiento !== "number" || !Number.isInteger(asiento) || asiento < 0 || asiento >= capacidad[mesa.modo]) {
     throw new ErrorPeticion(400, "Ese asiento no pertenece a la mesa.");
   }
   const { rows: [ocupante] } = await db.query("SELECT computadora FROM juego.asientos WHERE mesa=$1 AND asiento=$2", [id, asiento]);
@@ -122,10 +133,15 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   return { id, cambiado: true };
 }
 
-export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}) {
+export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false) {
   return async function mesas(req: IncomingMessage, res: ServerResponse) {
     try {
       const path = (req.url ?? "").split("?")[0];
+      if (path === "/api/modalidades") {
+        if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
+        responderJson(res, 200, { modos: tercetos ? ["1v1", "2v2", "3v3"] : ["1v1", "2v2"] });
+        return;
+      }
       const mesa = rutaMesa.exec(path);
       const invitacion = rutaInvitacion.exec(path);
       const jugador = await jugadorDeSesion(pool, req);
@@ -147,7 +163,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         await db.query("BEGIN");
         if (invitacion) cambio = await unir(db, jugador.id, invitacion[1]);
         else if (mesa) cambio = await agregarComputadora(db, mesa[1], jugador.id, datos.asiento);
-        else cambio = await crear(db, jugador.id, datos.modo, datos.formato, datos.meta);
+        else cambio = await crear(db, jugador.id, datos.modo, datos.formato, datos.meta, tercetos);
         vista = await leerMesa(db, cambio.id, jugador.id, web);
         await db.query("COMMIT");
       } catch (error) {
