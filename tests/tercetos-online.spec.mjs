@@ -110,6 +110,23 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(3);
       return page;
     }));
+    if (ancho > 760) {
+      for (const page of paginas) {
+        // Girar hacia la derecha desde la perspectiva de quien reparte y mira al centro.
+        const aLaDerecha = await page.getByRole("group", { name: "Los seis asientos" }).evaluate(mesa => {
+          const centro = elemento => {
+            const { x, y, width, height } = elemento.getBoundingClientRect();
+            return [x + width / 2, y + height / 2];
+          };
+          const muestra = mesa.querySelector(".j-seis-muestra");
+          const [mx, my] = centro(muestra);
+          const [dx, dy] = centro(muestra.parentElement.querySelector(".j-seis-nombre"));
+          const [cx, cy] = centro(mesa.querySelector(".j-seis-centro"));
+          return (mx - dx) * (dy - cy) + (my - dy) * (cx - dx) > 0;
+        });
+        expect(aLaDerecha).toBe(true);
+      }
+    }
     for (const i of [0, 5]) {
       const puestos = paginas[i].getByRole("group", { name: "Los seis asientos" });
       await expect(puestos.getByRole("group")).toHaveCount(6);
