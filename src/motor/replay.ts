@@ -1,12 +1,12 @@
 import { esCardId } from "./cartas.ts";
 import { iniciarMano, jugarCarta, type ErrorJugada, type EstadoMano, type Jugada } from "./mano.ts";
-import { esAsiento, esSemilla, repartir, versionReparto, type Asiento } from "./reparto.ts";
+import { esAsiento, esSemilla, repartir, versionReparto, type AsientoV1 } from "./reparto.ts";
 
 const versionesV1 = { version: 1, versionReglas: 1, versionReparto } as const;
 
 export type ReplayV1 = typeof versionesV1 & {
   readonly semilla: number;
-  readonly dador: Asiento;
+  readonly dador: AsientoV1;
   readonly jugadas: readonly Jugada[];
 };
 

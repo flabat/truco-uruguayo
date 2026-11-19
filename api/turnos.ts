@@ -4,6 +4,7 @@ import { aDecidir, elegirAccionOnline, iniciarOnline, versionReglasOnline, vista
 import type { Asiento } from "../src/motor/reparto.ts";
 import { signals, versions, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
+import type { FormatoMesa } from "./mesas.ts";
 import { ErrorPeticion } from "./http.ts";
 
 export type Confirmada = AccionOnline & { sena?: Signal };
@@ -14,11 +15,12 @@ export interface Registro {
 }
 
 function identificador(accion: Confirmada): ActionId {
+  if (accion.tipo === "mazo") throw new RangeError("El retiro al mazo requiere una mesa de tercetos.");
   const base = accion.tipo === "carta" ? accion.carta : accion.tipo;
   return accion.sena === undefined ? base : `${accion.sena}/${base}`;
 }
 
-export function leerAccion(datos: unknown, asiento: Asiento, formato: Format): Confirmada {
+export function leerAccion(datos: unknown, asiento: Asiento, formato: FormatoMesa): Confirmada {
   if (!datos || typeof datos !== "object" || Array.isArray(datos) || !("tipo" in datos) || typeof datos.tipo !== "string") {
     throw new ErrorPeticion(400, "Falta la acción de juego.");
   }
@@ -46,7 +48,7 @@ export function guardarAcciones(mano: ManoPublicable): Confirmada[] {
 
 export function restaurar(fila: Registro, formato: Format, meta?: number): ManoPublicable {
   if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== (formato === "pairs-senas" ? versions.signals : null)) {
-    throw new Error("Versión de reglas desconocida.");
+    throw new ErrorPeticion(503, "Esta mesa requiere otra versión de las reglas.");
   }
   const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio, meta), turnos: []};
   return fila.acciones.reduce((mano, accion) => confirmar(mano, formato, accion), inicial);

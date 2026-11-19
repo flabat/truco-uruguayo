@@ -1,0 +1,29 @@
+{
+  "versionReglas": 2,
+  "meta": 26,
+  "numero": 2,
+  "puntosInicio": [12, 11],
+  "reparto": {
+    "versionReparto": "online-2",
+    "dador": 4,
+    "mano": 5,
+    "muestra": "oros-01",
+    "manos": [
+      ["copas-05", "copas-06", "copas-07"],
+      ["oros-03", "copas-01", "bastos-06"],
+      ["oros-02", "espadas-06", "bastos-07"],
+      ["bastos-02", "bastos-03", "bastos-04"],
+      ["espadas-11", "espadas-10", "copas-12"],
+      ["bastos-01", "espadas-12", "copas-04"]
+    ]
+  },
+  "acciones": [
+    {"duelo": 1, "asiento": 5, "tipo": "envido"},
+    {"duelo": 1, "asiento": 2, "tipo": "quiero"},
+    {"duelo": 1, "asiento": 5, "tipo": "mazo"},
+    {"duelo": 2, "asiento": 0, "tipo": "flor"},
+    {"duelo": 2, "asiento": 3, "tipo": "flor"},
+    {"duelo": 2, "asiento": 3, "tipo": "contraflor-al-resto"},
+    {"duelo": 2, "asiento": 0, "tipo": "quiero"}
+  ]
+}
