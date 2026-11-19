@@ -53,7 +53,7 @@ const server = createServer(async (request, response) => {
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
 const partidas = crearPartidas(pool, web, alCambiar);
-const mesas = crearRutasMesas(pool, web, alCambiar);
+const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1");
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
