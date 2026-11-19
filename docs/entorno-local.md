@@ -8,7 +8,7 @@ docker compose up --build --wait
 
 | Servicio | Cómo probarlo |
 | --- | --- |
-| Web Astro | Abrí [la guía](http://localhost:8081/). Nginx sirve los archivos estáticos compilados. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
+| Web Astro | Abrí [Truco Oriental](http://localhost:8081/). Desde la portada podés acceder a las mesas, leer la guía de reglas o practicar como invitado. Nginx sirve la interfaz y reenvía las peticiones de juego a la API. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
 | API Node/TypeScript | Abrí [el estado de la API](http://localhost:3001/health). Devuelve HTTP 200 con `api` y `postgres` en `ok`. Si la API responde y la base está caída, devuelve 503. |
 | PostgreSQL | Ejecutá `docker compose exec db psql -U truco -d truco`. El puerto de la base queda dentro de la red de Compose. |
 | Identidad de prueba | Abrí [la cuenta de Keycloak](http://localhost:8080/realms/truco-local/account/) con el usuario `prueba` y la contraseña `truco-local`. El [documento de descubrimiento OIDC](http://localhost:8080/realms/truco-local/.well-known/openid-configuration) publica el emisor y las URLs de autorización, tokens y claves. |
@@ -37,7 +37,7 @@ Usá dispositivos o perfiles independientes del navegador para probar diferentes
 
 El diseño del chat de voz opcional de la mesa se sigue en [#102](https://github.com/flabat/truco-uruguayo/issues/102).
 
-Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloak importa el nuevo realm `mesa-local` junto al realm de prueba existente y la API aplica la migración a PostgreSQL. Nginx recibe el retorno del proveedor en `/api/auth/callback` y lo pasa a la API. El código se canjea dentro de Compose. El navegador recibe una cookie de sesión HTTP-only y las credenciales de desarrollo pertenecen a Keycloak. La compilación estática para GitHub Pages sigue ofreciendo la guía y la práctica individual.
+Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloak importa el nuevo realm `mesa-local` junto al realm de prueba existente y la API aplica la migración a PostgreSQL. Nginx recibe el retorno del proveedor en `/api/auth/callback` y lo pasa a la API. El código se canjea dentro de Compose. El navegador recibe una cookie de sesión HTTP-only y las credenciales de desarrollo pertenecen a Keycloak.
 
 ### Tercetos y reconexión
 
@@ -49,7 +49,7 @@ Compose habilita el alta de tercetos en desarrollo. Para desplegar por etapas, a
 
 ## Motor de contenedores
 
-Para macOS proponemos Colima con Docker Engine. Colima ejecuta los contenedores Linux en una VM local. El proyecto usa Dockerfiles y Compose estándar y también se puede arrancar con Docker Desktop o con Docker Engine y el plugin Compose en Linux. En un despliegue futuro se puede publicar la misma imagen de la API, apuntar `DATABASE_URL` a PostgreSQL administrado y servir la compilación de Astro desde un alojamiento estático. La identidad de prueba y sus credenciales son para desarrollo. [Colima](https://github.com/abiosoft/colima) · [Docker Compose](https://docs.docker.com/compose/)
+Para macOS proponemos Colima con Docker Engine. Colima ejecuta los contenedores Linux en una VM local. El proyecto usa Dockerfiles y Compose estándar y también se puede arrancar con Docker Desktop o con Docker Engine y el plugin Compose en Linux. En un despliegue futuro se puede publicar la misma imagen de la API, apuntar `DATABASE_URL` a PostgreSQL administrado y servir la compilación de Astro en la raíz del sitio con las rutas de la API y de WebSocket bajo `/api/`. La identidad de prueba y sus credenciales son para desarrollo. [Colima](https://github.com/abiosoft/colima) · [Docker Compose](https://docs.docker.com/compose/)
 
 Para preparar un Mac con Homebrew:
 

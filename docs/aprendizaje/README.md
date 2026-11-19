@@ -1,5 +1,7 @@
 # Diseño de la ruta de aprendizaje
 
+La guía y la práctica individual están disponibles como invitado desde la portada de la aplicación completa. Los planes originales documentan las dos rutas que se verificaban cuando se publicaba en GitHub Pages. La verificación actual usa la raíz del sitio. [Entorno local](../entorno-local.md) · [Verificación del proyecto](../../CONTRIBUTING.md#verificación-local)
+
 La ruta está pensada para quien practica a solas y quizá conoce la conga, pero recién empieza a jugar al truco con muestra. En los primeros cinco minutos debería poder comparar dos cartas y reconocer flor en una mano nueva. Al terminar el primer tramo debería saber qué cartas contar, cuánto vale una pieza y cómo elegir su primera carta en una mesa de parejas.
 
 El primer entregable técnico es una mano completa que se [juega y reproduce desde la terminal](simular.md). La misma lógica se usa después en la práctica y en la mesa del navegador. El [plan de implementación](plan.md) muestra los issues, el orden de integración y las oportunidades de trabajo paralelo. El [issue de seguimiento](https://github.com/flabat/truco-uruguayo/issues/15) reúne las entregas.

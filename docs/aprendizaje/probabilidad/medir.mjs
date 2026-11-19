@@ -5,7 +5,7 @@ import { iniciarMano } from "../../../src/motor/mano.ts";
 import { repartir } from "../../../src/motor/reparto.ts";
 import { capturarReplay } from "../../../src/motor/replay.ts";
 
-const base = new URL(process.argv[2] ?? "http://127.0.0.1:4322/truco-uruguayo/");
+const base = new URL(process.argv[2] ?? "http://127.0.0.1:4322/");
 const repeticiones = 10;
 const viewport = { width: 360, height: 780 };
 const mano = {
