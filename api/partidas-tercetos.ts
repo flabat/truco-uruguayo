@@ -8,7 +8,7 @@ import { ErrorPeticion } from "./http.ts";
 import type { Registro } from "./turnos.ts";
 
 import type { TipoLance } from "../src/motor/reglas-tercetos.ts";
-export type RegistroTercetos = Registro & {
+export type RegistroTercetos = Omit<Registro, "acciones"> & {
   mesa: string;
   meta_tercetos: number | null;
   tipo_reparto: TipoLance | null;

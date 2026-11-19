@@ -15,6 +15,7 @@ export interface Registro {
 }
 
 function identificador(accion: Confirmada): ActionId {
+  if (accion.tipo === "mazo") throw new RangeError("El retiro al mazo requiere una mesa de tercetos.");
   const base = accion.tipo === "carta" ? accion.carta : accion.tipo;
   return accion.sena === undefined ? base : `${accion.sena}/${base}`;
 }
