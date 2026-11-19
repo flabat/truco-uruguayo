@@ -34,11 +34,14 @@ export type ResumenLance = LanceTercetos & {
   resultado: NonNullable<EstadoOnline["resultado"]>;
   acciones: readonly AccionOnline[];
   cobros: readonly Cobro[];
+  indiceCobroLateral?: number;
   vueltas: readonly VueltaCerrada[];
   puntos: readonly [number, number];
 };
 
 export interface EstadoOnline {
+  /** Acción pública que terminó de resolver el envite o la flor, incluidas las consultas. */
+  indiceCobroLateral?: number;
   comparacionFlor?: {
     indiceAccion: number;
     participantes: readonly { asiento: Asiento; total: number }[];
@@ -192,8 +195,9 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
     // El resto querido se lleva todas las flores. En los otros casos suman las propias.
     tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
   }
+  estado.indiceCobroLateral = estado.acciones.length - 1;
   if (flor && participantes && !esTerceto(estado)) {
-    estado.comparacionFlor = { indiceAccion: estado.acciones.length - 1, participantes };
+    estado.comparacionFlor = { indiceAccion: estado.indiceCobroLateral, participantes };
   }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
     ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });
