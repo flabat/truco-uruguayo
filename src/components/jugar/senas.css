@@ -1,0 +1,16 @@
+.j-habilitar-senas, .j-elegir-sena {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .65rem;
+  margin-block: 1rem;
+}
+.j-elegir-sena label { font-weight: 700; }
+.j-elegir-sena select {
+  max-width: 100%;
+  min-height: 44px;
+  padding-inline: .7rem;
+  font: inherit;
+}
+.j-elegir-sena small { flex-basis: 100%; }
+.j-senas-vistas ol { padding-inline-start: 1.5rem; }
