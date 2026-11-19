@@ -62,7 +62,7 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
         assert(record.id===id && record.seed===seed && record.pin===final.pin && record.refPin===final.reference);
         return {id,pairs:record.rows};
       });
-      const verified = summarize(evidence,"champion",source.finalResamples);
+      const verified = summarize(evidence,"champion",source.finalResamples,source.familyError??0.05);
       assert.deepEqual(verified,final.evaluation,"Final result differs from its deal outcomes");
       assert.equal(final.improved,qualifies(verified,source.directLowerBound,source.familyDeltaLowerBound));
       const winner = final.improved ? challenger : incumbent;
@@ -71,7 +71,8 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
       // A research finalist can be used for optimization without being named the
       // champion. Context routers keep their residual expert as trainable weights.
       const researchStarter = paired ? challenger : winner;
-      const starter = researchStarter.kind==="team-context-mixture-v1" ? researchStarter.finalist : researchStarter;
+      const starter = researchStarter.kind==="team-context-mixture-v1" ? researchStarter.finalist
+        : researchStarter.kind==="team-format-transfer-v1" ? registered(join(input,"starter.json")) : researchStarter;
       openActor(starter,format,0);
       store(join(input,"starter.json"),starter);
       store(join(input,"champion-at-start.json"),winner);

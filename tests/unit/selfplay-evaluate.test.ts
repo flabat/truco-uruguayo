@@ -16,3 +16,12 @@ test("la promoción requiere ganar el duelo directo y proteger cada familia", ()
   assert.equal(compare([1,0],[1,1]),false);
   assert.equal(compare([1,1],[0,0]),false);
 });
+
+test("la confirmación adicional puede exigir intervalos simultáneos más conservadores", () => {
+  const pairs = Array.from({length:48},(_,pair):PairOutcome=>({pair,candidate:[Number(pair%3>0),Number(pair%5>1)],incumbent:[1,0]}));
+  const field = [{id:"champion",pairs}];
+  const usual = summarize(field,"champion",2000), strict = summarize(field,"champion",2000,0.01);
+  assert.equal(usual.direct.estimate,strict.direct.estimate);
+  assert(strict.direct.lower<=usual.direct.lower && strict.direct.upper>=usual.direct.upper);
+  assert.throws(()=>summarize(field,"champion",2000,0));
+});

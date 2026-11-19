@@ -175,7 +175,7 @@ export function evaluate(root:string,format:Format,label:string) {
     }
     families.push({id:f.id,pairs:saved.rows as PairOutcome[]});emitted+=saved.signalsSent;
   }
-  const evaluation=summarize(families,"champion",final?protocol.finalResamples:protocol.epochResamples);
+  const evaluation=summarize(families,"champion",final?protocol.finalResamples:protocol.epochResamples,protocol.familyError??0.05);
   const improved=qualifies(evaluation,protocol.directLowerBound,protocol.familyDeltaLowerBound);
   const worst=evaluation.families.reduce((a,b)=>b.delta.lower<a.delta.lower?b:a);
   const relative=(id:string)=>evaluation.families.find(f=>f.id===id);
