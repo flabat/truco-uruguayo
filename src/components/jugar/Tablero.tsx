@@ -5,7 +5,7 @@ import type { VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
 
-const canto = {
+export const canto = {
   truco: "Truco",
   retruco: "Retruco",
   "vale-cuatro": "Vale cuatro",
@@ -18,9 +18,10 @@ const canto = {
   quiero: "Quiero",
   "no-quiero": "No quiero",
   "paso-flor": "Sin flor",
+  mazo: "Irse al mazo",
 } satisfies Record<Exclude<Tipo, "carta">, string>;
-const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
-const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
+export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
+export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -32,7 +33,7 @@ const grupos: { nombre: string; opciones: Canto[] }[] = [
   },
 ];
 
-function Naipe({ id, base }: { id: CardId; base: string }) {
+export function Naipe({ id, base }: { id: CardId; base: string }) {
   return <img src={base + "img/cartas/tatu/" + id + ".webp"} width={384} height={596} alt={nombrar(id)} />;
 }
 
@@ -119,7 +120,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   if (resultado) {
     const fin = partida.ganadorPartida !== null;
     const victoria = resultado.equipo === propio;
-    const motivos = { vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
+    const motivos = { mazo: "el retiro al mazo", vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
     return {
       titulo: fin
         ? victoria
@@ -159,6 +160,26 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   };
 }
 
+export function Tanteador({ meta, puntos, propio, equipo }: {
+  meta: number; puntos: readonly [number, number]; propio: number; equipo: (n: number) => string;
+}) {
+  return (
+      <div className="j-tanteador" role="group" aria-label="Tanteador">
+        <div className="j-meta">
+          <b>Chico a {meta}</b>
+          <small>{mitadesDelChico(meta)}</small>
+        </div>
+        {[propio, 1 - propio].map((e) => (
+          <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
+            <span id={"j-equipo-" + e}>{equipo(e)}</span>
+            <strong>{puntos[e]}</strong>
+            <small>{cuentaDelChico(puntos[e], meta)}</small>
+          </div>
+        ))}
+      </div>
+  );
+}
+
 export function EnJuego({
   mesa,
   partida,
@@ -174,7 +195,6 @@ export function EnJuego({
 }) {
   const v = partida.vista!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const ajeno = propio === 0 ? 1 : 0;
   const equipo = (e: number) =>
     mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
   const nombre = (a: number) => mesa.asientos[a].nombre!;
@@ -194,19 +214,7 @@ export function EnJuego({
   const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
   return (
     <>
-      <div className="j-tanteador" role="group" aria-label="Tanteador">
-        <div className="j-meta">
-          <b>Chico a {partida.meta}</b>
-          <small>{mitadesDelChico(partida.meta)}</small>
-        </div>
-        {[propio, ajeno].map((e) => (
-          <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
-            <span id={"j-equipo-" + e}>{equipo(e)}</span>
-            <strong>{partida.puntos[e]}</strong>
-            <small>{cuentaDelChico(partida.puntos[e], partida.meta)}</small>
-          </div>
-        ))}
-      </div>
+      <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
       <div
         className="j-partida"
         onClickCapture={(e) => {
