@@ -10,7 +10,7 @@ import { iniciarChicoOnline, decidirChicoOnline, vistaChicoOnline } from "../../
 test("duelo mixto: la falta aceptada por la computadora paga 40 antes de tirar una carta", () => {
   const antes = reproducirChico(duelo, 1, 2);
   assert.deepEqual(antes.puntos, [0, 0]);
-  assert.ok(antes.vista && "legales" in antes.vista && antes.vista.legales.includes("quiero"));
+  assert.ok(antes.vista && "legales" in antes.vista && antes.vista.legales.some(accion => accion === "quiero"));
   const despues = reproducirChico(duelo, 1, 3);
   assert.deepEqual(despues.puntos, [40, 0]);
   assert.equal(despues.vista?.acciones.some(a => a.tipo === "carta"), false);
