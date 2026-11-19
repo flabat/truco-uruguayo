@@ -24,8 +24,9 @@ export function elegirJugada(vista: VistaAsiento): CardId {
   const mayorRival = rivales.reduce((mayor, otra) =>
     compararCartas(otra.carta, mayor.carta, muestra) > 0 ? otra : mayor);
   const contraRival = (carta: CardId) => compararCartas(carta, mayorRival.carta, muestra);
-  const compañero = jugadas.find(jugada => equipoPorAsiento[jugada.asiento] === equipo);
-  const ventajaDelCompañero = compañero ? contraRival(compañero.carta) : -1;
+  const compañeros = jugadas.filter(jugada => equipoPorAsiento[jugada.asiento] === equipo);
+  const ventajaDelCompañero = compañeros.reduce((ventaja, jugada) =>
+    Math.max(ventaja, contraRival(jugada.carta)), -1);
 
   if (ventajaDelCompañero > 0) return menor;
   const ganadora = cartas.find(carta => contraRival(carta) > 0);

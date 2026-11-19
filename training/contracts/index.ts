@@ -1,6 +1,6 @@
 import type { CardId } from "../../src/motor/cartas.ts";
-import type { AccionOnline, Cobro, TipoAccionOnline, VistaOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento, RepartoOnline } from "../../src/motor/reparto.ts";
+import type { AccionOnlineV1, Cobro, TipoAccionOnlineV1, VistaOnlineV1 } from "../../src/motor/mesa-online.ts";
+import type { Asiento, AsientoV1, RepartoOnline } from "../../src/motor/reparto.ts";
 
 export const supportedFormats = ["duel", "pairs", "pairs-senas", "pairs-private-senas"] as const;
 export type Format = typeof supportedFormats[number];
@@ -30,7 +30,7 @@ export function canSeeSignal(format: Format, sender: Asiento, viewer?: Asiento):
 }
 
 export type Score = readonly [number, number];
-export type Move = CardId | Exclude<TipoAccionOnline, "carta">;
+export type Move = CardId | Exclude<TipoAccionOnlineV1, "carta">;
 // IDs follow the rows of the published table in src/data/juego.json.
 export const signals = ["cejas", "beso", "nariz", "ojo-derecho", "ojo-izquierdo",
   "labios-derecha", "labios-izquierda", "labio-inferior", "boca", "lengua",
@@ -42,7 +42,7 @@ export type ActionId = Move | `${Signal}/${Move}`;
 /** One committed turn. In a seat projection the signal is omitted if that seat cannot see it. */
 export interface PublicTurn {
   readonly signal?: Signal;
-  readonly action: AccionOnline;
+  readonly action: AccionOnlineV1;
   readonly awards: readonly Cobro[];
 }
 export interface SeatObservation {
@@ -50,8 +50,8 @@ export interface SeatObservation {
   readonly format: Format;
   readonly seats: 2 | 4;
   /** Absolute seat IDs in order starting with the observing seat. */
-  readonly relativeSeats: readonly Asiento[];
-  readonly view: VistaOnline;
+  readonly relativeSeats: readonly AsientoV1[];
+  readonly view: VistaOnlineV1;
   readonly originalCards: readonly CardId[];
   readonly startScore: Score;
   readonly score: Score;

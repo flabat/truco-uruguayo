@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {randomUUID} from "node:crypto";
 import pg from "pg";
 import {crearEnsayo} from "./ensayos.ts";
-import {avanzarEnsayo} from "./partidas.ts";
+import {avanzarEnsayo, crearPartidas} from "./partidas.ts";
 import {resolverTurno} from "./bot-pendiente.ts";
 import {createServing} from "./serving.ts";
 import {restaurar} from "./turnos.ts";
@@ -13,7 +13,46 @@ const {rows:[owner]}=await pool.query("INSERT INTO juego.jugadores (emisor,sujet
 const id=await crearEnsayo(pool,"duel",owner.id,"actor-ausente");
 const servicio=createServing({loadArtifact:async()=>null});
 const current=async()=> (await pool.query("SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero DESC LIMIT 1",[id])).rows[0];
+async function verificarFlorEntreVueltas() {
+  const {rows: [mesa]} = await pool.query(
+    "INSERT INTO juego.mesas (modo,creador,invitacion,politica) VALUES ('1v1',$1,$2,'prueba-flor') RETURNING id",
+    [owner.id, randomUUID()]);
+  await pool.query("INSERT INTO juego.asientos VALUES ($1,0,$2,false), ($1,1,NULL,true)", [mesa.id, owner.id]);
+  const reparto = {versionReparto:"online-1", dador:1, mano:0, muestra:"oros-05",
+    manos:[["oros-06","oros-02","oros-10"],["copas-02","bastos-06","espadas-05"]]};
+  const declaraciones = [{tipo:"flor",asiento:0},{tipo:"paso-flor",asiento:1}];
+  await pool.query(`INSERT INTO juego.manos (mesa,numero,version,version_reglas,reparto,puntos_inicio,acciones)
+    VALUES ($1,4,3,1,$2,'{11,0}',$3)`, [mesa.id,reparto,JSON.stringify(declaraciones)]);
+  const partidas = crearPartidas(pool,new URL("http://localhost"));
+  const jugar = (version,accion) => partidas.ejecutar(mesa.id,owner.id,"acciones",{id:randomUUID(),version,accion});
+  const leer = () => partidas.leer(mesa.id,owner.id);
+  const decidir = (action) => resolverTurno(pool,{async decide(pin,obs) {
+    assert.ok(obs.legalActions.includes(action));
+    assert.doesNotMatch(JSON.stringify(obs),/oros-02|oros-10/);
+    return {action,policy:pin,latencyMs:0,fallback:null};
+  }},()=>{},mesa.id);
+
+  await jugar(3,{tipo:"carta",carta:"oros-06"});
+  assert.ok(await decidir("espadas-05"));
+  const espera = await leer();
+  assert.equal(espera.vista.turno,1);
+  assert.deepEqual(espera.vista.legales,[]);
+  await assert.rejects(jugar(espera.version,{tipo:"carta",carta:"oros-10"}),{status:409});
+  assert.ok(await decidir("truco"));
+  const oferta = await leer();
+  assert.equal(oferta.vista.pendiente.tipo,"truco");
+  const aceptado = await jugar(oferta.version,{tipo:"quiero"});
+  assert.deepEqual(aceptado.vista.legales,[]);
+  assert.ok(await decidir("copas-02"));
+  const fin = await leer();
+  assert.deepEqual(fin.puntos,[16,0]);
+  assert.deepEqual(fin.vista.acciones.map(a=>a.tipo),["flor","paso-flor","carta","carta","truco","quiero","mazo"]);
+  assert.deepEqual(fin.vista.resultado,{motivo:"mazo",equipo:0,tantos:2});
+  assert.equal(await decidir("bastos-06"),false);
+}
+
 try {
+  await verificarFlorEntreVueltas();
   await avanzarEnsayo(pool);
   const first=await current();
   // Simula el reinicio después de leer y antes del commit; queda el trabajo duradero.

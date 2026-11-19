@@ -119,11 +119,11 @@
   {
     "id": "puntaje",
     "title": "El tanteador",
-    "intro": "Antes de repartir, acuerden a cuántos tantos juegan. En una partida a 40 hay 20 malas y 20 buenas. Gana el equipo que llegue primero a 40.",
+    "intro": "En Truco Oriental el chico es a 40 tantos en duelo y en parejas, y a 50 de a seis. Podés acordar otro total par antes de jugar. La primera mitad son las malas y la segunda, las buenas. Gana quien llega primero al total elegido.",
     "blocks": [
       {
         "heading": "Pasar a buenas",
-        "text": "Cada equipo lleva su propia cuenta. Si van 18 a 14 y tu equipo suma tres, pasa a 21 en total, o una buena. El rival sigue con 14 malas. Si juegan a 30, la mitad está en 15."
+        "text": "Cada lado lleva su propia cuenta. En un chico a 40, si vas 19 a 14 y ganás un tanto, completás las 20 malas y entrás en buenas con cero. Si ganás otro, tenés una buena (21 tantos en total). Tu rival sigue con 14 malas."
       },
       {
         "heading": "Qué se anota",
@@ -153,7 +153,7 @@
   {
     "id": "seis-jugadores",
     "title": "El juego de a seis",
-    "intro": "Dos tercetos comparten mesa y tanteador. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
+    "intro": "Dos equipos de tres juegan por defecto a 50 tantos, con 25 malas y 25 buenas. Con 25 tantos entrás en buenas y con 26 tenés una buena. Podés acordar otra meta antes del reparto. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
     "blocks": [
       {
         "heading": "Alternar las manos",
@@ -162,6 +162,14 @@
       {
         "heading": "Anotar los duelos",
         "text": "Al terminar cada duelo, los tantos van al marcador de los equipos. La alternancia entre redondilla y pico a pico se usa mientras los dos equipos estén en malas. Cuando uno llega a buenas, los siguientes repartos son redondillas."
+      },
+      {
+        "heading": "El chico de tercetos en línea",
+        "text": "La casa propone 50 tantos, con 25 malas y 25 buenas. Si pactan otra meta, la mitad marca la entrada en buenas. Si un equipo entra en buenas durante un duelo, se completan los duelos de ese reparto y la redondilla vuelve en el siguiente. En cuanto un cobro alcanza la meta, gana ese equipo y se cierran los cobros y los duelos pendientes. Irse al mazo en turno de carta concede al rival el valor vigente del truco. Primero se liquidan las flores obligatorias.",
+        "sources": [
+          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Truco Oriental · Decisiones para los tercetos en línea", "url": "https://github.com/flabat/truco-uruguayo/pull/173"}
+        ]
       },
       {
         "heading": "Una flor por lado en el pico a pico",
@@ -195,10 +203,10 @@
   {
     "id": "senas",
     "title": "Las señas",
-    "intro": "En equipo, un gesto le cuenta a tu compañero qué carta podés aportar. Las señas se hacen a la vista de la mesa, disimulando para que el rival no las lea.",
+    "intro": "Las señas son gestos discretos que usás para contarle a tu compañero qué cartas tenés. Por ejemplo, si tenés el 2 del palo de la muestra, podés alzar ambas cejas. En la mesa en línea, solo vos y tu compañero ven la seña.",
     "blocks": [
       {
-        "heading": "Un código de mesa",
+        "heading": "Un código entre compañeros",
         "text": "Estas son las convenciones recogidas en la guía de Wikipedia. Las señas de flor y de buen tanto son opcionales. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
         "table": {
           "headers": ["Carta o jugada", "Gesto"],

@@ -98,7 +98,9 @@ test("en duelos y parejas V1 reproduce cada decisiÃ³n del bot y ofrece una acciÃ
           const obs = game.see(seat);
           const reference = vistaOnline(game.state, seat);
           const expected = elegirAccionOnline(reference);
-          assert.deepEqual(obs.view, reference);
+          // El historial de la mesa incorpora el desglose de flor al mostrarse. El actor V1 conserva sus cobros originales.
+          const cobrosV1 = reference.cobros.map(({ comparacionFlor, ...cobro }) => cobro);
+          assert.deepEqual(obs.view, { ...reference, cobros: cobrosV1 });
           assert.deepEqual(obs.originalCards, deal.manos[seat]);
           assert.deepEqual(obs.legalActions, reference.legales.flatMap<Move>(type => type === "carta" ? [...reference.cartas] : [type]));
           assert.deepEqual(choose(obs), expected);

@@ -27,12 +27,13 @@ async function llamar(persona, metodo, ruta, datos, origen = process.env.WEB_ORI
 const invitacion = mesa => "/api/invitaciones/" + new URL(mesa.invitacion).searchParams.get("invitacion") + "/unirse";
 const bot = (p, mesa, asiento) => llamar(p, "POST", "/api/mesas/" + mesa.id + "/computadoras", { asiento });
 const entrar = (p, mesa) => llamar(p, "POST", invitacion(mesa));
-async function crear(p, modo) {
-  const r = await llamar(p, "POST", "/api/mesas", {modo});
+async function crear(p, modo, meta) {
+  const r = await llamar(p, "POST", "/api/mesas", {modo, meta});
   assert.equal(r.estado, 201);
   assert.equal(r.datos.miAsiento, 0);
   assert.equal(r.datos.creadorId, p.id);
   assert.equal(r.datos.lista, false);
+  assert.equal(r.datos.meta, meta ?? (modo === "3v3" ? 50 : 40));
   return r.datos;
 }
 
@@ -51,10 +52,16 @@ try {
   } else {
     assert.equal((await llamar(null, "POST", "/api/mesas", {modo:"2v2"})).estado, 401);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"2v2"}, "https://example.org")).estado, 403);
-    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"3v3"})).estado, 400);
+    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"4v4"})).estado, 400);
     assert.equal((await llamar(ana, "POST", "/api/invitaciones/invalida/unirse")).estado, 404);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "1v1", formato: "pairs-senas"})).estado, 400);
-    const dupla = await crear(ana, "2v2");
+    for (const meta of [0, 25, 1.5, "50", null, 2147483648]) {
+      assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "2v2", meta})).estado, 400);
+    }
+    const seis = await crear(ana, "3v3");
+    assert.equal(seis.formato, "triples");
+    assert.deepEqual(seis.asientos.map(a => a.equipo), [0,1,0,1,0,1]);
+    const dupla = await crear(ana, "2v2", 50);
     assert.equal(dupla.formato, "pairs");
     assert.equal(dupla.asientos.length, 4);
     assert.deepEqual(dupla.asientos.map(a=>a.equipo), [0,1,0,1]);
@@ -67,6 +74,7 @@ try {
     const carrera = await Promise.all(candidatos.map(p => entrar(p, dupla)));
     assert.deepEqual(carrera.map(r=>r.estado).sort(), [200,409]);
     const ultimo = carrera.find(r=>r.estado===200).datos;
+    assert.equal(ultimo.meta, 50);
     assert.equal(ultimo.miAsiento, 3);
     assert.equal(ultimo.lista, true);
     assert.deepEqual(ultimo.asientos.map(a=>a.tipo), Array(4).fill("humano"));
