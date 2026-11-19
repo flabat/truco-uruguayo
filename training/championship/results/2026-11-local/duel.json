@@ -1,0 +1,785 @@
+{
+  "schema": "public-championship-record-v1",
+  "revision": "6747968960ca68d2a8079950cf8b3390abd01c1e",
+  "build": "2550f3889cc19d7abb51f810cca7f731c4b86328d02f1328433bec04e8d62054",
+  "versions": {
+    "rules": "online-1",
+    "competition": "chico-40-v1",
+    "signals": "senas-publicas-v1",
+    "observation": "seat-v1",
+    "actions": "cards-bids-signals-v1",
+    "replay": "committed-v1",
+    "checkpoint": "training-v1",
+    "actor": "policy-v1"
+  },
+  "planSha256": "0bc5055db4fda618809d74cf7f5745c3b7d20f9f4bb05200d19b6bc5ebd79cdb",
+  "dealCommitment": "2655fd2344b47f9855d9a456424f6aab472687e8890f0130441b5f4aff03efed",
+  "manifestSha256": "7a1aa3efe47ace97ec90df835b47b8f289247c481e395c0789cc882b55e933f0",
+  "actors": {
+    "candidate": {
+      "id": "league-duel-73061",
+      "lineage": "league-duel-73061",
+      "trainingSeed": 73061,
+      "sha256": "c9d050fff73317a42714de21f39f9b6f0796acc1876239d6e7d7a03868dfded1",
+      "pin": "fc66f3ce3198a1289fcfa02e5e97e0dcf95d503b1f59b345a8ac6dee9c20de29"
+    },
+    "independent": {
+      "id": "league-duel-71039",
+      "lineage": "league-duel-71039",
+      "trainingSeed": 71039,
+      "sha256": "07bb9521f871720a2bfca726c8e710b31f466875b5bbd2d5d4e4ef939d95c145",
+      "pin": "53f746f530a4383d69271e768ef6273553540a94657d3fd1acc24cfe2a5a402d"
+    },
+    "counter": {
+      "id": "targeted-duel-mc-duel-923711",
+      "lineage": "targeted-duel-mc-duel-923711",
+      "trainingSeed": 923711,
+      "family": "duel-mc",
+      "sha256": "aab6bf934eff8f27f5593e1f5f24f5fe334303efe8fac1c1162f464732e19d94",
+      "pin": "20c1b2f3ea92bb39be8150572a9838296f99418c0a0eeaff92cfe3c623a6a90e"
+    }
+  },
+  "counterReceiptSha256": "364dd157d71fa561cc50de34a89468ff87dcdd9d7c850030e0399ac04d71749b",
+  "baselineSourceSha256": "537df69e9301bd342a88e3eae3323b6c2c8b3c83e18235e8e81d9d498603920b",
+  "thresholds": {
+    "direct": 0.5,
+    "delta": -0.02
+  },
+  "deadlineMs": 200,
+  "fallbackLimit": 0.005,
+  "sizing": {
+    "pilotPairs": 12,
+    "pilotMs": 719.307958,
+    "variances": {
+      "incumbent-online-v1/fixed": 0.060606060606060615,
+      "direct": 0.06060606060606062,
+      "duel-direct-falta-35-v1/fixed": 0.1590909090909091,
+      "caller/fixed": 0.18181818181818182,
+      "folder/fixed": 0.1590909090909091,
+      "frequent-bluff/fixed": 0.23295454545454544,
+      "rare-bluff/fixed": 0.08333333333333331,
+      "strong-cards/fixed": 0.15719696969696975,
+      "independent/fixed": 0.09090909090909091,
+      "counter/fixed": 0.13636363636363635
+    },
+    "z": 3.2,
+    "powerZ": 0.842,
+    "targetDifference": 0.06,
+    "wanted": 1058,
+    "feasible": 30028,
+    "estimatedDetectable": 0.12193037822557982,
+    "maxPairs": 256,
+    "wallBudgetMinutes": 30
+  },
+  "runtime": {
+    "node": "v24.22.1",
+    "cpu": "Apple M5",
+    "arch": "arm64",
+    "system": "27.2.0",
+    "memory": 25769803776
+  },
+  "elapsedMs": 31010,
+  "report": {
+    "format": "duel",
+    "planSha256": "0bc5055db4fda618809d74cf7f5745c3b7d20f9f4bb05200d19b6bc5ebd79cdb",
+    "matchCount": 9216,
+    "field": {
+      "pairs": 256,
+      "resamples": 10000,
+      "simultaneous": "Bonferroni (direct win rate + each family change)",
+      "headline": {
+        "estimate": 0.3051215277777775,
+        "lower": 0.28906249999999994,
+        "upper": 0.3213975694444445
+      },
+      "direct": {
+        "estimate": 0.158203125,
+        "lower": 0.115234375,
+        "upper": 0.201171875
+      },
+      "families": [
+        {
+          "id": "incumbent-online-v1/fixed",
+          "winRate": 0.158203125,
+          "delta": {
+            "estimate": -0.341796875,
+            "lower": -0.384765625,
+            "upper": -0.298828125
+          }
+        },
+        {
+          "id": "duel-direct-falta-35-v1/fixed",
+          "winRate": 0.134765625,
+          "delta": {
+            "estimate": -0.279296875,
+            "lower": -0.330078125,
+            "upper": -0.224609375
+          }
+        },
+        {
+          "id": "caller/fixed",
+          "winRate": 0.3046875,
+          "delta": {
+            "estimate": -0.416015625,
+            "lower": -0.48828125,
+            "upper": -0.345703125
+          }
+        },
+        {
+          "id": "folder/fixed",
+          "winRate": 0.595703125,
+          "delta": {
+            "estimate": 0.041015625,
+            "lower": -0.029296875,
+            "upper": 0.107421875
+          }
+        },
+        {
+          "id": "frequent-bluff/fixed",
+          "winRate": 0.3671875,
+          "delta": {
+            "estimate": -0.291015625,
+            "lower": -0.359375,
+            "upper": -0.22265625
+          }
+        },
+        {
+          "id": "rare-bluff/fixed",
+          "winRate": 0.1953125,
+          "delta": {
+            "estimate": -0.341796875,
+            "lower": -0.396484375,
+            "upper": -0.283203125
+          }
+        },
+        {
+          "id": "strong-cards/fixed",
+          "winRate": 0.310546875,
+          "delta": {
+            "estimate": -0.388671875,
+            "lower": -0.45703125,
+            "upper": -0.3203125
+          }
+        },
+        {
+          "id": "independent/fixed",
+          "winRate": 0.494140625,
+          "delta": {
+            "estimate": -0.3359375,
+            "lower": -0.404296875,
+            "upper": -0.265625
+          }
+        },
+        {
+          "id": "counter/fixed",
+          "winRate": 0.185546875,
+          "delta": {
+            "estimate": -0.34375,
+            "lower": -0.392578125,
+            "upper": -0.29296875
+          }
+        }
+      ]
+    },
+    "latencyMs": {
+      "p50": 0.026,
+      "p95": 0.058,
+      "p99": 0.099
+    },
+    "decisions": 153309,
+    "fallbackRate": 0,
+    "roleTotals": {
+      "candidate:incumbent-online-v1/fixed:tested": {
+        "decisions": 15247,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/fixed:opponent": {
+        "decisions": 15659,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:tested": {
+        "decisions": 22786,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:opponent": {
+        "decisions": 22786,
+        "fallbacks": {}
+      },
+      "candidate:duel-direct-falta-35-v1/fixed:tested": {
+        "decisions": 17392,
+        "fallbacks": {}
+      },
+      "candidate:duel-direct-falta-35-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:duel-direct-falta-35-v1/fixed:opponent": {
+        "decisions": 17813,
+        "fallbacks": {}
+      },
+      "incumbent:duel-direct-falta-35-v1/fixed:tested": {
+        "decisions": 25467,
+        "fallbacks": {}
+      },
+      "incumbent:duel-direct-falta-35-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:duel-direct-falta-35-v1/fixed:opponent": {
+        "decisions": 25495,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:tested": {
+        "decisions": 15214,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:opponent": {
+        "decisions": 15435,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:tested": {
+        "decisions": 21449,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:opponent": {
+        "decisions": 21124,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:tested": {
+        "decisions": 28443,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:opponent": {
+        "decisions": 31056,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:tested": {
+        "decisions": 28617,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:opponent": {
+        "decisions": 29519,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:tested": {
+        "decisions": 8497,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:opponent": {
+        "decisions": 8659,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:tested": {
+        "decisions": 10433,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:opponent": {
+        "decisions": 10421,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:tested": {
+        "decisions": 14283,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:opponent": {
+        "decisions": 14653,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:tested": {
+        "decisions": 20406,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:opponent": {
+        "decisions": 20420,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:tested": {
+        "decisions": 22729,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:opponent": {
+        "decisions": 23005,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:tested": {
+        "decisions": 23487,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:opponent": {
+        "decisions": 24088,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:tested": {
+        "decisions": 15034,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:opponent": {
+        "decisions": 14999,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:tested": {
+        "decisions": 15166,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:opponent": {
+        "decisions": 14723,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:tested": {
+        "decisions": 16470,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:opponent": {
+        "decisions": 16791,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:tested": {
+        "decisions": 23367,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:opponent": {
+        "decisions": 23315,
+        "fallbacks": {}
+      }
+    },
+    "invalidField": false,
+    "awards": {
+      "envido": {
+        "won": 42677,
+        "conceded": 91587
+      },
+      "truco": {
+        "won": 32710,
+        "conceded": 37834
+      },
+      "flor": {
+        "won": 21633,
+        "conceded": 22400
+      }
+    },
+    "scoreBands": {
+      "0/0": {
+        "matches": 4608,
+        "wins": 1406,
+        "scorePriorSum": 2304
+      },
+      "0/1": {
+        "matches": 1622,
+        "wins": 334,
+        "scorePriorSum": 725.4552033620974
+      },
+      "1/1": {
+        "matches": 1479,
+        "wins": 497,
+        "scorePriorSum": 733.4578556449947
+      },
+      "1/2": {
+        "matches": 880,
+        "wins": 135,
+        "scorePriorSum": 355.6811090739927
+      },
+      "1/3": {
+        "matches": 653,
+        "wins": 12,
+        "scorePriorSum": 125.5136754012715
+      },
+      "2/3": {
+        "matches": 665,
+        "wins": 72,
+        "scorePriorSum": 183.12522540405178
+      },
+      "1/0": {
+        "matches": 1169,
+        "wins": 540,
+        "scorePriorSum": 640.1397386820091
+      },
+      "2/1": {
+        "matches": 655,
+        "wins": 412,
+        "scorePriorSum": 384.6245382719619
+      },
+      "0/3": {
+        "matches": 316,
+        "wins": 1,
+        "scorePriorSum": 29.378255483822745
+      },
+      "0/2": {
+        "matches": 377,
+        "wins": 20,
+        "scorePriorSum": 133.43467683512122
+      },
+      "2/2": {
+        "matches": 754,
+        "wins": 276,
+        "scorePriorSum": 371.3446736077089
+      },
+      "3/3": {
+        "matches": 592,
+        "wins": 236,
+        "scorePriorSum": 287.4169490081641
+      },
+      "2/0": {
+        "matches": 243,
+        "wins": 191,
+        "scorePriorSum": 155.14144474010848
+      },
+      "3/1": {
+        "matches": 476,
+        "wins": 447,
+        "scorePriorSum": 380.41108718557643
+      },
+      "3/2": {
+        "matches": 591,
+        "wins": 449,
+        "scorePriorSum": 415.8956465837052
+      },
+      "3/0": {
+        "matches": 189,
+        "wins": 189,
+        "scorePriorSum": 164.70052059174228
+      }
+    },
+    "receiptSha256": "0811b66e887c3db0d9a0c12e6eefcfda53a82c2d72cbacf7dd5547eabbe28b41",
+    "result": "failed"
+  },
+  "example": {
+    "family": "counter/fixed",
+    "arm": "candidate",
+    "pair": 0,
+    "leg": 0,
+    "replay": {
+      "id": "duel-0-0",
+      "score": [
+        1,
+        40
+      ],
+      "winner": 1,
+      "hands": [
+        {
+          "hand": 0,
+          "dador": 1,
+          "muestra": "bastos-12",
+          "startScore": [
+            0,
+            0
+          ],
+          "endScore": [
+            0,
+            4
+          ],
+          "turns": [
+            {
+              "action": {
+                "tipo": "envido",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "envido",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "no-quiero",
+                "asiento": 0
+              },
+              "awards": [
+                {
+                  "equipo": 1,
+                  "tantos": 2,
+                  "motivo": "envido"
+                }
+              ]
+            },
+            {
+              "action": {
+                "tipo": "truco",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "retruco",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "no-quiero",
+                "asiento": 0
+              },
+              "awards": [
+                {
+                  "equipo": 1,
+                  "tantos": 2,
+                  "motivo": "truco"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "hand": 1,
+          "dador": 0,
+          "muestra": "espadas-11",
+          "startScore": [
+            0,
+            4
+          ],
+          "endScore": [
+            1,
+            4
+          ],
+          "turns": [
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 1,
+                "carta": "bastos-02"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 0,
+                "carta": "copas-03"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 0,
+                "carta": "bastos-06"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 1,
+                "carta": "copas-10"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 1,
+                "carta": "bastos-11"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "truco",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "no-quiero",
+                "asiento": 1
+              },
+              "awards": [
+                {
+                  "equipo": 0,
+                  "tantos": 1,
+                  "motivo": "truco"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "hand": 2,
+          "dador": 1,
+          "muestra": "bastos-12",
+          "startScore": [
+            1,
+            4
+          ],
+          "endScore": [
+            1,
+            10
+          ],
+          "turns": [
+            {
+              "action": {
+                "tipo": "envido",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "real-envido",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "quiero",
+                "asiento": 0
+              },
+              "awards": [
+                {
+                  "equipo": 1,
+                  "tantos": 5,
+                  "motivo": "envido",
+                  "asiento": 1,
+                  "tantoGanador": 31
+                }
+              ]
+            },
+            {
+              "action": {
+                "tipo": "carta",
+                "asiento": 0,
+                "carta": "espadas-11"
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "truco",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "no-quiero",
+                "asiento": 0
+              },
+              "awards": [
+                {
+                  "equipo": 1,
+                  "tantos": 1,
+                  "motivo": "truco"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "hand": 3,
+          "dador": 0,
+          "muestra": "copas-01",
+          "startScore": [
+            1,
+            10
+          ],
+          "endScore": [
+            1,
+            40
+          ],
+          "turns": [
+            {
+              "action": {
+                "tipo": "envido",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "falta-envido",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "action": {
+                "tipo": "quiero",
+                "asiento": 1
+              },
+              "awards": [
+                {
+                  "equipo": 1,
+                  "tantos": 30,
+                  "motivo": "envido",
+                  "asiento": 1,
+                  "tantoGanador": 28
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

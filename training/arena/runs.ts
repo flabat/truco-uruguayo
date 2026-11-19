@@ -178,6 +178,13 @@ export function run(directory: string, limit = Infinity, adapters: Adapters = {}
 function writeManifest(directory: string, manifest: Manifest) {
   immutableFile(join(directory, "manifest.json"), json(manifest) + "\n");
 }
+/** Public table transcript. Only the dealer and exposed card come from the private deal. */
+export function publicReplay(record: MatchRecord) {
+  return {id: record.id, score: record.score, winner: record.winner,
+    hands: record.hands.map(h => ({hand: h.hand, dador: h.deal.dador, muestra: h.deal.muestra,
+      startScore: h.startScore, endScore: h.endScore, turns: h.turns}))};
+}
+
 export function verify(manifestPath: string, adapters: Adapters = {}, match?: string) {
   const dir = dirname(manifestPath), plan = readPlan(dir);
   const manifest: Manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
@@ -200,10 +207,7 @@ export function verify(manifestPath: string, adapters: Adapters = {}, match?: st
     if (match) selected = record;
   }
   if (match && !selected) throw new Error("El chico no figura en el manifiesto.");
-  // Console replay is public. Private input, sealed decks and unplayed hands remain in referee files.
-  const replay = selected && {id: selected.id, score: selected.score, winner: selected.winner,
-    hands: selected.hands.map(h => ({hand: h.hand, dador: h.deal.dador, muestra: h.deal.muestra,
-      startScore: h.startScore, endScore: h.endScore, turns: h.turns}))};
+  const replay = selected && publicReplay(selected);
   return {complete: true, verified: matches, hands, matchesPerFormat: plan.pairs * 2,
     formats: plan.formats, resultsSha256: digest(json(manifest.receipts)), ...(replay && {replay})};
 }
