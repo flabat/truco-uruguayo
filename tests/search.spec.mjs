@@ -24,6 +24,9 @@ test("busca con y sin tilde, prioriza el título y abre el primer resultado con 
   await input.press("Enter");
   await expect(page).toHaveURL("reglas/senas/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Las señas");
+  await expect(page.getByText("solo vos y tu compañero ven la seña", { exact: false })).toBeVisible();
+  const pieza = page.getByRole("row", { name: /2 de la muestra/ });
+  await expect(pieza.getByRole("cell")).toHaveText("Alzar ambas cejas.");
 });
 
 test("cierra la búsqueda, devuelve el foco y permite elegir un resultado con el teclado", async ({ page }) => {
