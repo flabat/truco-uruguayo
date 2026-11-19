@@ -117,7 +117,6 @@ export function newRun(directory: string, selected: Format[], pairs: number, see
 function readPlan(directory: string): Plan {
   const plan = JSON.parse(readFileSync(join(directory, "plan.json"), "utf8"));
   validate(plan);
-  assert.deepEqual({source: plan.source, policies: plan.policies}, sourceHashes(), "Cambió el código o la política del plan.");
   return plan;
 }
 
@@ -141,6 +140,7 @@ function validateRecord(record: MatchRecord, schedule: {id: string; format: Form
 export function run(directory: string, limit = Infinity, adapters: Adapters = {}) {
   const plan = readPlan(directory);
   if (existsSync(join(directory, "manifest.json"))) return verify(join(directory, "manifest.json"), adapters);
+  assert.deepEqual({source: plan.source, policies: plan.policies}, sourceHashes(), "Cambió el código o la política del plan.");
   const started = performance.now();
   const receipts: Receipt[] = [];
   let added = 0;
