@@ -2,23 +2,8 @@ import type { ReactNode } from "react";
 import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VistaOnline } from "../../motor/mesa-online";
-import type { Tipo } from "./cliente";
+import { canto } from "../../lib/cantos";
 
-export const canto = {
-  truco: "Truco",
-  retruco: "Retruco",
-  "vale-cuatro": "Vale cuatro",
-  envido: "Envido",
-  "real-envido": "Real envido",
-  "falta-envido": "Falta envido",
-  flor: "Flor",
-  "con-flor-envido": "Con flor envido",
-  "contraflor-al-resto": "Contraflor al resto",
-  quiero: "Quiero",
-  "no-quiero": "No quiero",
-  "paso-flor": "Sin flor",
-  mazo: "Irse al mazo",
-} satisfies Record<Exclude<Tipo, "carta">, string>;
 export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
 

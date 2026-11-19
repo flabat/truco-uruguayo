@@ -33,6 +33,17 @@ test("replay por asiento y por acción, con la misma muestra y todos los cobros 
     for (const asiento of asientos) {
       const vista = vistaTercetos(vivo, asiento);
       assert.deepEqual(vista, vistaTercetos(rearmado, asiento));
+      if (vivo.resultado) {
+        assert.deepEqual(vista.pruebasDeTantos, [
+          { duelo: 1, asiento: 2, motivo: "envido", total: 37, cartas: ["oros-02", "bastos-07"] },
+          { duelo: 2, asiento: 0, motivo: "flor", total: 38, cartas: reparto.manos[0] },
+        ]);
+        for (const futuro of [1, 4]) {
+          for (const carta of reparto.manos[futuro]) assert.ok(!JSON.stringify(vista).includes(carta));
+        }
+      } else {
+        assert.equal(vista.pruebasDeTantos, undefined);
+      }
       assert.equal(vista.muestra, reparto.muestra);
       assert.equal(vista.dador, 4);
       assert.equal(vista.mano, 5);
@@ -56,6 +67,7 @@ test("replay por asiento y por acción, con la misma muestra y todos los cobros 
     }
   }
   assert.deepEqual(vivo.historialLances?.map(r => r.puntos), [[15, 11], [26, 11]]);
+  assert.deepEqual(vivo.historialLances?.map(r => r.indiceCobroLateral), [1, 3]);
   assert.deepEqual(vivo.cobros, [{ equipo: 0, motivo: "flor", valor: 15, tantos: 11, asiento: 0, tantoGanador: 38 }]);
   assert.equal(vivo.resultado?.motivo, "flor");
   assert.equal(vivo.trucoPendiente, null);

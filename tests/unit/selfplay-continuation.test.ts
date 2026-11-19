@@ -11,6 +11,7 @@ import {dealSeed, read, save} from "../../training/anchored/io.ts";
 import {summarize, type PairOutcome} from "../../training/eval/statistics.ts";
 import {createLearner} from "../../training/selfplay/learner.ts";
 import {qualificationFamilies} from "../../training/selfplay/evaluate.ts";
+import {prepareConfirmation} from "../../training/selfplay/confirm.ts";
 import {prepare} from "../../training/selfplay/prepare.ts";
 import {runSlice} from "../../training/selfplay/train.ts";
 
@@ -34,6 +35,7 @@ test("la siguiente noche hereda los ganadores confirmados, conserva los rivales 
       const seed = dealSeed("parent",format,"gate","final");
       for (const name of ["anchor-v1","champion-at-start","archive/previous-anchored","archive/older-candidate"])
         write(join(input,name+".json"),anchor,true);
+      write(join(input,"archive","last-counter.json"),candidate,true);
       write(join("evaluation-input",format,"independent.json"),anchor,true);
       if (format!=="duel") write(join("evaluation-input",format,"unfamiliar.json"),anchor,true);
       if (format==="pairs-private-senas") {
@@ -69,6 +71,40 @@ test("la siguiente noche hereda los ganadores confirmados, conserva los rivales 
     assert.equal(trained.learnerUpdates,trained.learner.actor.updates-40);
     assert.equal(trained.counterUpdates,trained.specialist.actor.updates-40);
     assert(trained.learnerUpdates>0 && trained.counterUpdates>0);
+    // A fixed study may contribute a champion only if its complete paired
+    // evidence passes and the primary comparison did not qualify a model.
+    const extra=join(temp,"extra"), paths:string[]=[];
+    mkdirSync(extra);
+    const fixedSeed="independent-source-42";
+    save(join(extra,"plan.json"),{seed:fixedSeed,finalPairs:4,resamples:1000,familyError:0.01,
+      gates:{directLowerAbove:0.5,everyFamilyDeltaLowerAbove:-0.02}});
+    for(const f of activeFormats) {
+      const actor=read(join(source,f,"final-candidate.json"));
+      actor.weights[0]=0.8;
+      const path=join(temp,"fixed-"+f+".json"); save(path,actor); paths.push(path);
+    }
+    const fixed=prepareConfirmation(extra,source,paths);
+    for(const f of activeFormats) {
+      const dir=join(extra,f), stage=join(dir,"assessments","final");
+      mkdirSync(stage,{recursive:true});
+      const candidate=read(join(dir,"a","candidate.json")), counter=read(join(dir,"a","counter.json"));
+      const pin=fixed.challengers[f], refPin=artifactPin(read(join(dir,"champion.json")));
+      const field=qualificationFamilies(f).map((id,i)=>{
+        const rows=[0,1,2,3].map((pair):PairOutcome=>({pair,candidate:[1,1],incumbent:[1,0]}));
+        save(join(stage,"family-"+i+".json"),{id,pin,refPin,seed:dealSeed(fixedSeed,f,"gate","final"),rows});
+        return {id,pairs:rows};
+      });
+      save(join(stage,"counter.json"),counter);
+      save(join(dir,"final-candidate.json"),candidate);
+      save(join(dir,"eval-final.json"),{format:f,epoch:"final",pin,counter:fixed.counters[f],reference:refPin,
+        evaluation:summarize(field,"champion",1000,0.01),improved:true,games:4*4*field.length});
+    }
+    const extended=join(temp,"extended");
+    const nextProtocol=prepare(extended,source,"new-independent-training","extended",extra);
+    assert.equal(nextProtocol.supplement!.models.duel.adopted,false);
+    assert.equal(nextProtocol.supplement!.models.pairs.adopted,true);
+    assert.equal(read(join(extended,"duel","champion.json")).weights[0],0.25);
+    assert.equal(read(join(extended,"pairs","champion.json")).weights[0],0.8);
     const final = read(join(source,"duel","eval-final.json"));
     write(join("duel","eval-final.json"),{...final,improved:false});
     assert.throws(()=>prepare(join(temp,"corrupt"),source,"other"));

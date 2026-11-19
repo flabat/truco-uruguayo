@@ -22,6 +22,7 @@ test("ambas cartas perdedoras se entregan tapadas y la mano guardada conserva el
     const vista = vistaOnline(fin.estado, 0);
     assert.equal(vista.turno, null);
     assert.deepEqual(vista.legales, []);
+    assert.equal(vista.pruebasDeTantos, undefined);
     assert.doesNotMatch(JSON.stringify(vista), /oros-07|bastos-01/);
     assert.deepEqual(aplicarOnline(fin.estado, { tipo: "mazo", asiento: 1 }), { ok: false, error: "mano-cerrada" });
   }
@@ -137,7 +138,9 @@ test("la flor querida revela también el total perdedor al decidir la salida del
     const vista = vistaOnline(mano.estado, 1);
     assert.deepEqual(vista.cobros[0].comparacionFlor?.participantes, [{ asiento: 0, total: 29 }, { asiento: 1, total: 39 }]);
     assert.deepEqual(vista.legales, ["mazo", "truco"]);
-    assert.equal(confirmarComputadora(mano, "duel", 1, "copas-05").estado.resultado?.motivo, "mazo");
+    const retiro = confirmarComputadora(mano, "duel", 1, "copas-05");
+    assert.equal(retiro.estado.resultado?.motivo, "mazo");
+    assert.deepEqual(vistaOnline(retiro.estado, 0).pruebasDeTantos, [{ asiento: 1, motivo: "flor", total: 39, cartas: propias }]);
     // Una partida anterior que dejó salir al humano se reproduce con su carta original.
     const previa = restaurar({ ...fila, acciones: [...acciones, { tipo: "carta", asiento: 0, carta: a }] }, "duel", 40, [0]);
     assert.equal(previa.estado.mano.vueltaActual?.jugadas[0].carta, a);
