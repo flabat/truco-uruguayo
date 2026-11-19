@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
-import { versions, type Format } from "../training/contracts/index.ts";
+import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
@@ -71,19 +71,22 @@ interface Cambio { id: string; cambiado: boolean }
 export function formatoMesa(modo: Modo, versionSenas: string | null): Format {
   if (!versionSenas) return modo === "1v1" ? "duel" : "pairs";
   if (modo === "2v2" && versionSenas === versions.signals) return "pairs-senas";
+  if (modo === "2v2" && versionSenas === teamSignalsVersion) return "pairs-private-senas";
   throw new Error("Versión de señas desconocida.");
 }
 
 async function crear(db: PoolClient, jugador: string, modo: unknown, formato: unknown): Promise<Cambio> {
   if (modo !== "1v1" && modo !== "2v2") throw new ErrorPeticion(400, "Elegí 1v1 o 2v2.");
-  const defaultFormat = formatoMesa(modo, null);
-  if (formato !== undefined && formato !== defaultFormat && !(modo === "2v2" && formato === "pairs-senas")) {
+  let nueva = formatoMesa(modo, null);
+  // Un cliente de la versión anterior también crea una mesa con señas de equipo.
+  if (modo === "2v2" && (formato === "pairs-private-senas" || formato === "pairs-senas")) nueva = "pairs-private-senas";
+  else if (formato !== undefined && formato !== nueva) {
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
   const token = randomBytes(24).toString("base64url");
   const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, politica) VALUES ($1,$2,$3,$4,
     COALESCE((SELECT pin FROM juego.activaciones WHERE formato=$5), 'incumbent-online-v1')) RETURNING id`,
-    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null, formato ?? defaultFormat]);
+    [modo, jugador, token, signalVersionFor(nueva), nueva]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };
 }

@@ -1,8 +1,7 @@
 import type { Asiento } from "../../src/motor/reparto.ts";
 import { playMatch } from "../arena/index.ts";
-import type { Policy } from "../contracts/index.ts";
+import { hasSignals, type Policy } from "../contracts/index.ts";
 import { incumbent } from "../seat/index.ts";
-import { signalRules } from "../signals/index.ts";
 import { digest, domainSeed, type Actor } from "./policy.ts";
 import { seatPolicies } from "./train.ts";
 
@@ -23,20 +22,20 @@ export function crossplay(candidate: Actor, reference: Actor, comparator: Actor,
   const reports = [];
   for (const partner of ["self", "incumbent", "independent"] as const) {
     for (const opponent of ["incumbent", "monte-carlo", "independent"] as const) {
-      for (const gestures of (candidate.format === "pairs-senas" ? [true, false] : [false])) {
+      for (const gestures of (hasSignals(candidate.format) ? [true, false] : [false])) {
         const outcomes = [];
         for (let pair = 0; pair < pairs; pair++) {
           const scores = [];
           for (const leg of [0, 1] as const) {
             const candidateSeat = (pair * 2 + leg) % 4;
             const match = playMatch({ format: candidate.format, seed: domainSeed(seed, "development-crossplay"),
-              pair, leg, signalRules: candidate.format === "pairs-senas" ? signalRules : undefined,
+              pair, leg,
               policies(seat: Asiento) {
                 let policy: Policy;
                 if (seat === candidateSeat || seat % 2 === leg && partner === "self") policy = own[seat];
                 else if (seat % 2 === leg) policy = partner === "incumbent" ? incumbent : other[seat];
                 else policy = opponent === "incumbent" ? incumbent : opponent === "monte-carlo" ? mc[seat] : other[seat];
-                return candidate.format === "pairs-senas" && !gestures ? mask(policy) : policy;
+                return hasSignals(candidate.format) && !gestures ? mask(policy) : policy;
               },
             });
             scores.push(Number(match.winner === leg));

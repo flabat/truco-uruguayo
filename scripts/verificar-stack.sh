@@ -35,12 +35,12 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
-for formato in duel pairs pairs-senas; do
+for formato in duel pairs pairs-private-senas; do
   pin=$(node scripts/actor-ensayo.ts "$formato" | "${compose[@]}" exec -T api node policyctl.ts register "$formato")
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
-for formato in duel pairs pairs-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
+for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
 "${compose[@]}" run --no-deps --rm -T api node --input-type=module < scripts/verificar-inferencia.mjs
 "${compose[@]}" up --wait api

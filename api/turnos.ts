@@ -2,7 +2,7 @@ import { esCardId } from "../src/motor/cartas.ts";
 import { aDecidir, elegirAccionOnline, iniciarOnline, versionReglasOnline, vistaOnline,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
-import { signals, versions, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
+import { canSeeSignal, hasSignals, signals, signalVersionFor, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
 import { ErrorPeticion } from "./http.ts";
 
@@ -24,7 +24,7 @@ export function leerAccion(datos: unknown, asiento: Asiento, formato: Format): C
   }
   const claves = datos.tipo === "carta" ? ["tipo", "carta"] : ["tipo"];
   if ("sena" in datos) {
-    if (formato !== "pairs-senas" || !signals.includes(datos.sena as Signal)) throw new ErrorPeticion(400, "Seña no permitida.");
+    if (!hasSignals(formato) || !signals.includes(datos.sena as Signal)) throw new ErrorPeticion(400, "Seña no permitida.");
     claves.push("sena");
   }
   if (Object.keys(datos).length !== claves.length || !claves.every(k => Object.hasOwn(datos, k))
@@ -40,12 +40,19 @@ export function confirmar(mano: ManoPublicable, formato: Format, accion: Confirm
   return {estado: state, turnos: [...mano.turnos, turn]};
 }
 
+// La versión de almacenamiento se conserva para restaurar partidas históricas.
+// Cada vista en línea limita los gestos al equipo, incluso en esas partidas.
+export function turnosDeEquipo(turnos: readonly PublicTurn[], asiento: Asiento): PublicTurn[] {
+  return turnos.map(({ signal, action, awards }) =>
+    signal && canSeeSignal("pairs-private-senas", action.asiento, asiento) ? { signal, action, awards } : { action, awards });
+}
+
 export function guardarAcciones(mano: ManoPublicable): Confirmada[] {
   return mano.turnos.map(t => t.signal ? {...t.action, sena: t.signal} : t.action);
 }
 
 export function restaurar(fila: Registro, formato: Format): ManoPublicable {
-  if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== (formato === "pairs-senas" ? versions.signals : null)) {
+  if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== signalVersionFor(formato)) {
     throw new Error("Versión de reglas desconocida.");
   }
   const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio), turnos: []};
@@ -61,7 +68,7 @@ export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos
     const accion = elegirAccionOnline(vistaOnline(mano.estado, asiento));
     if (!accion) throw new Error("La computadora no encontró jugada.");
     // El ensayo privado comprueba la transmisión de gestos desde un actor de prueba.
-    const sena = formato === "pairs-senas" && ensayo ? signals[mano.turnos.length % signals.length] : undefined;
+    const sena = hasSignals(formato) && ensayo ? signals[mano.turnos.length % signals.length] : undefined;
     mano = confirmar(mano, formato, sena ? {...accion, sena} : accion);
   }
   return mano;

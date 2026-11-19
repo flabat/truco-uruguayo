@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, type Registro } from "../../api/turnos.ts";
-import { formats } from "../../training/contracts/index.ts";
+import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
+import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
 import { iniciarOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
 
 const parejas: RepartoOnline = {versionReparto: "online-1", mano: 0, dador: 3, muestra: "oros-01", manos: [
@@ -17,7 +17,7 @@ test("los clientes envían un gesto reconocido y una jugada, el servidor fija el
   assert.throws(() => leerAccion({tipo:"truco",sena:"cejas"}, 0, "pairs"));
 });
 test("los comandos persistidos reconstruyen todas las señas y cobros sin volver a consultar al bot", () => {
-  for (const formato of formats) {
+  for (const formato of supportedFormats) {
     const reparto = formato === "duel" ? {...parejas, dador:1, manos:parejas.manos.slice(0,2)} as RepartoOnline : parejas;
     const estado = iniciarOnline(reparto);
     const inicial = {estado, turnos: []};
@@ -26,10 +26,21 @@ test("los comandos persistidos reconstruyen todas las señas y cobros sin volver
     assert.equal(jugada.turnos[0].action.tipo,"flor");
     assert.deepEqual(jugarComputadoras(inicial, formato, [0]), inicial);
     const fila: Registro = { numero:1, version:1, version_reglas:1,
-      version_senas: formato === "pairs-senas" ? "senas-publicas-v1" : null,
+      version_senas: signalVersionFor(formato),
       reparto, puntos_inicio:[0,0], acciones: guardarAcciones(jugada) };
-    assert.deepEqual(restaurar(fila, formato), jugada);
+    const repetida = restaurar(fila, formato);
+    assert.deepEqual(repetida, jugada);
+    if (hasSignals(formato)) {
+      for (const asiento of [0, 1, 2, 3] as const) {
+        const visibles = turnosDeEquipo(repetida.turnos, asiento);
+        for (const [i, turno] of visibles.entries()) {
+          const original = jugada.turnos[i];
+          const esperado = original.action.asiento % 2 === asiento % 2 ? original : {action: original.action, awards: original.awards};
+          assert.deepEqual(turno, esperado);
+        }
+      }
+    }
     assert.throws(() => restaurar({...fila, version_senas:"futura"}, formato));
-    assert.ok(fila.acciones.every(a => Boolean(a.sena) === (formato === "pairs-senas")));
+    assert.ok(fila.acciones.every(a => Boolean(a.sena) === hasSignals(formato)));
   }
 });

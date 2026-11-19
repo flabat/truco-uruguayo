@@ -4,3 +4,4 @@
 - Usá un worktree o checkout aislado por sesión. Conservá los cambios ajenos y actualizá el PR existente si estás retomando un trabajo. Integrá cambios en `main` mediante PR.
 - Antes de pedir revisión, ejecutá `npm ci` y `npm run check`. Agregá las pruebas o comprobaciones del comportamiento que cambia y registrá los resultados en el PR.
 - Para los pasos de reserva, traspaso, revisión y publicación, seguí [CONTRIBUTING.md](CONTRIBUTING.md).
+- Entrená y evaluá solo entre computadoras. En toda corrida nueva o reanudada con señas, usá `pairs-private-senas`: solo quien hace la seña y su compañero la ven. Los rivales reciben la misma jugada e historial que si hubo silencio.
