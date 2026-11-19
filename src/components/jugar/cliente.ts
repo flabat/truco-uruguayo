@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { VistaOnline } from "../../motor/mesa-online";
+import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "../../motor/mesa-online";
 import type { CardId } from "../../motor/cartas";
 
-export type Modo = "1v1" | "2v2";
+import type { Format, PublicTurn } from "../../../training/contracts/index";
+
+export type Modo = "1v1" | "2v2" | "3v3";
 export interface Jugador {
   id: string;
   nombre: string;
@@ -16,20 +18,34 @@ export interface Asiento {
 export interface Mesa {
   id: string;
   modo: Modo;
+  meta: number;
+  formato?: Format | "triples";
   creadorId: string;
   miAsiento: number;
   invitacion: string;
   lista: boolean;
   asientos: Asiento[];
 }
-export interface Partida {
+interface Marcador {
   version: number;
   manoNumero: number;
   puntos: [number, number];
   meta: number;
   ganadorPartida: 0 | 1 | null;
+}
+export interface Partida extends Marcador {
+  formato?: Format;
+  versionSenas?: string;
+  turnos?: readonly PublicTurn[];
   vista: VistaOnline | null;
 }
+export interface PartidaTercetos extends Marcador {
+  formato: "triples";
+  lance: LanceTercetos;
+  historialLances: readonly ResumenLance[];
+  vista: VistaTercetos;
+}
+type PartidaRecibida = Partida | PartidaTercetos;
 export type Tipo = VistaOnline["legales"][number];
 export type Eleccion = { tipo: Exclude<Tipo, "carta"> } | { tipo: "carta"; carta: CardId };
 
@@ -70,7 +86,7 @@ export function idComando() {
 export function useMesa(id: string) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
-  const [partida, setPartida] = useState<Partida>();
+  const [partida, setPartida] = useState<PartidaRecibida>();
   const [conectada, setConectada] = useState(false);
   const [error, setError] = useState<ErrorMesa | null>(null);
   const refrescar = useRef<() => Promise<void>>(async () => {});
@@ -99,7 +115,7 @@ export function useMesa(id: string) {
           const canal = socket?.readyState === WebSocket.OPEN ? socket : undefined;
           const sala = await pedir<Mesa>(ruta, undefined, cancel.signal);
           const mano = sala.lista
-            ? await pedir<Partida>(ruta + "/partida", undefined, cancel.signal)
+            ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
             : undefined;
           if (cancel.signal.aborted) return;
           setMesa(sala);

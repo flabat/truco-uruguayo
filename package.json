@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
     "test:unit": "node --test \"tests/unit/*.test.ts\"",
@@ -13,7 +14,8 @@
     "preview": "astro preview",
     "cartas:generar": "node scripts/tatu/generar.mjs",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
-    "cartas:exportar": "node scripts/tatu/generar.mjs --exportar"
+    "cartas:exportar": "node scripts/tatu/generar.mjs --exportar",
+    "train": "node training/cli.ts"
   },
   "engines": {
     "node": ">=22.23.4"

@@ -30,7 +30,7 @@ async function comprobarDador(page, estado, nombres, lado) {
     const persona = caja(".j-ocupante");
     const mazo = caja(".j-muestra");
     const tapete = asiento.closest(".j-tapete").getBoundingClientRect();
-    const vecinos = document.querySelectorAll(".j-persona, .j-jugada img, .j-dorsos img, .j-mano button, .j-jugada-panel");
+    const vecinos = document.querySelectorAll(".j-persona, .j-jugada, .j-dorsos img, .j-mano button, .j-jugada-panel");
     const mismaFila = persona.top < mazo.bottom && persona.bottom > mazo.top;
     const mismaColumna = persona.left < mazo.right && persona.right > mazo.left;
     return {
@@ -102,7 +102,17 @@ for (const [modo, cantidad, miAsiento, ladoAna, ladoSiguiente] of [
         if (vuelta === 0 && i === cantidad - 2) await capturarTapete();
       }
     }
-    await expect(page.locator(".j-tapete header")).toContainText("Terminada");
+    const cierre = estado.mano.vueltas.at(-1).resultado;
+    const tapete = page.getByRole("region", { name: "Tapete" });
+    await expect(tapete.locator("header")).toContainText("Vuelta 3");
+    if (cierre.tipo === "ganada") {
+      await expect(tapete.locator("header")).toContainText("Ganó " + nombres[cierre.asiento]);
+      const ganador = tapete.locator(".j-puesto").filter({ has: page.getByText(nombres[cierre.asiento], { exact: true }) });
+      await expect(ganador.getByText("Ganó la vuelta")).toBeVisible();
+    } else {
+      await expect(tapete.locator("header")).toContainText("Parda");
+      await expect(tapete.locator(".j-ganadora")).toHaveCount(0);
+    }
     await page.getByRole("button", { name: "Repartir otra mano" }).click();
     await expect(page.locator(".j-tapete header")).toContainText("Mano 2");
     await comprobarDador(page, estado, nombres, ladoSiguiente);

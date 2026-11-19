@@ -1,0 +1,750 @@
+{
+  "schema": "training-engineering-evidence-v1",
+  "runtime": {
+    "node": "v24.22.1",
+    "system": "darwin 27.2.0",
+    "arch": "arm64",
+    "cpu": "Apple M5",
+    "memory": 25769803776
+  },
+  "versions": {
+    "rules": "online-1",
+    "competition": "chico-40-v1",
+    "signals": "senas-publicas-v1",
+    "observation": "seat-v1",
+    "actions": "cards-bids-signals-v1",
+    "replay": "committed-v1",
+    "checkpoint": "training-v1",
+    "actor": "policy-v1"
+  },
+  "legacy": {
+    "revision": "bda46c58eac9a58c9b119f6880df6a12c1ba2246",
+    "openings": {
+      "deals": 20000,
+      "offered": 1103,
+      "accepted": 499,
+      "won": 484
+    },
+    "tournament": {
+      "matches": 5000,
+      "hands": 81515,
+      "won": 2840
+    }
+  },
+  "arena": {
+    "revision": "117bde72bd3cbb238a63b20b50080be8eae65d75",
+    "formatos": [
+      "duel",
+      "pairs",
+      "pairs-senas"
+    ],
+    "paresPorFormato": 500,
+    "manos": 41760,
+    "verificados": 3000,
+    "fallback": 0,
+    "secuenciasSha256": "8b79d6659aba18630a89bd8b62b95d67c58c0034da1fd6d70901f6885e28b103",
+    "manifest": {
+      "path": "runs/arena-121-final/manifest.json",
+      "sha256": "94f779829f5a9605ea141cb0dfcf31b71158301672e5a122360d47b060b4c876"
+    }
+  },
+  "freshCheckout": {
+    "duel": {
+      "revision": "f219b8392e955a98effac89fb822fb530766f36e",
+      "presupuesto": 16,
+      "unidad": "iteraciones",
+      "checkpoint": {
+        "path": "runs/fresh-handoff-118/duel/checkpoint",
+        "sha256": "bbd19b5074ef7896ebf491ac6af2777c442b4c59fd20aaa965bd2d96a2d684ab"
+      },
+      "actor": {
+        "path": "runs/fresh-handoff-118/duel/actor.json",
+        "sha256": "d1ed83ac60f10eaa4cd5518e839ca9a44cc25bb06bb59cb75e996c714fb28cc8"
+      }
+    },
+    "pairs": {
+      "revision": "f219b8392e955a98effac89fb822fb530766f36e",
+      "presupuesto": 8,
+      "unidad": "chicos por aprendiz",
+      "checkpoint": {
+        "path": "runs/fresh-handoff-118/pairs/checkpoint",
+        "sha256": "fad140a52936839e48a76f71ae43d210eca0a763eda3eb286af84fed3f3015ed"
+      },
+      "actor": {
+        "path": "runs/fresh-handoff-118/pairs/actor.json",
+        "sha256": "3f3540e959a24489e61b6365d57275ff19b8670be1443693b9a1ca5e431ca620"
+      }
+    },
+    "pairs-senas": {
+      "revision": "f219b8392e955a98effac89fb822fb530766f36e",
+      "presupuesto": 8,
+      "unidad": "chicos por aprendiz",
+      "checkpoint": {
+        "path": "runs/fresh-handoff-118/pairs-senas/checkpoint",
+        "sha256": "0936c88065aa21d7c1c12652db38ad131fbc4118d712c93a5286db39c8b041c2"
+      },
+      "actor": {
+        "path": "runs/fresh-handoff-118/pairs-senas/actor.json",
+        "sha256": "63e43ce1fe897ff63bcbbf36d13f61bd2b4318df49b5af7d16fa7b29b095ab18"
+      }
+    }
+  },
+  "search": {
+    "duel": {
+      "revision": "b0a33d7fc8f289464e13c4466f520a1afc58653b",
+      "fitMatches": 64,
+      "holdoutMatches": 32,
+      "worlds": 2,
+      "deadlineMs": 6,
+      "decisions": {
+        "searched": 149,
+        "forced": 26,
+        "timeout": 115,
+        "no-worlds": 1
+      },
+      "timedFallbacks": {
+        "on": {
+          "count": 115
+        },
+        "off": {
+          "count": 0
+        }
+      },
+      "latencyMs": {
+        "on": {
+          "decisions": 291,
+          "p50": 3.8612080000000333,
+          "p95": 19.58187500000031,
+          "p99": 38.62583300000006
+        },
+        "off": {
+          "decisions": 563,
+          "p50": 0.008374999999887223,
+          "p95": 0.019667000000026746,
+          "p99": 0.1155839999996715
+        }
+      },
+      "calibration": [
+        {
+          "leaderFrom": 0,
+          "hands": 176,
+          "observed": 0.5,
+          "predicted": 0.420177951454408,
+          "brier": 0.26645885843944667
+        },
+        {
+          "leaderFrom": 14,
+          "hands": 95,
+          "observed": 0.6105263157894737,
+          "predicted": 0.3414944072482822,
+          "brier": 0.3795679090942141
+        },
+        {
+          "leaderFrom": 28,
+          "hands": 78,
+          "observed": 0.4230769230769231,
+          "predicted": 0.30376391047550955,
+          "brier": 0.18058741488813768
+        }
+      ],
+      "statistics": {
+        "pairs": 8,
+        "resamples": 10000,
+        "simultaneous": "Bonferroni (direct win rate + each family change)",
+        "headline": {
+          "estimate": 0.6875,
+          "lower": 0.5625,
+          "upper": 0.875
+        },
+        "direct": {
+          "estimate": 0.6875,
+          "lower": 0.5,
+          "upper": 0.875
+        },
+        "families": [
+          {
+            "id": "frozen",
+            "winRate": 0.6875,
+            "delta": {
+              "estimate": 0.25,
+              "lower": 0.0625,
+              "upper": 0.4375
+            }
+          }
+        ]
+      },
+      "release": "off",
+      "pesosSha256": "746aceb4380f4d04a04b9e0328812de08cc3136d0ecca11fab51e1819f07656a",
+      "tabla": {
+        "path": "runs/search-129-81029/duel-continuation.json",
+        "sha256": "9f3da6e55d0fcb9031bfdce33977cba61d6c3e03cdc87507f8c377813721a3cd"
+      },
+      "manifest": {
+        "path": "runs/search-129-81029/duel-report.json",
+        "sha256": "9c559d02745a36d81d2d8d20930929b14bbe04c05dff5ee97ec201fd161af790"
+      }
+    },
+    "pairs": {
+      "revision": "b0a33d7fc8f289464e13c4466f520a1afc58653b",
+      "fitMatches": 64,
+      "holdoutMatches": 32,
+      "worlds": 2,
+      "deadlineMs": 6,
+      "decisions": {
+        "searched": 322,
+        "forced": 172,
+        "timeout": 249,
+        "no-worlds": 30
+      },
+      "timedFallbacks": {
+        "on": {
+          "count": 249
+        },
+        "off": {
+          "count": 0
+        }
+      },
+      "latencyMs": {
+        "on": {
+          "decisions": 773,
+          "p50": 3.868208999999297,
+          "p95": 10.404708000000028,
+          "p99": 23.46204100000068
+        },
+        "off": {
+          "decisions": 594,
+          "p50": 0.011833999999907974,
+          "p95": 0.025833000000602624,
+          "p99": 0.1347089999999298
+        }
+      },
+      "calibration": [
+        {
+          "leaderFrom": 0,
+          "hands": 112,
+          "observed": 0.5982142857142857,
+          "predicted": 0.558758327498455,
+          "brier": 0.2439215956818437
+        },
+        {
+          "leaderFrom": 14,
+          "hands": 64,
+          "observed": 0.390625,
+          "predicted": 0.5326653394033998,
+          "brier": 0.2735560146472016
+        },
+        {
+          "leaderFrom": 28,
+          "hands": 61,
+          "observed": 0.5737704918032787,
+          "predicted": 0.5666007513809751,
+          "brier": 0.10329477441257344
+        }
+      ],
+      "statistics": {
+        "pairs": 8,
+        "resamples": 10000,
+        "simultaneous": "Bonferroni (direct win rate + each family change)",
+        "headline": {
+          "estimate": 0.6875,
+          "lower": 0.4375,
+          "upper": 0.9375
+        },
+        "direct": {
+          "estimate": 0.6875,
+          "lower": 0.375,
+          "upper": 0.9375
+        },
+        "families": [
+          {
+            "id": "frozen",
+            "winRate": 0.6875,
+            "delta": {
+              "estimate": 0.25,
+              "lower": 0.0625,
+              "upper": 0.4375
+            }
+          }
+        ]
+      },
+      "release": "off",
+      "pesosSha256": "dfe4ce177d40d0480197a116066097a5abf50cd458c671c13d7e3038ef2ef02d",
+      "tabla": {
+        "path": "runs/search-129-81029/pairs-continuation.json",
+        "sha256": "ef4af70b964e9d33eb9285b4a8ad2f3d622b559a48828a82ed4b732a36ed5155"
+      },
+      "manifest": {
+        "path": "runs/search-129-81029/pairs-report.json",
+        "sha256": "3db887e870ce1343029298baaaf3442f41bbae2bf35ecdcf83256ac752bbceb0"
+      }
+    },
+    "pairs-senas": {
+      "revision": "b0a33d7fc8f289464e13c4466f520a1afc58653b",
+      "fitMatches": 64,
+      "holdoutMatches": 32,
+      "worlds": 2,
+      "deadlineMs": 6,
+      "decisions": {
+        "searched": 26,
+        "forced": 0,
+        "timeout": 621,
+        "no-worlds": 49
+      },
+      "timedFallbacks": {
+        "on": {
+          "count": 621
+        },
+        "off": {
+          "count": 1
+        }
+      },
+      "latencyMs": {
+        "on": {
+          "decisions": 696,
+          "p50": 6.081709000000046,
+          "p95": 12.584499999999025,
+          "p99": 30.192666000000827
+        },
+        "off": {
+          "decisions": 696,
+          "p50": 0.04349999999976717,
+          "p95": 0.1395830000001297,
+          "p99": 0.8207910000000993
+        }
+      },
+      "calibration": [
+        {
+          "leaderFrom": 0,
+          "hands": 119,
+          "observed": 0.4789915966386555,
+          "predicted": 0.5162477191609242,
+          "brier": 0.25904337866825866
+        },
+        {
+          "leaderFrom": 14,
+          "hands": 70,
+          "observed": 0.4142857142857143,
+          "predicted": 0.4397708899741693,
+          "brier": 0.16166247723647176
+        },
+        {
+          "leaderFrom": 28,
+          "hands": 63,
+          "observed": 0.3333333333333333,
+          "predicted": 0.3823306113201691,
+          "brier": 0.18566080385665953
+        }
+      ],
+      "statistics": {
+        "pairs": 8,
+        "resamples": 10000,
+        "simultaneous": "Bonferroni (direct win rate + each family change)",
+        "headline": {
+          "estimate": 0.625,
+          "lower": 0.375,
+          "upper": 0.875
+        },
+        "direct": {
+          "estimate": 0.625,
+          "lower": 0.375,
+          "upper": 0.875
+        },
+        "families": [
+          {
+            "id": "frozen",
+            "winRate": 0.625,
+            "delta": {
+              "estimate": 0,
+              "lower": 0,
+              "upper": 0
+            }
+          }
+        ]
+      },
+      "release": "off",
+      "pesosSha256": "8c3e4bfb0d4bb01a30cf807b8568bae0228f7057c51a57fdd0421f2e9092de5d",
+      "tabla": {
+        "path": "runs/search-129-81029/pairs-senas-continuation.json",
+        "sha256": "bd2780f5a4487b0c8e55d976b0e3e374c376fd7cf93b79efd838d6e44cf8e1cc"
+      },
+      "manifest": {
+        "path": "runs/search-129-81029/pairs-senas-report.json",
+        "sha256": "2a54d650d34a91b9883cdb4a2dc8aa033a5d6b3b7eb572e23463882dbe5c8155"
+      }
+    }
+  },
+  "learningHardware": {
+    "python": "3.12.14",
+    "torch": "2.14.1",
+    "mpsAvailable": true,
+    "fallback": false,
+    "selection": "cpu",
+    "benchmark": {
+      "path": "runs/partners-128-benchmark/backend.json",
+      "sha256": "9ca2ce510a415a4bb035fb2dae31b375bac8bbb828b020158e314b34747d377e"
+    },
+    "completeRun": {
+      "path": "runs/partners-128-benchmark/end-to-end.json",
+      "sha256": "964ff762fe6a7362f41877e958afebd7b5ca7f40b289df04f03cba233b289c5f"
+    },
+    "measurements": [
+      {
+        "format": "pairs",
+        "device": "cpu",
+        "matchesPerAlgorithm": 32,
+        "actorExamples": 2251,
+        "mcExamples": 2291,
+        "seconds": 13.379504832999999,
+        "actorExamplesPerSec": 168.24239970734948,
+        "allDecisionsPerSec": 339.47444667737955
+      },
+      {
+        "format": "pairs-senas",
+        "device": "mps",
+        "matchesPerAlgorithm": 32,
+        "actorExamples": 1773,
+        "mcExamples": 1660,
+        "seconds": 29.286407415999996,
+        "actorExamplesPerSec": 60.54003056145971,
+        "allDecisionsPerSec": 117.22161585870907
+      },
+      {
+        "format": "pairs",
+        "device": "mps",
+        "matchesPerAlgorithm": 32,
+        "actorExamples": 2251,
+        "mcExamples": 2291,
+        "seconds": 31.027206416999995,
+        "actorExamplesPerSec": 72.54923210768544,
+        "allDecisionsPerSec": 146.38765536788418
+      },
+      {
+        "format": "pairs-senas",
+        "device": "cpu",
+        "matchesPerAlgorithm": 32,
+        "actorExamples": 1773,
+        "mcExamples": 1660,
+        "seconds": 13.476097292000006,
+        "actorExamplesPerSec": 131.56628076976926,
+        "allDecisionsPerSec": 254.74734454744382
+      }
+    ]
+  },
+  "engineeringServing": [
+    {
+      "format": "duel",
+      "pin": "3d22ff5228abe06f51e3350bb59f4929e4187bead29871287cd93491e60780b1",
+      "seed": 8010131,
+      "pairs": 24,
+      "hands": 363,
+      "node": "v24.22.1",
+      "deadlineMs": 200,
+      "decisions": 1114,
+      "coldMs": 100.87645800000001,
+      "p50": 0.14820799999995415,
+      "p95": 1.8468330000000606,
+      "p99": 6.09904199999994,
+      "fallbackCount": 0,
+      "fallbackRate": 0
+    },
+    {
+      "format": "pairs",
+      "pin": "b2269164e57e9bb68138561fc92ac1023abbe6266eaa15fdc6e7ea9f035aeeda",
+      "seed": 8010131,
+      "pairs": 24,
+      "hands": 348,
+      "node": "v24.22.1",
+      "deadlineMs": 200,
+      "decisions": 1802,
+      "coldMs": 185.66600000000005,
+      "p50": 0.16041599999971368,
+      "p95": 5.054875000000038,
+      "p99": 14.36141600000019,
+      "fallbackCount": 0,
+      "fallbackRate": 0
+    },
+    {
+      "format": "pairs-senas",
+      "pin": "ea98090384a24c84d26469384be68061208669ca35131657563c647e2b97ffde",
+      "seed": 8010131,
+      "pairs": 24,
+      "hands": 423,
+      "node": "v24.22.1",
+      "deadlineMs": 200,
+      "decisions": 2222,
+      "coldMs": 120.03937499999998,
+      "p50": 0.2508330000000569,
+      "p95": 4.142583000000286,
+      "p99": 13.984375,
+      "fallbackCount": 0,
+      "fallbackRate": 0
+    }
+  ],
+  "freshEvaluation": {
+    "path": "runs/fresh-handoff-118/eval/manifest.json",
+    "sha256": "037516a3b90fb9a2550893f4d9d1ca2e2c6b3dd430e80dd43ba0ce0d8842b8a2"
+  },
+  "partnershipReference": {
+    "pairs": {
+      "run": "runs/partners-128-pairs-420701/development.json",
+      "sha256": "01dbcb180d070d8cf6208ed7b5e9ad0f8cd66c92636f13a240fd85d18bdba365",
+      "seed": 91107,
+      "pairs": 8,
+      "oracle": {
+        "value": 0.5986045988059552,
+        "optimum": 1
+      },
+      "reports": [
+        {
+          "partner": "self",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 4,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 7,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 6,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 6,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 8,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 13,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 4,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 5,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 5,
+          "games": 16
+        }
+      ],
+      "deltas": []
+    },
+    "pairs-senas": {
+      "run": "runs/partners-128-pairs-senas-420701/development.json",
+      "sha256": "e25f0abc4689dcc815d39983ba09674dfa1775845bb676bb5c9cd45d2ed459db",
+      "seed": 91107,
+      "pairs": 8,
+      "oracle": {
+        "value": 0.598236051179411,
+        "optimum": 1
+      },
+      "reports": [
+        {
+          "partner": "self",
+          "opponent": "incumbent",
+          "gestures": true,
+          "wins": 4,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 3,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "monte-carlo",
+          "gestures": true,
+          "wins": 10,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 11,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "independent",
+          "gestures": true,
+          "wins": 7,
+          "games": 16
+        },
+        {
+          "partner": "self",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 7,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "incumbent",
+          "gestures": true,
+          "wins": 7,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 5,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "monte-carlo",
+          "gestures": true,
+          "wins": 9,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 9,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "independent",
+          "gestures": true,
+          "wins": 8,
+          "games": 16
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 8,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "incumbent",
+          "gestures": true,
+          "wins": 3,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "incumbent",
+          "gestures": false,
+          "wins": 4,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "monte-carlo",
+          "gestures": true,
+          "wins": 13,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "monte-carlo",
+          "gestures": false,
+          "wins": 10,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "independent",
+          "gestures": true,
+          "wins": 9,
+          "games": 16
+        },
+        {
+          "partner": "independent",
+          "opponent": "independent",
+          "gestures": false,
+          "wins": 10,
+          "games": 16
+        }
+      ],
+      "deltas": [
+        {
+          "partner": "self",
+          "opponent": "incumbent",
+          "winRateChangeWhenMasked": -0.0625
+        },
+        {
+          "partner": "self",
+          "opponent": "monte-carlo",
+          "winRateChangeWhenMasked": 0.0625
+        },
+        {
+          "partner": "self",
+          "opponent": "independent",
+          "winRateChangeWhenMasked": 0
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "incumbent",
+          "winRateChangeWhenMasked": -0.125
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "monte-carlo",
+          "winRateChangeWhenMasked": 0
+        },
+        {
+          "partner": "incumbent",
+          "opponent": "independent",
+          "winRateChangeWhenMasked": 0
+        },
+        {
+          "partner": "independent",
+          "opponent": "incumbent",
+          "winRateChangeWhenMasked": 0.0625
+        },
+        {
+          "partner": "independent",
+          "opponent": "monte-carlo",
+          "winRateChangeWhenMasked": -0.1875
+        },
+        {
+          "partner": "independent",
+          "opponent": "independent",
+          "winRateChangeWhenMasked": 0.0625
+        }
+      ]
+    }
+  }
+}

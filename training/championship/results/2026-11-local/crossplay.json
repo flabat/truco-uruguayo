@@ -1,0 +1,263 @@
+{
+  "pairs": {
+    "schema": "frozen-partnership-diagnostics-v1",
+    "planSha256": "fbd100cd8d9548d2fb9601070e0ff4d1582185b13aa66fddea6213ffe33d3416",
+    "sourceFileSha256": "058bfd5cba6bae409645c03e28bd732749bf4734d01f348e03d7ae597b700c56",
+    "candidateSha256": "183e6228f5e01d65545b20a3135a0cb81c27b3fa4f1cf56c7580497cae38f4da",
+    "partnerSha256": "d19dac5c5adc7f1588f3d6613501e3dd8feb36831bfd046b99a9b5702c62bc77",
+    "comparatorSha256": "9fbc42eaa612665e29009f48b71b8ac7355d4700bc32ec859152086f564460ad",
+    "seed": 20261911,
+    "pairs": 48,
+    "reports": [
+      {
+        "partner": "self",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 30,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 48,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 49,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 34,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 56,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 45,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 30,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 46,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 45,
+        "games": 96
+      }
+    ],
+    "deltas": []
+  },
+  "pairs-senas": {
+    "schema": "frozen-partnership-diagnostics-v1",
+    "planSha256": "22115dfe4d0add0185dd0a793174ffe5573884daeb430bebcfab824c5ac3b424",
+    "sourceFileSha256": "02c785a625260f40f993885ea9c0137104af99ec939982f0dcce9d499e3370b8",
+    "candidateSha256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04",
+    "partnerSha256": "75c22e1ef420563b35901c8f52397db96e3f73506e93764748d7f99cfb4c5abf",
+    "comparatorSha256": "f00c6ae2a2825c5caf4232c6ac310dcaea5e7ec25f5f1427809d6072bb394178",
+    "seed": 20261911,
+    "pairs": 48,
+    "reports": [
+      {
+        "partner": "self",
+        "opponent": "incumbent",
+        "gestures": true,
+        "wins": 22,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 28,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "monte-carlo",
+        "gestures": true,
+        "wins": 46,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 49,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "independent",
+        "gestures": true,
+        "wins": 50,
+        "games": 96
+      },
+      {
+        "partner": "self",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 45,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "incumbent",
+        "gestures": true,
+        "wins": 34,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 31,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "monte-carlo",
+        "gestures": true,
+        "wins": 62,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 62,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "independent",
+        "gestures": true,
+        "wins": 60,
+        "games": 96
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 60,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "incumbent",
+        "gestures": true,
+        "wins": 23,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "incumbent",
+        "gestures": false,
+        "wins": 32,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "monte-carlo",
+        "gestures": true,
+        "wins": 51,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "monte-carlo",
+        "gestures": false,
+        "wins": 49,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "independent",
+        "gestures": true,
+        "wins": 43,
+        "games": 96
+      },
+      {
+        "partner": "independent",
+        "opponent": "independent",
+        "gestures": false,
+        "wins": 45,
+        "games": 96
+      }
+    ],
+    "deltas": [
+      {
+        "partner": "self",
+        "opponent": "incumbent",
+        "winRateChangeWhenMasked": 0.0625
+      },
+      {
+        "partner": "self",
+        "opponent": "monte-carlo",
+        "winRateChangeWhenMasked": 0.03125
+      },
+      {
+        "partner": "self",
+        "opponent": "independent",
+        "winRateChangeWhenMasked": -0.052083333333333336
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "incumbent",
+        "winRateChangeWhenMasked": -0.03125
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "monte-carlo",
+        "winRateChangeWhenMasked": 0
+      },
+      {
+        "partner": "incumbent",
+        "opponent": "independent",
+        "winRateChangeWhenMasked": 0
+      },
+      {
+        "partner": "independent",
+        "opponent": "incumbent",
+        "winRateChangeWhenMasked": 0.09375
+      },
+      {
+        "partner": "independent",
+        "opponent": "monte-carlo",
+        "winRateChangeWhenMasked": -0.020833333333333332
+      },
+      {
+        "partner": "independent",
+        "opponent": "independent",
+        "winRateChangeWhenMasked": 0.020833333333333332
+      }
+    ]
+  }
+}
