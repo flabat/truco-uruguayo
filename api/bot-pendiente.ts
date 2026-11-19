@@ -18,9 +18,9 @@ export async function programarTurno(db: PoolClient, mesa: string, mano: ManoPub
   else await db.query("INSERT INTO juego.turnos_bot VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);
 }
 
-type Fila = Registro & {mesa: string; politica: string; modo: "1v1" | "2v2"; humanos: Asiento[]};
+type Fila = Registro & {mesa: string; politica: string; modo: "1v1" | "2v2"; meta: number; humanos: Asiento[]};
 async function snapshot(db: Pool | PoolClient, id?: string) {
-  return (await db.query<Fila>(`SELECT h.*, m.politica, m.modo,
+  return (await db.query<Fila>(`SELECT h.*, m.politica, m.modo, m.meta,
     ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
@@ -34,7 +34,7 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
   const fila = await snapshot(pool, id);
   if (!fila) return false;
   const formato = formatoMesa(fila.modo, fila.version_senas);
-  const mano = restaurar(fila, formato);
+  const mano = restaurar(fila, formato, fila.meta);
   const seat = actor(mano, fila.humanos);
   if (seat === undefined) return false;
   const observacion = observe(mano.estado, seat, formato, mano.turnos);

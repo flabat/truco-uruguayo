@@ -1,4 +1,5 @@
 import { randomInt } from "node:crypto";
+import { metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza } from "./cartas.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
@@ -32,8 +33,9 @@ export function repartirOnline(cantidad: 2 | 4, dador?: number): RepartoOnline {
   return { versionReparto: "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
-export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [number, number] = [0, 0], meta = 40): EstadoOnline {
+export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [number, number] = [0, 0], metaElegida?: number): EstadoOnline {
   if (!esRepartoOnline(reparto)) throw new TypeError("Se necesita un reparto de mesa en línea válido.");
+  const meta = metaElegida === undefined ? metaPorModalidad[reparto.manos.length === 2 ? "1v1" : "2v2"] : metaElegida;
   if (!Number.isSafeInteger(meta) || meta <= 0 || puntosInicio.length !== 2
     || !puntosInicio.every(p => Number.isSafeInteger(p) && p >= 0 && p < meta)) {
     throw new RangeError("La meta y los tantos de inicio deben corresponder a un partido en juego.");
