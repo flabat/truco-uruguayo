@@ -19,3 +19,5 @@
 !training/duel/math.ts
 !training/partners/
 !training/partners/policy.ts
+!training/selfplay/
+!training/selfplay/learner.ts
