@@ -167,7 +167,9 @@ function MesaAbierta({
   recienCreada?: boolean;
 }) {
   const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
-  const { tablero, partida, mostrandoCartas } = usePresentacionVueltas(recibida, recienCreada);
+  const [presencioReparto, recordarEspera] = useState(recienCreada);
+  if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
+  const { tablero, partida, mostrandoCartas } = usePresentacionVueltas(recibida, presencioReparto);
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
   useEffect(() => {

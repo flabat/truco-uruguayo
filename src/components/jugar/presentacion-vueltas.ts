@@ -13,7 +13,7 @@ interface Paso {
 function pasosNuevos(
   anterior: Partida | undefined,
   actual: Partida | undefined,
-  recienCreada: boolean,
+  presencioReparto: boolean,
   pendientes: Paso[] = [],
 ): Paso[] {
   const enVivo = { partida: actual, espera: 0 };
@@ -21,7 +21,7 @@ function pasosNuevos(
   if (!actual || !vista) return [enVivo];
 
   const previa = anterior?.manoNumero === actual.manoNumero ? anterior.vista : null;
-  const primeraMano = recienCreada && !anterior?.vista && actual.manoNumero === 1;
+  const primeraMano = presencioReparto && !anterior?.vista && actual.manoNumero === 1;
   const repartoSiguiente = anterior?.vista?.resultado && actual.manoNumero === anterior.manoNumero + 1;
   // Si se retomó una mano en curso o se perdió su reparto, ir directamente al estado recibido.
   if (!previa && !primeraMano && !repartoSiguiente) return [enVivo];
@@ -82,13 +82,13 @@ function pasosNuevos(
 }
 
 // Un aviso puede contener varias jugadas o llegar mientras el tapete muestra una vuelta anterior.
-export function usePresentacionVueltas(actual: Partida | undefined, recienCreada: boolean) {
+export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean) {
   const tablero = useRef<HTMLDivElement>(null);
   const [secuencia, mostrar] = useState(() => ({
-    recibida: actual, pasos: pasosNuevos(undefined, actual, recienCreada),
+    recibida: actual, pasos: pasosNuevos(undefined, actual, presencioReparto),
   }));
   if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero) {
-    mostrar({ recibida: actual, pasos: pasosNuevos(secuencia.recibida, actual, recienCreada, secuencia.pasos) });
+    mostrar({ recibida: actual, pasos: pasosNuevos(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
   }
   const paso = secuencia.pasos[0];
   const [pasoCargado, confirmarCarga] = useState<Paso>();
