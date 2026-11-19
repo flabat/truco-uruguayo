@@ -164,7 +164,7 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
           <p className="j-seis-falta">Falta envido · Si gana tu equipo, cobra {tantos(vista.faltaPorEquipo[propio])}. Si ganan los rivales, cobran {tantos(vista.faltaPorEquipo[1 - propio])}.</p>
         )}
         {opciones.length > 0 && <div className="j-cantos" role="group" aria-label="Cantos y respuestas">
-          {opciones.map(tipo => <button key={tipo} className={tipo === "quiero" ? "button" : "j-sec"} disabled={bloqueada}
+          {opciones.map(tipo => <button key={tipo} className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"} disabled={bloqueada}
             onClick={() => jugar({ tipo })}>{canto[tipo]}</button>)}
         </div>}
         {esFin ? <a className="button" href={base + "jugar/"}>Crear otra mesa</a> : vista.estado === "terminado" &&
