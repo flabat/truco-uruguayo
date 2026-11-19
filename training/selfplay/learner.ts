@@ -167,8 +167,9 @@ function validate(actor: SelfplayActor) {
 export function openSelfplay(actor: SelfplayActor): Policy {
   validate(actor);
   const snapshot=structuredClone(actor), anchor=openAnchored(snapshot.anchor);
+  const unchanged=snapshot.updates===0 || snapshot.weights.every(w=>w===0);
   return {id:selfplayKind+"-"+actor.format,decide(obs,legal) {
-    if (snapshot.updates===0) return anchor.decide(obs,legal);
+    if (unchanged) return anchor.decide(obs,legal);
     return calculate(snapshot,anchor,obs,legal,false).distribution;
   }};
 }
