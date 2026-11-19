@@ -37,3 +37,5 @@ training/partners/python/.venv/bin/python -B training/partners/python/benchmark.
 ```
 
 La comparación usa 256 decisiones por variante, los mismos pesos y lotes en cada dispositivo, tres pasos de calentamiento y ocho pasos medidos con sincronización. Alterna ambos formatos en cada iteración y registra la pérdida, ejemplos por segundo, RSS máximo y memoria Metal. Para medir el entrenamiento completo en un dispositivo se puede pasar `--device cpu` o `--device mps` al crear un run. El actor y los informes de desarrollo quedan disponibles localmente.
+
+Para comprobar la continuidad del optimizador en el entorno fijado, ejecutá `node training/partners/verify.ts`. Compara todos los bytes del checkpoint y de ambos actores tras ocho chicos por aprendiz en una sola corrida y en una corrida interrumpida al cuarto chico y reanudada desde disco, por separado en ambos formatos. El escritor mantiene un lock local que el sistema operativo libera si el proceso se interrumpe.
