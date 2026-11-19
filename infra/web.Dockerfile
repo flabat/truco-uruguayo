@@ -4,6 +4,7 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY astro.config.mjs ./
 COPY src ./src
+COPY training/contracts/index.ts ./training/contracts/index.ts
 COPY public ./public
 COPY arte ./arte
 COPY scripts/tatu ./scripts/tatu

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { VistaOnline } from "../../motor/mesa-online";
 import type { CardId } from "../../motor/cartas";
 
+import type { Format, PublicTurn } from "../../../training/contracts/index";
+
 export type Modo = "1v1" | "2v2";
 export interface Jugador {
   id: string;
@@ -16,6 +18,7 @@ export interface Asiento {
 export interface Mesa {
   id: string;
   modo: Modo;
+  formato?: Format;
   creadorId: string;
   miAsiento: number;
   invitacion: string;
@@ -23,6 +26,9 @@ export interface Mesa {
   asientos: Asiento[];
 }
 export interface Partida {
+  formato?: Format;
+  versionSenas?: string;
+  turnos?: readonly PublicTurn[];
   version: number;
   manoNumero: number;
   puntos: [number, number];
