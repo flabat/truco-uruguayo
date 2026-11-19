@@ -6,11 +6,11 @@ Sobre el checkout registrado con Node 24:
 
 ```sh
 node training/championship/event.ts register --bundle runs/league/championship-input/duel/bundle.json --output runs/final-duel/plan
-node training/championship/event.ts run --plan runs/final-duel/plan/plan.json --output runs/final-duel/games
-node training/championship/event.ts verify --plan runs/final-duel/plan/plan.json --output runs/final-duel/games
+node training/championship/event.ts run --plan runs/final-duel/plan/plan.json --expected "$PLAN_SHA256" --output runs/final-duel/games
+node training/championship/event.ts verify --plan runs/final-duel/plan/plan.json --expected "$PLAN_SHA256" --output runs/final-duel/games
 ```
 
-Repetir para pairs y pairs-senas con directorios independientes. La ruta de entrada real queda en el registro de la liga. Registrar el hash del plan antes de correr el evento. El campo se fija por código: V1, el cambio de falta en duelo, cinco estilos, el oponente independiente y el contrajugador. Los compañeros desconocidos rotan de asiento. Cada miembro del campo juega los cuatro chicos por secuencia (control y candidato, con ambos equipos). El servicio recibe la observación ordinaria y un uniforme del árbitro para muestrear la política. El actor nunca recibe la semilla de los repartos.
+Repetir para pairs y pairs-senas con directorios independientes. La ruta de entrada real queda en el registro de la liga. Registrar el hash del plan antes de correr el evento. Asigná a PLAN_SHA256 ese valor del registro independiente al correr o verificar los resultados. El campo se fija por código: V1, el cambio de falta en duelo, cinco estilos, el oponente independiente y el contrajugador. Los compañeros desconocidos rotan de asiento. Cada miembro del campo juega los cuatro chicos por secuencia (control y candidato, con ambos equipos). El servicio recibe la observación ordinaria y un uniforme del árbitro para muestrear la política. El actor nunca recibe la semilla de los repartos.
 
 El registro usa 12 pares de desarrollo por familia para estimar varianza y costo; después genera una clave final nueva. El tamaño se fija con la mayor varianza observada, objetivo de detectar seis puntos porcentuales y presupuesto aproximado de treinta minutos locales por formato. El plan registra el tamaño realizable y el efecto detectable correspondiente. Se remuestrean secuencias completas conjuntamente en todas las familias. El triunfo directo se calcula con compañeros propios contra V1. Las comparaciones de cambios incluyen explícitamente los compañeros desconocidos. Los intervalos simultáneos y el plazo de 200 ms y fallback del 0,5% se fijaron en #132 antes de abrir los repartos finales.
 

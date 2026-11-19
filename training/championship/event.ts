@@ -75,7 +75,10 @@ export function decision(summary:ReturnType<typeof summarize>,fallback:number,li
   if(fallback>limit || summary.direct.upper<=0.5 || summary.families.some(f=>f.delta.upper<=-0.02)) return "failed";
   return summary.direct.lower>0.5 && summary.families.every(f=>f.delta.lower> -0.02) ? "pass" : "inconclusive";
 }
-export async function championship(dir:string,output:string,verifyOnly:boolean) {
+export async function championship(dir:string,output:string,verifyOnly:boolean,expectedHash:string) {
+  assert.match(expectedHash,/^[0-9a-f]{64}$/,"Copiá el hash del plan prerregistrado.");
+  const planHash=sha(bytes(join(dir,"plan.json")));
+  assert.equal(planHash,expectedHash,"El plan difiere del compromiso prerregistrado.");
   const plan=read(join(dir,"plan.json")),field=plan.field as Field;
   assert.equal(plan.schema,"chico-championship-v1"); assert.equal(field.build,buildId());
   assert.deepEqual(plan.fieldFamilies,families(field)); assert.ok(Number.isSafeInteger(plan.pairs)&&plan.pairs>=24&&plan.pairs<=256);
@@ -83,7 +86,6 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
   const secret=bytes(join(dir,"referee-key")).toString();
   assert.equal(sha(secret),plan.commitment);
   const seed=parseInt(sha(json(["sealed-final-v1",field.format,secret])).slice(0,12),16);
-  const planHash=sha(bytes(join(dir,"plan.json")));
   const service=referee(field,file=>bytes(join(dir,file)));
   const summaries:FamilyResult[]=[],files:{path:string;sha256:string}[]=[];
   const latency:number[]=[],roleTotals:Record<string,RoleDiagnostics>={};
@@ -172,8 +174,8 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
   return report;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  const {positionals:[cmd],values}=parseArgs({allowPositionals:true,options:{bundle:{type:"string"},plan:{type:"string"},output:{type:"string"}}});
+  const {positionals:[cmd],values}=parseArgs({allowPositionals:true,options:{bundle:{type:"string"},plan:{type:"string"},output:{type:"string"},expected:{type:"string"}}});
   if(cmd==="register" && values.bundle && values.output) console.log(json(await register(values.bundle,values.output)));
-  else if((cmd==="run"||cmd==="verify") && values.plan && values.output) console.log(json(await championship(dirname(resolve(values.plan)),values.output,cmd==="verify")));
-  else throw Error("register --bundle bundle.json --output plan-dir | run|verify --plan plan.json --output results-dir");
+  else if((cmd==="run"||cmd==="verify") && values.plan && values.output && values.expected) console.log(json(await championship(dirname(resolve(values.plan)),values.output,cmd==="verify",values.expected)));
+  else throw Error("register --bundle bundle.json --output plan-dir | run|verify --plan plan.json --expected SHA256 --output results-dir");
 }

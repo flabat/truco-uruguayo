@@ -12,6 +12,7 @@ uv sync --frozen --project training/partners/python
 npm run arena -- smoke --formats all --seed 42 --output runs/primer-torneo
 npm run arena -- replay --manifest runs/primer-torneo/manifest.json --match pairs-senas-0-0
 npm run arena -- verify --manifest runs/primer-torneo/manifest.json
+node --test tests/unit/training-seat.test.ts
 node training/eval/legacy.ts
 
 npm run train -- --format duel --config training/configs/duel-local.json --run runs/primer-duelo --iterations 8
