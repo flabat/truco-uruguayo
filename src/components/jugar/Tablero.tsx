@@ -3,7 +3,7 @@ import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
-import type { Asiento, Eleccion, Mesa, PartidaClasica, Tipo } from "./cliente";
+import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
 
 export const canto = {
   truco: "Truco",
@@ -19,7 +19,7 @@ export const canto = {
   "no-quiero": "No quiero",
   "paso-flor": "Sin flor",
   mazo: "Irse al mazo",
-} satisfies Record<Exclude<Tipo, "carta"> | "mazo", string>;
+} satisfies Record<Exclude<Tipo, "carta">, string>;
 export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
 
@@ -114,13 +114,13 @@ function AsientoEnMesa({
   );
 }
 
-function estadoDelTurno(mesa: Mesa, partida: PartidaClasica, vista: VistaOnline) {
+function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   const { resultado, pendiente, porDeclararFlor, turno, legales } = vista;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   if (resultado) {
     const fin = partida.ganadorPartida !== null;
     const victoria = resultado.equipo === propio;
-    const motivos = { vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
+    const motivos = { mazo: "el retiro al mazo", vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
     return {
       titulo: fin
         ? victoria
@@ -188,7 +188,7 @@ export function EnJuego({
   jugar,
 }: {
   mesa: Mesa;
-  partida: PartidaClasica;
+  partida: Partida;
   bloqueada: boolean;
   base: string;
   jugar: (a?: Eleccion) => void;

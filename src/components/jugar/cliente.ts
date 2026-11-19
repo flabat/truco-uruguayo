@@ -33,7 +33,7 @@ interface Marcador {
   meta: number;
   ganadorPartida: 0 | 1 | null;
 }
-export interface PartidaClasica extends Marcador {
+export interface Partida extends Marcador {
   formato?: Format;
   versionSenas?: string;
   turnos?: readonly PublicTurn[];
@@ -45,9 +45,9 @@ export interface PartidaTercetos extends Marcador {
   historialLances: readonly ResumenLance[];
   vista: VistaTercetos;
 }
-export type Partida = PartidaClasica | PartidaTercetos;
+type PartidaRecibida = Partida | PartidaTercetos;
 export type Tipo = VistaOnline["legales"][number];
-export type Eleccion = { tipo: Exclude<Tipo, "carta"> | "mazo" } | { tipo: "carta"; carta: CardId };
+export type Eleccion = { tipo: Exclude<Tipo, "carta"> } | { tipo: "carta"; carta: CardId };
 
 export class ErrorMesa extends Error {
   constructor(
@@ -86,7 +86,7 @@ export function idComando() {
 export function useMesa(id: string) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
-  const [partida, setPartida] = useState<Partida>();
+  const [partida, setPartida] = useState<PartidaRecibida>();
   const [conectada, setConectada] = useState(false);
   const [error, setError] = useState<ErrorMesa | null>(null);
   const refrescar = useRef<() => Promise<void>>(async () => {});
@@ -115,7 +115,7 @@ export function useMesa(id: string) {
           const canal = socket?.readyState === WebSocket.OPEN ? socket : undefined;
           const sala = await pedir<Mesa>(ruta, undefined, cancel.signal);
           const mano = sala.lista
-            ? await pedir<Partida>(ruta + "/partida", undefined, cancel.signal)
+            ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
             : undefined;
           if (cancel.signal.aborted) return;
           setMesa(sala);

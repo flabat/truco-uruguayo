@@ -3,14 +3,14 @@ import { signals, type Signal } from "../../../training/contracts/index";
 import { cartasPorId } from "../../lib/cartas";
 import juego from "../../data/juego.json";
 import { EnJuego } from "./Tablero";
-import type { Eleccion, Mesa, PartidaClasica } from "./cliente";
+import type { Eleccion, Mesa, Partida } from "./cliente";
 import "./senas.css";
 
 const filas = juego.find(seccion => seccion.id === "senas")!.blocks.find(b => b.table)!.table!.rows;
 const menu = signals.map((id, i) => ({ id, texto: filas[i][1].replace(/\.$/, "") }));
 
 export function MesaConSenas({ base, mesa, partida, bloqueada, jugar }: {
-  base: string; mesa: Mesa; partida: PartidaClasica; bloqueada: boolean;
+  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean;
   jugar: (accion?: Eleccion & { sena?: Signal }) => void;
 }) {
   const [seleccion, elegir] = useState<{version: number; sena: Signal | ""}>();

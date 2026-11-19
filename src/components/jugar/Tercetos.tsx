@@ -51,7 +51,7 @@ function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base
         const ganador = !enCurso && ultima?.resultado.tipo === "ganada" && ultima.resultado.asiento === asiento;
         return (
           <div key={asiento} className="j-seis-puesto" data-pos={(asiento - mesa.miAsiento + 6) % 6}
-            data-activo={lance.activos.includes(asiento)} role="group" aria-label={`Asiento ${asiento + 1} · ${nombre}`}>
+            data-activo={lance.activos.some(a => a === asiento)} role="group" aria-label={`Asiento ${asiento + 1} · ${nombre}`}>
             <div className="j-seis-nombre">
               <strong>{nombre}</strong>
               <span>{papel} · Equipo {equipo + 1}</span>
@@ -94,7 +94,7 @@ function Historial({ acciones, cobros, vueltas, mesa }: Pick<VistaTercetos, "acc
     {cobros.length > 0 && <ul aria-label="Tantos cobrados">
       {cobros.map((c, i) => <li key={i}>Equipo {c.equipo + 1} · {tantos(c.tantos)} por {c.motivo}
         {c.tantoGanador != null && c.asiento != null && ` (${mesa.asientos[c.asiento].nombre} con ${c.tantoGanador})`}
-        {c.valor !== c.tantos && ` · valor del canto ${tantos(c.valor)}`}.</li>)}
+        {c.valor != null && c.valor !== c.tantos && ` · valor del canto ${tantos(c.valor)}`}.</li>)}
     </ul>}
   </>;
 }
@@ -147,6 +147,8 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
           <h2 ref={encabezado} tabIndex={-1}>{titulo}</h2>
           {vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
             ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
+          {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
+            <p>Cantá tu flor antes de jugar una carta.</p>}
           {vista.pendiente && <p>{mesa.asientos[vista.pendiente.asiento].nombre} cantó {canto[vista.pendiente.tipo].toLowerCase()}.</p>}
           {vista.trucoPendiente && vista.pendiente && vista.pendiente.tipo !== vista.trucoPendiente.tipo &&
             <p>Queda pendiente el {canto[vista.trucoPendiente.tipo].toLowerCase()} de {mesa.asientos[vista.trucoPendiente.asiento].nombre}.</p>}
