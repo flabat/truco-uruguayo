@@ -4,6 +4,8 @@ import { resumir, type Conteo, type Fila, type Metodo, type Par } from "./estadi
 
 export type Perfil = "apertura-20000-v1" | "segunda-exacta-v1" | "practica-v1";
 export const semillaAnalisis = 29;
+export const versionMotorPractica = "mano-v1";
+export const versionModeloPractica = "bot-v1";
 export interface ResultadoCompleto {
   tipo: "completo";
   version: 1;
@@ -47,7 +49,7 @@ export function perfilAnalisis(posicion: PosicionPublicaV1): Perfil {
 }
 export function claveAnalisis(posicion: PosicionPublicaV1): string {
   const clave = clavePosicion(posicion);
-  return ["probabilidad-v1", "mano-v1", "bot-v1", perfilDeClave(clave), clave].join("/");
+  return ["probabilidad-v1", versionMotorPractica, versionModeloPractica, perfilDeClave(clave), clave].join("/");
 }
 
 export function resultadoCompleto(posicion: PosicionPublicaV1, conteo: Conteo,

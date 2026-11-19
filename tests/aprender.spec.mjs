@@ -84,7 +84,7 @@ test("primeros cinco minutos, empate con teclado, flor y repaso tras recarga", a
   await boton(page, "Tengo flor").click();
   await boton(page, "Pedir una pista").click();
   await expect(page.getByRole("status")).toContainText("Apartá la pieza");
-  await boton(page, "Sin flor").click();
+  await boton(page, "Yo no canto").click();
   await expect(page.getByRole("status")).toContainText("palos distintos");
   await boton(page, "Seguir con práctica mixta").click();
   await expect(page).toHaveURL("aprender/?modo=mixta");

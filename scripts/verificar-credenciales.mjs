@@ -36,9 +36,9 @@ async function iniciar(volver) {
   const login = await fetch(url, { redirect: "manual" });
   return { params: new URL(login.headers.get("location")).searchParams, cookie: login.headers.getSetCookie()[0].split(";")[0] };
 }
-async function completar(params, cookies, emisor = issuer.href, audiencia = "truco-web") {
+async function completar(params, cookies, emisor = issuer.href, audiencia = "truco-web", perfil = {}) {
   const now = Math.floor(Date.now() / 1000);
-  claims = { iss: emisor, aud: audiencia, sub: "local-fixture", nonce: params.get("nonce"), iat: now, exp: now + 60 };
+  claims = { ...perfil, iss: emisor, aud: audiencia, sub: "local-fixture", nonce: params.get("nonce"), iat: now, exp: now + 60 };
   const callback = new URL("/api/auth/callback", app.url);
   callback.search = new URLSearchParams({ code: "codigo-local", state: params.get("state") });
   return fetch(callback, { redirect: "manual", headers: { cookie: cookies } });
@@ -55,6 +55,24 @@ try {
     assert.equal(result.headers.getSetCookie().some(c => c.startsWith("truco_sesion=")), esperado === 303);
   }
   console.log("Solo el emisor y la audiencia acordados obtuvieron una sesión.");
+
+  let jugadorId;
+  for (const [perfil, nombre] of [
+    [{ given_name: "Luz", preferred_username: "privado@example.test" }, "Luz"],
+    [{ preferred_username: "LuzLocal" }, "LuzLocal"],
+    [{ preferred_username: "privado@example.test" }, "Jugador"],
+  ]) {
+    const { params, cookie } = await iniciar();
+    const respuesta = await completar(params, cookie, issuer.href, "truco-web", perfil);
+    assert.equal(respuesta.status, 303);
+    const sesion = respuesta.headers.getSetCookie().find(c => c.startsWith("truco_sesion=")).split(";")[0];
+    const me = await fetch(new URL("/api/jugador", app.url), { headers: { cookie: sesion } });
+    assert.equal(me.status, 200);
+    const jugador = await me.json();
+    assert.equal(jugador.nombre, nombre);
+    if (jugadorId) assert.equal(jugador.id, jugadorId);
+    jugadorId = jugador.id;
+  }
 
   const destinos = ["/jugar/?invitacion=primera", "/jugar/?mesa=segunda", "https://example.org/"];
   const intentos = await Promise.all(destinos.map(iniciar));

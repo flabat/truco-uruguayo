@@ -12,6 +12,6 @@ export const canto = {
   "contraflor-al-resto": "Contraflor al resto",
   quiero: "Quiero",
   "no-quiero": "No quiero",
-  "paso-flor": "Sin flor",
+  "paso-flor": "Yo no canto",
   mazo: "Irse al mazo",
 } satisfies Record<Exclude<TipoAccionOnline, "carta">, string>;

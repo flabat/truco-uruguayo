@@ -54,7 +54,9 @@ services:
     image: quay.io/keycloak/keycloak:26.8.2
     command: ["start-dev", "--import-realm"]
     environment:
-      KC_HOSTNAME: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
+      - KC_HOSTNAME=http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
+      - KC_BOOTSTRAP_ADMIN_USERNAME
+      - KC_BOOTSTRAP_ADMIN_PASSWORD
     volumes:
       - identidad:/opt/keycloak/data
       - ./infra/truco-local-realm.json:/opt/keycloak/data/import/truco-local-realm.json:ro

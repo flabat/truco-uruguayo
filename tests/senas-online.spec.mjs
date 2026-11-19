@@ -13,6 +13,11 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
       ["oros-01","copas-03","espadas-07"],["copas-05","espadas-02","oros-03"]]});
   const turns = [];
   const sent = [];
+  function registrar(asiento, jugada) {
+    const paso = commitTurn(state, asiento, "pairs-private-senas", jugada);
+    state = paso.state;
+    turns.push(paso.turn);
+  }
   await page.routeWebSocket("**/vivo", () => {});
   await page.route("**/api/**", async route => {
     const req=route.request(), path=new URL(req.url()).pathname;
@@ -24,8 +29,7 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
     else if(path.endsWith("/acciones")) {
       const {accion}=req.postDataJSON();
       sent.push(accion);
-      const {state:next,turn}=commitTurn(state,0,"pairs-private-senas",accion.sena+"/"+accion.tipo);
-      state=next; turns.push(turn);
+      registrar(0, accion.sena + "/" + accion.tipo);
     } else if(path.endsWith("/partida")) data={version:turns.length+1,manoNumero:1,puntos:[0,0],meta:40,
       ganadorPartida:null,formato:"pairs-private-senas",versionSenas:teamSignalsVersion,turnos:turns,vista:vistaOnline(state,0)};
     await route.fulfill({json:data});
@@ -47,9 +51,17 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   }
   await page.getByRole("button",{name:"Falta envido",exact:true}).press("Enter");
   const entries=page.getByRole("region",{name:"Señas de esta mano"}).getByRole("listitem");
+  const publicas=page.getByRole("region",{name:"Historial de la mano",exact:true}).getByRole("listitem");
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido"]);
+  await expect(publicas).toHaveText(["A dijo «Falta envido»."]);
   await page.reload();
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido"]);
+  await expect(publicas).toHaveText(["A dijo «Falta envido»."]);
   expect(sent).toEqual([{tipo:"falta-envido",sena:"cejas"}]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+
+  registrar(1, "quiero");
+  registrar(2, "cejas/paso-flor");
+  await page.reload();
+  await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido", "C · Alzar ambas cejas · Yo no canto"]);
 });
