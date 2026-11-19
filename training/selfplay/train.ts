@@ -46,13 +46,22 @@ export function openTrainingTeam(model: Artifact, format: CycleFormat): Team {
   });
 }
 
-function initialize(format: CycleFormat, lineage: Lineage, seed: number, starter: AnchoredActor): Checkpoint {
-  if (starter.kind !== kind || starter.format !== format) throw new Error("Invalid frozen starting model");
+type Starter = AnchoredActor | SelfplayActor;
+
+function initialize(format: CycleFormat, lineage: Lineage, seed: number, starter: Starter): Checkpoint {
+  if (starter.format !== format || (starter.kind !== kind && starter.kind !== selfplayKind)) {
+    throw new Error("Invalid frozen starting model");
+  }
+  const learner = createLearner(starter.kind === selfplayKind ? starter.anchor : starter);
+  if (starter.kind === selfplayKind) {
+    openSelfplay(starter);
+    learner.actor = structuredClone(starter);
+  }
   return {schema:1, format, lineage, starterPin:artifactPin(starter), seed, rng:seed,
     epoch:0, trainingSeconds:0, totalTrainingSeconds:0, games:0, hands:0, decisions:0, learningDecisions:0,
     learnerUpdates:0, counterGames:0, counterWins:0, counterUpdates:0, counterTarget:"",
     targetCounterGames:0, targetCounterWins:0,
-    learner:createLearner(starter), specialist:createLearner(starter), record:{}, history:[], last:null};
+    learner, specialist:structuredClone(learner), record:{}, history:[], last:null};
 }
 
 function nextUniform(state: Checkpoint) {
@@ -111,7 +120,7 @@ function freezeContext(root: string, state: Checkpoint, epoch: number, archived:
   return {champion,previous,peers,archivePins};
 }
 
-function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedModel: AnchoredActor) {
+function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedModel: Starter) {
   const repeated = (policy: Policy): Team => Array(seatsFor(state.format)).fill(policy);
   const choice = (s: Snapshot): Choice => ({name:s.name,team:openTrainingTeam(s.model,state.format)});
   const champion = choice(context.champion), previous = choice(context.previous);
@@ -158,13 +167,15 @@ function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedMod
         action = "Seat " + (d.seat+1) + " · " + base + " · hand " + (d.hand+1) + " · " + score.join("–");
       }});
     const won = game.winner === team;
+    const previousUpdates = learner.actor.updates;
     collector.finish(won ? 1 : -1);
+    const updates = learner.actor.updates - previousUpdates;
     state.games++; state.decisions+=total; state.hands+=game.hands.length; state.learningDecisions+=trained;
     if (specialist) {
-      state.counterGames++; state.counterWins+=Number(won); state.counterUpdates=learner.actor.updates;
+      state.counterGames++; state.counterWins+=Number(won); state.counterUpdates+=updates;
       state.targetCounterGames++; state.targetCounterWins+=Number(won);
     } else {
-      state.learnerUpdates=learner.actor.updates;
+      state.learnerUpdates+=updates;
       const row = state.record[opponent.name] ??= {wins:0,games:0};
       row.wins+=Number(won); row.games++;
       if ((n+1) % 128 === 0) {

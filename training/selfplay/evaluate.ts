@@ -35,6 +35,15 @@ function play(format:CycleFormat, model:Team, fixture:Fixture, seed:number,pair:
   }
   return {wins,signalsSent};
 }
+export function qualificationFamilies(format:CycleFormat) {
+  const ids = ["champion","V1",...styles,"independent"];
+  if (format==="duel") ids.push("opening-falta");
+  ids.push("trained-counter");
+  if (format!=="duel") ids.push("unfamiliar-teammate","strong-cards/unfamiliar");
+  if (format==="pairs-private-senas") ids.push("signaling-teammate","signaling-teammate/masked");
+  return ids;
+}
+
 export function qualifies(result:ReturnType<typeof summarize>, directBound:number, familyBound:number) {
   return result.direct.lower>directBound && result.families.every(f=>f.delta.lower>familyBound);
 }
@@ -113,6 +122,7 @@ export function evaluate(root:string,format:Format,label:string) {
         {id:"signaling-teammate/masked",opponent:reference,mate:signalMate,silent:true});
     }
   }
+  assert.deepEqual(fixtures.map(f=>f.id),qualificationFamilies(format));
   const n=final?protocol.finalPairs:protocol.epochPairs, seed=dealSeed(protocol.seed,format,"gate",label);
   const families=[], total=4*n*fixtures.length;
   let emitted=0;
