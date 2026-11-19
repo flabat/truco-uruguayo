@@ -1,0 +1,41 @@
+{
+  "version": "chico-v1",
+  "id": "9bec3db3-a4fd-4ee3-bd58-000000000002",
+  "origen": "fixture",
+  "variante": "parejas",
+  "perfil": "pairs-private-senas",
+  "motor": {"version": "online-1", "build": "git:9c867e1c8db858e7692cd09096b5cada36a0440a"},
+  "meta": 2,
+  "inicio": "2026-11-19T12:00:00Z",
+  "asientos": [
+    {"tipo": "humano"},
+    {"tipo": "humano"},
+    {"tipo": "humano"},
+    {"tipo": "humano"}
+  ],
+  "eventos": [
+    {
+      "tipo": "reparto", "secuencia": 1, "manoNumero": 1, "puntosInicio": [0, 0],
+      "reparto": {
+        "versionReparto": "online-1", "dador": 3, "mano": 0, "muestra": "oros-06",
+        "manos": [
+          ["espadas-01", "bastos-01", "copas-11"],
+          ["espadas-06", "bastos-06", "copas-03"],
+          ["oros-03", "espadas-11", "bastos-10"],
+          ["oros-01", "espadas-04", "bastos-05"]
+        ]
+      }
+    },
+    {"tipo": "decision", "secuencia": 2, "accion": {"tipo": "truco", "asiento": 0}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 3, "accion": {"tipo": "quiero", "asiento": 3}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 4, "accion": {"tipo": "carta", "asiento": 0, "carta": "espadas-01", "sena": "cejas"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 5, "accion": {"tipo": "carta", "asiento": 1, "carta": "espadas-06"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 6, "accion": {"tipo": "carta", "asiento": 2, "carta": "oros-03"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 7, "accion": {"tipo": "carta", "asiento": 3, "carta": "oros-01"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 8, "accion": {"tipo": "carta", "asiento": 0, "carta": "bastos-01"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 9, "accion": {"tipo": "carta", "asiento": 1, "carta": "bastos-06"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 10, "accion": {"tipo": "carta", "asiento": 2, "carta": "espadas-11"}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 11, "accion": {"tipo": "carta", "asiento": 3, "carta": "espadas-04"}, "cobros": [{"equipo": 0, "tantos": 2, "motivo": "truco"}], "puntos": [2, 0]},
+    {"tipo": "cierre", "secuencia": 12, "estado": "terminado", "ganador": 0, "puntos": [2, 0], "fecha": "2026-11-19T12:01:00Z"}
+  ]
+}

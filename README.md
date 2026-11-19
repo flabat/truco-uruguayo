@@ -52,6 +52,8 @@ El [diseño de la ruta de aprendizaje](docs/aprendizaje/README.md) describe el m
 
 La [guía de entrenamiento local](training/README.md) permite entrenar rivales de computadora para duelos y parejas, reproducir chicos y verificar la evaluación por formato.
 
+El [formato de replay de un chico](docs/multijugador/replay-chico.md) incluye cuatro partidas de referencia y un ejemplo para reconstruir una jugada desde el asiento que la vio.
+
 El [diseño del juego de a seis](docs/multijugador/tercetos/README.md) describe la mesa de tres contra tres, la meta configurable de 50 tantos y los tres duelos de un pico a pico. El [plan de implementación](docs/multijugador/tercetos/implementacion.md) reúne las dependencias y las pruebas de cada entrega.
 
 ## Trabajo en el repositorio

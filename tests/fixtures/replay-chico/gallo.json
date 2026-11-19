@@ -1,0 +1,29 @@
+{
+  "version": "chico-v1",
+  "id": "00000000-0000-4000-8000-000000000003",
+  "origen": "fixture",
+  "variante": "gallo",
+  "perfil": "gallo-sintetico-v1",
+  "motor": { "version": "gallo-sintetico-v1", "build": "sha256:a393f2b94639581f3ae5ca74fa0c02ccb683d74c75d6b5cecf995201b940adb4" },
+  "meta": 2,
+  "inicio": "2026-11-19T12:00:00Z",
+  "asientos": [{ "tipo": "humano" }, { "tipo": "humano" }, { "tipo": "humano" }],
+  "eventos": [
+    {
+      "tipo": "reparto", "secuencia": 1, "manoNumero": 1, "puntosInicio": [0, 0],
+      "reparto": {
+        "versionReparto": "gallo-sintetico-1", "dador": 0, "mano": 1, "gallo": 1, "muestra": "oros-03",
+        "manos": [
+          ["oros-11", "copas-06", "bastos-04"],
+          ["espadas-01", "copas-11", "bastos-06", "oros-07"],
+          ["espadas-05", "bastos-12", "copas-04"]
+        ]
+      }
+    },
+    { "tipo": "decision", "secuencia": 2, "accion": { "tipo": "descarte", "asiento": 1, "carta": "oros-07" }, "cobros": [], "puntos": [0, 0] },
+    { "tipo": "decision", "secuencia": 3, "accion": { "tipo": "truco", "asiento": 1 }, "cobros": [], "puntos": [0, 0] },
+    { "tipo": "decision", "secuencia": 4, "accion": { "tipo": "retruco", "asiento": 0 }, "cobros": [], "puntos": [0, 0] },
+    { "tipo": "decision", "secuencia": 5, "accion": { "tipo": "no-quiero", "asiento": 1 }, "cobros": [{"equipo": 1, "tantos": 2, "motivo": "truco"}], "puntos": [0, 2] },
+    { "tipo": "cierre", "secuencia": 6, "estado": "terminado", "ganador": 1, "puntos": [0, 2], "fecha": "2026-11-19T12:01:00Z" }
+  ]
+}
