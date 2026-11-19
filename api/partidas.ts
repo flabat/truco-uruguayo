@@ -7,11 +7,11 @@ import {
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, type VistaMesa } from "./mesas.ts";
-import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
+import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo,
   type Confirmada, type ManoPublicable, type Registro } from "./turnos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
-import { seatsFor, versions, type Format } from "../training/contracts/index.ts";
+import { hasSignals, seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
 
 const meta = 40;
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -56,7 +56,7 @@ function ganador(puntos: Tanteador) {
 function vista(mano: ManoPublicable, formato: Format, numero: number, version: number, asiento: Asiento) {
   const puntos = tantos(mano.estado);
   return { version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos),
-    ...(formato === "pairs-senas" && {versionSenas: versions.signals, turnos: mano.turnos}),
+    ...(hasSignals(formato) && {versionSenas: signalVersionFor(formato), turnos: turnosDeEquipo(mano.turnos, asiento)}),
     vista: vistaOnline(mano.estado, asiento) };
 }
 
@@ -71,7 +71,7 @@ async function repartir(db: PoolClient, mesa: string, formato: Format, humanos: 
   const mano = diferida ? inicial : jugarComputadoras(inicial, formato, humanos);
   await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [mesa, numero, version, versionReglasOnline, reparto, puntos,
-    JSON.stringify(guardarAcciones(mano)), formato === "pairs-senas" ? versions.signals : null]);
+    JSON.stringify(guardarAcciones(mano)), signalVersionFor(formato)]);
   if (diferida) await programarTurno(db, mesa, mano, humanos);
   return mano;
 }
@@ -143,7 +143,10 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         FROM juego.comandos WHERE mesa=$1 AND jugador=$2 AND id=$3`, [id, jugador, comando.id, comando]);
       if (previo) {
         if (!previo.coincide) throw new ErrorPeticion(409, "El identificador corresponde a otro comando.");
-        return { cambio: false, partida: previo.respuesta };
+        // Un recibo anterior a la privacidad de equipo puede contener señas rivales.
+        const respuesta = previo.respuesta;
+        const partida = respuesta.turnos ? { ...respuesta, turnos: turnosDeEquipo(respuesta.turnos, asiento) } : respuesta;
+        return { cambio: false, partida };
       }
     }
     const fila = await ultimaMano(db, id);

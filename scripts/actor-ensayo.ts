@@ -29,6 +29,9 @@ if (championship && (format === "duel" || format === "pairs" || format === "pair
   });
   for (let i = 0; i < 2; i++) duelStep(state);
   console.log(JSON.stringify(exportDuel(state)));
+} else if (format === "pairs-private-senas") {
+  // Actor de prueba sobre el contrato nuevo, separado de los campeonatos históricos.
+  console.log(JSON.stringify(exportActor(initialize(format, 7, 2, .01, 2, "cpu"))));
 } else if (format === "pairs" || format === "pairs-senas") {
   const state = initialize(format, 7, 2, .01, 2, "cpu");
   trainingBatch(state, 2);
