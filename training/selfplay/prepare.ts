@@ -59,7 +59,7 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
     trainingHours:6, maxWallHours:8, workers:{duel:2,pairs:1,"pairs-private-senas":1},
     screeningPairs:48,epochPairs:128,finalPairs:1024,epochResamples:3000,finalResamples:10000,
     directLowerBound:0.5, familyDeltaLowerBound:-0.02, files,
-    selection:"Compare frozen candidate checkpoints on a separate screening pool. Rank mean win rate across the reference, caller, strong-cards and rotating opposition. Gates use independent paired deals per epoch. Final confirms one finalist vs the immutable starting research champion.",
+    selection:"Compare frozen candidate checkpoints on a separate screening pool. Rank mean win rate across the reference, caller, strong-cards, frequent-bluff and folder. Gates use independent paired deals per epoch. Final confirms one finalist vs the immutable starting research champion.",
     deployment:"Local research only; no automatic activation."
   };
   store("protocol.json",protocol,false);
