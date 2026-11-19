@@ -107,3 +107,42 @@ test("la actualización espera el ganador del chico y usa ambas decisiones del e
   assert.equal(seats.size,2);
   assert.ok(decisions>1 && learner.actor.weights.some(w=>w!==0) && learner.critic.some(v=>v!==0));
 });
+
+test("el actor aprende una respuesta distinta al aviso de un compañero con igual historia pública",()=>{
+  function seatAfterSignal(signal: boolean) {
+    let state=iniciarOnline(deal);
+    const turns=[];
+    const script:[Asiento,ActionId][]=[[0,"envido"],[1,"quiero"],[2,"paso-flor"],
+      [3,signal?"cejas/paso-flor":"paso-flor"],[0,"oros-05"]];
+    for (const [seat,action] of script) {
+      const step=commitTurn(state,seat,format,action);
+      turns.push(step.turn);state=step.state;
+    }
+    const obs=observe(state,1,format,turns);
+    return {...obs,legalActions:signalRules.legalActions(obs.legalActions as Move[])};
+  }
+  const withCue=seatAfterSignal(true), silent=seatAfterSignal(false);
+  assert.deepEqual(withCue.view,silent.view);
+  const learner=createLearner(initial(format));
+  for (let pass=0;pass<16;pass++) {
+    for (const [obs,reward] of [[withCue,1],[silent,-1]] as const) {
+      const c=collect(learner);c.policy.decide(obs,obs.legalActions);c.record(obs,"bastos-04");c.finish(reward);
+    }
+  }
+  const actor=openSelfplay(exportSelfplay(learner));
+  const weight=(obs:typeof silent)=>actor.decide(obs,obs.legalActions).reduce((sum,p,i)=>
+    sum+(obs.legalActions[i].split("/").at(-1)==="bastos-04"?p:0),0);
+  assert.ok(weight(withCue)>weight(silent));
+});
+
+test("las jugadas obligatorias actualizan el crítico y conservan la política anclada",()=>{
+  const dist:RepartoOnline={...deal,manos:[["oros-04","oros-05","oros-10"],...deal.manos.slice(1)]};
+  const forced=observe(iniciarOnline(dist),0,"pairs",[]);
+  assert.deepEqual(forced.legalActions,["flor"]);
+  const anchor=initial("pairs"), learner=createLearner(anchor), c=collect(learner);
+  assert.deepEqual(c.policy.decide(forced,forced.legalActions),[1]);
+  c.record(forced,"flor");c.finish(1);
+  assert.ok(learner.critic.some(x=>x!==0));
+  const obs=opening("pairs");
+  assert.deepEqual(openSelfplay(exportSelfplay(learner)).decide(obs,obs.legalActions),openAnchored(anchor).decide(obs,obs.legalActions));
+});
