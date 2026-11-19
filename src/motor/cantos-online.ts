@@ -31,6 +31,8 @@ export interface EstadoOnline {
   valorTruco: number;
   trucoPendiente: Oferta<CantoTruco> | null;
   ultimoCantorTruco: Asiento | null;
+  /** Oportunidad de cantar o entregar antes de que el rival abra la segunda vuelta. */
+  antesDeSalida?: Asiento;
   lateral: Envite | null;
   lateralCerrado: boolean;
   flores: readonly Asiento[];
@@ -57,7 +59,10 @@ export function aDecidir(estado: EstadoOnline): Asiento[] {
   if (estado.resultado) return [];
   if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
   const oferta = estado.lateral ?? estado.trucoPendiente;
-  if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
+  if (!oferta) {
+    const asiento = estado.antesDeSalida ?? estado.mano.turno;
+    return asiento === null ? [] : [asiento];
+  }
   const posibles = estado.flores.length && estado.lateral ? estado.flores : enOrden(estado);
   return posibles.filter(a => equipoPorAsiento[a] !== equipoPorAsiento[oferta.asiento]);
 }
@@ -87,7 +92,7 @@ export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccio
   }
 
   const oferta = estado.trucoPendiente;
-  const legales: TipoAccionOnline[] = oferta ? ["quiero", "no-quiero"] : ["carta"];
+  const legales: TipoAccionOnline[] = oferta ? ["quiero", "no-quiero"] : [estado.antesDeSalida === asiento ? "mazo" : "carta"];
   const proximo = nivelesTruco[estado.valorTruco - 1 + (oferta ? 1 : 0)];
   if (proximo && (estado.ultimoCantorTruco === null
       || equipoPorAsiento[estado.ultimoCantorTruco] !== equipoPorAsiento[asiento])) legales.push(proximo);

@@ -1,5 +1,5 @@
 import { esCardId } from "../src/motor/cartas.ts";
-import { aDecidir, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaOnline,
+import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaParaPolitica,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import { signals, versions, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
@@ -47,7 +47,7 @@ export function confirmar(mano: ManoPublicable, formato: Format, accion: Confirm
 export function confirmarComputadora(mano: ManoPublicable, formato: Format, asiento: Asiento, decision: ActionId) {
   // Conservar el canto que el actor eligió, incluida su probabilidad de retrucar.
   const entregar = esCardId(decision) && mano.estado.mano.restantes[asiento].includes(decision)
-    && segundaPerdidaEnDuelo(mano.estado, asiento);
+    && (mano.estado.antesDeSalida === asiento || segundaPerdidaEnDuelo(mano.estado, asiento));
   return confirmarTurno(mano, formato, asiento, entregar ? "mazo" : decision);
 }
 
@@ -55,21 +55,32 @@ export function guardarAcciones(mano: ManoPublicable): Confirmada[] {
   return mano.turnos.map(t => t.signal ? {...t.action, sena: t.signal} : t.action);
 }
 
-export function restaurar(fila: Registro, formato: Format): ManoPublicable {
+export function prepararTurno(mano: ManoPublicable, humanos: readonly number[]): ManoPublicable {
+  return { ...mano, estado: anticiparAnteFlor(mano.estado, humanos) };
+}
+
+export function restaurar(fila: Registro, formato: Format, humanos?: readonly number[]): ManoPublicable {
   if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== (formato === "pairs-senas" ? versions.signals : null)) {
     throw new Error("Versión de reglas desconocida.");
   }
   const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio), turnos: []};
-  return fila.acciones.reduce((mano, accion) => confirmar(mano, formato, accion), inicial);
+  const mano = fila.acciones.reduce((previa, accion) => {
+    // Las manos anteriores pueden tener una salida rival en este mismo punto.
+    // Solo reconstruir la oportunidad si el registro contiene la intervención.
+    const enTurno = aDecidir(previa.estado).includes(accion.asiento);
+    return confirmar(enTurno ? previa : prepararTurno(previa, []), formato, accion);
+  }, inicial);
+  return humanos ? prepararTurno(mano, humanos) : mano;
 }
 
 export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos: readonly number[], ensayo = false) {
   while (!mano.estado.resultado) {
+    mano = prepararTurno(mano, humanos);
     const posibles = aDecidir(mano.estado);
     if (posibles.some(s => humanos.includes(s))) break;
     const asiento = posibles[0];
     if (asiento === undefined) throw new Error("Falta un asiento habilitado.");
-    const accion = elegirAccionOnline(vistaOnline(mano.estado, asiento));
+    const accion = elegirAccionOnline(vistaParaPolitica(mano.estado, asiento));
     if (!accion) throw new Error("La computadora no encontró jugada.");
     // El ensayo privado comprueba la transmisión de gestos desde un actor de prueba.
     const sena = formato === "pairs-senas" && ensayo ? signals[mano.turnos.length % signals.length] : undefined;

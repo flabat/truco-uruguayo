@@ -7,7 +7,7 @@ import {
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, type VistaMesa } from "./mesas.ts";
-import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
+import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar,
   type Confirmada, type ManoPublicable, type Registro } from "./turnos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
@@ -96,7 +96,7 @@ export async function avanzarEnsayo(pool: Pool) {
         throw new Error("El ensayo requiere un asiento de computadora por posición.");
       }
       const fila = await ultimaMano(db, mesa.id);
-      const previo = fila && restaurar(fila, formato);
+      const previo = fila && restaurar(fila, formato, []);
       const puntos: Tanteador = previo ? tantos(previo.estado) : [0, 0];
       if (previo && !previo.estado.resultado) {
         await programarTurno(db, mesa.id, previo, []);
@@ -152,9 +152,22 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0], undefined, diferida);
       return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento) };
     }
-    const mano = restaurar(fila, mesa.formato);
+    const humanos = asientosHumanos(mesa);
+    const mano = restaurar(fila, mesa.formato, humanos);
     const estado = mano.estado;
-    if (!comando) return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento) };
+    if (!comando) {
+      // Una mano guardada antes de esta regla puede estar esperando la salida humana.
+      if (estado.antesDeSalida !== undefined) {
+        if (diferida) await programarTurno(db, id, mano, humanos);
+        else {
+          const nueva = jugarComputadoras(mano, mesa.formato, humanos);
+          await db.query("UPDATE juego.manos SET version=version+1, acciones=$3 WHERE mesa=$1 AND numero=$2",
+            [id, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
+          return { cambio: true, partida: vista(nueva, mesa.formato, fila.numero, fila.version + 1, asiento) };
+        }
+      }
+      return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento) };
+    }
     if (comando.version !== fila.version) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
     const version = fila.version + 1;
     let partida;
@@ -172,8 +185,8 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         if (!(error instanceof RangeError || error instanceof TypeError)) throw error;
         throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
       }
-      const siguiente = diferida ? paso : jugarComputadoras(paso, mesa.formato, asientosHumanos(mesa));
-      if (diferida) await programarTurno(db, id, siguiente, asientosHumanos(mesa));
+      const siguiente = diferida ? prepararTurno(paso, humanos) : jugarComputadoras(paso, mesa.formato, humanos);
+      if (diferida) await programarTurno(db, id, siguiente, humanos);
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
         [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
       partida = vista(siguiente, mesa.formato, fila.numero, version, asiento);

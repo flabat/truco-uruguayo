@@ -1,12 +1,12 @@
 import type {Pool, PoolClient} from "pg";
-import { aDecidir } from "../src/motor/mesa-online.ts";
+import { aDecidir, vistaParaPolitica } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { Move, SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
 import { formatoMesa } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { confirmarComputadora, guardarAcciones, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -34,10 +34,10 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
   const fila = await snapshot(pool, id);
   if (!fila) return false;
   const formato = formatoMesa(fila.modo, fila.version_senas);
-  const mano = restaurar(fila, formato);
+  const mano = restaurar(fila, formato, fila.humanos);
   const seat = actor(mano, fila.humanos);
   if (seat === undefined) return false;
-  const observacion = observe(mano.estado, seat, formato, mano.turnos);
+  const observacion = observe(mano.estado, seat, formato, mano.turnos, vistaParaPolitica);
   const decision = await servicio.decide(fila.politica, formato === "pairs-senas"
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
 
@@ -53,7 +53,7 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
       await db.query("ROLLBACK");
       return false;
     }
-    const nueva = confirmarComputadora(mano, formato, seat, decision.action);
+    const nueva = prepararTurno(confirmarComputadora(mano, formato, seat, decision.action), actual.humanos);
     await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
       [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
     await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
