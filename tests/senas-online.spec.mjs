@@ -38,7 +38,7 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   await expect(selector).toBeEnabled();
   await expect(selector).toHaveValue("");
   await expect(selector.locator("option")).toHaveCount(14);
-  await selector.focus(); await selector.press("ArrowDown");
+  await selector.focus(); await selector.press("a");
   await expect(selector).toHaveValue("cejas");
   expect(sent).toEqual([]);
   if(process.env.CAPTURAS_SENAS) {

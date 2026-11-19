@@ -215,7 +215,8 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const bloqueada = ocupado || !conectada;
+  const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.versionSenas !== "senas-publicas-v1";
+  const bloqueada = ocupado || !conectada || Boolean(versionDesconocida);
   return (
     <>
       <div className="j-barra">
@@ -231,6 +232,7 @@ function MesaAbierta({
           Reconectando con tu mesa…
         </p>
       )}
+      {versionDesconocida && <p role="alert">Actualizá la aplicación para jugar con esta versión de señas.</p>}
       {aviso && (
         <p role="alert" className="j-aviso">
           {aviso}
