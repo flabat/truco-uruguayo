@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VueltaCerrada } from "../../motor/mano";
@@ -258,6 +258,7 @@ export function EnJuego({
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
   const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
+  const florQuerida = cobrados.find((c) => c.comparacionFlor);
   return (
     <>
       <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
@@ -393,13 +394,24 @@ export function EnJuego({
           <summary>Ver jugadas y cantos de la mano</summary>
           <ol>
             {v.acciones.map((a, i) => (
-              <li key={i}>
-                {nombre(a.asiento)}{" "}
-                {a.tipo === "carta"
-                  ? "jugó " + nombrar(a.carta).toLowerCase()
-                  : "dijo «" + canto[a.tipo] + "»"}
-                .
-              </li>
+              <Fragment key={i}>
+                <li>
+                  {nombre(a.asiento)}{" "}
+                  {a.tipo === "carta"
+                    ? "jugó " + nombrar(a.carta).toLowerCase()
+                    : "dijo «" + canto[a.tipo] + "»"}
+                  .
+                </li>
+                {florQuerida?.comparacionFlor?.indiceAccion === i && (
+                  <li>
+                    <strong>Flor querida.</strong>{" "}
+                    {new Intl.ListFormat("es-UY").format(
+                      florQuerida.comparacionFlor.participantes.map(({ asiento, total }) => nombre(asiento) + " cantó " + total),
+                    )}. Ganó {nombre(florQuerida.asiento!)} con {florQuerida.tantoGanador} de flor. El equipo{" "}
+                    {florQuerida.equipo + 1} sumó {tantos(florQuerida.tantos)} al tanteador.
+                  </li>
+                )}
+              </Fragment>
             ))}
           </ol>
         </details>
