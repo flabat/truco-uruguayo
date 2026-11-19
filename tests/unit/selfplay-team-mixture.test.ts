@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {openActor} from "../../api/actor-registry.ts";
+import {createHash} from "node:crypto";
+import {mkdtempSync,mkdirSync,readFileSync,rmSync,writeFileSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {runTeamPilot} from "../../training/selfplay/team-pilot.ts";
+import {artifactPin,openActor} from "../../api/actor-registry.ts";
 import {playMatch} from "../../training/arena/index.ts";
 import {initial} from "../../training/anchored/actor.ts";
 import {observe} from "../../training/seat/index.ts";
@@ -53,4 +58,29 @@ test("la cubierta del tercer asiento cuenta cartas desconocidas y protege al com
   model.routes[teamContext(obs)]="team";
   const dist=openTeamMixture(model).decide(obs,obs.legalActions);
   assert.equal(obs.legalActions[dist.indexOf(1)],"bastos-01");
+});
+
+test("el piloto congela su actor antes de auditar y rechaza cambiar las semillas al reanudar",()=>{
+  const format="pairs", root=mkdtempSync(join(tmpdir(),"team-router-"));
+  try {
+    const area=join(root,"research"), previous=join(root,"prior"), output=join(root,"output");
+    mkdirSync(join(previous,"input",format),{recursive:true});mkdirSync(join(previous,format));
+    mkdirSync(area);
+    const anchor=initial(format), finalist=createLearner(anchor).actor;
+    const store=(path:string,data:unknown)=>{
+      const buffer=JSON.stringify(data);writeFileSync(path,buffer);return createHash("sha256").update(buffer).digest("hex");
+    };
+    const ids={anchor:store(join(previous,"input",format,"champion-at-start.json"),anchor),
+      finalist:store(join(previous,format,"final-candidate.json"),finalist)};
+    const protocol={formatVersion:"senas-equipo-v1",trainOnly:true,inputs:{[format]:ids},seeds:{[format]:{fit:43,select:44,audit:45}},
+      pairs:{fit:2,select:2,audit:2},trainingFixtures:["champion","strong-cards","V1","caller","strong-cards/V1-teammate"],
+      auditExtras:["finalist","champion/V1-teammate"]};
+    const file=join(area,"protocol.json");store(file,protocol);
+    const result=runTeamPilot(format,previous,area,output);
+    const exported=JSON.parse(readFileSync(join(output,format,"team.json"),"utf8"));
+    assert.equal(artifactPin(exported),result.pin);assert.equal(result.fixtures.length,7);
+    assert.deepEqual(runTeamPilot(format,previous,area,output),result);
+    protocol.seeds[format].audit=47;store(file,protocol);
+    assert.throws(()=>runTeamPilot(format,previous,area,output),/Run inputs changed/);
+  } finally {rmSync(root,{recursive:true,force:true});}
 });
