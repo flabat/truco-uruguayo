@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { proyectarTercetos } from "../api/partidas-tercetos.ts";
+import { aplicarOnline, iniciarOnline } from "../src/motor/mesa-online.ts";
+
+const ejemplo = JSON.parse(readFileSync(new URL("./fixtures/pico-tercetos-v2.json", import.meta.url), "utf8"));
 
 const id = "449e7634-5062-4dec-9063-357975dac55f";
 const nombres = ["Ana", "Bruno", "Clara", "Diego", "Elena", "Félix"];
-const cartas = [
-  ["espadas-01", "copas-12", "oros-03"], ["bastos-03", "espadas-03", "copas-05"],
-  ["copas-03", "copas-04", "oros-04"], ["oros-01", "oros-02", "bastos-01"],
-  ["bastos-02", "bastos-05", "espadas-02"], ["oros-06", "bastos-06", "copas-07"],
-];
 const jugadores = nombres.map((nombre, asiento) => ({ nombre, id: "jugador-" + asiento }));
 const asientos = nombres.map((nombre, asiento) => ({ nombre, asiento, equipo: asiento % 2, tipo: "humano" }));
 const crearSala = (miAsiento, plazas = asientos) => ({
@@ -14,39 +14,12 @@ const crearSala = (miAsiento, plazas = asientos) => ({
   miAsiento, asientos: plazas, lista: plazas.every(a => a.tipo !== "vacio"),
   invitacion: "http://localhost/jugar/?invitacion=seis-personas",
 });
-const caminos = [ [5, 2], [0, 3], [1, 4] ];
-const lanceDe = (duelo) => duelo === null
-  ? { tipo: "redondilla", duelo: null, activos: [4, 5, 0, 1, 2, 3] }
-  : { tipo: "pico-a-pico", duelo, activos: caminos[duelo - 1] };
-const primero = {
-  ...lanceDe(1), acciones: [{ tipo: "mazo", asiento: 5 }], vueltas: [],
-  resultado: { equipo: 0, tantos: 1, motivo: "mazo" }, cobros: [{ equipo: 0, valor: 1, tantos: 1, motivo: "truco" }],
-  puntos: [13, 11],
-};
+function abrirRedondilla() {
+  return iniciarOnline({ ...ejemplo.reparto, mano: 4, dador: 3 }, [0, 0], ejemplo.meta);
+}
 
-function lectura(asiento, duelo, version, termino = false) {
-  const lance = lanceDe(duelo);
-  const jugando = lance.activos.includes(asiento) && !termino;
-  const estado = termino ? "terminado" : jugando ? "jugando" : "esperando";
-  const resultado = termino ? { equipo: 0, tantos: 13, motivo: "envido" } : null;
-  const cobros = termino ? [{ equipo: 0, valor: 13, tantos: 13, motivo: "envido", asiento: 0, tantoGanador: 31 }] : [];
-  const acciones = termino ? [{ tipo: "falta-envido", asiento: 0 }, { tipo: "quiero", asiento: 3 }] : [];
-  const historialLances = duelo === 2 ? [primero] : [];
-  if (termino) historialLances.push({ ...lance, resultado, acciones, cobros, vueltas: [], puntos: [26, 11] });
-  return {
-    formato: "triples", version, meta: 26, manoNumero: duelo === null ? 1 : 2,
-    puntos: termino ? [26, 11] : duelo === 2 ? [13, 11] : [12, 11],
-    ganadorPartida: termino ? 0 : null, lance, historialLances,
-    vista: {
-      estado, asiento, muestra: "espadas-04", dador: duelo === null ? 3 : 4, mano: duelo === null ? 4 : 5,
-      turno: termino ? null : lance.activos[0], apuesta: "sin-canto", equipoPorAsiento: [0, 1, 0, 1, 0, 1],
-      resultado, pendiente: null, trucoPendiente: null, porDeclararFlor: null,
-      vueltas: [], vueltaActual: { salida: lance.activos[0], jugadas: [] }, valorTruco: 1,
-      acciones, cobros, faltaPorEquipo: duelo === 2 ? [13, 2] : [1, 2],
-      legales: jugando && lance.activos[0] === asiento ? ["carta", "envido", "falta-envido", "truco", "mazo"] : [],
-      ...(jugando && { cartas: cartas[asiento], tantosPropios: { modalidad: "envido", total: 31 } }),
-    },
-  };
+function lectura(estado, asiento, version) {
+  return proyectarTercetos(estado, estado.lance.tipo === "redondilla" ? 1 : 2, version, asiento);
 }
 
 test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta elegida", async ({ page }) => {
@@ -69,7 +42,7 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
       json = crearSala(0, plazas);
     }
     if (pathname.endsWith("/" + id)) json = crearSala(0, plazas);
-    if (pathname.endsWith("/partida")) json = lectura(0, null, 1);
+    if (pathname.endsWith("/partida")) json = lectura(abrirRedondilla(), 0, 1);
     await route.fulfill({ json });
   });
   await page.goto("jugar/");
@@ -101,7 +74,8 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {
   test.setTimeout(75_000);
-  let duelo = null, version = 1, termino = false;
+  let estado = abrirRedondilla(), version = 1;
+  const confirmadas = [];
   const sockets = new Map(), contextos = [];
   const ancho = info.project.name === "mobile" ? 320 : 1280;
   function avisar() {
@@ -120,12 +94,16 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
         if (pathname === "/api/jugador") json = jugadores[asiento];
         if (pathname.endsWith("/unirse") || pathname.endsWith("/" + id)) json = crearSala(asiento);
         if (pathname.endsWith("/acciones")) {
-          expect(asiento).toBe(5);
-          expect(route.request().postDataJSON()).toMatchObject({ version, accion: { tipo: "mazo" } });
-          duelo = 2;
+          const datos = route.request().postDataJSON();
+          expect(datos.version).toBe(version);
+          const accion = { ...datos.accion, asiento };
+          const paso = aplicarOnline(estado, accion);
+          expect(paso.ok).toBeTruthy();
+          confirmadas.push({ duelo: estado.lance.duelo, ...accion });
+          estado = paso.estado;
           avisar();
         }
-        if (pathname.endsWith("/partida") || pathname.endsWith("/acciones")) json = lectura(asiento, duelo, version, termino);
+        if (pathname.endsWith("/partida") || pathname.endsWith("/acciones")) json = lectura(estado, asiento, version);
         await route.fulfill({ json });
       });
       await page.goto("jugar/?invitacion=seis-personas");
@@ -144,13 +122,18 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
         expect(Math.abs((yo.x + yo.width/2) - (enfrente.x + enfrente.width/2))).toBeLessThan(2);
       }
     }
-    duelo = 1;
+    estado = iniciarOnline(ejemplo.reparto, ejemplo.puntosInicio, ejemplo.meta, ejemplo.numero);
     avisar();
     for (const [i, page] of paginas.entries()) {
       const cartas = page.getByRole("group", { name: "Tus cartas" });
       await expect(page.getByText(/Duelo 1 de 3 ·/)).toBeVisible();
       await expect(cartas).toHaveCount([5, 2].includes(i) ? 1 : 0);
     }
+    await expect(paginas[5].getByText(/Si gana tu equipo, cobra 2 tantos/)).toBeVisible();
+    await paginas[5].getByRole("button", { name: "Envido", exact: true }).click();
+    await paginas[2].getByRole("button", { name: "Quiero", exact: true }).click();
+    await expect(paginas[4].getByText("1 buena", { exact: true })).toBeVisible();
+    await expect(paginas[4].getByText(/Duelo 1 de 3 ·/)).toBeVisible();
     await paginas[5].getByRole("button", { name: "Irse al mazo" }).press("Enter");
     await expect(paginas[5].getByRole("heading", { name: "Turno de Ana" })).toBeFocused();
     await expect(paginas[5].getByText("Ya jugaste tu duelo. Esperá el próximo reparto.")).toBeVisible();
@@ -166,13 +149,18 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await expect(paginas[4].getByText("Te toca en el duelo 3 de 3.")).toBeVisible();
     await expect(paginas[4].getByText("Tus tantos", {exact: true})).toHaveCount(0);
     await expect(paginas[4].getByText("Último cobro · Equipo 1, 1 tanto por truco.")).toBeVisible();
-    await expect(paginas[0].getByText("0 buenas", { exact: true })).toHaveCount(1);
+    await expect(paginas[0].getByText("2 buenas", { exact: true })).toHaveCount(1);
     if (process.env.CAPTURAS_TERCETOS) {
       const i = ancho === 320 ? 5 : 0;
-      await paginas[i].locator(".j-partida").screenshot({ path: `${process.env.CAPTURAS_TERCETOS}/tercetos-${ancho}.jpg`, type: "jpeg", quality: 84 });
+      await paginas[i].locator(".j-partida").screenshot({ path: `${process.env.CAPTURAS_TERCETOS}/tercetos-${ancho}.jpg`, type: "jpeg", quality: 84, scale: "css" });
     }
-    termino = true;
-    avisar();
+    await paginas[0].getByRole("button", { name: "Flor", exact: true }).click();
+    await paginas[3].reload();
+    await expect(paginas[3].getByRole("heading", { name: "Te toca declarar" })).toBeVisible();
+    await paginas[3].getByRole("button", { name: "Flor", exact: true }).click();
+    await paginas[3].getByRole("button", { name: "Contraflor al resto", exact: true }).click();
+    await paginas[0].getByRole("button", { name: "Quiero", exact: true }).click();
+    expect(confirmadas).toEqual(ejemplo.acciones);
     for (const [i, page] of paginas.entries()) {
       await expect(page.getByRole("heading", { name: i % 2 ? "El rival ganó el chico" : "Tu equipo ganó el chico" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
@@ -180,7 +168,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
     }
     await paginas[4].getByText(/Duelo 2 de 3 · Ganó el equipo 1/).click();
-    await expect(paginas[4].getByText("Equipo 1 · 13 tantos por envido (Ana con 31).")).toBeVisible();
+    await expect(paginas[4].getByText("Equipo 1 · 11 tantos por flor (Ana con 38) · valor del canto 15 tantos.")).toBeVisible();
   } finally {
     await Promise.all(contextos.map(ctx => ctx.close()));
   }
