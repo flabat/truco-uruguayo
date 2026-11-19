@@ -10,18 +10,18 @@ import type { TresCartas } from "../../src/motor/reparto.ts";
  * la información común, dos prescripciones para la segunda vuelta. Cada una mapea las
  * dos posibles tenencias privadas del asiento a una de sus dos cartas restantes.
  * Los rivales juegan en orden fijo; la tercera vuelta queda forzada. Solo se admiten cartas. */
-const opens: CardId[] = ["bastos-12", "bastos-06", "copas-06", "copas-12"];
-const left = [["espadas-10", "oros-05"], ["oros-11", "espadas-11"]] as const;
-const right = [["espadas-05", "espadas-02"], ["espadas-04", "espadas-03"]] as const;
+const opens: CardId[] = ["copas-07", "bastos-12", "copas-05", "copas-12"];
+const left = [["espadas-06", "copas-03"], ["oros-06", "copas-11"]] as const;
+const right = [["bastos-01", "bastos-04"], ["oros-04", "espadas-10"]] as const;
 export type Prescription = readonly [0 | 1, 0 | 1];
 const options: Prescription[] = [[0, 0], [0, 1], [1, 0], [1, 1]];
 
 function position(a: 0 | 1, c: 0 | 1) {
   const manos: TresCartas[] = [
-    [opens[0], ...left[a]], [opens[1], "bastos-11", "oros-03"],
-    [opens[2], ...right[c]], [opens[3], "oros-06", "bastos-05"],
+    [opens[0], ...left[a]], [opens[1], "bastos-05", "espadas-03"],
+    [opens[2], ...right[c]], [opens[3], "oros-10", "oros-11"],
   ];
-  return iniciarOnline({versionReparto: "online-1", mano: 0, dador: 3, muestra: "copas-01", manos}, [39, 39]);
+  return iniciarOnline({versionReparto: "online-1", mano: 0, dador: 3, muestra: "espadas-05", manos}, [39, 39]);
 }
 export function prescriptionValue(first: Prescription, third: Prescription) {
   let wins = 0;
