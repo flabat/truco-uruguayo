@@ -1,0 +1,29 @@
+{
+  "version": "chico-v1",
+  "id": "9bec3db3-a4fd-4ee3-bd58-000000000001",
+  "origen": "fixture",
+  "variante": "duelo",
+  "perfil": "duel",
+  "motor": {"version": "online-1", "build": "git:9c867e1c8db858e7692cd09096b5cada36a0440a"},
+  "meta": 40,
+  "inicio": "2026-11-19T12:00:00Z",
+  "asientos": [
+    {"tipo": "humano"},
+    {"tipo": "computadora", "politica": "fixture-duelo-v1"}
+  ],
+  "eventos": [
+    {
+      "tipo": "reparto", "secuencia": 1, "manoNumero": 1, "puntosInicio": [0, 0],
+      "reparto": {
+        "versionReparto": "online-1", "dador": 1, "mano": 0, "muestra": "espadas-07",
+        "manos": [
+          ["oros-07", "oros-06", "bastos-03"],
+          ["espadas-04", "copas-01", "oros-12"]
+        ]
+      }
+    },
+    {"tipo": "decision", "secuencia": 2, "accion": {"tipo": "falta-envido", "asiento": 0}, "cobros": [], "puntos": [0, 0]},
+    {"tipo": "decision", "secuencia": 3, "accion": {"tipo": "quiero", "asiento": 1}, "cobros": [{"equipo": 0, "tantos": 40, "motivo": "envido", "asiento": 0, "tantoGanador": 33}], "puntos": [40, 0], "bot": {"solicitada": "fixture-duelo-v1", "aplicada": "fixture-duelo-v1", "observacion": "seat-v1", "acciones": "cards-bids-signals-v1"}},
+    {"tipo": "cierre", "secuencia": 4, "estado": "terminado", "ganador": 0, "puntos": [40, 0], "fecha": "2026-11-19T12:01:00Z"}
+  ]
+}

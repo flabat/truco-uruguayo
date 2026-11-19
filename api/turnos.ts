@@ -14,7 +14,7 @@ export interface Registro {
   reparto: RepartoOnline; puntos_inicio: [number, number]; acciones: Confirmada[];
 }
 
-function identificador(accion: Confirmada): ActionId {
+export function identificador(accion: Confirmada): ActionId {
   const base = accion.tipo === "carta" ? accion.carta : accion.tipo;
   return accion.sena === undefined ? base : `${accion.sena}/${base}`;
 }
@@ -81,7 +81,8 @@ export function restaurar(fila: Registro, formato: Format, meta?: number, humano
   return humanos ? prepararTurno(mano, humanos) : mano;
 }
 
-export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos: readonly number[], ensayo = false) {
+export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos: readonly number[], ensayo = false,
+    alConfirmar?: (mano: ManoPublicable, propuesta: ActionId) => void) {
   while (!mano.estado.resultado) {
     mano = prepararTurno(mano, humanos);
     const posibles = aDecidir(mano.estado);
@@ -92,7 +93,9 @@ export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos
     if (!accion) throw new Error("La computadora no encontró jugada.");
     // El ensayo privado comprueba la transmisión de gestos desde un actor de prueba.
     const sena = hasSignals(formato) && ensayo ? signals[mano.turnos.length % signals.length] : undefined;
-    mano = confirmarComputadora(mano, formato, asiento, identificador(sena ? {...accion, sena} : accion));
+    const propuesta = identificador(sena ? {...accion, sena} : accion);
+    mano = confirmarComputadora(mano, formato, asiento, propuesta);
+    alConfirmar?.(mano, propuesta);
   }
   return mano;
 }
