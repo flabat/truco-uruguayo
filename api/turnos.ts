@@ -4,6 +4,7 @@ import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segunda
 import type { Asiento } from "../src/motor/reparto.ts";
 import { signals, versions, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
+import type { FormatoMesa } from "./mesas.ts";
 import { ErrorPeticion } from "./http.ts";
 
 export type Confirmada = AccionOnline & { sena?: Signal };
@@ -18,7 +19,7 @@ function identificador(accion: Confirmada): ActionId {
   return accion.sena === undefined ? base : `${accion.sena}/${base}`;
 }
 
-export function leerAccion(datos: unknown, asiento: Asiento, formato: Format): Confirmada {
+export function leerAccion(datos: unknown, asiento: Asiento, formato: FormatoMesa): Confirmada {
   if (!datos || typeof datos !== "object" || Array.isArray(datos) || !("tipo" in datos) || typeof datos.tipo !== "string") {
     throw new ErrorPeticion(400, "Falta la acción de juego.");
   }
@@ -29,7 +30,7 @@ export function leerAccion(datos: unknown, asiento: Asiento, formato: Format): C
   }
   if (Object.keys(datos).length !== claves.length || !claves.every(k => Object.hasOwn(datos, k))
     || (datos.tipo === "carta" && !("carta" in datos && esCardId(datos.carta)))
-    || datos.tipo === "mazo" || esCardId(datos.tipo) || datos.tipo.includes("/")) {
+    || (datos.tipo === "mazo" && formato !== "triples") || esCardId(datos.tipo) || datos.tipo.includes("/")) {
     throw new ErrorPeticion(400, "La acción requiere un canto o una carta y una seña opcional.");
   }
   return { ...datos, asiento } as Confirmada;
@@ -59,11 +60,11 @@ export function prepararTurno(mano: ManoPublicable, humanos: readonly number[]):
   return { ...mano, estado: anticiparAnteFlor(mano.estado, humanos) };
 }
 
-export function restaurar(fila: Registro, formato: Format, humanos?: readonly number[]): ManoPublicable {
+export function restaurar(fila: Registro, formato: Format, meta?: number, humanos?: readonly number[]): ManoPublicable {
   if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== (formato === "pairs-senas" ? versions.signals : null)) {
-    throw new Error("Versión de reglas desconocida.");
+    throw new ErrorPeticion(503, "Esta mesa requiere otra versión de las reglas.");
   }
-  const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio), turnos: []};
+  const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio, meta), turnos: []};
   const mano = fila.acciones.reduce((previa, accion) => {
     // Las manos anteriores pueden tener una salida rival en este mismo punto.
     // Solo reconstruir la oportunidad si el registro contiene la intervención.

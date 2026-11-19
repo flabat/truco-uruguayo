@@ -1,24 +1,28 @@
 import { randomInt } from "node:crypto";
+import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza } from "./cartas.ts";
 import { evaluarTantos } from "./tantos.ts";
+import { faltaDelGanador, tipoDeReparto } from "./reglas-tercetos.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
-import { esAsiento, esRepartoOnline, type Asiento, type RepartoOnline, type TresCartas } from "./reparto.ts";
+import { iniciarMano, jugarCarta, vistaPublicaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
+import { esAsientoOnline, esRepartoOnline, type Asiento, type AsientoV1, type RepartoOnline, type TresCartas } from "./reparto.ts";
 import {
-  aDecidir, cobrarVueltas, legalesOnline, resolverCanto, tantosPropios, type AccionOnline, type Cobro,
-  type EstadoOnline, type Oferta, type TipoAccionOnline,
+  aDecidir, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios, type AccionOnline, type AccionOnlineV1, type Cobro,
+  type EstadoOnline, type LanceTercetos, type ResumenLance, type Oferta, type TipoAccionOnline, type TipoAccionOnlineV1,
 } from "./cantos-online.ts";
 
 export { aDecidir };
-export type { AccionOnline, Cobro, EstadoOnline, RepartoOnline, TipoAccionOnline };
+export { marcadorOnline } from "./cantos-online.ts";
+export { versionReglasTercetos } from "./reglas-tercetos.ts";
+export type { AccionOnline, AccionOnlineV1, Cobro, EstadoOnline, LanceTercetos, ResumenLance, RepartoOnline, TipoAccionOnline, TipoAccionOnlineV1 };
 export const versionReglasOnline = 1;
 
 /** Reparte en el servidor una carta por asiento en cada una de las tres rondas. */
-export function repartirOnline(cantidad: 2 | 4, dador?: number): RepartoOnline {
-  if (cantidad !== 2 && cantidad !== 4) throw new RangeError("La mesa requiere dos o cuatro asientos.");
+export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnline {
+  if (cantidad !== 2 && cantidad !== 4 && cantidad !== 6) throw new RangeError("La mesa requiere dos, cuatro o seis asientos.");
   dador ??= randomInt(cantidad);
-  if (!esAsiento(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
+  if (!esAsientoOnline(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
   const mano = ((dador + 1) % cantidad) as Asiento;
   const mazoMezclado = [...mazo];
   // Fisher–Yates parcial: solo se precisan las tres rondas y la muestra.
@@ -30,20 +34,57 @@ export function repartirOnline(cantidad: 2 | 4, dador?: number): RepartoOnline {
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { versionReparto: "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
+  return { versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
-export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [number, number] = [0, 0], meta = 40): EstadoOnline {
+function dueloDelPico(mano: Asiento, duelo: 1 | 2 | 3): LanceTercetos {
+  const primero = ((mano + duelo - 1) % 6) as Asiento;
+  return { tipo: "pico-a-pico", duelo, activos: [primero, ((primero + 3) % 6) as Asiento] };
+}
+
+export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [number, number] = [0, 0],
+    metaElegida?: number, numeroReparto = 1): EstadoOnline {
   if (!esRepartoOnline(reparto)) throw new TypeError("Se necesita un reparto de mesa en línea válido.");
-  if (!Number.isSafeInteger(meta) || meta <= 0 || puntosInicio.length !== 2
+  const meta = metaElegida === undefined ? metaPorModalidad[reparto.manos.length === 6 ? "3v3" : reparto.manos.length === 2 ? "1v1" : "2v2"] : metaElegida;
+  if ((reparto.versionReparto === "online-2" && !esMetaDeChico(meta)) || !Number.isSafeInteger(meta) || meta <= 0 || puntosInicio.length !== 2
     || !puntosInicio.every(p => Number.isSafeInteger(p) && p >= 0 && p < meta)) {
     throw new RangeError("La meta y los tantos de inicio deben corresponder a un partido en juego.");
   }
+  let lance: LanceTercetos | undefined;
+  if (reparto.versionReparto === "online-2") {
+    lance = tipoDeReparto(numeroReparto, puntosInicio, meta) === "pico-a-pico"
+      ? dueloDelPico(reparto.mano, 1)
+      : { tipo: "redondilla", duelo: null, activos: reparto.manos.map((_, i) => ((reparto.mano + i) % 6) as Asiento) };
+  }
+  return abrirLance(reparto, puntosInicio, meta, lance, []);
+}
+
+function abrirLance(reparto: RepartoOnline, puntosInicio: readonly [number, number], meta: number,
+    lance: LanceTercetos | undefined, historialLances: readonly ResumenLance[]): EstadoOnline {
   return {
-    mano: iniciarMano(reparto), puntosInicio: [...puntosInicio], meta, acciones: [], cobros: [], resultado: null,
+    ...(lance && { lance, historialLances }),
+    mano: iniciarMano(reparto, lance?.tipo === "pico-a-pico" ? lance.activos : undefined),
+    puntosInicio: [...puntosInicio], meta, acciones: [], cobros: [], resultado: null,
     valorTruco: 1, ultimoCantorTruco: null, trucoPendiente: null, lateral: null, lateralCerrado: false,
     flores: [], consultaFlor: [], respuestaEnvido: null, rechazoTruco: false,
   };
+}
+
+/** Transición atómica tras el último cobro de un lance, reproducible con la misma acción. */
+function cerrarLance(estado: EstadoOnline): EstadoOnline {
+  const { lance, resultado } = estado;
+  if (!lance || !resultado) return estado;
+  const puntos = marcadorOnline(estado);
+  const resumen: ResumenLance = { ...lance, resultado, puntos, acciones: estado.acciones,
+    cobros: estado.cobros, vueltas: estado.mano.vueltas };
+  const historial = [...estado.historialLances!, resumen];
+  if (!puntos.includes(estado.meta) && lance.tipo === "pico-a-pico" && lance.duelo < 3) {
+    const proximo = dueloDelPico(estado.mano.reparto.mano, lance.duelo === 1 ? 2 : 3);
+    return abrirLance(estado.mano.reparto, puntos, estado.meta, proximo, historial);
+  }
+  return { ...estado, historialLances: historial, trucoPendiente: null, lateral: null, consultaFlor: [],
+    respuestaEnvido: null, rechazoTruco: false, retiro: undefined,
+    mano: { ...estado.mano, turno: null, vueltaActual: null } };
 }
 
 type PasoOnline = { ok: true; estado: EstadoOnline } | { ok: false; error: ErrorJugada | "accion-invalida" | "accion-no-permitida" };
@@ -96,7 +137,7 @@ export function anticiparAnteFlor(estado: EstadoOnline, humanos: readonly number
 
 export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoOnline {
   if (estado.resultado) return { ok: false, error: "mano-cerrada" };
-  if (!accion || !esAsiento(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
+  if (!accion || !esAsientoOnline(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
     return { ok: false, error: "accion-invalida" };
   }
   const { tipo, asiento } = accion;
@@ -121,7 +162,7 @@ export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoO
     siguiente.acciones = [...estado.acciones, canto];
     resolverCanto(siguiente, canto);
   }
-  return { ok: true, estado: siguiente };
+  return { ok: true, estado: cerrarLance(siguiente) };
 }
 
 export interface VistaOnline extends VistaAsiento {
@@ -137,38 +178,80 @@ export interface VistaOnline extends VistaAsiento {
   readonly tantosPropios: ReturnType<typeof tantosPropios>;
 }
 
-export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline {
-  const mesa = vistaPara(estado.mano, asiento);
+function vistaPublicaOnline(estado: EstadoOnline, asiento: Asiento) {
+  const mesa = vistaPublicaPara(estado.mano, asiento);
   const { resultado, valorTruco } = estado;
   const trucoPendiente = resultado ? null : estado.trucoPendiente;
   const pendiente = resultado ? null : estado.lateral ?? trucoPendiente;
-  const apuesta = resultado?.motivo === "rechazo" ? "rechazado" : trucoPendiente ? "pendiente"
+  const apuesta: VistaOnline["apuesta"] = resultado?.motivo === "rechazo" ? "rechazado" : trucoPendiente ? "pendiente"
     : valorTruco > 1 ? "querido" : "sin-canto";
   return {
     ...mesa, turno: resultado ? null : estado.antesDeSalida ?? mesa.turno, vueltaActual: resultado ? null : mesa.vueltaActual,
-    equipoGanador: resultado?.equipo ?? null, apuesta, valorTruco, legales: legalesOnline(estado, asiento),
+    equipoGanador: resultado?.equipo ?? null, apuesta, valorTruco,
     resultado: resultado && { ...resultado }, pendiente: pendiente && { tipo: pendiente.tipo, asiento: pendiente.asiento },
     trucoPendiente: trucoPendiente && { ...trucoPendiente }, porDeclararFlor: estado.consultaFlor[0] ?? null,
-    acciones: structuredClone(estado.acciones), cobros: structuredClone(estado.cobros), tantosPropios: tantosPropios(estado, asiento),
+    acciones: structuredClone(estado.acciones), cobros: structuredClone(estado.cobros),
   };
 }
 
+function privadaJugable(estado: EstadoOnline, asiento: Asiento): VistaOnline {
+  return { ...vistaPublicaOnline(estado, asiento), cartas: [...estado.mano.restantes[asiento]],
+    legales: legalesOnline(estado, asiento), tantosPropios: tantosPropios(estado, asiento) };
+}
+
+export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline {
+  if (estado.lance && (estado.resultado || !estado.lance.activos.includes(asiento))) {
+    throw new RangeError("Ese asiento necesita la proyección pública de tercetos.");
+  }
+  return privadaJugable(estado, asiento);
+}
+
+export interface VistaOnlineV1 extends VistaOnline {
+  readonly asiento: AsientoV1;
+  readonly mano: AsientoV1;
+  readonly dador: AsientoV1;
+  readonly turno: AsientoV1 | null;
+  readonly acciones: readonly AccionOnlineV1[];
+  readonly legales: readonly TipoAccionOnlineV1[];
+}
+
+export function vistaOnlineV1(estado: EstadoOnline, asiento: Asiento): VistaOnlineV1 {
+  if (estado.mano.reparto.versionReparto !== "online-1") throw new RangeError("La liga usa un reparto V1.");
+  return privadaJugable(estado, asiento) as VistaOnlineV1;
+}
+
+type FaltaPorEquipo = { faltaPorEquipo: readonly [number, number] };
+export type VistaTercetos = FaltaPorEquipo & (
+  | (VistaOnline & { estado: "jugando" })
+  | (Omit<VistaOnline, "cartas" | "legales" | "tantosPropios"> & { estado: "esperando" | "terminado"; legales: [] })
+);
+
+export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTercetos {
+  if (!estado.lance) throw new RangeError("Se necesita una mesa de tercetos.");
+  const faltaPorEquipo = estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number];
+  if (estado.resultado || !estado.lance.activos.includes(asiento)) {
+    return { ...vistaPublicaOnline(estado, asiento), faltaPorEquipo,
+      estado: estado.resultado ? "terminado" : "esperando", legales: [] };
+  }
+  return { ...privadaJugable(estado, asiento), estado: "jugando", faltaPorEquipo };
+}
+
 /** Las políticas ya entrenadas expresan la entrega eligiendo una de sus cartas. */
-export function vistaParaPolitica(estado: EstadoOnline, asiento: Asiento): VistaOnline {
-  const vista = vistaOnline(estado, asiento);
+export function vistaParaPolitica(estado: EstadoOnline, asiento: Asiento): VistaOnlineV1 {
+  const vista = vistaOnlineV1(estado, asiento);
   return vista.legales.includes("mazo")
     ? { ...vista, legales: vista.legales.map(tipo => tipo === "mazo" ? "carta" : tipo) }
     : vista;
 }
 
 /** El bot recibe la misma vista que un humano en ese asiento y elige entre sus acciones legales. */
-export function elegirAccionOnline(vista: VistaOnline): AccionOnline | null {
+export function elegirAccionOnline(vista: VistaOnline): AccionOnlineV1 | null {
   const { asiento, cartas, muestra, legales, tantosPropios: { total } } = vista;
   if (!legales.length) return null;
   const fuertes = cartas.filter(carta => compararCartas(carta, "oros-03", muestra) >= 0);
   const primera = vista.vueltas[0]?.resultado;
   const ventaja = primera?.tipo === "ganada" && primera.equipo === vista.equipoPorAsiento[asiento];
-  const ofertas: TipoAccionOnline[] = ["flor", "paso-flor"];
+  const ofertas: TipoAccionOnlineV1[] = ["flor", "paso-flor"];
   if (total >= 42) ofertas.push("contraflor-al-resto");
   if (total >= 33) ofertas.push("con-flor-envido");
   if (total >= 35) ofertas.push("falta-envido");

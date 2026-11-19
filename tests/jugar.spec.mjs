@@ -18,6 +18,7 @@ const mesa = (modo, asientos, miAsiento = 0) => ({
   creadorId: "ana",
   miAsiento,
   modo,
+  meta: 40,
   asientos,
   lista: asientos.every((a) => a.tipo !== "vacio"),
   invitacion: "http://localhost/jugar/?invitacion=" + token,
@@ -57,6 +58,53 @@ async function simular(page, handler) {
   });
   return sockets;
 }
+
+test("de a seis se proponen 25 malas y 25 buenas y la mesa puede pactar otra meta", async ({ page }) => {
+  await page.goto("reglas/seis-jugadores/");
+  const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico de a seis" });
+  const mitades = page.locator("output[for=meta-seis]");
+  await expect(campo).toHaveValue("50");
+  await expect(mitades).toHaveText("25 malas y 25 buenas");
+  if (process.env.CAPTURAS_UI)
+    await page.locator(".meta-de-seis").screenshot({ path: `${process.env.CAPTURAS_UI}/meta-seis-${test.info().project.name}.png`, scale: "css" });
+  await campo.fill("26");
+  await campo.press("ArrowUp");
+  await expect(mitades).toHaveText("14 malas y 14 buenas");
+  await page.reload();
+  await expect(campo).toHaveValue("28");
+  await campo.fill("25");
+  await expect(mitades).toHaveText("Elegí un número par desde 2.");
+  await campo.fill("50");
+  await expect(page).not.toHaveURL(/meta=/);
+});
+
+test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
+  const asientos = [personas[0], seat(1, "vacio", null)];
+  let meta;
+  await simular(page, (path, req) => {
+    if (path === "/api/mesas") {
+      const datos = req.postDataJSON();
+      expect(datos).toEqual({ modo: "1v1", meta: 26 });
+      meta = datos.meta;
+    }
+    if (path === "/api/mesas" || path.endsWith("/" + mesaId)) return { json: { ...mesa("1v1", asientos), meta } };
+  });
+  await page.goto("jugar/");
+  await page.getByRole("radio", { name: /1 contra 1/ }).check();
+  const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico" });
+  const crear = page.getByRole("button", { name: "Crear mesa", exact: true });
+  await expect(campo).toHaveValue("40");
+  await campo.fill("25");
+  await expect(crear).toBeDisabled();
+  await campo.fill("26");
+  await expect(page.getByText("13 malas y 13 buenas")).toBeVisible();
+  if (process.env.CAPTURAS_UI)
+    await page.locator(".j-crear .j-panel").screenshot({ path: `${process.env.CAPTURAS_UI}/crear-meta-${test.info().project.name}.png`, scale: "css" });
+  await crear.press("Enter");
+  await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+});
 
 test("crea un duelo con computadora y juega desde su mano", async ({ page }) => {
   let bot = false,
@@ -129,6 +177,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
   await expect(page.getByRole("button", { name: "Jugar As de espadas" })).toBeEnabled();
   expect(bot).toBe(true);
+  await expect(page.getByRole("group", { name: "Tanteador" }).getByText("0 malas", { exact: true })).toHaveCount(2);
   if (process.env.CAPTURAS_UI)
     await page.screenshot({
       path: process.env.CAPTURAS_UI + "/duelo-" + test.info().project.name + ".jpg",
@@ -141,6 +190,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await truco.focus();
   await truco.press("Enter");
   await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeFocused();
+  await expect(page.getByText("1 mala", { exact: true })).toBeVisible();
   expect(comando.accion).toEqual({ tipo: "truco" });
   expect(comando.version).toBe(1);
   expect(comando.id).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i);
@@ -175,7 +225,7 @@ test("la entrega en duelo deja el cobro y el historial visibles al volver a la m
 
 test("Ana responde al bluff sobre su flor antes de abrir la segunda vuelta", async ({ page }) => {
   const rival = seat(1, "computadora", "Computadora 2");
-  let mano = restaurar(dueloFlor, "duel", [0]);
+  let mano = restaurar(dueloFlor, "duel", 40, [0]);
   let version = 5;
   const sockets = await simular(page, (path, req) => {
     if (path.endsWith("/" + mesaId)) return { json: mesa("1v1", [personas[0], rival]) };
@@ -206,6 +256,103 @@ test("Ana responde al bluff sobre su flor antes de abrir la segunda vuelta", asy
   if (process.env.CAPTURAS_MAZO)
     await historial.screenshot({ path: process.env.CAPTURAS_MAZO + "/flor-mazo-" + test.info().project.name + ".png", scale: "css" });
 });
+
+for (const entrada of ["crear la mesa", "completar la sala de espera"]) {
+  test("muestra las salidas de las computadoras en orden al " + entrada + " y al día al retomarla", async ({ page }) => {
+    const desdeSala = entrada === "completar la sala de espera";
+    const computadora = i => seat(i, "computadora", "CPU " + i);
+    const asientos = [personas[0], ...[1, 2, 3].map(i =>
+      desdeSala && i < 3 ? computadora(i) : seat(i, "vacio", null)
+    )];
+    const jugadas = ["copas-06", "bastos-04", "oros-05"].map((carta, i) => ({ carta, asiento: i + 1 }));
+    const mano = {
+      ...vista, mano: 1, dador: 0,
+      acciones: jugadas.map(j => ({ tipo: "carta", ...j })),
+      vueltaActual: { salida: 1, jugadas },
+    };
+    let recibida = { ...partida, vista: mano };
+    const sockets = await simular(page, (path, req) => {
+      if (path.endsWith("/computadoras")) {
+        const { asiento } = req.postDataJSON();
+        asientos[asiento] = computadora(asiento);
+      }
+      if (path === "/api/mesas" || path.endsWith("/" + mesaId)) return { json: mesa("2v2", asientos) };
+      if (path.endsWith("/partida")) return { json: recibida };
+    });
+    await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+    await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+    if (desdeSala) {
+      await page.goto("jugar/?mesa=" + mesaId);
+      await expect(page.getByRole("heading", { name: "Esperando jugadores" })).toBeVisible();
+      const agregar = page.getByRole("button", { name: "Agregar computadora al asiento 4" });
+      await expect(agregar).toBeEnabled();
+      await agregar.press("Enter");
+    } else {
+      await page.goto("jugar/");
+      await page.getByRole("button", { name: "Jugar con computadoras" }).press("Enter");
+    }
+    const cartas = page.getByRole("region", { name: "Tapete" }).locator(".j-jugada img");
+    const jugar = page.getByRole("button", { name: "Jugar As de espadas" });
+    for (const [i, nombre] of ["6 de copas", "4 de bastos", "5 de oros"].entries()) {
+      await expect(cartas).toHaveCount(i + 1);
+      const nueva = cartas.nth(i);
+      await expect(nueva).toHaveAttribute("alt", nombre);
+      if (i < 2) {
+        await expect(jugar).toBeDisabled();
+        await nueva.evaluate(img => img.decode());
+        await page.clock.runFor(450);
+      }
+    }
+    await expect(jugar).toBeEnabled();
+    await page.reload();
+    await expect(cartas).toHaveCount(3);
+    await expect(jugar).toBeEnabled();
+
+    // Si el aviso posterior trae otra mano sin su cierre anterior, el tanteador parte del estado recibido.
+    const siguientes = jugadas.slice(1);
+    recibida = {
+      ...partida, manoNumero: 2, version: 7, puntos: [2, 3],
+      vista: {
+        ...mano, mano: 2, dador: 1,
+        acciones: siguientes.map(j => ({ tipo: "carta", ...j })),
+        vueltaActual: { salida: 2, jugadas: siguientes },
+      },
+    };
+    sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+    await expect(page.getByText("Mano 2", { exact: true })).toBeVisible();
+    await expect(cartas).toHaveCount(2);
+    await expect(jugar).toBeEnabled();
+    await expect(page.locator(".j-tanteador strong")).toHaveText(["2", "3"]);
+  });
+}
+
+for (const modo of ["1v1", "2v2"]) {
+  test(`el chico a 40 cuenta las malas y buenas por lado en ${modo}`, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const asientos = modo === "1v1" ? personas.slice(0, 2) : personas;
+    let puntos = [19, 19];
+    const sockets = await simular(page, (path) => {
+      if (path.endsWith("/" + mesaId)) return { json: mesa(modo, asientos, 1) };
+      if (path.endsWith("/partida")) return { json: { ...partida, puntos, vista: { ...vista, asiento: 1 } } };
+    });
+    await page.goto("jugar/?mesa=" + mesaId);
+    const marcador = page.getByRole("group", { name: "Tanteador" });
+    const propio = marcador.getByRole("group", { name: modo === "1v1" ? "Vos" : "Tu equipo" });
+    const rival = marcador.getByRole("group", { name: modo === "1v1" ? "Tu rival" : "Rivales" });
+    await expect(marcador.getByText("Chico a 40")).toBeVisible();
+    await expect(marcador.getByText("20 malas y 20 buenas")).toBeVisible();
+    await expect(propio.getByText("19 malas")).toBeVisible();
+    for (const [total, cuenta] of [[20, "0 buenas"], [21, "1 buena"]]) {
+      puntos = [19, total];
+      sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+      await expect(propio.locator("strong")).toHaveText(String(total));
+      await expect(propio.getByText(cuenta)).toBeVisible();
+      await expect(rival.getByText("19 malas")).toBeVisible();
+    }
+    if (process.env.CAPTURAS_UI)
+      await marcador.screenshot({ path: `${process.env.CAPTURAS_UI}/tanteador-${modo}-${test.info().project.name}.png` });
+  });
+}
 
 test("reserva la invitación para el ingreso y recupera la pareja con un canto pendiente", async ({
   page,
@@ -377,6 +524,10 @@ test("recupera el marcador al reconectar y cierra la partida por envido", async 
   leerDeNuevo();
   await page.getByRole("button", { name: "Quiero", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ganaste la partida" })).toBeVisible();
+  const marcador = page.getByRole("group", { name: "Tanteador" });
+  await expect(marcador.locator("strong")).toHaveText(["40", "39"]);
+  await expect(marcador.getByText("20 buenas", { exact: true })).toBeVisible();
+  await expect(marcador.getByText("19 buenas", { exact: true })).toBeVisible();
   await expect(page.getByText("Tu equipo · 2 tantos")).toBeVisible();
   await expect(page.getByText(/CPU 1 con 33/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);

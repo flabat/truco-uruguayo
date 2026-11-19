@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable } from "../../api/turnos.ts";
-import { aplicarOnline, iniciarOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "../../src/motor/mesa-online.ts";
 import { mazo } from "../../src/motor/cartas.ts";
 import { evaluarTantos } from "../../src/motor/tantos.ts";
 import { observe } from "../../training/seat/index.ts";
@@ -79,7 +79,7 @@ test("una primera parda y una mesa de parejas conservan la jugada de la computad
 });
 
 test("la flor y la primera ganada de Ana dejan al bot cantar o entregar antes de la segunda carta", () => {
-  const mano = restaurar(dueloFlor, "duel", [0]);
+  const mano = restaurar(dueloFlor, "duel", 40, [0]);
   assert.deepEqual(vistaOnline(mano.estado, 0).legales, []);
   assert.deepEqual(vistaOnline(mano.estado, 1).legales, ["mazo", "truco"]);
   assert.equal(vistaOnline(mano.estado, 0).vueltaActual?.salida, 0);
@@ -104,9 +104,20 @@ test("la flor y la primera ganada de Ana dejan al bot cantar o entregar antes de
   assert.deepEqual(restaurar({ ...dueloFlor, acciones: guardarAcciones(entrega) }, "duel"), entrega);
 
   const antes = restaurar({ ...dueloFlor, acciones: [...dueloFlor.acciones,
-    { tipo: "carta", asiento: 0, carta: "oros-10" }] }, "duel", [0]);
+    { tipo: "carta", asiento: 0, carta: "oros-10" }] }, "duel", 40, [0]);
   assert.equal(antes.estado.mano.vueltaActual?.jugadas[0].carta, "oros-10");
-  assert.equal(restaurar(dueloFlor, "duel", [1]).estado.antesDeSalida, undefined);
+  assert.equal(restaurar(dueloFlor, "duel", 40, [1]).estado.antesDeSalida, undefined);
+});
+
+test("el bluff y la entrega conservan la meta pactada al reconstruir el chico", () => {
+  const mano = restaurar(dueloFlor, "duel", 16, [0]);
+  const amago = confirmarComputadora(mano, "duel", 1, "truco");
+  const aceptada = confirmar(amago, "duel", { tipo: "quiero", asiento: 0 });
+  const fin = jugarComputadoras(aceptada, "duel", [0]);
+  assert.equal(fin.estado.resultado?.motivo, "mazo");
+  assert.deepEqual(marcadorOnline(fin.estado), [16, 0]);
+  const replay = restaurar({ ...dueloFlor, acciones: guardarAcciones(fin) }, "duel", 16, [0]);
+  assert.deepEqual(replay, fin);
 });
 
 test("las 28 flores compatibles dan la misma decisión y una combinación ganable deja salir a Ana", () => {
@@ -119,7 +130,7 @@ test("las 28 flores compatibles dan la misma decisión y una combinación ganabl
       const manoAna = [expuesta, a, b] as const;
       if (evaluarTantos(manoAna, reparto.muestra).modalidad !== "flor") continue;
       compatibles++;
-      const mano = restaurar({ ...dueloFlor, reparto: { ...reparto, manos: [manoAna, reparto.manos[1]] } }, "duel", [0]);
+      const mano = restaurar({ ...dueloFlor, reparto: { ...reparto, manos: [manoAna, reparto.manos[1]] } }, "duel", 40, [0]);
       assert.equal(mano.estado.antesDeSalida, 1);
     }
   }
@@ -127,7 +138,7 @@ test("las 28 flores compatibles dan la misma decisión y una combinación ganabl
 
   // Ana en realidad tiene dos piezas, pero el as de bastos y el 7 de espadas podrían barrer dos oros comunes.
   const posible = restaurar({ ...dueloFlor, reparto: { ...reparto,
-    manos: [reparto.manos[0], ["bastos-01", "espadas-07", "espadas-05"]] } }, "duel", [0]);
+    manos: [reparto.manos[0], ["bastos-01", "espadas-07", "espadas-05"]] } }, "duel", 40, [0]);
   assert.equal(posible.estado.antesDeSalida, undefined);
   assert.equal(vistaOnline(posible.estado, 0).turno, 0);
 });
