@@ -76,6 +76,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
   test.setTimeout(75_000);
   let estado = abrirRedondilla(), version = 1;
   const confirmadas = [];
+  const acuseEnvido = Promise.withResolvers();
   const sockets = new Map(), contextos = [];
   const ancho = info.project.name === "mobile" ? 320 : 1280;
   function avisar() {
@@ -102,8 +103,11 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
           confirmadas.push({ duelo: estado.lance.duelo, ...accion });
           estado = paso.estado;
           avisar();
+          json = lectura(estado, asiento, version);
+          // El aviso público puede llegar antes del acuse privado del cantor.
+          if (accion.tipo === "envido") await acuseEnvido.promise;
         }
-        if (pathname.endsWith("/partida") || pathname.endsWith("/acciones")) json = lectura(estado, asiento, version);
+        if (pathname.endsWith("/partida")) json = lectura(estado, asiento, version);
         await route.fulfill({ json });
       });
       await page.goto("jugar/?invitacion=seis-personas");
@@ -151,7 +155,16 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await paginas[2].getByRole("button", { name: "Quiero", exact: true }).click();
     await expect(paginas[4].getByText("1 buena", { exact: true })).toBeVisible();
     await expect(paginas[4].getByText(/Duelo 1 de 3 ·/)).toBeVisible();
-    await paginas[5].getByRole("button", { name: "Irse al mazo" }).press("Enter");
+    const retiro = paginas[5].getByRole("button", { name: "Irse al mazo" });
+    await expect(paginas[5].getByText("1 buena", { exact: true })).toBeVisible();
+    await expect(retiro).toBeDisabled();
+    acuseEnvido.resolve();
+    await expect(retiro).toBeEnabled();
+    const [acuseRetiro] = await Promise.all([
+      paginas[5].waitForResponse(r => r.url().endsWith("/acciones") && r.request().postDataJSON().accion.tipo === "mazo"),
+      retiro.press("Enter"),
+    ]);
+    expect((await acuseRetiro.json()).lance.duelo).toBe(2);
     await expect(paginas[5].getByRole("heading", { name: "Turno de Ana" })).toBeFocused();
     await expect(paginas[5].getByText("Ya jugaste tu duelo. Esperá el próximo reparto.")).toBeVisible();
     await expect(paginas[0].getByRole("heading", { name: "Tu turno" })).toBeVisible();
@@ -177,16 +190,17 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await paginas[3].getByRole("button", { name: "Flor", exact: true }).click();
     await paginas[3].getByRole("button", { name: "Contraflor al resto", exact: true }).click();
     await paginas[0].getByRole("button", { name: "Quiero", exact: true }).click();
-    expect(confirmadas).toEqual(ejemplo.acciones);
     for (const [i, page] of paginas.entries()) {
       await expect(page.getByRole("heading", { name: i % 2 ? "El rival ganó el chico" : "Tu equipo ganó el chico" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Crear otra mesa" })).toBeVisible();
       await expect(page.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
     }
+    expect(confirmadas).toEqual(ejemplo.acciones);
     await paginas[4].getByText(/Duelo 2 de 3 · Ganó el equipo 1/).click();
     await expect(paginas[4].getByText("Equipo 1 · 11 tantos por flor (Ana con 38) · valor del canto 15 tantos.")).toBeVisible();
   } finally {
+    acuseEnvido.resolve();
     await Promise.all(contextos.map(ctx => ctx.close()));
   }
 });
