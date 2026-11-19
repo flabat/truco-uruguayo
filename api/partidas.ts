@@ -2,16 +2,20 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import type { Asiento } from "../src/motor/reparto.ts";
 import {
-  iniciarOnline, repartirOnline, versionReglasOnline, vistaOnline, type EstadoOnline,
+  iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline, type EstadoOnline,
 } from "../src/motor/mesa-online.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
-import { formatoMesa, leerMesa, type VistaMesa } from "./mesas.ts";
+import { formatoMesa, leerMesa, type FormatoMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
-  type Confirmada, type ManoPublicable, type Registro } from "./turnos.ts";
+  type Confirmada, type ManoPublicable } from "./turnos.ts";
+import {
+  confirmarTurnoTercetosDB, proyectarTercetos, registrarPendienteTercetos,
+  repartirTercetosDB, restaurarTercetosDB, type RegistroTercetos,
+} from "./partidas-tercetos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
-import { seatsFor, versions, type Format } from "../training/contracts/index.ts";
+import { seatsFor, versions } from "../training/contracts/index.ts";
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 const rutaPartida = /^\/api\/mesas\/([^/]+)\/(partida|acciones|siguiente)$/;
@@ -26,7 +30,7 @@ interface Comando {
   accion?: Confirmada;
 }
 
-function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: Asiento, formato: Format): Comando {
+function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: Asiento, formato: FormatoMesa): Comando {
   if (typeof datos.id !== "string" || !uuid.test(datos.id) || typeof datos.version !== "number"
       || !Number.isSafeInteger(datos.version) || datos.version < 0) {
     throw new ErrorPeticion(400, "El comando requiere un identificador y una versión válidos.");
@@ -41,6 +45,7 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
 }
 
 function tantos(estado: EstadoOnline): Tanteador {
+  if (estado.lance) return marcadorOnline(estado);
   const puntos: Tanteador = [...estado.puntosInicio];
   for (const cobro of estado.cobros) puntos[cobro.equipo] += cobro.tantos;
   return puntos.map(n => Math.min(n, estado.meta)) as Tanteador;
@@ -52,7 +57,8 @@ function ganador(puntos: Tanteador, meta: number) {
   return null;
 }
 
-function vista(mano: ManoPublicable, formato: Format, numero: number, version: number, asiento: Asiento) {
+function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, version: number, asiento: Asiento) {
+  if (formato === "triples") return proyectarTercetos(mano.estado, numero, version, asiento);
   const puntos = tantos(mano.estado);
   const { meta } = mano.estado;
   return { version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
@@ -64,8 +70,12 @@ function asientosHumanos(mesa: VistaMesa) {
   return mesa.asientos.filter(a => a.tipo === "humano").map(a => a.asiento);
 }
 
-async function repartir(db: PoolClient, mesa: string, formato: Format, humanos: number[], numero: number,
+async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, humanos: number[], numero: number,
     version: number, puntos: Tanteador, meta: number, dador?: number, diferida = false) {
+  if (formato === "triples") {
+    const estado = await repartirTercetosDB(db, mesa, numero, version, puntos, meta, humanos, dador);
+    return {estado, turnos: []};
+  }
   const reparto = repartirOnline(seatsFor(formato), dador);
   const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
   const mano = diferida ? inicial : jugarComputadoras(inicial, formato, humanos);
@@ -77,8 +87,17 @@ async function repartir(db: PoolClient, mesa: string, formato: Format, humanos: 
 }
 
 async function ultimaMano(db: PoolClient, id: string) {
-  const {rows: [fila]} = await db.query<Registro>("SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero DESC LIMIT 1", [id]);
+  const {rows: [fila]} = await db.query<RegistroTercetos>("SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero DESC LIMIT 1", [id]);
   return fila;
+}
+
+function recuperar(fila: RegistroTercetos, formato: FormatoMesa, meta: number): ManoPublicable {
+  if (formato === "triples") {
+    const estado = restaurarTercetosDB(fila);
+    if (estado.meta !== meta) throw new Error("La meta del reparto difiere de la pactada.");
+    return { estado, turnos: [] };
+  }
+  return restaurar(fila, formato, meta);
 }
 
 /** Un único paso de una mesa de laboratorio. El servidor reanuda los ensayos reservados en PostgreSQL. */
@@ -92,20 +111,22 @@ export async function avanzarEnsayo(pool: Pool) {
     if (mesa) {
       const formato = formatoMesa(mesa.modo, mesa.version_senas);
       const asientos = await db.query(`SELECT asiento FROM juego.asientos WHERE mesa=$1 AND computadora ORDER BY asiento`, [mesa.id]);
-      if (asientos.rows.length !== seatsFor(formato) || asientos.rows.some((a, i) => a.asiento !== i)) {
+      const capacidad = formato === "triples" ? 6 : seatsFor(formato);
+      if (asientos.rows.length !== capacidad || asientos.rows.some((a, i) => a.asiento !== i)) {
         throw new Error("El ensayo requiere un asiento de computadora por posición.");
       }
       const fila = await ultimaMano(db, mesa.id);
-      const previo = fila && restaurar(fila, formato, mesa.meta);
+      const previo = fila && recuperar(fila, formato, mesa.meta);
       const puntos: Tanteador = previo ? tantos(previo.estado) : [0, 0];
       if (previo && !previo.estado.resultado) {
-        await programarTurno(db, mesa.id, previo, []);
+        if (formato === "triples") await registrarPendienteTercetos(db, mesa.id, previo.estado, []);
+        else await programarTurno(db, mesa.id, previo, []);
         await db.query("COMMIT");
         return true;
       }
       let final = ganador(puntos, mesa.meta) !== null;
       if (!final) {
-        const dador = fila ? (fila.reparto.dador + 1) % seatsFor(formato) : undefined;
+        const dador = fila ? (fila.reparto.dador + 1) % capacidad : undefined;
         const mano = await repartir(db, mesa.id, formato, [], (fila?.numero ?? 0) + 1,
           (fila?.version ?? 0) + 1, puntos, mesa.meta, dador, true);
         final = ganador(tantos(mano.estado), mesa.meta) !== null;
@@ -152,7 +173,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0], mesa.meta, undefined, diferida);
       return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento) };
     }
-    const mano = restaurar(fila, mesa.formato, mesa.meta);
+    const mano = recuperar(fila, mesa.formato, mesa.meta);
     const estado = mano.estado;
     if (!comando) return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento) };
     if (comando.version !== fila.version) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
@@ -164,6 +185,9 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
       const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, mesa.meta, dador, diferida);
       partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento);
+    } else if (mesa.formato === "triples") {
+      const nuevo = await confirmarTurnoTercetosDB(db, fila, estado, comando.accion!, asientosHumanos(mesa));
+      partida = proyectarTercetos(nuevo, fila.numero, version, asiento);
     } else {
       let paso: ManoPublicable;
       try {
