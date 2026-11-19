@@ -103,21 +103,31 @@ function subidasEnvido(estado: EstadoOnline, tipo: CantoLateral): CantoEnvido[] 
     ? ["envido", "real-envido", "falta-envido"] : ["real-envido", "falta-envido"];
 }
 
+function subidasFlor(oferta: Oferta, asiento: Asiento): CantoFlor[] {
+  if (oferta.tipo === "flor") return ["con-flor-envido", "contraflor-al-resto"];
+  if (oferta.tipo === "con-flor-envido" && equipoDelAsiento(asiento) !== equipoDelAsiento(oferta.asiento)) {
+    return ["contraflor-al-resto"];
+  }
+  return [];
+}
+
 /** Solo se inspeccionan las cartas del asiento que pide su lista de acciones. */
 export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccionOnline[] {
   if (!aDecidir(estado).includes(asiento)) return [];
   const debeFlor = !estado.lateralCerrado && !estado.flores.includes(asiento)
     && tantosPropios(estado, asiento).modalidad === "flor";
-  if (debeFlor) return ["flor"];
+  const lado = estado.lateral;
+  if (debeFlor) {
+    if (estado.mano.reparto.reglaFlor === "inmediata" && lado && estado.flores.length) {
+      return ["flor", ...subidasFlor(lado, asiento)];
+    }
+    return ["flor"];
+  }
   if (estado.consultaFlor.length) return ["paso-flor"];
 
-  const lado = estado.lateral;
   if (lado) {
     if (!estado.flores.length) return ["quiero", "no-quiero", ...subidasEnvido(estado, lado.tipo)];
-    const opciones: TipoAccionOnline[] = ["quiero", "no-quiero"];
-    if (lado.tipo === "flor") opciones.push("con-flor-envido");
-    if (lado.tipo !== "contraflor-al-resto") opciones.push("contraflor-al-resto");
-    return opciones;
+    return ["quiero", "no-quiero", ...subidasFlor(lado, asiento)];
   }
 
   const oferta = estado.trucoPendiente;
@@ -214,11 +224,11 @@ function sinDeclaracion(estado: EstadoOnline) {
 
 function terminarConsultas(estado: EstadoOnline) {
   if (estado.consultaFlor.length) return;
-  if (estado.flores.length && estado.lateral?.tipo === "flor") {
+  if (estado.flores.length && estado.lateral) {
     if (estado.flores.every(a => equipoDelAsiento(a) === equipoDelAsiento(estado.flores[0]))) {
       liquidarLateral(estado, false);
     }
-    // Con cantores en ambos equipos se abre la respuesta a la primera flor.
+    // Con flores en ambos equipos, el rival responde al último envite.
     return;
   }
   if (estado.respuestaEnvido) liquidarLateral(estado, estado.respuestaEnvido === "quiero");
@@ -231,6 +241,12 @@ function consultarFlores(estado: EstadoOnline) {
     ? pendientes.filter(a => tantosPropios(estado, a).modalidad === "flor")
     : pendientes;
   terminarConsultas(estado);
+}
+
+function declararFlor(estado: EstadoOnline, asiento: Asiento) {
+  estado.respuestaEnvido = null;
+  estado.flores = [...estado.flores, asiento];
+  consultarFlores(estado);
 }
 
 /** Se trabaja sobre la copia del estado creada por aplicarOnline. */
@@ -261,9 +277,7 @@ export function resolverCanto(estado: EstadoOnline, accion: Exclude<AccionOnline
     }
     case "flor":
       if (!estado.flores.length) estado.lateral = { tipo, asiento, anterior: 0, valor: 0 };
-      estado.respuestaEnvido = null;
-      estado.flores = [...estado.flores, asiento];
-      consultarFlores(estado);
+      declararFlor(estado, asiento);
       break;
     case "paso-flor":
       estado.consultaFlor = estado.consultaFlor.slice(1);
@@ -273,6 +287,7 @@ export function resolverCanto(estado: EstadoOnline, accion: Exclude<AccionOnline
     case "contraflor-al-resto": {
       const anterior = estado.lateral!.valor;
       estado.lateral = { tipo, asiento, anterior, valor: tipo === "con-flor-envido" ? 2 : Math.max(falta, anterior) };
+      if (estado.consultaFlor.length) declararFlor(estado, asiento);
       break;
     }
     case "quiero":

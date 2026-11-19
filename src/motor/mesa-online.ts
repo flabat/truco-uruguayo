@@ -294,9 +294,10 @@ export function elegirAccionOnline(vista: VistaOnline): AccionOnlineV1 | null {
   const fuertes = cartas.filter(carta => compararCartas(carta, "oros-03", muestra) >= 0);
   const primera = vista.vueltas[0]?.resultado;
   const ventaja = primera?.tipo === "ganada" && primera.equipo === vista.equipoPorAsiento[asiento];
-  const ofertas: TipoAccionOnlineV1[] = ["flor", "paso-flor"];
+  const ofertas: TipoAccionOnlineV1[] = [];
   if (total >= 42) ofertas.push("contraflor-al-resto");
   if (total >= 33) ofertas.push("con-flor-envido");
+  ofertas.push("flor", "paso-flor");
   if (total >= 35) ofertas.push("falta-envido");
   if (total >= 31) ofertas.push("real-envido");
   if (total >= 28) ofertas.push("envido");
