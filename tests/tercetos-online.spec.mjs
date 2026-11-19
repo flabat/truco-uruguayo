@@ -41,7 +41,7 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
       plazas[asiento] = { ...plazas[asiento], nombre: "Computadora " + asiento, tipo: "computadora" };
       json = crearSala(0, plazas);
     }
-    if (pathname.endsWith("/" + id)) json = crearSala(0, plazas);
+    if (pathname.endsWith("/" + id)) json = { ...crearSala(0, plazas), versionReglas: 2, politica: "tercetos-basica-v1" };
     if (pathname.endsWith("/partida")) json = lectura(abrirRedondilla(), 0, 1);
     await route.fulfill({ json });
   });
@@ -72,6 +72,9 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(page.getByRole("region", { name: "Tapete" })).toBeVisible();
   const cartas = page.getByRole("group", { name: "Tus cartas" }).getByRole("button", { name: /^Jugar / });
   await expect(cartas).toHaveText(["", "", ""], { useInnerText: true });
+  const pie = page.getByRole("contentinfo");
+  await expect(pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd")).toHaveText("v2");
+  await expect(pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd")).toHaveText("tercetos-basica-v1");
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {
