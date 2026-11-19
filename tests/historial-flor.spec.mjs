@@ -36,30 +36,36 @@ test("la comparación de flor queda entre su Quiero y el del truco, también al 
   });
 
   await page.goto("jugar/?mesa=" + id);
-  const abrir = page.getByText("Ver jugadas y cantos de la mano", { exact: true });
-  await abrir.press("Enter");
-  const historia = page.locator("details").filter({ has: abrir });
+  const historia = page.getByRole("region", { name: "Historial de la mano", exact: true });
+  const anteriores = historia.locator("details");
+  const abrir = anteriores.locator("summary").filter({ hasText: /anteriores/i });
   const entradas = historia.getByRole("listitem");
   const inicio = [
     "Bruno dijo «Truco».", "Ana dijo «Flor».", "Clara dijo «Flor».", "Diego dijo «Flor».", "Diego dijo «Con flor envido».",
   ];
-  await expect(entradas).toHaveText(inicio);
+  await expect(entradas).toHaveText(inicio.slice(-3));
+  await abrir.press("Enter");
+  await expect(anteriores.getByRole("listitem")).toHaveText(inicio.slice(0, -3));
+  await abrir.press("Enter");
   const quiero = page.getByRole("button", { name: "Quiero", exact: true });
   await quiero.click();
   const comparacion = "Flor querida. Clara cantó 30, Diego cantó 36 y Ana cantó 32. " +
     "Ganó Diego con 36 de flor. El equipo 2 sumó 5 tantos al tanteador.";
   const flor = [...inicio, "Ana dijo «Quiero».", comparacion];
-  await expect(entradas).toHaveText(flor);
+  await expect(entradas).toHaveText(flor.slice(-3));
   await expect(page.getByRole("heading", { name: "Truco", exact: true })).toBeVisible();
   await quiero.click();
   const completa = [...flor, "Ana dijo «Quiero»."];
-  await expect(entradas).toHaveText(completa);
+  await expect(entradas).toHaveText(completa.slice(-3));
+  await abrir.press("Enter");
+  await expect(anteriores.getByRole("listitem")).toHaveText(completa.slice(0, -3));
   if (process.env.CAPTURAS_UI) await historia.screenshot({
     path: process.env.CAPTURAS_UI + "/historial-flor-" + test.info().project.name + ".jpg", quality: 85, scale: "css",
   });
   // El rival que vuelve a la mesa recibe el mismo historial público.
   miAsiento = 1;
   await page.reload();
+  await expect(entradas).toHaveText(completa.slice(-3));
   await abrir.click();
-  await expect(entradas).toHaveText(completa);
+  await expect(anteriores.getByRole("listitem")).toHaveText(completa.slice(0, -3));
 });
