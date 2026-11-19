@@ -1,5 +1,5 @@
 import { equipoDelAsiento, type Asiento, type Equipo, type RepartoOnline } from "./reparto.ts";
-import { participantesDe, type EstadoMano, type Jugada } from "./mano.ts";
+import { participantesDe, type EstadoMano, type Jugada, type VueltaCerrada } from "./mano.ts";
 import { faltaDelGanador, restoQuerido, tantosAcreditados } from "./reglas-tercetos.ts";
 import { evaluarTantos } from "./tantos.ts";
 
@@ -8,9 +8,11 @@ type CantoEnvido = "envido" | "real-envido" | "falta-envido";
 type CantoFlor = "flor" | "con-flor-envido" | "contraflor-al-resto";
 type CantoLateral = CantoEnvido | CantoFlor;
 type Canto = CantoTruco | CantoLateral;
-export type TipoAccionOnline = Canto | "mazo" | "quiero" | "no-quiero" | "paso-flor" | "carta";
-export type AccionOnline = ({ tipo: "carta" } & Jugada)
-  | { tipo: Exclude<TipoAccionOnline, "carta">; asiento: Asiento };
+export type TipoAccionOnlineV1 = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta";
+export type TipoAccionOnline = TipoAccionOnlineV1 | "mazo";
+export type AccionOnlineV1 = ({ tipo: "carta" } & Jugada)
+  | { tipo: Exclude<TipoAccionOnlineV1, "carta">; asiento: Asiento };
+export type AccionOnline = AccionOnlineV1 | { tipo: "mazo"; asiento: Asiento };
 
 export interface Oferta<T extends Canto = Canto> { tipo: T; asiento: Asiento }
 interface Envite extends Oferta<CantoLateral> { valor: number; anterior: number }
@@ -24,7 +26,21 @@ export interface Cobro {
   tantoGanador?: number;
 }
 
+export type LanceTercetos =
+  | { tipo: "redondilla"; duelo: null; activos: readonly Asiento[] }
+  | { tipo: "pico-a-pico"; duelo: 1 | 2 | 3; activos: readonly Asiento[] };
+
+export type ResumenLance = LanceTercetos & {
+  resultado: NonNullable<EstadoOnline["resultado"]>;
+  acciones: readonly AccionOnline[];
+  cobros: readonly Cobro[];
+  vueltas: readonly VueltaCerrada[];
+  puntos: readonly [number, number];
+};
+
 export interface EstadoOnline {
+  lance?: LanceTercetos;
+  historialLances?: readonly ResumenLance[];
   mano: EstadoMano<RepartoOnline>;
   puntosInicio: readonly [number, number];
   meta: number;
@@ -61,7 +77,10 @@ export function aDecidir(estado: EstadoOnline): Asiento[] {
   if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
   const oferta = estado.lateral ?? estado.trucoPendiente;
   if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
-  const posibles = estado.flores.length && estado.lateral ? estado.flores : participantesDe(estado.mano);
+  let posibles = participantesDe(estado.mano);
+  if (estado.flores.length && estado.lateral) {
+    posibles = esTerceto(estado) ? posibles.filter(a => estado.flores.includes(a)) : estado.flores;
+  }
   return posibles.filter(a => equipoDelAsiento(a) !== equipoDelAsiento(oferta.asiento));
 }
 
