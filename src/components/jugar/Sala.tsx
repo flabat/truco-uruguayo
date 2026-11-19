@@ -12,6 +12,7 @@ import {
 } from "./cliente";
 import { EnJuego } from "./Tablero";
 import { MesaConSenas } from "./Senas";
+import { usePresentacionVueltas } from "./presentacion-vueltas";
 
 function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
   return (
@@ -163,7 +164,8 @@ function MesaAbierta({
   base: string;
   avisoInicial: string;
 }) {
-  const { ruta, mesa, partida, conectada, error, refrescar } = useMesa(id);
+  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
+  const { tablero, partida, mostrandoCartas } = usePresentacionVueltas(recibida);
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
   useEffect(() => {
@@ -195,7 +197,7 @@ function MesaAbierta({
     }
   }
   function jugada(accion?: Eleccion & { sena?: string }) {
-    if (ocupado || !conectada || !partida) return;
+    if (ocupado || !conectada || !partida || mostrandoCartas) return;
     void enviar(accion ? "/acciones" : "/siguiente", {
       id: idComando(),
       version: partida.version,
@@ -216,9 +218,9 @@ function MesaAbierta({
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
   const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.versionSenas !== "senas-publicas-v1";
-  const bloqueada = ocupado || !conectada || Boolean(versionDesconocida);
+  const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
   return (
-    <>
+    <div ref={tablero}>
       <div className="j-barra">
         <span>
           {mesa.formato === "pairs-senas" ? "Parejas con señas" : mesa.modo === "1v1" ? "Mano a mano" : "En parejas"} · {jugador.nombre}
@@ -240,8 +242,8 @@ function MesaAbierta({
       )}
       {mesa.lista && partida?.vista ? (
         mesa.formato === "pairs-senas" && partida.versionSenas === "senas-publicas-v1" ? (
-          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
-        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
+          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">
@@ -290,7 +292,7 @@ function MesaAbierta({
           </section>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -373,7 +375,7 @@ export default function Sala({ base }: { base: string }) {
       ) : jugador === null ? (
         <Ingreso volver={volver} invitada={Boolean(invitacion)} />
       ) : mesa ? (
-        <MesaAbierta id={mesa} jugador={jugador} base={base} avisoInicial={avisoMesa} />
+        <MesaAbierta key={mesa} id={mesa} jugador={jugador} base={base} avisoInicial={avisoMesa} />
       ) : (
         <AbrirMesa
           base={base}
