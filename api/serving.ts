@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { Worker } from "node:worker_threads";
-import { signals, type ActionId, type SeatObservation } from "../training/contracts/index.ts";
+import { hasSignals, signals, type ActionId, type SeatObservation } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 export { artifactPin } from "./actor-registry.ts";
 
@@ -62,7 +62,7 @@ export function createServing(options: Options) {
     let policy = pin, fallback = null, action: ActionId;
     const base = () => draw(incumbent.decide(observation, observation.legalActions), observation.legalActions, uniform);
     if (pin === incumbent.id) action = base();
-    else if (pin === exampleSignalPin && observation.format === "pairs-senas") {
+    else if (pin === exampleSignalPin && hasSignals(observation.format)) {
       action = `${signals[observation.history.length % signals.length]}/${base()}` as ActionId;
       if (!observation.legalActions.includes(action)) throw new Error("Falta la máscara de señas.");
     } else {

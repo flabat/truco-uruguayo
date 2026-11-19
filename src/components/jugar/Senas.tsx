@@ -26,7 +26,7 @@ export function MesaConSenas({ base, mesa, partida, bloqueada, jugar }: {
           <option value="">Silencio</option>
           {menu.map(s => <option key={s.id} value={s.id}>{s.texto}</option>)}
         </select>
-        <small id="alcance-sena">Los cuatro asientos verán la seña cuando juegues. Podés amagar.</small>
+        <small id="alcance-sena">La seña la ven vos y tu compañero al confirmar la jugada.</small>
       </div>
     )}
     <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada}

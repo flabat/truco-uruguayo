@@ -1,12 +1,12 @@
 import type {Pool, PoolClient} from "pg";
 import { aDecidir } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
-import type { Move, SeatObservation } from "../training/contracts/index.ts";
+import { hasSignals, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { commitTurn, signalRules } from "../training/signals/index.ts";
 import { formatoMesa } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { guardarAcciones, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
+import { guardarAcciones, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -37,8 +37,9 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
   const mano = restaurar(fila, formato);
   const seat = actor(mano, fila.humanos);
   if (seat === undefined) return false;
-  const observacion = observe(mano.estado, seat, formato, mano.turnos);
-  const decision = await servicio.decide(fila.politica, formato === "pairs-senas"
+  const historial = formato === "pairs-senas" ? turnosDeEquipo(mano.turnos, seat) : mano.turnos;
+  const observacion = observe(mano.estado, seat, formato, historial);
+  const decision = await servicio.decide(fila.politica, hasSignals(formato)
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
 
   const db = await pool.connect();
