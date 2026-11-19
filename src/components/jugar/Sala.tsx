@@ -204,7 +204,7 @@ function MesaAbierta({
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
   const esTerceto = recibida?.formato === "triples";
-  const { tablero, partida: presentada, mostrandoCartas } = usePresentacionVueltas(
+  const { tablero, partida: presentada, mostrandoCartas, voz } = usePresentacionVueltas(
     esTerceto ? undefined : recibida, presencioReparto,
   );
   const partida = esTerceto ? recibida : presentada;
@@ -285,10 +285,11 @@ function MesaAbierta({
       )}
       {mesa.lista && partida?.vista ? (
         partida.formato === "triples" ? (
-          <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
+          <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada}
+            jugar={jugada} presencioReparto={presencioReparto} />
         ) : versionSenas && !versionDesconocida ? (
-          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
-        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} jugar={jugada} />
+          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">
