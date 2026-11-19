@@ -129,15 +129,17 @@ function scoreOf(state: EstadoOnline): Score {
   return [Math.min(points[0], state.meta), Math.min(points[1], state.meta)];
 }
 
-export function playMatch(options: MatchOptions): MatchRecord {
+type Schedule = Omit<MatchOptions, "policies" | "onDecision">;
+type Request = Pick<Decision, "hand" | "seat" | "state" | "observation"> & {uniform: number};
+
+function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionId> {
   const {format, seed, pair, leg} = options;
   const signalRules = options.signalRules ?? (format === "pairs-senas" ? publicSignals : undefined);
   natural(seed, "seed"); natural(pair, "pair");
   if (leg !== 0 && leg !== 1) throw new RangeError("Manga inválida.");
   checkSignals(format, signalRules);
   const seats = seatsFor(format);
-  const actors = Array.from({length: seats}, (_, s) => options.policies(s as Asiento));
-  const sampling = actors.map((_, s) => stream("policy", format, seed, pair, leg, s));
+  const sampling = Array.from({length: seats}, (_, s) => stream("policy", format, seed, pair, leg, s));
   const hands: RefereeHand[] = [];
   let score: Score = [0, 0];
   while (Math.max(...score) < 40) {
@@ -150,10 +152,9 @@ export function playMatch(options: MatchOptions): MatchRecord {
       if (turns.length >= 64) throw new Error("La mano no avanzó.");
       const seat = aDecidir(state)[0];
       const observation = viewFor(state, seat, format, turns, signalRules);
-      const legal = Object.freeze([...observation.legalActions]);
-      const probabilities = actors[seat].decide(observation, legal);
-      const id = legal[sample(probabilities, legal.length, sampling[seat]() / 0x100000000)];
-      options.onDecision?.({hand, seat, observation, action: id, probabilities, state});
+      const legal = [...observation.legalActions];
+      const id = yield {seat, hand, state, observation, uniform: sampling[seat]() / 0x100000000};
+      if (!legal.includes(id)) throw new Error("El actor devolvió una acción ilegal.");
       const step = commitTurn(state, seat, format, id);
       turns.push(step.turn);
       state = step.state;
@@ -162,6 +163,33 @@ export function playMatch(options: MatchOptions): MatchRecord {
     hands.push({schema: versions.replay, format, hand, deal, startScore, turns, endScore: score});
   }
   return {id: matchId(format, pair, leg), format, pair, leg, winner: score[0] === 40 ? 0 : 1, score, hands};
+}
+
+export function playMatch(options: MatchOptions): MatchRecord {
+  const actors = Array.from({length: seatsFor(options.format)}, (_, s) => options.policies(s as Asiento));
+  const steps = matchSteps(options);
+  let request = steps.next();
+  while (!request.done) {
+    const {observation, seat, hand, state, uniform} = request.value;
+    const legal = Object.freeze([...observation.legalActions]);
+    const probabilities = actors[seat].decide(observation, legal);
+    const action = legal[sample(probabilities, legal.length, uniform)];
+    options.onDecision?.({seat, hand, state, observation, action, probabilities});
+    request = steps.next(action);
+  }
+  return request.value;
+}
+
+export type Responder = (observation: SeatObservation, uniform: number) => ActionId | Promise<ActionId>;
+export async function playMatchAsync(options: Schedule & {responders(seat: Asiento): Responder}): Promise<MatchRecord> {
+  const responders = Array.from({length: seatsFor(options.format)}, (_, s) => options.responders(s as Asiento));
+  const steps = matchSteps(options);
+  let request = steps.next();
+  while (!request.done) {
+    const {seat, observation, uniform} = request.value;
+    request = steps.next(await responders[seat](observation, uniform));
+  }
+  return request.value;
 }
 
 /** Re-run committed commands independently of policy decisions. Validate the referee deal when given the seed. */
