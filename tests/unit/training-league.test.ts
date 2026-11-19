@@ -43,4 +43,49 @@ test("el contrajugador de duelo aprende de chicos contra un artefacto fijado y p
   const whole=await trainCounter("duel",actor,runB,213,"",4);
   assert.equal(sha(split),sha(whole));assert.ok(loadDuelActor(split).id.startsWith("duel-"));
   await assert.rejects(trainCounter("duel",actor,runA,214,"",8),/linaje/);
+  await assert.rejects(trainCounter("duel",actor,runA,213,"",2),/retroceder/);
+});
+
+test("el informe de ciclos considera la orientación y las dos mangas de cada cruce", async () => {
+  const {cycles} = await import("../../training/league/report.ts");
+  const ahead = interval([1,1,1,1]), behind = interval([0,0,0,0]);
+  const report = cycles([
+    {left:"a",right:"b",pairs:[1,1,1,1],interval:ahead},
+    {left:"b",right:"c",pairs:[1,1,1,1],interval:ahead},
+    {left:"a",right:"c",pairs:[0,0,0,0],interval:behind},
+  ]);
+  assert.deepEqual(report,{count:1,examples:[["a","b","c"]],threePairwiseBoundsExcludeHalf:[["a","b","c"]]});
+});
+
+test("el contrajugador de parejas conserva la familia efectiva del export en victorias y empates", async () => {
+  const { selectResponse, verifyCounterFamily } = await import("../../training/league/counters.ts");
+  const { initialize, exportActor } = await import("../../training/partners/train.ts");
+  const dir = mkdtempSync(join(tmpdir(),"truco-liga-familia-"));
+  const mc = join(dir,"mc-actor.json"), net = join(dir,"actor.json");
+  const state = initialize("pairs",81,4,0.04,2,"cpu");
+  save(mc,exportActor(state,true)); save(net,exportActor(state));
+  for (const [mcWins, netWins, expected] of [[1,0,"pairs-mc-v1"],[0,1,"pairs-recurrent-v1"],[1,1,"pairs-mc-v1"]] as const) {
+    const selected = selectResponse("pairs",[{path:mc,outcomes:[mcWins,mcWins]},{path:net,outcomes:[netWins,netWins]}])[0];
+    assert.equal(selected.family,expected);
+    const receipt = {chosen:selected.sha256,chosenFamily:selected.family,trainingStateSchema:versions.checkpoint};
+    const path=join(dir,selected.file);
+    assert.equal(verifyCounterFamily("pairs",path,receipt),expected);
+    assert.throws(()=>verifyCounterFamily("pairs",path,{...receipt,chosenFamily:"duel-mc"}),/familia/);
+    assert.throws(()=>verifyCounterFamily("pairs",path,{...receipt,trainingStateSchema:"duel-mc-counter-v1"}),/familia/);
+  }
+});
+
+test("los huecos de un checkpoint recuperado no inflan las decisiones por segundo", async () => {
+  const { timedProgress } = await import("../../training/league/evidence.ts");
+  const report=timedProgress([
+    {before:0,completed:4,seconds:2,trainDecisions:40},
+    {before:8,completed:12,seconds:3,trainDecisions:120},
+    {before:12,completed:16,seconds:2,trainDecisions:172},
+  ],0,0);
+  assert.deepEqual(report,{measuredSeconds:7,measuredUnits:12,measuredDecisions:92,decisionSeconds:4});
+});
+
+test("el monitor recupera un scheduler adjunto que desaparece y conserva el plazo", async () => {
+  const { execFileSync } = await import("node:child_process");
+  execFileSync("python3",["-B","tests/fixtures/league-monitor.py"]);
 });

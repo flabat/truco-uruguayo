@@ -1,17 +1,45 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { playMatch } from "../arena/index.ts";
-import { versions, type Policy } from "../contracts/index.ts";
+import { versions, type Format, type Policy } from "../contracts/index.ts";
 import { coordinates, duelActorId, duelSchema, loadDuelActor, width, type DuelExport } from "../duel/actor.ts";
 import { incumbent } from "../seat/index.ts";
 import { main as trainPartners } from "../partners/cli.ts";
-import { domainSeed, digest } from "../partners/policy.ts";
+import { domainSeed, digest, monteCarloId, recurrentId } from "../partners/policy.ts";
 import { interval, json, loadTeam, pairOutcomes, rate, save, sha } from "./development.ts";
 
 interface CounterState {
   schema: "duel-mc-counter-v1"; target: string; seed:number; completed:number; decisions:number; buckets:number;
   cells: Record<string, {sum:number[]; count:number[]; prior:number[]; baseSum?:number; baseCount?:number}>;
 }
+type CounterFamily = "duel-mc" | typeof monteCarloId | typeof recurrentId;
+
+export function counterFamily(format: Format, path: string): CounterFamily {
+  const actor = json(path);
+  if (actor.format !== format) throw Error("El formato del contrajugador no coincide.");
+  if (format === "duel" && actor.schema === duelSchema) return "duel-mc";
+  if (format !== "duel" && (actor.kind === monteCarloId || actor.kind === recurrentId)) return actor.kind;
+  throw Error("Familia desconocida en el actor de respuesta.");
+}
+
+export function selectResponse(format: Format, responses: {path:string; outcomes:number[]}[]) {
+  return responses.map(({path,outcomes}) => ({
+    file:basename(path), family:counterFamily(format,path), sha256:sha(path),
+    winRate:rate(outcomes), interval:interval(outcomes), outcomes,
+  })).sort((a,b) => b.winRate - a.winRate);
+}
+
+export function verifyCounterFamily(format: Format, path: string, receipt: {
+  chosen:string; chosenFamily:CounterFamily; trainingStateSchema:string;
+}) {
+  const family = counterFamily(format,path);
+  const schema = format === "duel" ? "duel-mc-counter-v1" : versions.checkpoint;
+  if (receipt.chosen !== sha(path) || receipt.chosenFamily !== family || receipt.trainingStateSchema !== schema) {
+    throw Error("El actor o la familia no coincide con el recibo de entrenamiento.");
+  }
+  return family;
+}
+
 const zeros=()=>Array(width).fill(0) as number[];
 function strengths(row:CounterState["cells"][string], slot:number) {
   // Beta-style shrinkage of completed-match team returns; prior is the incumbent's
@@ -24,6 +52,9 @@ function duelCounter(path:string,out:string,seed:number,matches:number) {
   const state:CounterState=existsSync(checkpoint) ? json(checkpoint) : {schema:"duel-mc-counter-v1",target,seed,
     completed:0,decisions:0,buckets:256,cells:{}};
   if(state.target!==target||state.seed!==seed||state.schema!=="duel-mc-counter-v1")throw Error("Otro rival o linaje en el checkpoint.");
+  if (!Number.isSafeInteger(matches) || matches < 1 || state.completed > matches) {
+    throw Error("El presupuesto no puede retroceder el checkpoint del contrajugador.");
+  }
   const learner:Policy={id:"counter-mc-training",decide(obs,legal){
     const {bucket,slots}=coordinates(obs,legal,state.buckets), row=state.cells[bucket];
     const old=incumbent.decide(obs,legal),w=slots.map((slot,i)=>row?strengths(row,slot):old[i]);
@@ -70,27 +101,35 @@ export async function trainCounter(format:"duel"|"pairs"|"pairs-senas",target:st
   let paths:string[];
   let checkpoint:string;
   let against:string;
+  let trainingStateSchema:string;
+  let completedMatches:number;
   if(format==="duel"){
     paths=duelCounter(target,out,seed,matches);
     checkpoint=join(out,"counter-state.json");
-    against=json(checkpoint).target;
+    const state = json(checkpoint);
+    against=state.target; trainingStateSchema=state.schema; completedMatches=state.completed;
   }else{
     checkpoint=join(out,"checkpoint");
     const args=existsSync(checkpoint)?["--resume",checkpoint]:["--format",format,"--config",configFile,"--run",out,"--seed",String(seed)];
     await trainPartners([...args,"--opponent",target,"--matches",String(matches)]);
     const state=json(checkpoint).state;
     if(digest(state.opponent)!==digest(json(target))||state.seed!==seed||state.completed!==matches)throw Error("El checkpoint no confirma el rival.");
-    against=sha(target);paths=[join(out,"mc-actor.json"),join(out,"actor.json")];
+    against=sha(target); trainingStateSchema=state.schema; completedMatches=state.completed; paths=[join(out,"mc-actor.json"),join(out,"actor.json")];
   }
   if(against!==sha(target))throw Error("El contrajugador se entrenó contra otro actor.");
   const selectionSeed=domainSeed(seed,"counter-response-selection-v1");
   const champion=loadTeam(format,target);
-  const selection=paths.map(path=>{
-    const {results}=pairOutcomes(format,loadTeam(format,path),champion,48,selectionSeed);
-    return {path,sha256:sha(path),winRate:rate(results),interval:interval(results),outcomes:results};
-  }).sort((a,b)=>b.winRate-a.winRate);
-  save(join(out,"training-receipt.json"),{format,trainingSeed:seed,completedMatches:matches,
+  const selection = selectResponse(format, paths.map(path => ({
+    path, outcomes:pairOutcomes(format,loadTeam(format,path),champion,48,selectionSeed).results,
+  })));
+  const winner = selection[0];
+  const receipt = {format,trainingSeed:seed,completedMatches,trainingStateSchema,
     trainedAgainstSha256:against,storedOpponentContent:format==="duel"?null:digest(json(checkpoint).state.opponent),
-    checkpointSha256:sha(checkpoint),selectionSeed,selectionPairs:48,selection,chosen:selection[0].sha256});
-  return selection[0].path;
+    checkpointSha256:sha(checkpoint),selectionSeed,selectionPairs:48,selection,
+    selectionRule:"Maximum mean response win rate on 48 common seat-swapped development pairs against the frozen candidate. Stable input order breaks ties.",
+    chosen:winner.sha256,chosenFamily:winner.family};
+  const selectedPath = join(out,winner.file);
+  verifyCounterFamily(format,selectedPath,receipt);
+  save(join(out,"training-receipt.json"),receipt);
+  return selectedPath;
 }

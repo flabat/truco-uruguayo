@@ -8,6 +8,24 @@ import { exportActor } from "../partners/train.ts";
 import { digest as contentHash } from "../partners/policy.ts";
 import { field, json, outcomes, rate, save, sha, trainingSeeds } from "./development.ts";
 
+interface TimedChunk { before:number; completed:number; seconds:number; trainDecisions:number }
+
+export function timedProgress(chunks:TimedChunk[], before:number, startingDecisions:number) {
+  let previousUnit=before, previousDecisions=startingDecisions;
+  let measuredDecisions=0, decisionSeconds=0, measuredSeconds=0, measuredUnits=0;
+  for(const chunk of chunks){
+    measuredUnits+=chunk.completed-chunk.before;
+    measuredSeconds+=chunk.seconds;
+    if(chunk.before===previousUnit){
+      measuredDecisions+=chunk.trainDecisions-previousDecisions;
+      decisionSeconds+=chunk.seconds;
+    }
+    previousUnit=chunk.completed;
+    previousDecisions=chunk.trainDecisions;
+  }
+  return {measuredSeconds, measuredUnits, measuredDecisions, decisionSeconds};
+}
+
 export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"overnight") {
   const current=join(run,"snapshots",stage,format);
   const previous=stage==="pilot"?"profile":stage==="overnight"?"pilot":null;
@@ -29,8 +47,9 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
     const start=previous?json(join(run,"snapshots",previous,format,String(seed),"checkpoint")).state:null;
     const meta=json(join(dir,format==="duel"?"manifest.json":"training.json"));
     const completed=cp.iteration??cp.completed, before=start?.iteration??start?.completed??0;
-    const measuredSeconds=profile.samples.filter((r:{seed:number})=>r.seed===seed).reduce((a:number,r:{seconds:number})=>a+r.seconds,0);
+    const chunks = profile.samples.filter((r:{seed:number})=>r.seed===seed);
     const decisions=cp.counters?.prefixDecisions??cp.examples, old=start?.counters?.prefixDecisions??start?.examples??0;
+    const {measuredSeconds,measuredUnits,measuredDecisions,decisionSeconds}=timedProgress(chunks,before,old);
     const memory=samples.filter(row=>Number(row.seed)===seed).map(row=>row.rssKiB);
     const cumulative=new Map<string,number>();
     let cpuSeconds=0;
@@ -50,14 +69,17 @@ export function evidence(run:string, format:Format, stage:"profile"|"pilot"|"ove
       checkpointBytes:readFileSync(checkpoint).length,actorSha256:sha(actor),checkpointSha256:sha(checkpoint),
       measuredTrainerWallSeconds:measuredSeconds,measuredLaneHours:measuredSeconds/3600,
       sampledCpuHoursLowerBound:cumulative.size?cpuSeconds/3600:null,
-      completedUnitsPerMeasuredSecond:(completed-before)/measuredSeconds,decisionsPerMeasuredSecond:(decisions-old)/measuredSeconds,
+      timedCompletedUnits:measuredUnits,unitsOutsideMeasuredChunks:completed-before-measuredUnits,
+      timedDecisions:measuredDecisions,secondsForTimedDecisions:decisionSeconds,
+      completedUnitsPerMeasuredSecond:measuredSeconds?measuredUnits/measuredSeconds:null,
+      decisionsPerMeasuredSecond:decisionSeconds?measuredDecisions/decisionSeconds:null,
       latestTrainerPeakRSSKiB:meta.maxRssKiB??null,sampledProcessTreePeakRSSKiB:memory.length?Math.max(...memory):null,
       memorySamples:memory.length,devMean:rate(outcomes(report,String(seed))),worstFamily:means[0],
       developmentActorLatencyMs:report.actorLatencyMs[String(seed)]};
   });
   const result={format,stage,runs,field,sourceRevision:json(join(run,"plan.json")).revision,developmentSeed:report.seed,
     developmentPairs:report.budget,developmentReportSha256:sha(join(run,"development",format,stage+".json")),
-    throughputScope:"Completed chunks measured by the scheduler. Final interrupted batches may shorten recorded lane time.",
+    throughputScope:"Throughput uses only timed completed chunks; decision throughput excludes any chunk lacking a contiguous starting counter. Recovered units without a matching timer are reported separately.",
     cpuScope:"Lower bound from CPU-time differences for each live PID on two successive samples; process startup/exit tails excluded.",
     memoryScope:"Sampled sum of RSS of trainer and descendants; shared mappings may be counted by two processes."};
   save(join(run,"evidence",format,stage+".json"),result);

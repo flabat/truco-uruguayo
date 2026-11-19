@@ -59,12 +59,31 @@ def sample(tree, pid, run):
     return usage
 
 
+def scheduler_command(cmd, phase, run):
+    signature = "training/league/cli.ts " + phase + " --run " + str(run)
+    return Path(cmd.split()[0]).name == "node" and (signature + " " in cmd or cmd.endswith(signature))
+
+
+def quotas_met(run, phase, plan, selected):
+    quota = plan["budgets"][phase] / len(plan["seeds"])
+    for fmt in selected:
+        path = run / (phase + "-" + fmt + ".json")
+        if not path.exists():
+            return False
+        samples = json.loads(path.read_text())["samples"]
+        for seed in plan["seeds"]:
+            if sum(row["seconds"] for row in samples if row["seed"] == seed) < quota:
+                return False
+    return True
+
+
 def watch(run, phase, pid, deadline=None, child=None):
     log = run / (phase+"-telemetry.jsonl")
     with log.open("a") as out:
         while True:
             tree = processes()
-            if (child is not None and child.poll() is not None) or pid not in tree:
+            if ((child is not None and child.poll() is not None) or pid not in tree or
+                    not scheduler_command(tree[pid][2], phase.removesuffix("-cpu"), run)):
                 return False
             if deadline is not None and time.time() >= deadline:
                 # This group is created solely for this pilot. Children write checkpoints atomically.
@@ -126,12 +145,23 @@ def timed_stage(run, phase, runtime, plan, selected):
     if list(selected) != timing.get("formats", list(FORMATS)):
         raise RuntimeError("Los formatos deben coincidir al reanudar la etapa.")
     if timing["status"] == "running":
-        signature = "training/league/cli.ts " + phase + " --run " + str(run)
-        pids = [pid for pid, row in processes().items()
-                if signature in row[2] and Path(row[2].split()[0]).name == "node"]
-        if len(pids) > 1:
-            raise RuntimeError("Se encontraron dos ejecuciones de la misma etapa.")
-        if pids or time.time() < timing["deadlineUTC"]:
+        while True:
+            tree = processes()
+            pids = [pid for pid, row in tree.items() if scheduler_command(row[2], phase, run)]
+            if len(pids) > 1:
+                raise RuntimeError("Se encontraron dos ejecuciones de la misma etapa.")
+            if not pids:
+                # A lost scheduler can leave one bounded child training its current chunk.
+                # Let that sole writer finish before another scheduler opens the same run.
+                workers = [pid for pid, row in tree.items() if Path(row[2].split()[0]).name == "node"
+                           and "/training/cli.ts " in row[2] and str(run) + "/" in row[2]]
+                if workers:
+                    if time.time() >= timing["deadlineUTC"]:
+                        raise RuntimeError("Quedaron entrenadores sin coordinador al vencer el plazo. Verificá sus PID antes de exportar.")
+                    time.sleep(1)
+                    continue
+                if time.time() >= timing["deadlineUTC"] or quotas_met(run, phase, plan, selected):
+                    break
             args = ["node", "training/league/cli.ts", phase, "--run", run]
             if tuple(selected) != FORMATS:
                 args.extend(["--formats", ",".join(selected)])
@@ -139,8 +169,16 @@ def timed_stage(run, phase, runtime, plan, selected):
                 child = None if pids else subprocess.Popen(args, cwd=runtime, stdout=out, stderr=out, start_new_session=True)
                 pid = pids[0] if pids else child.pid
                 deadline_reached = watch(run, phase, pid, timing["deadlineUTC"], child)
-                if child is not None and not deadline_reached and child.returncode != 0:
-                    raise RuntimeError("El entrenador falló. Revisá el log y reanudá dentro del presupuesto.")
+            if deadline_reached:
+                break
+            if child is not None and child.returncode != 0:
+                raise RuntimeError("El entrenador falló. Revisá el log y reanudá dentro del presupuesto.")
+            if quotas_met(run, phase, plan, selected):
+                break
+            if child is not None:
+                raise RuntimeError("El entrenador salió antes del plazo sin completar las cuotas. La etapa queda abierta.")
+            # A scheduler reattached by PID disappeared early. Its exit status is unknown;
+            # only the atomic samples/checkpoints and original absolute deadline authorize completion.
         timing.update(status="budget-finished", finishedUTC=time.time())
         write(clock, timing)
     if not (run / "snapshots" / phase / "index.json").exists():
@@ -169,9 +207,7 @@ def main():
     if plan["revision"] != revision:
         raise RuntimeError("Se requiere el checkout fijado en el manifiesto.")
     if args.observe_pilot_cpu:
-        signature = "training/league/cli.ts pilot --run " + str(run)
-        pids = [pid for pid, row in processes().items()
-                if signature in row[2] and Path(row[2].split()[0]).name == "node"]
+        pids = [pid for pid, row in processes().items() if scheduler_command(row[2], "pilot", run)]
         if len(pids) != 1:
             raise RuntimeError("Se necesita exactamente un piloto en ejecución.")
         watch(run, "pilot-cpu", pids[0])
