@@ -7,11 +7,11 @@ import type { Asiento } from "../src/motor/reparto.ts";
 import { ErrorPeticion } from "./http.ts";
 import type { Registro } from "./turnos.ts";
 
-type TipoReparto = "redondilla" | "pico-a-pico";
+import type { TipoLance } from "../src/motor/reglas-tercetos.ts";
 export type RegistroTercetos = Registro & {
   mesa: string;
   meta_tercetos: number | null;
-  tipo_reparto: TipoReparto | null;
+  tipo_reparto: TipoLance | null;
   acciones: (AccionOnline & { duelo?: number | null })[];
 };
 
@@ -70,15 +70,9 @@ export async function repartirTercetosDB(db: PoolClient, mesa: string, numero: n
   return estado;
 }
 
-export function ganadorTercetos(estado: EstadoOnline): 0 | 1 | null {
-  const puntos = marcadorOnline(estado);
-  if (puntos[0] >= estado.meta) return 0;
-  if (puntos[1] >= estado.meta) return 1;
-  return null;
-}
-
 export function proyectarTercetos(estado: EstadoOnline, numero: number, version: number, asiento: Asiento) {
-  return { formato: "triples", version, manoNumero: numero, meta: estado.meta, puntos: marcadorOnline(estado),
-    ganadorPartida: ganadorTercetos(estado), lance: estado.lance, historialLances: estado.historialLances,
+  const puntos = marcadorOnline(estado);
+  const ganadorPartida = puntos[0] >= estado.meta ? 0 : puntos[1] >= estado.meta ? 1 : null;
+  return { formato: "triples", version, manoNumero: numero, meta: estado.meta, puntos, ganadorPartida, lance: estado.lance, historialLances: estado.historialLances,
     vista: vistaTercetos(estado, asiento) };
 }

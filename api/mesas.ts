@@ -47,7 +47,7 @@ export function esRutaMesas(pathname: string) {
 export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: string, web: URL): Promise<VistaMesa | null> {
   if (!esId(id)) return null;
   const { rows } = await db.query(`
-    SELECT m.id, m.modo, m.meta, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
+    SELECT m.id, m.modo, m.meta, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
            a.asiento, a.computadora, j.nombre
       FROM juego.mesas m
       JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
@@ -58,6 +58,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   `, [id, jugadorId]);
   if (rows.length === 0) return null;
   const mesa = rows[0];
+  verificarPerfil(mesa.modo, mesa.perfil_tercetos);
   const asientos: AsientoVista[] = Array.from({ length: capacidad[mesa.modo as Modo] }, (_, asiento) => {
     const ocupado = rows.find(row => row.asiento === asiento);
     const tipo = !ocupado ? "vacio" : ocupado.computadora ? "computadora" : "humano";
@@ -70,6 +71,12 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   enlace.searchParams.set("invitacion", mesa.invitacion);
   return { id: mesa.id, modo: mesa.modo, meta: mesa.meta, politica: mesa.politica, formato: formatoMesa(mesa.modo, mesa.version_senas), creadorId: mesa.creador, miAsiento: mesa.mio,
     invitacion: enlace.href, lista: rows.length === asientos.length, asientos };
+}
+
+export function verificarPerfil(modo: Modo, perfil: string | null) {
+  if (modo === "3v3" && perfil !== perfilTercetos) {
+    throw new ErrorPeticion(503, "Esta mesa requiere otra versión del árbitro de tercetos.");
+  }
 }
 
 interface Cambio { id: string; cambiado: boolean }

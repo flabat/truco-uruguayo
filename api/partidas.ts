@@ -2,11 +2,11 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import type { Asiento } from "../src/motor/reparto.ts";
 import {
-  iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline, type EstadoOnline,
+  iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
 } from "../src/motor/mesa-online.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
-import { formatoMesa, leerMesa, type FormatoMesa, type VistaMesa } from "./mesas.ts";
+import { formatoMesa, leerMesa, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
   type Confirmada, type ManoPublicable } from "./turnos.ts";
 import {
@@ -44,13 +44,6 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
   return comando;
 }
 
-function tantos(estado: EstadoOnline): Tanteador {
-  if (estado.lance) return marcadorOnline(estado);
-  const puntos: Tanteador = [...estado.puntosInicio];
-  for (const cobro of estado.cobros) puntos[cobro.equipo] += cobro.tantos;
-  return puntos.map(n => Math.min(n, estado.meta)) as Tanteador;
-}
-
 function ganador(puntos: Tanteador, meta: number) {
   if (puntos[0] >= meta) return 0;
   if (puntos[1] >= meta) return 1;
@@ -59,7 +52,7 @@ function ganador(puntos: Tanteador, meta: number) {
 
 function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, version: number, asiento: Asiento) {
   if (formato === "triples") return proyectarTercetos(mano.estado, numero, version, asiento);
-  const puntos = tantos(mano.estado);
+  const puntos = marcadorOnline(mano.estado);
   const { meta } = mano.estado;
   return { version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
     ...(formato === "pairs-senas" && {versionSenas: versions.signals, turnos: mano.turnos}),
@@ -105,10 +98,11 @@ export async function avanzarEnsayo(pool: Pool) {
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
-    const {rows: [mesa]} = await db.query(`SELECT id, modo, meta, version_senas FROM juego.mesas
+    const {rows: [mesa]} = await db.query(`SELECT id, modo, meta, version_senas, perfil_tercetos FROM juego.mesas
       WHERE solo_computadoras AND NOT ensayo_terminado
       AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t WHERE t.mesa=juego.mesas.id) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
     if (mesa) {
+      verificarPerfil(mesa.modo, mesa.perfil_tercetos);
       const formato = formatoMesa(mesa.modo, mesa.version_senas);
       const asientos = await db.query(`SELECT asiento FROM juego.asientos WHERE mesa=$1 AND computadora ORDER BY asiento`, [mesa.id]);
       const capacidad = formato === "triples" ? 6 : seatsFor(formato);
@@ -117,7 +111,7 @@ export async function avanzarEnsayo(pool: Pool) {
       }
       const fila = await ultimaMano(db, mesa.id);
       const previo = fila && recuperar(fila, formato, mesa.meta);
-      const puntos: Tanteador = previo ? tantos(previo.estado) : [0, 0];
+      const puntos: Tanteador = previo ? marcadorOnline(previo.estado) : [0, 0];
       if (previo && !previo.estado.resultado) {
         if (formato === "triples") await registrarPendienteTercetos(db, mesa.id, previo.estado, []);
         else await programarTurno(db, mesa.id, previo, []);
@@ -129,7 +123,7 @@ export async function avanzarEnsayo(pool: Pool) {
         const dador = fila ? (fila.reparto.dador + 1) % capacidad : undefined;
         const mano = await repartir(db, mesa.id, formato, [], (fila?.numero ?? 0) + 1,
           (fila?.version ?? 0) + 1, puntos, mesa.meta, dador, true);
-        final = ganador(tantos(mano.estado), mesa.meta) !== null;
+        final = ganador(marcadorOnline(mano.estado), mesa.meta) !== null;
       }
       if (final) await db.query("UPDATE juego.mesas SET ensayo_terminado=true WHERE id=$1", [mesa.id]);
     }
@@ -180,7 +174,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const version = fila.version + 1;
     let partida;
     if (comando.operacion === "siguiente") {
-      const puntos = tantos(estado);
+      const puntos = marcadorOnline(estado);
       if (!estado.resultado || ganador(puntos, mesa.meta) !== null) throw new ErrorPeticion(409, "No corresponde repartir otra mano.");
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
       const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, mesa.meta, dador, diferida);

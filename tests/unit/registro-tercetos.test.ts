@@ -20,6 +20,7 @@ test("la bitácora recupera una respuesta pendiente con la prioridad de un human
   assert.equal(asientoBotTercetos(estado, [2]), undefined);
   const rival = proyectarTercetos(estado, fila.numero, pendiente.version, 2);
   assert.deepEqual(rival.lance, {tipo: "pico-a-pico", duelo: 1, activos: [5, 2]});
+  assert.equal(rival.vista.estado, "jugando");
   assert.ok(rival.vista.legales.includes("quiero"));
   const espera = proyectarTercetos(estado, fila.numero, pendiente.version, 4);
   assert.deepEqual(espera.puntos, [2, 4]);
