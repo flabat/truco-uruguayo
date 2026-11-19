@@ -8,7 +8,7 @@ COPY training/contracts/index.ts ./training/contracts/index.ts
 COPY public ./public
 COPY arte ./arte
 COPY scripts/tatu ./scripts/tatu
-RUN PUBLIC_MULTIJUGADOR=1 npm run build
+RUN npm run build
 
 FROM nginx:stable-alpine
 COPY infra/web.conf /etc/nginx/conf.d/default.conf
