@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { canto } from "../src/lib/cantos.ts";
 import { probarTercetos } from "./verificar-tercetos-navegador.mjs";
+import { ingresarConClaveLocal as ingresar } from "./ingreso-local-navegador.mjs";
 import { chromium, expect } from "@playwright/test";
 
 const [web, proyecto] = process.argv.slice(2);
@@ -19,13 +20,6 @@ async function navegador(movil) {
   const p = await context.newPage();
   p.setDefaultTimeout(20_000);
   return p;
-}
-
-async function ingresar(p, usuario) {
-  await boton(p, "Ingresar al juego").click();
-  await p.locator("#username").fill(usuario);
-  await p.locator("#password").fill("truco-local");
-  await p.locator("#kc-login").click();
 }
 
 async function crear(p, modo, computadoras = false, meta) {

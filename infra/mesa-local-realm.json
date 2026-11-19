@@ -2,6 +2,10 @@
   "realm": "mesa-local",
   "enabled": true,
   "displayName": "Truco Oriental",
+  "loginTheme": "truco-oriental",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["es", "en"],
+  "defaultLocale": "es",
   "sslRequired": "none",
   "registrationAllowed": false,
   "clients": [

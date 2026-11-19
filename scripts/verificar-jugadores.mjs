@@ -1,15 +1,13 @@
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
+import { ingresarConClaveLocal } from "./ingreso-local-navegador.mjs";
 
 const web = process.argv[2];
 const usuarios = ["ana", "bruno", "clara", "diego"];
 const browser = await chromium.launch();
 
 async function ingresar(page, usuario) {
-  await page.getByRole("button", { name: "Ingresar al juego" }).click();
-  await page.locator("#username").fill(usuario);
-  await page.locator("#password").fill("truco-local");
-  await page.locator("#kc-login").click();
+  await ingresarConClaveLocal(page, usuario);
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
   const me = await page.request.get(web + "/api/jugador");
   assert.equal(me.status(), 200);

@@ -51,7 +51,7 @@ services:
       retries: 20
 
   identidad:
-    image: quay.io/keycloak/keycloak:26.8.2
+    build: ./infra/keycloak
     command: ["start-dev", "--import-realm"]
     environment:
       - KC_HOSTNAME=http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
