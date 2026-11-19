@@ -1,6 +1,7 @@
 import { crearMesaGuiada, type VistaGuiada } from "../../aprendizaje/mano-guiada";
 import { comparar, temas } from "../../aprendizaje/lecciones";
 import type { Respuesta } from "../../aprendizaje/tipos";
+import { canto } from "../../lib/cantos";
 import type { CardId } from "../../motor/cartas";
 import { mostrarCarta } from "../aprendizaje/cartas";
 import { asientos, nombre, pareja, resultadoMano, resultadoVuelta, situacionDeJuego, ultimaJugada } from "./relato";
@@ -91,7 +92,7 @@ export function montarMesa() {
       pregunta.textContent = paso.consigna;
       if (paso.tipo === "decidir-flor") {
         guia.textContent = "Mirá tus tres cartas y el palo de la muestra.";
-        for (const hayFlor of [true, false]) decisiones.append(boton(hayFlor ? "Tengo flor" : "Sin flor",
+        for (const hayFlor of [true, false]) decisiones.append(boton(hayFlor ? "Tengo flor" : canto["paso-flor"],
           () => responder({ tipo: paso.tipo, hayFlor }), "ap-opcion"));
       } else if (paso.tipo === "elegir-cartas") {
         guia.textContent = "Marcá las cartas que vas a contar.";
