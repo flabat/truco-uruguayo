@@ -47,9 +47,12 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   }
   await page.getByRole("button",{name:"Falta envido",exact:true}).press("Enter");
   const entries=page.getByRole("region",{name:"Señas de esta mano"}).getByRole("listitem");
+  const publicas=page.getByRole("region",{name:"Historial de la mano",exact:true}).getByRole("listitem");
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido"]);
+  await expect(publicas).toHaveText(["A dijo «Falta envido»."]);
   await page.reload();
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido"]);
+  await expect(publicas).toHaveText(["A dijo «Falta envido»."]);
   expect(sent).toEqual([{tipo:"falta-envido",sena:"cejas"}]);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });

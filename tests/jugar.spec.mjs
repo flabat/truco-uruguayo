@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, confirmarComputadora, jugarComputadoras, restaurar } from "../api/turnos.ts";
-import { vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
 import { dueloFlor, dueloMazo } from "./fixtures/duelo-mazo.ts";
 
 const mesaId = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
@@ -212,10 +212,87 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   expect(comando.id).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i);
   await page.getByRole("button", { name: "Repartir otra mano" }).click();
   await expect(page.getByText("Mano 2", { exact: true })).toBeVisible();
+  const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
+  await expect(historial).toBeVisible();
+  await expect(historial.getByText("Todavía no hay jugadas.")).toBeVisible();
+  await expect(historial.getByRole("listitem")).toHaveCount(0);
+  await expect(historial.locator("summary")).toHaveCount(0);
   await page.getByRole("button", { name: "Jugar As de espadas" }).press("Enter");
   await expect(page.getByRole("heading", { name: "Turno de CPU 1" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
 });
+
+for (const [caso, cantos] of [
+  ["la flor de salida en duelo", ["flor"]],
+  ["la flor seguida de dos declaraciones en parejas", ["flor", "paso-flor", "paso-flor"]],
+  ["el rechazo del envido sin que nadie cante flor", ["envido", "no-quiero", "paso-flor"]],
+]) {
+  test("la declaración muestra el contexto de " + caso, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const duelo = cantos.length === 1;
+    const conFlor = cantos[0] === "flor";
+    const asientos = ["Ana", "Computadora 2", "Clara", "Diego"].slice(0, duelo ? 2 : 4)
+      .map((nombre, i) => seat(i, i === 0 ? "humano" : "computadora", nombre));
+    const manos = [
+      ["oros-05", "copas-12", "bastos-11"],
+      conFlor ? ["copas-01", "copas-04", "copas-06"] : ["oros-04", "copas-04", "bastos-06"],
+      ["espadas-07", "oros-03", "bastos-04"],
+      ["oros-06", "copas-07", "bastos-03"],
+    ];
+    let estado = iniciarOnline({ versionReparto: "online-1", mano: 1, dador: 0,
+      muestra: "espadas-04", manos: manos.slice(0, asientos.length) });
+    function confirmarCanto(tipo, asiento) {
+      const paso = aplicarOnline(estado, { tipo, asiento });
+      expect(paso.ok).toBe(true);
+      estado = paso.estado;
+    }
+    cantos.forEach((tipo, i) => confirmarCanto(tipo, i + 1));
+    await simular(page, (path, req) => {
+      if (path.endsWith("/" + mesaId)) return { json: mesa(duelo ? "1v1" : "2v2", asientos) };
+      if (path.endsWith("/acciones")) {
+        expect(req.postDataJSON().accion).toEqual({ tipo: "paso-flor" });
+        confirmarCanto("paso-flor", 0);
+      }
+      if (path.endsWith("/partida") || path.endsWith("/acciones"))
+        return { json: { ...partida, version: estado.acciones.length, puntos: marcadorOnline(estado), vista: vistaOnline(estado, 0) } };
+    });
+    await page.goto("jugar/?mesa=" + mesaId);
+    const panel = page.locator(".j-jugada-panel");
+    const respuesta = panel.getByRole("button", { name: "Sin flor", exact: true });
+    const estadoDelTurno = panel.getByRole("status");
+    const anuncio = estadoDelTurno.getByText(/Computadora 2 cantó flor/i);
+    const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
+    await expect(respuesta).toBeEnabled();
+    await expect(historial).toBeVisible();
+    await expect(historial.getByRole("listitem")).toHaveCount(cantos.length);
+    await expect(historial.getByRole("listitem").first()).toHaveText(conFlor ? "Computadora 2 dijo «Flor»." : "Computadora 2 dijo «Envido».");
+    await expect(historial.locator("summary")).toHaveCount(0);
+    if (conFlor) {
+      await expect(anuncio).toBeVisible();
+      const cajaAnuncio = await anuncio.boundingBox();
+      const cajaRespuesta = await respuesta.boundingBox();
+      expect(cajaAnuncio.y + cajaAnuncio.height).toBeLessThanOrEqual(cajaRespuesta.y);
+      if (isMobile) {
+        await respuesta.scrollIntoViewIfNeeded();
+        await expect(anuncio).toBeInViewport();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+      }
+    } else {
+      await expect(estadoDelTurno).not.toContainText(/cantó flor/i);
+    }
+    if (duelo && process.env.CAPTURAS_UI) await panel.screenshot({
+      path: process.env.CAPTURAS_UI + "/flor-de-salida-" + test.info().project.name + ".png", scale: "css",
+    });
+    await respuesta.press("Enter");
+    await expect(respuesta).toHaveCount(0);
+    await expect(anuncio).toHaveCount(0);
+    await expect(historial.getByRole("listitem")).toContainText([/Ana dijo «Sin flor»/]);
+    if (duelo) {
+      await page.reload();
+      await expect(historial.getByRole("listitem")).toContainText([/Computadora 2 dijo «Flor»/, /Ana dijo «Sin flor»/]);
+    }
+  });
+}
 
 test("la entrega en duelo deja el cobro y el historial visibles al volver a la mesa", async ({ page }) => {
   const rival = seat(1, "computadora", "Computadora 2");
@@ -229,10 +306,11 @@ test("la entrega en duelo deja el cobro y el historial visibles al volver a la m
   await page.reload();
   await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeVisible();
   await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
-  const historial = page.locator(".j-historia");
-  await historial.locator("summary").press("Enter");
-  await expect(historial.getByRole("listitem")).toHaveCount(8);
+  const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
+  await expect(historial.getByRole("listitem")).toHaveCount(3);
   await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
+  await historial.locator("summary").filter({ hasText: /anteriores/i }).press("Enter");
+  await expect(historial.getByRole("listitem")).toHaveCount(8);
   await expect(historial).not.toContainText(/7 de oros|as de bastos/i);
   await expect(page.getByRole("button", { name: "Repartir otra mano" })).toBeEnabled();
   if (process.env.CAPTURAS_MAZO)
@@ -264,10 +342,11 @@ test("Ana responde al bluff sobre su flor antes de abrir la segunda vuelta", asy
   await page.getByRole("button", { name: "Quiero", exact: true }).press("Enter");
   await page.reload();
   await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
-  const historial = page.locator(".j-historia");
-  await historial.locator("summary").press("Enter");
-  await expect(historial.getByRole("listitem")).toHaveCount(7);
+  const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
+  await expect(historial.getByRole("listitem")).toHaveCount(3);
   await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
+  await historial.locator("summary").filter({ hasText: /anteriores/i }).press("Enter");
+  await expect(historial.getByRole("listitem")).toHaveCount(7);
   await expect(historial.getByRole("listitem").filter({ hasText: "jugó" })).toHaveCount(2);
   if (process.env.CAPTURAS_MAZO)
     await historial.screenshot({ path: process.env.CAPTURAS_MAZO + "/flor-mazo-" + test.info().project.name + ".png", scale: "css" });
@@ -309,8 +388,11 @@ for (const entrada of ["crear la mesa", "completar la sala de espera"]) {
     }
     const cartas = page.getByRole("region", { name: "Tapete" }).locator(".j-jugada img");
     const jugar = page.getByRole("button", { name: "Jugar As de espadas" });
+    const jugadasVisibles = page.getByRole("region", { name: "Historial de la mano", exact: true }).getByRole("listitem");
     for (const [i, nombre] of ["6 de copas", "4 de bastos", "5 de oros"].entries()) {
       await expect(cartas).toHaveCount(i + 1);
+      await expect(jugadasVisibles).toHaveCount(i + 1);
+      await expect(jugadasVisibles.last()).toHaveText(asientos[i + 1].nombre + " jugó " + nombre + ".");
       const nueva = cartas.nth(i);
       await expect(nueva).toHaveAttribute("alt", nombre);
       if (i < 2) {
@@ -337,6 +419,7 @@ for (const entrada of ["crear la mesa", "completar la sala de espera"]) {
     sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
     await expect(page.getByText("Mano 2", { exact: true })).toBeVisible();
     await expect(cartas).toHaveCount(2);
+    await expect(jugadasVisibles).toHaveCount(2);
     await expect(jugar).toBeEnabled();
     await expect(page.locator(".j-tanteador strong")).toHaveText(["2", "3"]);
   });
