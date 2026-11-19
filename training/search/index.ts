@@ -74,12 +74,13 @@ export function refine(prior: readonly number[], rows: readonly number[][], weig
 }
 export function boundedSearch(options: SearchOptions, report?: (d: Diagnostics) => void, now = performance.now.bind(performance)): Policy {
   const { table, field, worlds, proposals, deadlineMs, duelRisk } = options;
-  if (!Number.isSafeInteger(worlds) || worlds < 1 || !Number.isSafeInteger(proposals) || proposals < worlds
+  if (table.schema !== "score-continuation-v1" || table.field.length !== seatsFor(table.format)
+      || !Number.isSafeInteger(worlds) || worlds < 1 || !Number.isSafeInteger(proposals) || proposals < worlds
       || !Number.isFinite(deadlineMs) || deadlineMs < 0 || !Number.isFinite(duelRisk) || duelRisk < 0 || duelRisk > 1
       || !table.field.every((id, s) => id === field(s as Asiento).id)) throw new RangeError("Configuración de búsqueda inválida.");
   const model = createHash("sha256").update(JSON.stringify([table, worlds, proposals, deadlineMs, duelRisk])).digest("hex");
   return { id: "bounded-search-v1-" + model, decide(obs, legal) {
-    if (obs.format !== table.format || legal.length !== obs.legalActions.length || legal.some((a, i) => a !== obs.legalActions[i])) {
+    if (obs.format !== table.format || obs.target !== 40 || legal.length !== obs.legalActions.length || legal.some((a, i) => a !== obs.legalActions[i])) {
       throw new Error("Formato o acciones incompatibles con la búsqueda.");
     }
     const deadline = now() + deadlineMs;
