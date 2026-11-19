@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { esRepartoOnline, esRepartoV1, repartir, type Asiento } from "../../src/motor/reparto.ts";
 import { iniciarMano, jugarCarta } from "../../src/motor/mano.ts";
-import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, repartirOnline, vistaOnline,
+import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, repartirOnline, vistaOnline, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
 
 const empate: RepartoOnline = {
@@ -89,6 +89,12 @@ test("falta elevada entre rivales empatados usa la cuenta del ganador al abrir e
     estado = declaraciones(enviar(estado, { tipo: "quiero", asiento: mano }));
     assert.deepEqual(estado.cobros, [{ equipo, asiento: mano, valor: equipo ? 1 : 18,
       tantos: equipo ? 1 : 18, motivo: "envido", tantoGanador: 31 }]);
+    const prueba = vistaTercetos(estado, 2).pruebasDeTantos;
+    if (equipo === 0) {
+      assert.deepEqual(prueba, [{ asiento: 0, motivo: "envido", total: 31, cartas: ["copas-10", "oros-04"] }]);
+    } else {
+      assert.equal(prueba, undefined);
+    }
   }
 });
 
