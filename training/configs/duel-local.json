@@ -1,0 +1,9 @@
+{
+  "seed": 11003,
+  "iterations": 128,
+  "buckets": 2048,
+  "expandDepth": 1,
+  "exploration": 0.08,
+  "referenceSteps": 200,
+  "saveEvery": 4
+}
