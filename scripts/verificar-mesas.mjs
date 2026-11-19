@@ -53,7 +53,9 @@ try {
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"2v2"}, "https://example.org")).estado, 403);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"3v3"})).estado, 400);
     assert.equal((await llamar(ana, "POST", "/api/invitaciones/invalida/unirse")).estado, 404);
+    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "1v1", formato: "pairs-senas"})).estado, 400);
     const dupla = await crear(ana, "2v2");
+    assert.equal(dupla.formato, "pairs");
     assert.equal(dupla.asientos.length, 4);
     assert.deepEqual(dupla.asientos.map(a=>a.equipo), [0,1,0,1]);
     assert.equal((await llamar(eva, "GET", "/api/mesas/" + dupla.id)).estado, 404);

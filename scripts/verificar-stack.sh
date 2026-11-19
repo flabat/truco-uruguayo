@@ -34,6 +34,7 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module - iniciar < scripts/verificar-vivo.mjs
 node scripts/verificar-juego-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
