@@ -1,24 +1,26 @@
 import { randomInt } from "node:crypto";
-import { metaPorModalidad } from "./chico.ts";
+import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza } from "./cartas.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
 import { iniciarMano, jugarCarta, vistaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
-import { esAsiento, esRepartoOnline, type Asiento, type RepartoOnline, type TresCartas } from "./reparto.ts";
+import { esAsientoOnline, esRepartoOnline, type Asiento, type RepartoOnline, type TresCartas } from "./reparto.ts";
 import {
   aDecidir, cobrarVueltas, legalesOnline, resolverCanto, tantosPropios, type AccionOnline, type Cobro,
   type EstadoOnline, type Oferta, type TipoAccionOnline,
 } from "./cantos-online.ts";
 
 export { aDecidir };
+export { marcadorOnline } from "./cantos-online.ts";
+export { versionReglasTercetos } from "./reglas-tercetos.ts";
 export type { AccionOnline, Cobro, EstadoOnline, RepartoOnline, TipoAccionOnline };
 export const versionReglasOnline = 1;
 
 /** Reparte en el servidor una carta por asiento en cada una de las tres rondas. */
-export function repartirOnline(cantidad: 2 | 4, dador?: number): RepartoOnline {
-  if (cantidad !== 2 && cantidad !== 4) throw new RangeError("La mesa requiere dos o cuatro asientos.");
+export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnline {
+  if (cantidad !== 2 && cantidad !== 4 && cantidad !== 6) throw new RangeError("La mesa requiere dos, cuatro o seis asientos.");
   dador ??= randomInt(cantidad);
-  if (!esAsiento(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
+  if (!esAsientoOnline(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
   const mano = ((dador + 1) % cantidad) as Asiento;
   const mazoMezclado = [...mazo];
   // Fisher–Yates parcial: solo se precisan las tres rondas y la muestra.
@@ -30,13 +32,13 @@ export function repartirOnline(cantidad: 2 | 4, dador?: number): RepartoOnline {
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { versionReparto: "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
+  return { versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
 export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [number, number] = [0, 0], metaElegida?: number): EstadoOnline {
   if (!esRepartoOnline(reparto)) throw new TypeError("Se necesita un reparto de mesa en línea válido.");
-  const meta = metaElegida === undefined ? metaPorModalidad[reparto.manos.length === 2 ? "1v1" : "2v2"] : metaElegida;
-  if (!Number.isSafeInteger(meta) || meta <= 0 || puntosInicio.length !== 2
+  const meta = metaElegida === undefined ? metaPorModalidad[reparto.manos.length === 6 ? "3v3" : reparto.manos.length === 2 ? "1v1" : "2v2"] : metaElegida;
+  if ((reparto.versionReparto === "online-2" && !esMetaDeChico(meta)) || !Number.isSafeInteger(meta) || meta <= 0 || puntosInicio.length !== 2
     || !puntosInicio.every(p => Number.isSafeInteger(p) && p >= 0 && p < meta)) {
     throw new RangeError("La meta y los tantos de inicio deben corresponder a un partido en juego.");
   }
@@ -51,7 +53,7 @@ type PasoOnline = { ok: true; estado: EstadoOnline } | { ok: false; error: Error
 
 export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoOnline {
   if (estado.resultado) return { ok: false, error: "mano-cerrada" };
-  if (!accion || !esAsiento(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
+  if (!accion || !esAsientoOnline(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
     return { ok: false, error: "accion-invalida" };
   }
   const { tipo, asiento } = accion;
