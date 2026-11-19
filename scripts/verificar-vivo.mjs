@@ -83,7 +83,8 @@ async function vistas(sesiones, ruta) {
 }
 
 async function iniciar(sesiones, ajena) {
-  const mesa = await http(sesiones[0], "/api/mesas", { modo: "2v2" });
+  const mesa = await http(sesiones[0], "/api/mesas", { modo: "2v2", formato: "pairs-senas" });
+  assert.equal(mesa.formato, "pairs-senas");
   const id = mesa.id;
   const token = new URL(mesa.invitacion).searchParams.get("invitacion");
   for (const s of sesiones.slice(1)) await http(s, "/api/invitaciones/" + token + "/unirse", {});
@@ -97,7 +98,7 @@ async function iniciar(sesiones, ajena) {
   assert.notEqual(turno, -1);
   const { vista, version } = antes[turno];
   const accion = vista.legales.includes("carta") ? { tipo: "carta", carta: vista.cartas[0] } : { tipo: "flor" };
-  const orden = { tipo: "accion", id: randomUUID(), version, accion };
+  const orden = { tipo: "accion", id: randomUUID(), version, accion: {...accion, sena: "cejas"} };
   const autor = clientes[turno];
   // El aviso se emite después del commit. Cortar en ese punto deja al autor sin leer la confirmación.
   autor.ws.send(JSON.stringify(orden));
@@ -108,10 +109,19 @@ async function iniciar(sesiones, ajena) {
   }
   const despues = await vistas(sesiones, ruta);
   assert.ok(despues[0].version > version);
+  for (const p of despues) {
+    assert.equal(p.versionSenas, "senas-publicas-v1");
+    assert.equal(p.formato, "pairs-senas");
+    assert.deepEqual(p.turnos, despues[0].turnos);
+    assert.deepEqual(p.turnos.map(t => t.signal), ["cejas"]);
+    assert.deepEqual(p.turnos.map(t => t.action), p.vista.acciones);
+  }
   const regreso = conectar(sesiones[turno], id);
   assert.deepEqual(await regreso.recibir(), { tipo: "actualizar" });
   regreso.ws.send(JSON.stringify(orden));
   assert.deepEqual(await regreso.recibir(), { tipo: "confirmacion", id: orden.id, partida: despues[turno] });
+  regreso.ws.send(JSON.stringify({...orden, accion: {...orden.accion, sena: "beso"}}));
+  assert.equal((await regreso.recibir()).tipo, "error");
   const viejo = { ...orden, id: randomUUID() };
   regreso.ws.send(JSON.stringify(viejo));
   const error = await regreso.recibir();
