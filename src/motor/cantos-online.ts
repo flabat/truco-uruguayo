@@ -8,11 +8,11 @@ type CantoEnvido = "envido" | "real-envido" | "falta-envido";
 type CantoFlor = "flor" | "con-flor-envido" | "contraflor-al-resto";
 type CantoLateral = CantoEnvido | CantoFlor;
 type Canto = CantoTruco | CantoLateral;
-export type TipoAccionOnlineV1 = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta";
-export type TipoAccionOnline = TipoAccionOnlineV1 | "mazo";
-export type AccionOnlineV1 = ({ tipo: "carta" } & Jugada)
-  | { tipo: Exclude<TipoAccionOnlineV1, "carta">; asiento: Asiento };
-export type AccionOnline = AccionOnlineV1 | { tipo: "mazo"; asiento: Asiento };
+export type TipoAccionOnline = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta" | "mazo";
+export type AccionOnline = ({ tipo: "carta" } & Jugada)
+  | { tipo: Exclude<TipoAccionOnline, "carta">; asiento: Asiento };
+export type TipoAccionOnlineV1 = TipoAccionOnline;
+export type AccionOnlineV1 = AccionOnline;
 
 export interface Oferta<T extends Canto = Canto> { tipo: T; asiento: Asiento }
 interface Envite extends Oferta<CantoLateral> { valor: number; anterior: number }
@@ -54,6 +54,8 @@ export interface EstadoOnline {
   valorTruco: number;
   trucoPendiente: Oferta<CantoTruco> | null;
   ultimoCantorTruco: Asiento | null;
+  /** Oportunidad de cantar o entregar antes de que el rival abra la segunda vuelta. */
+  antesDeSalida?: Asiento;
   lateral: Envite | null;
   lateralCerrado: boolean;
   flores: readonly Asiento[];
@@ -80,7 +82,10 @@ export function aDecidir(estado: EstadoOnline): Asiento[] {
   if (estado.resultado) return [];
   if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
   const oferta = estado.lateral ?? estado.trucoPendiente;
-  if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
+  if (!oferta) {
+    const asiento = estado.antesDeSalida ?? estado.mano.turno;
+    return asiento === null ? [] : [asiento];
+  }
   let posibles = participantesDe(estado.mano);
   if (estado.flores.length && estado.lateral) {
     posibles = esTerceto(estado) ? posibles.filter(a => estado.flores.includes(a)) : estado.flores;
@@ -113,7 +118,7 @@ export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccio
   }
 
   const oferta = estado.trucoPendiente;
-  const legales: TipoAccionOnline[] = oferta ? ["quiero", "no-quiero"] : ["carta"];
+  const legales: TipoAccionOnline[] = oferta ? ["quiero", "no-quiero"] : [estado.antesDeSalida === asiento ? "mazo" : "carta"];
   if (!oferta && esTerceto(estado)) legales.push("mazo");
   const proximo = nivelesTruco[estado.valorTruco - 1 + (oferta ? 1 : 0)];
   if (proximo && (estado.ultimoCantorTruco === null

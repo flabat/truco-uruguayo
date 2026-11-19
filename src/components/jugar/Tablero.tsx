@@ -151,7 +151,9 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
         : victoria
           ? "Ganaste la mano"
           : "El rival ganó la mano",
-      indicacion: `Se anotaron ${tantos(resultado.tantos)} por ${motivos[resultado.motivo]}.`,
+      indicacion: resultado.motivo === "mazo"
+        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo. Se anotaron ${tantos(resultado.tantos)}.`
+        : `Se anotaron ${tantos(resultado.tantos)} por ${motivos[resultado.motivo]}.`,
     };
   }
   if (porDeclararFlor !== null) {
@@ -399,7 +401,7 @@ export function EnJuego({
                   {nombre(a.asiento)}{" "}
                   {a.tipo === "carta"
                     ? "jugó " + nombrar(a.carta).toLowerCase()
-                    : "dijo «" + canto[a.tipo] + "»"}
+                    : a.tipo === "mazo" ? "se fue al mazo" : "dijo «" + canto[a.tipo] + "»"}
                   .
                 </li>
                 {florQuerida?.comparacionFlor?.indiceAccion === i && (

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { esCardId, type CardId } from "../../src/motor/cartas.ts";
 import { compararCartas } from "../../src/motor/jerarquia.ts";
 import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
-import { signalVersionFor, versions, signals, type ActionId, type Policy, type SeatObservation } from "../contracts/index.ts";
+import { signalVersionFor, versions, signals, type ActionId, type Move, type Policy, type SeatObservation } from "../contracts/index.ts";
 import { signalRules } from "../signals/index.ts";
 
 export const partnerships = ["pairs", "pairs-senas", "pairs-private-senas"] as const;
@@ -10,6 +10,11 @@ export type Partnership = typeof partnerships[number];
 export const dimensions = { event: 9, memory: 6, current: 12, move: 31, signal: 14 } as const;
 const bids = ["truco", "retruco", "vale-cuatro", "envido", "real-envido", "falta-envido", "flor",
   "paso-flor", "con-flor-envido", "contraflor-al-resto", "quiero", "no-quiero"] as const;
+
+function bidCategory(bid: Exclude<Move, CardId>) {
+  if (bid === "mazo") throw new RangeError("La política de parejas no admite una entrega de duelo.");
+  return 19 + bids.indexOf(bid);
+}
 
 function power(card: CardId, sample: CardId) {
   // El 4 de un palo distinto a la muestra tiene puesto 18 (el más débil).
@@ -28,7 +33,7 @@ export function encode(obs: SeatObservation, legal: readonly ActionId[]): Input 
   const history = obs.history.map(({ action, signal, awards }) => {
     const relative = (action.asiento - seat + 4) % 4;
     const card = action.tipo === "carta";
-    const category = card ? power(action.carta, view.muestra) : 19 + bids.indexOf(action.tipo);
+    const category = card ? power(action.carta, view.muestra) : bidCategory(action.tipo);
     const earned = awards.reduce((sum, award) => sum + (award.equipo === team ? 1 : -1) * award.tantos, 0);
     return [0, 1, 2, 3].map(n => Number(n === relative)).concat([
       Number(card), category / 30, signal ? (signals.indexOf(signal) + 1) / 13 : 0, Number(!!signal), earned / 40,
@@ -40,7 +45,7 @@ export function encode(obs: SeatObservation, legal: readonly ActionId[]): Input 
     view.valorTruco / 4, (obs.stakes.side?.accept ?? 0) / 40, (obs.stakes.side?.decline ?? 0) / 40];
   const actions: [number, number][] = legal.map(id => {
     const { move, signal } = signalRules.decode(id);
-    return [esCardId(move) ? power(move, view.muestra) : 19 + bids.indexOf(move), signal ? signals.indexOf(signal) + 1 : 0];
+    return [esCardId(move) ? power(move, view.muestra) : bidCategory(move), signal ? signals.indexOf(signal) + 1 : 0];
   });
   return { history, current, actions };
 }

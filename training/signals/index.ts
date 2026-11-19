@@ -9,7 +9,7 @@ import { decodeMove } from "../seat/index.ts";
 const bids = {
   truco: true, retruco: true, "vale-cuatro": true, envido: true, "real-envido": true,
   "falta-envido": true, flor: true, "paso-flor": true, "con-flor-envido": true,
-  "contraflor-al-resto": true, quiero: true, "no-quiero": true,
+  "contraflor-al-resto": true, quiero: true, "no-quiero": true, mazo: true,
 } satisfies Record<Exclude<Move, CardId>, true>;
 
 function isMove(value: string): value is Move {

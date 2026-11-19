@@ -1,14 +1,14 @@
 import type {Pool, PoolClient} from "pg";
-import { aDecidir, vistaTercetos } from "../src/motor/mesa-online.ts";
+import { aDecidir, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import { hasSignals, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
-import { commitTurn, signalRules } from "../training/signals/index.ts";
+import { signalRules } from "../training/signals/index.ts";
 import { elegirAccionTercetos } from "../src/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { guardarAcciones, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -32,7 +32,7 @@ async function snapshot(db: Pool | PoolClient, id?: string) {
 
 interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }
 
-async function prepararTurno(fila: Fila, servicio: Inferencia) {
+async function decidirTurno(fila: Fila, servicio: Inferencia) {
   if (fila.modo === "3v3") {
     if (fila.politica !== politicaTercetos) throw new Error("Política de tercetos desconocida.");
     const estado = restaurarTercetosDB(fila);
@@ -48,19 +48,18 @@ async function prepararTurno(fila: Fila, servicio: Inferencia) {
     };
   }
   const formato = formatoMesa(fila.modo, fila.version_senas);
-  const mano = restaurar(fila, formato, fila.meta);
+  const mano = restaurar(fila, formato, fila.meta, fila.humanos);
   const asiento = actor(mano, fila.humanos);
   if (asiento === undefined) return null;
   const historial = formato === "pairs-senas" ? turnosDeEquipo(mano.turnos, asiento) : mano.turnos;
-  const observacion = observe(mano.estado, asiento, formato, historial);
+  const observacion = observe(mano.estado, asiento, formato, historial, vistaParaPolitica);
   const decision = await servicio.decide(fila.politica, hasSignals(formato)
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
   return {
     asiento, politica: decision.policy, fallback: decision.fallback, latencia: decision.latencyMs,
     actorActual: (humanos: Asiento[]) => actor(mano, humanos),
     async aplicar(db: PoolClient, humanos: Asiento[]) {
-      const paso = commitTurn(mano.estado, asiento, formato, decision.action);
-      const nueva = {estado: paso.state, turnos: [...mano.turnos, paso.turn]};
+      const nueva = prepararTurno(confirmarComputadora(mano, formato, asiento, decision.action), humanos);
       await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
         [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
       await programarTurno(db, fila.mesa, nueva, humanos);
@@ -72,7 +71,7 @@ async function prepararTurno(fila: Fila, servicio: Inferencia) {
 export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar: (id: string) => void, id?: string) {
   const fila = await snapshot(pool, id);
   if (!fila) return false;
-  const turno = await prepararTurno(fila, servicio);
+  const turno = await decidirTurno(fila, servicio);
   if (!turno) return false;
   const db = await pool.connect();
   try {

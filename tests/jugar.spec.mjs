@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { confirmar, confirmarComputadora, jugarComputadoras, restaurar } from "../api/turnos.ts";
+import { vistaOnline } from "../src/motor/mesa-online.ts";
+import { dueloFlor, dueloMazo } from "./fixtures/duelo-mazo.ts";
 
 const mesaId = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
 const token = "t".repeat(32);
@@ -196,6 +199,62 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await page.getByRole("button", { name: "Jugar As de espadas" }).press("Enter");
   await expect(page.getByRole("heading", { name: "Turno de CPU 1" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
+});
+
+test("la entrega en duelo deja el cobro y el historial visibles al volver a la mesa", async ({ page }) => {
+  const rival = seat(1, "computadora", "Computadora 2");
+  const fin = confirmarComputadora(restaurar(dueloMazo, "duel"), "duel", 1, "oros-07");
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("1v1", [personas[0], rival]) };
+    if (path.endsWith("/partida")) return { json: { ...partida, manoNumero: 5,
+      vista: vistaOnline(fin.estado, 0), puntos: [2, 1] } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeVisible();
+  await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
+  const historial = page.locator(".j-historia");
+  await historial.locator("summary").press("Enter");
+  await expect(historial.getByRole("listitem")).toHaveCount(8);
+  await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
+  await expect(historial).not.toContainText(/7 de oros|as de bastos/i);
+  await expect(page.getByRole("button", { name: "Repartir otra mano" })).toBeEnabled();
+  if (process.env.CAPTURAS_MAZO)
+    await historial.screenshot({ path: process.env.CAPTURAS_MAZO + "/mazo-" + test.info().project.name + ".png" });
+});
+
+test("Ana responde al bluff sobre su flor antes de abrir la segunda vuelta", async ({ page }) => {
+  const rival = seat(1, "computadora", "Computadora 2");
+  let mano = restaurar(dueloFlor, "duel", 40, [0]);
+  let version = 5;
+  const sockets = await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("1v1", [personas[0], rival]) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "quiero" });
+      mano = jugarComputadoras(confirmar(mano, "duel", { tipo: "quiero", asiento: 0 }), "duel", [0]);
+      version++;
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones"))
+      return { json: { ...partida, manoNumero: 4, version, vista: vistaOnline(mano.estado, 0),
+        puntos: [mano.estado.resultado ? 16 : 14, 0] } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await expect(page.getByRole("heading", { name: "Turno de Computadora 2" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button").first()).toBeDisabled();
+  mano = confirmarComputadora(mano, "duel", 1, "truco");
+  version++;
+  await expect.poll(() => sockets.length).toBeGreaterThan(0);
+  sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+  await page.getByRole("button", { name: "Quiero", exact: true }).press("Enter");
+  await page.reload();
+  await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
+  const historial = page.locator(".j-historia");
+  await historial.locator("summary").press("Enter");
+  await expect(historial.getByRole("listitem")).toHaveCount(7);
+  await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
+  await expect(historial.getByRole("listitem").filter({ hasText: "jugó" })).toHaveCount(2);
+  if (process.env.CAPTURAS_MAZO)
+    await historial.screenshot({ path: process.env.CAPTURAS_MAZO + "/flor-mazo-" + test.info().project.name + ".png", scale: "css" });
 });
 
 for (const entrada of ["crear la mesa", "completar la sala de espera"]) {

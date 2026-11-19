@@ -1,6 +1,7 @@
 import { randomInt } from "node:crypto";
 import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza } from "./cartas.ts";
+import { evaluarTantos } from "./tantos.ts";
 import { faltaDelGanador, tipoDeReparto } from "./reglas-tercetos.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
@@ -88,16 +89,67 @@ function cerrarLance(estado: EstadoOnline): EstadoOnline {
 
 type PasoOnline = { ok: true; estado: EstadoOnline } | { ok: false; error: ErrorJugada | "accion-invalida" | "accion-no-permitida" };
 
+/** La parda en la segunda también le da la mano a quien ganó la primera. */
+export function segundaPerdidaEnDuelo({ mano }: EstadoOnline, asiento: Asiento): boolean {
+  const primera = mano.vueltas[0]?.resultado;
+  const salida = mano.vueltaActual?.jugadas[0];
+  return mano.reparto.manos.length === 2 && mano.vueltas.length === 1
+    && primera?.tipo === "ganada" && primera.asiento !== asiento
+    && mano.turno === asiento && salida?.asiento === primera.asiento
+    && mano.restantes[asiento].every(carta => compararCartas(carta, salida.carta, mano.reparto.muestra) <= 0);
+}
+
+/** Solo las cartas propias y los hechos públicos pueden justificar interrumpir la salida rival. */
+export function anticiparAnteFlor(estado: EstadoOnline, humanos: readonly number[]): EstadoOnline {
+  const { mano, flores } = estado;
+  const primera = mano.vueltas[0];
+  if (estado.resultado || estado.lateral || estado.trucoPendiente || estado.consultaFlor.length
+      || mano.reparto.manos.length !== 2 || mano.vueltas.length !== 1 || mano.vueltaActual?.jugadas.length !== 0
+      || primera.resultado.tipo !== "ganada" || !flores.includes(primera.resultado.asiento)) return estado;
+  const rival = primera.resultado.asiento;
+  const asiento = rival === 0 ? 1 : 0;
+  if (humanos.includes(asiento)) return estado;
+
+  const muestra = mano.reparto.muestra;
+  const propias = mano.restantes[asiento];
+  const expuesta = primera.jugadas.find(j => j.asiento === rival)!.carta;
+  const vistas = [muestra, ...propias, ...primera.jugadas.map(j => j.carta)];
+  const [menor, mayor] = [...propias].sort((a, b) => compararCartas(a, b, muestra));
+  const posibles = mazo.filter(carta => !vistas.includes(carta) && compararCartas(mayor, carta, muestra) > 0);
+  const totalRival = estado.comparacionFlor?.participantes.find(p => p.asiento === rival)?.total;
+  const comparacion = estado.cobros.find(c => c.motivo === "flor" && c.tantoGanador !== undefined);
+  // Basta un par compatible que permita ganar ambas vueltas para dejar salir al rival.
+  for (const [i, a] of posibles.entries()) {
+    for (const b of posibles.slice(i + 1)) {
+      if (compararCartas(menor, a, muestra) <= 0 && compararCartas(menor, b, muestra) <= 0) continue;
+      const tantos = evaluarTantos([expuesta, a, b], muestra);
+      if (tantos.modalidad !== "flor" || (totalRival !== undefined && tantos.total !== totalRival)) continue;
+      if (totalRival === undefined && comparacion?.tantoGanador !== undefined) {
+        const ganador = comparacion.asiento === rival;
+        const maximo = comparacion.tantoGanador;
+        if (ganador ? tantos.total !== maximo
+            : tantos.total > maximo || (tantos.total === maximo && mano.reparto.mano === rival)) continue;
+      }
+      return estado;
+    }
+  }
+  return { ...estado, antesDeSalida: asiento };
+}
+
 export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoOnline {
   if (estado.resultado) return { ok: false, error: "mano-cerrada" };
   if (!accion || !esAsientoOnline(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
     return { ok: false, error: "accion-invalida" };
   }
   const { tipo, asiento } = accion;
-  if (!legalesOnline(estado, asiento).includes(tipo)) {
+  const legales = legalesOnline(estado, asiento);
+  const permitida = legales.includes(tipo)
+    || (tipo === "mazo" && legales.includes("carta") && segundaPerdidaEnDuelo(estado, asiento));
+  if (!permitida) {
     return { ok: false, error: !aDecidir(estado).includes(asiento) ? "fuera-de-turno" : "accion-no-permitida" };
   }
   const siguiente = { ...estado };
+  delete siguiente.antesDeSalida;
   if (tipo === "carta") {
     if (!esCardId(accion.carta)) return { ok: false, error: "jugada-invalida" };
     const jugada = { asiento, carta: accion.carta };
@@ -135,7 +187,7 @@ function vistaPublicaOnline(estado: EstadoOnline, asiento: Asiento) {
   const apuesta: VistaOnline["apuesta"] = resultado?.motivo === "rechazo" ? "rechazado" : trucoPendiente ? "pendiente"
     : valorTruco > 1 ? "querido" : "sin-canto";
   return {
-    ...mesa, turno: resultado ? null : mesa.turno, vueltaActual: resultado ? null : mesa.vueltaActual,
+    ...mesa, turno: resultado ? null : estado.antesDeSalida ?? mesa.turno, vueltaActual: resultado ? null : mesa.vueltaActual,
     equipoGanador: resultado?.equipo ?? null, apuesta, valorTruco,
     resultado: resultado && { ...resultado }, pendiente: pendiente && { tipo: pendiente.tipo, asiento: pendiente.asiento },
     trucoPendiente: trucoPendiente && { ...trucoPendiente }, porDeclararFlor: estado.consultaFlor[0] ?? null,
@@ -170,7 +222,6 @@ export interface VistaOnlineV1 extends VistaOnline {
 
 export function vistaOnlineV1(estado: EstadoOnline, asiento: Asiento): VistaOnlineV1 {
   if (estado.mano.reparto.versionReparto !== "online-1") throw new RangeError("La liga usa un reparto V1.");
-  // El árbitro V1 nunca habilita el retiro de tercetos.
   return privadaJugable(estado, asiento) as VistaOnlineV1;
 }
 
@@ -188,6 +239,14 @@ export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTerc
       estado: estado.resultado ? "terminado" : "esperando", legales: [] };
   }
   return { ...privadaJugable(estado, asiento), estado: "jugando", faltaPorEquipo };
+}
+
+/** Las políticas ya entrenadas expresan la entrega eligiendo una de sus cartas. */
+export function vistaParaPolitica(estado: EstadoOnline, asiento: Asiento): VistaOnlineV1 {
+  const vista = vistaOnlineV1(estado, asiento);
+  return vista.legales.includes("mazo")
+    ? { ...vista, legales: vista.legales.map(tipo => tipo === "mazo" ? "carta" : tipo) }
+    : vista;
 }
 
 /** El bot recibe la misma vista que un humano en ese asiento y elige entre sus acciones legales. */

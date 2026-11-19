@@ -34,12 +34,13 @@ function publicHistory(state: EstadoOnline, view: VistaOnlineV1, history: readon
   return turns;
 }
 
-export function observe(state: EstadoOnline, seat: Asiento, format: Format, history: readonly PublicTurn[]): SeatObservation {
+export function observe(state: EstadoOnline, seat: Asiento, format: Format, history: readonly PublicTurn[],
+    proyectarVista = vistaOnlineV1): SeatObservation {
   const seats = seatsFor(format);
   if (!supportedFormats.includes(format) || state.mano.reparto.manos.length !== seats) {
     throw new RangeError("El formato no coincide con el número de asientos.");
   }
-  const view = vistaOnlineV1(state, seat);
+  const view = proyectarVista(state, seat);
   const legalActions: Move[] = [];
   for (const type of view.legales) {
     if (type === "carta") legalActions.push(...view.cartas);
