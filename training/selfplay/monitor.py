@@ -618,7 +618,7 @@ def watch(file_only=False):
                 threading.Thread(target=server.serve_forever, daemon=True).start()
                 port = server.server_port
                 (OPS / "monitor-url.txt").write_text(
-                    f"http://127.0.0.1:{port}/\\n", encoding="utf-8"
+                    f"http://127.0.0.1:{port}/\n", encoding="utf-8"
                 )
                 print(f"Local dashboard http://127.0.0.1:{port}/", flush=True)
             except OSError as exc:

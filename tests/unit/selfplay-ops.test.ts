@@ -46,9 +46,14 @@ test("checkpoint-aware scheduler, retry, independent evaluation and final monito
       await writeFile(join(dir,"input",format,"champion-at-start.json"),JSON.stringify(model));
       await writeFile(join(dir,format,"champion.json"),JSON.stringify(model));
     }
-    monitor=run("monitor.py",[dir,"--file-only"]);
+    monitor=run("monitor.py",[dir,"--port","0"]);
     supervisor=run("supervise.py",[dir,"--node",process.execPath]);
     await until(async()=> (await json(join(dir,"ops/schedule.json"))).status==="waiting" && (await readFile(join(dir,"monitor.html"),"utf8")).includes("Training workers"));
+    const urlFile=await readFile(join(dir,"ops/monitor-url.txt"),"utf8");
+    assert.match(urlFile,/^http:\/\/127\.0\.0\.1:\d+\/\n$/);
+    const dashboard=await fetch(urlFile.trim());
+    assert.equal(dashboard.status,200);
+    assert.match(await dashboard.text(),/Training workers/);
     const duplicate=spawnSync(python,[join(root,"training/selfplay/supervise.py"),dir,"--node",process.execPath],{encoding:"utf8"});
     assert.notEqual(duplicate.status,0);
     assert.match(duplicate.stderr,/already running/);
