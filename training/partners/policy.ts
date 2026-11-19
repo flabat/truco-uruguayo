@@ -2,10 +2,11 @@ import { createHash } from "node:crypto";
 import { esCardId, type CardId } from "../../src/motor/cartas.ts";
 import { compararCartas } from "../../src/motor/jerarquia.ts";
 import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
-import { versions, signals, type ActionId, type Policy, type SeatObservation } from "../contracts/index.ts";
+import { signalVersionFor, versions, signals, type ActionId, type Policy, type SeatObservation } from "../contracts/index.ts";
 import { signalRules } from "../signals/index.ts";
 
-export type Partnership = "pairs" | "pairs-senas";
+export const partnerships = ["pairs", "pairs-senas", "pairs-private-senas"] as const;
+export type Partnership = typeof partnerships[number];
 export const dimensions = { event: 9, memory: 6, current: 12, move: 31, signal: 14 } as const;
 const bids = ["truco", "retruco", "vale-cuatro", "envido", "real-envido", "falta-envido", "flor",
   "paso-flor", "con-flor-envido", "contraflor-al-resto", "quiero", "no-quiero"] as const;
@@ -106,11 +107,11 @@ interface Header { schema: typeof versions.actor; rules: typeof versions.rules; 
 export type Actor = Header & ({ kind: typeof recurrentId; seats: Network[] } | { kind: typeof monteCarloId; seats: Values[] });
 export const header = (format: Partnership): Header => ({ schema: versions.actor, rules: versions.rules,
   competition: versions.competition, observation: versions.observation, actions: versions.actions,
-  signals: format === "pairs-senas" ? versions.signals : null, format });
+  signals: signalVersionFor(format), format });
 export const digest = (data: unknown) => createHash("sha256").update(JSON.stringify(data)).digest("hex");
 
 export function loadPartnerPolicy(artifact: Actor, seat: Asiento): Policy {
-  if (!artifact || !["pairs", "pairs-senas"].includes(artifact.format) ||
+  if (!artifact || !partnerships.includes(artifact.format) ||
       Object.entries(header(artifact.format)).some(([k, v]) => artifact[k as keyof Header] !== v) ||
       !Array.isArray(artifact.seats) || artifact.seats.length !== 4 || ![0, 1, 2, 3].includes(seat)) {
     throw new TypeError("Artefacto de pareja incompatible.");

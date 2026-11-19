@@ -1,6 +1,6 @@
 import { resolve, join } from "node:path";
 import { parseArgs } from "node:util";
-import { formats, type Format } from "../contracts/index.ts";
+import { activeFormats, type Format } from "../contracts/index.ts";
 import { newRun, run, verify } from "./runs.ts";
 
 const [command, ...args] = process.argv.slice(2);
@@ -26,7 +26,7 @@ async function dispatch() {
     if (values.resume) {
       if (values.formats || values.seed || values.pairs || values.output) throw new Error("--resume usa los parámetros del plan guardado.");
     } else {
-      const selected = !values.formats || values.formats === "all" ? [...formats] : values.formats.split(",") as Format[];
+      const selected = !values.formats || values.formats === "all" ? [...activeFormats] : values.formats.split(",") as Format[];
       newRun(directory, selected, Number(values.pairs ?? 1), Number(values.seed ?? 42));
     }
     console.log(JSON.stringify({directory, ...run(directory, limit)}));

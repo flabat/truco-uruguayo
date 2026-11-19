@@ -7,7 +7,6 @@ import { versions, type Policy } from "../contracts/index.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
 import { tantosPropios } from "../../src/motor/cantos-online.ts";
 import { incumbent } from "../seat/index.ts";
-import { signalRules } from "../signals/index.ts";
 import { domainSeed, encode, header, initNetworks, loadPartnerPolicy, mcKeys, mcProbabilities, monteCarloId,
   probabilities, recurrentId, type Actor, type Input, type Network, type Partnership, type Values } from "./policy.ts";
 
@@ -66,7 +65,7 @@ function collect(cp: Checkpoint, index: number, mc: boolean) {
   const rows: BatchRow[] = [];
   const decisions: { seat: Asiento; key: string }[] = [];
   const record = playMatch({ format: cp.format, seed: domainSeed(cp.seed, "train-deals"), pair: index, leg: 0,
-    policies: seat => policies[seat], signalRules: cp.format === "pairs-senas" ? signalRules : undefined,
+    policies: seat => policies[seat],
     onDecision(d: Decision) {
       if (!active[d.seat]) return;
       const input = encode(d.observation, d.observation.legalActions);

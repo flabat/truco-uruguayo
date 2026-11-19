@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { baseline, styles } from "../baselines/index.ts";
-import { formats, versions, type Format } from "../contracts/index.ts";
+import { supportedFormats, versions, type Format } from "../contracts/index.ts";
 import { incumbent } from "../seat/index.ts";
 import { replayMatch, streamVersion, type MatchRecord } from "../arena/index.ts";
 import { hash, runPair, type Team } from "./tournament.ts";
@@ -44,7 +44,7 @@ function source() {
   return hash(json(files.map(f => [f,hash(readFileSync(join(root,f)))])));
 }
 function validate(field: Field) {
-  assert.ok(formats.includes(field.format) && pools.includes(field.pool));
+  assert.ok(supportedFormats.includes(field.format) && pools.includes(field.pool));
   assert.ok(Number.isSafeInteger(field.pairs) && field.pairs >= 2);
   assert.ok(Array.isArray(field.opponents) && field.opponents.some(e => e.id === incumbent.id));
   assert.equal(new Set(field.opponents.map(o=>o.id)).size, field.opponents.length);

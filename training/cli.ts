@@ -15,6 +15,6 @@ if (typeof values.resume === "string") {
 if (format === "duel") {
   const result = trainDuel(args);
   console.log(JSON.stringify({actor:result.actor, iteration:result.iteration, artifacts:result.artifacts}));
-} else if (format === "pairs" || format === "pairs-senas") {
+} else if (format === "pairs" || format === "pairs-senas" || format === "pairs-private-senas") {
   await trainPartners(args);
-} else throw new Error("Elegí --format duel, pairs o pairs-senas, o un checkpoint con --resume.");
+} else throw new Error("Elegí --format duel, pairs o pairs-private-senas, o un checkpoint con --resume.");
