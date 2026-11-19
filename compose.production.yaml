@@ -1,0 +1,124 @@
+name: truco-produccion
+
+x-servicio: &servicio
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  web:
+    <<: *servicio
+    build: {context: ., dockerfile: infra/web.Dockerfile, target: produccion}
+    environment:
+      SITE_HOST: ${SITE_HOST:?Falta el dominio público}
+    ports:
+      - "${HTTP_BIND:-80}:80"
+      - "${HTTPS_BIND:-443}:443"
+    networks:
+      default:
+        aliases: ["${SITE_HOST}"]
+    volumes:
+      - ./infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificados:/data
+      - config_caddy:/config
+
+  api:
+    <<: *servicio
+    build: {context: ., dockerfile: api/Dockerfile}
+    environment:
+      PGHOST: db
+      PGDATABASE: truco
+      PGUSER: mesa_app
+      PGPASSWORD: ${GAME_DB_PASSWORD:?Falta la contraseña del juego}
+      WEB_ORIGIN: https://${SITE_HOST}
+      OIDC_CALLBACK: https://${SITE_HOST}/api/auth/callback
+      OIDC_ISSUER: https://${SITE_HOST}/realms/mesa
+      OIDC_BACKEND: https://${SITE_HOST}/realms/mesa
+      TERCETOS_HABILITADOS: "${TERCETOS_HABILITADOS:-1}"
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then(r => process.exit(r.ok ? 0 : 1))"]
+      interval: 15s
+      timeout: 4s
+      retries: 4
+
+  db:
+    <<: *servicio
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: truco
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta la contraseña de PostgreSQL}
+      GAME_DB_PASSWORD: ${GAME_DB_PASSWORD:?Falta la contraseña del juego}
+      ID_DB_PASSWORD: ${ID_DB_PASSWORD:?Falta la contraseña de identidad}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./infra/produccion/iniciar-db.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "truco"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+
+  identidad:
+    <<: *servicio
+    image: quay.io/keycloak/keycloak:26.8.2
+    command: ["start", "--import-realm"]
+    mem_limit: 1200m
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/truco
+      KC_DB_SCHEMA: identidad
+      KC_DB_USERNAME: mesa_id
+      KC_DB_PASSWORD: ${ID_DB_PASSWORD:?Falta la contraseña de identidad}
+      KC_HOSTNAME: https://${SITE_HOST}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_BOOTSTRAP_ADMIN_USERNAME: operador
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:?Falta la contraseña inicial del operador}
+      PUBLIC_ORIGIN: https://${SITE_HOST}
+    depends_on:
+      db: {condition: service_healthy}
+    volumes:
+      - ./infra/produccion/mesa-realm.json:/opt/keycloak/data/import/mesa-realm.json:ro
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3; read -r status <&3; [[ $$status == *' 200 '* ]]"]
+      interval: 10s
+      timeout: 3s
+      start_period: 90s
+      retries: 6
+
+  backup:
+    <<: *servicio
+    build: {context: ./infra/produccion, dockerfile: backup.Dockerfile}
+    mem_limit: 512m
+    environment:
+      PGHOST: db
+      PGDATABASE: truco
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Falta la contraseña de PostgreSQL}
+      RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:?Falta el repositorio externo de copias}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?Falta la clave de cifrado de copias}
+      RESTIC_REST_USERNAME: ${RESTIC_REST_USERNAME:-}
+      RESTIC_REST_PASSWORD: ${RESTIC_REST_PASSWORD:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-}
+      GOMAXPROCS: "1"
+      GOMEMLIMIT: 320MiB
+    depends_on:
+      api: {condition: service_healthy}
+      identidad: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /tmp/ultimo-respaldo && test $$(( $$(date +%s) - $$(cat /tmp/ultimo-respaldo) )) -lt 93600"]
+      interval: 5m
+      timeout: 5s
+      start_period: 5m
+      retries: 1
+
+volumes:
+  postgres:
+  certificados:
+  config_caddy:
