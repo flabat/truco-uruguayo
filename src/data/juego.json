@@ -164,6 +164,14 @@
         "text": "Al terminar cada duelo, los tantos van al marcador de los equipos. La alternancia entre redondilla y pico a pico se usa mientras los dos equipos estén en malas. Cuando uno llega a buenas, los siguientes repartos son redondillas."
       },
       {
+        "heading": "El chico de tercetos en línea",
+        "text": "La casa propone 50 tantos, con 25 malas y 25 buenas. Si pactan otra meta, la mitad marca la entrada en buenas. Si un equipo entra en buenas durante un duelo, se completan los duelos de ese reparto y la redondilla vuelve en el siguiente. En cuanto un cobro alcanza la meta, gana ese equipo y se cierran los cobros y los duelos pendientes. Irse al mazo en turno de carta concede al rival el valor vigente del truco. Primero se liquidan las flores obligatorias.",
+        "sources": [
+          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
+          {"title": "Truco Oriental · Decisiones para los tercetos en línea", "url": "https://github.com/flabat/truco-uruguayo/pull/173"}
+        ]
+      },
+      {
         "heading": "Una flor por lado en el pico a pico",
         "text": "Tu equipo lleva 2 tantos y el rival, 4. La muestra es el as de oro. Tenés el 5, el 6 y el 7 de copa (38 de flor). Tu rival tiene el 2, el 3 y el 4 de basto (29 de flor). Los dos cantan flor y se acepta la contraflor al resto sin envites previos. ¿Cuánto anota tu equipo por ganar ese canto?",
         "table": {
