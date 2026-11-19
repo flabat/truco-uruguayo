@@ -5,9 +5,9 @@ import { execFileSync, spawn } from "node:child_process";
 import { parseArgs } from "node:util";
 import { once } from "node:events";
 import { pathToFileURL } from "node:url";
-import { versions } from "../contracts/index.ts";
+import { requireTrainingFormat, trainingVersions, versions } from "../contracts/index.ts";
 import { crossplay } from "./crossplay.ts";
-import { digest, type Partnership } from "./policy.ts";
+import { digest, partnerships, type Partnership } from "./policy.ts";
 import { exportActor, initialize, optimizer, pythonDir, seatPolicies, trainingBatch, update, type Checkpoint } from "./train.ts";
 import { compareEndgame } from "./oracle.ts";
 
@@ -27,6 +27,7 @@ function readCheckpoint(path: string): Checkpoint {
   if (checkpoint.sha256 !== digest(checkpoint.state) || checkpoint.state.schema !== versions.checkpoint) {
     throw Error("El checkpoint está dañado o es incompatible.");
   }
+  requireTrainingFormat(checkpoint.state.format);
   return checkpoint.state;
 }
 
@@ -59,6 +60,7 @@ export async function main(args = process.argv.slice(2)) {
     resume:{type:"string"}, until:{type:"string"}, device:{type:"string"}, partner:{type:"string"}, pairs:{type:"string"},
     benchmarkData:{type:"string"}, crossplay:{type:"boolean"}, opponent:{type:"string"},
   } });
+  if (v.format !== undefined) requireTrainingFormat(v.format);
   const run = v.resume ? dirname(resolve(v.resume)) : resolve(v.run ?? ".");
   if (v.crossplay) {
     if (!v.run || !v.partner) throw Error("Especificá --run y --partner con un actor entrenado en otra semilla.");
@@ -83,7 +85,8 @@ export async function main(args = process.argv.slice(2)) {
       if (!v.config || !v.run) throw Error("Especificá --config y --run.");
       const config = read(v.config);
       const format = v.format ?? config.format;
-      if (!["pairs","pairs-senas"].includes(format) || config.format !== format) throw Error("Configuración de formato inválida.");
+      requireTrainingFormat(format);
+      if (!partnerships.includes(format) || config.format !== format) throw Error("Configuración de formato inválida.");
       if (!(config.rate > 0 && config.rate <= 1)) throw Error("Tasa de aprendizaje inválida.");
       const device = v.device ?? config.device;
       if (device !== "cpu" && device !== "mps") throw Error("Usá cpu o mps.");
@@ -122,7 +125,7 @@ export async function main(args = process.argv.slice(2)) {
     save(join(run,"actor.json"),actor); save(join(run,"mc-actor.json"),mc);
     const revision = execFileSync("git",["rev-parse","HEAD"],{ encoding:"utf8" }).trim();
     const fileSha = (name: string) => createHash("sha256").update(readFileSync(join(run,name))).digest("hex");
-    save(join(run,"training.json"),{ format:cp.format,seed:cp.seed,codeRevision:revision,versions,
+    save(join(run,"training.json"),{ format:cp.format,seed:cp.seed,codeRevision:revision,versions:trainingVersions,
       trainer:"pairs-rnn-mc-v1",turns:cp.examples,mcTurns:cp.mcExamples,matchesPerLearner:cp.completed,
       goal:cp.goal,batchMatches:cp.batchMatches,rate:cp.learner.rate,optimizer:"SGD; momentum=0.7; clip=1",
       device:cp.device,node:process.version,python:"3.12.14",torch:"2.14.1",machine:[process.platform,process.arch],

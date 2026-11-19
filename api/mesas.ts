@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
-import { versions, type Format } from "../training/contracts/index.ts";
+import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
@@ -89,6 +89,7 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
     return modo === "1v1" ? "duel" : "pairs";
   }
   if (modo === "2v2" && versionSenas === versions.signals) return "pairs-senas";
+  if (modo === "2v2" && versionSenas === teamSignalsVersion) return "pairs-private-senas";
   throw new Error("Versión de señas desconocida.");
 }
 
@@ -97,14 +98,16 @@ async function crear(db: PoolClient, jugador: string, modo: unknown, formato: un
   if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
   if (!esMetaDeChico(meta)) throw new ErrorPeticion(400, "Elegí un puntaje par válido para el chico.");
-  const defaultFormat = formatoMesa(modo, null);
-  if (formato !== undefined && formato !== defaultFormat && !(modo === "2v2" && formato === "pairs-senas")) {
+  let nueva = formatoMesa(modo, null);
+  // Los clientes históricos también crean mesas con señas de equipo.
+  if (modo === "2v2" && (formato === "pairs-private-senas" || formato === "pairs-senas")) nueva = "pairs-private-senas";
+  else if (formato !== undefined && formato !== nueva) {
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
   const token = randomBytes(24).toString("base64url");
   const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos) VALUES ($1,$2,$3,$4,$5,
     COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8) RETURNING id`,
-    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null, meta, formato ?? defaultFormat,
+    [modo, jugador, token, nueva === "triples" ? null : signalVersionFor(nueva), meta, nueva,
       modo === "3v3" ? politicaTercetos : null, modo === "3v3" ? perfilTercetos : null]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };

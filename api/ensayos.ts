@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import { randomUUID } from "node:crypto";
-import { formats, seatsFor, versions } from "../training/contracts/index.ts";
+import { hasSignals, requireTrainingFormat, seatsFor, signalVersionFor } from "../training/contracts/index.ts";
 import { metaPorModalidad } from "../src/motor/chico.ts";
 import { politicaTercetos, perfilTercetos, type FormatoMesa } from "./mesas.ts";
 import { resolverTurno } from "./bot-pendiente.ts";
@@ -12,7 +12,7 @@ import { avanzarEnsayo } from "./partidas.ts";
 export async function crearEnsayo(pool: Pool, formato: FormatoMesa, creador: string, pin?: string) {
   const tercetos = formato === "triples";
   if (tercetos && pin && pin !== politicaTercetos) throw new RangeError("El ensayo de tercetos requiere su política básica.");
-  if (!tercetos && !formats.includes(formato)) throw new RangeError("Formato desconocido.");
+  if (!tercetos) requireTrainingFormat(formato);
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
@@ -20,8 +20,8 @@ export async function crearEnsayo(pool: Pool, formato: FormatoMesa, creador: str
     const politica = tercetos ? politicaTercetos : pin ?? null;
     const {rows: [mesa]} = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, solo_computadoras, politica, meta, perfil_tercetos)
       VALUES ($1, $2, $3, $4, true, COALESCE($5,(SELECT pin FROM juego.activaciones WHERE formato=$6),$7), $8, $9) RETURNING id`, [
-      modo, creador, randomUUID(), formato === "pairs-senas" ? versions.signals : null, politica, formato,
-      formato === "pairs-senas" ? exampleSignalPin : incumbent.id, metaPorModalidad[modo], tercetos ? perfilTercetos : null]);
+      modo, creador, randomUUID(), tercetos ? null : signalVersionFor(formato), politica, formato,
+      !tercetos && hasSignals(formato) ? exampleSignalPin : incumbent.id, metaPorModalidad[modo], tercetos ? perfilTercetos : null]);
     await db.query(`INSERT INTO juego.asientos (mesa, asiento, computadora)
       SELECT $1, asiento, true FROM generate_series(0, $2::integer-1) AS asiento`, [mesa.id, tercetos ? 6 : seatsFor(formato)]);
     await db.query("COMMIT");

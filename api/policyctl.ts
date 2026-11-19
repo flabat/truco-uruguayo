@@ -1,13 +1,13 @@
 import {readFileSync} from "node:fs";
 import pg from "pg";
 import type { Asiento } from "../src/motor/reparto.ts";
-import { formats, seatsFor, type Format } from "../training/contracts/index.ts";
+import { supportedFormats, seatsFor, type Format } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { artifactPin, openActor } from "./actor-registry.ts";
 
 const [command, rawFormat, pin] = process.argv.slice(2);
 const format = rawFormat as Format;
-if (!formats.includes(format)) throw new Error("Indicá duel, pairs o pairs-senas.");
+if (!supportedFormats.includes(format)) throw new Error("Formato desconocido. Disponibles: " + supportedFormats.join(", "));
 const pool = new pg.Pool({connectionString: process.env.DATABASE_URL});
 try {
   if (command === "register") {

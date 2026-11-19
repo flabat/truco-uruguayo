@@ -18,6 +18,7 @@ import { arch, cpus, release, totalmem } from "node:os";
 import { parseArgs } from "node:util";
 import { gunzipSync, gzipSync } from "node:zlib";
 import { replayMatch } from "../arena/index.ts";
+import { requireTrainingFormat } from "../contracts/index.ts";
 import { publicReplay } from "../arena/runs.ts";
 import { type FamilyResult, type PairOutcome, summarize } from "../eval/statistics.ts";
 import { incumbent } from "../seat/index.ts";
@@ -172,6 +173,7 @@ export async function championship(
   assert.equal(planHash, expectedHash, "El plan difiere del compromiso prerregistrado.");
   const plan = read(join(dir, "plan.json")), field = plan.field as Field;
   assert.equal(plan.schema, "chico-championship-v1");
+  if (!verifyOnly) requireTrainingFormat(field.format);
   assert.equal(field.build, buildId());
   assert.equal(sha(bytes(join(dir, "counter-training.json"))), field.counter.trainingReceiptSha256);
   assert.deepEqual(plan.fieldFamilies, families(field));

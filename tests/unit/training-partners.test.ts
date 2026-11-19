@@ -10,7 +10,7 @@ import { digest, loadPartnerPolicy, monteCarloId } from "../../training/partners
 import { compareEndgame, prescriptionValue, solveEndgame } from "../../training/partners/oracle.ts";
 import { crossplay } from "../../training/partners/crossplay.ts";
 
-for (const format of ["pairs","pairs-senas"] as const) {
+for (const format of ["pairs","pairs-private-senas"] as const) {
   test(format + " mantiene el actor privado, normalizado e independiente del crítico y de otros asientos", () => {
     const cp = initialize(format,24,4,0.04,2,"cpu"), actor = exportActor(cp);
     const policy = loadPartnerPolicy(actor,0);
@@ -18,7 +18,7 @@ for (const format of ["pairs","pairs-senas"] as const) {
     const alternate = {...cards, manos:[cards.manos[0],cards.manos[2],cards.manos[3],cards.manos[1]]};
     const result = [cards,alternate].map(deal => {
       const obs = observe(iniciarOnline(deal),0,format,[]);
-      const legal = format === "pairs-senas" ? signalRules.legalActions(obs.legalActions as Move[]) : obs.legalActions;
+      const legal = format === "pairs-private-senas" ? signalRules.legalActions(obs.legalActions as Move[]) : obs.legalActions;
       return policy.decide({...obs,legalActions:legal},legal);
     });
     assert.deepEqual(result[0],result[1]);

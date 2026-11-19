@@ -23,7 +23,7 @@ node training/league/profile-counter.ts --run runs/league --format duel --matche
 node training/league/development.ts --run runs/league --stage pilot --format duel
 ```
 
-Repetí esos comandos para `pairs` y `pairs-senas`. Cada matriz conserva los resultados por par para las 36 combinaciones de tres aprendices y seis estilos de computadora, y la distribución de tiempos del actor. Para extender durante ocho horas un formato, exigimos mejora del piloto frente a la primera foto y frente al perfil en los límites inferiores de sendos intervalos pareados al 95%, más mejora mediana entre las tres semillas. El presupuesto, la regla y los adversarios se fijan antes de inspeccionar el piloto. La familia con peor resultado y el orden entre tres equipos permiten detectar debilidades y ciclos. Ante una meseta, el siguiente comando mide un cambio concreto a presupuesto parejo en las tres semillas.
+Repetí esos comandos para `pairs` y `pairs-private-senas`. Cada matriz conserva los resultados por par para las 36 combinaciones de tres aprendices y seis estilos de computadora, y la distribución de tiempos del actor. Para extender durante ocho horas un formato, exigimos mejora del piloto frente a la primera foto y frente al perfil en los límites inferiores de sendos intervalos pareados al 95%, más mejora mediana entre las tres semillas. El presupuesto, la regla y los adversarios se fijan antes de inspeccionar el piloto. La familia con peor resultado y el orden entre tres equipos permiten detectar debilidades y ciclos. Ante una meseta, el siguiente comando mide un cambio concreto a presupuesto parejo en las tres semillas.
 
 ```sh
 node training/league/variation.ts --run runs/league --format duel
