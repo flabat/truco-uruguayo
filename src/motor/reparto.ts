@@ -1,9 +1,11 @@
 import { esCardId, mazo, type CardId } from "./cartas.ts";
 
 export const versionReparto = 1;
-export type Asiento = 0 | 1 | 2 | 3;
-export const equipoPorAsiento = Object.freeze([0, 1, 0, 1] as const);
-export type Equipo = (typeof equipoPorAsiento)[Asiento];
+type AsientoV1 = 0 | 1 | 2 | 3;
+export type Asiento = AsientoV1 | 4 | 5;
+export type Equipo = 0 | 1;
+/** Distribución histórica de las prácticas de cuatro. */
+export const equipoPorAsiento: readonly Equipo[] = Object.freeze([0, 1, 0, 1]);
 const derecha = [1, 2, 3, 0] as const;
 const dosALa32 = 2 ** 32;
 
@@ -24,13 +26,21 @@ export interface RepartoV1 extends Distribucion {
 }
 
 export interface RepartoOnline extends Distribucion {
-  readonly versionReparto: "online-1";
+  readonly versionReparto: "online-1" | "online-2";
 }
 
 export type Reparto = RepartoV1 | RepartoOnline;
 
-export function esAsiento(valor: unknown): valor is Asiento {
+export function esAsiento(valor: unknown): valor is AsientoV1 {
   return valor === 0 || valor === 1 || valor === 2 || valor === 3;
+}
+
+export function esAsientoOnline(valor: unknown): valor is Asiento {
+  return esAsiento(valor) || valor === 4 || valor === 5;
+}
+
+export function equipoDelAsiento(asiento: Asiento): Equipo {
+  return asiento % 2 === 0 ? 0 : 1;
 }
 
 export function esSemilla(valor: unknown): valor is number {
@@ -40,8 +50,8 @@ export function esSemilla(valor: unknown): valor is number {
 function esDistribucion(valor: unknown): valor is Distribucion {
   if (typeof valor !== "object" || valor === null) return false;
   const { dador, mano, manos, muestra } = valor as Partial<Record<keyof Distribucion, unknown>>;
-  if (!Array.isArray(manos) || (manos.length !== 2 && manos.length !== 4)) return false;
-  if (!esAsiento(dador) || dador >= manos.length || mano !== (dador + 1) % manos.length) return false;
+  if (!Array.isArray(manos) || (manos.length !== 2 && manos.length !== 4 && manos.length !== 6)) return false;
+  if (!esAsientoOnline(dador) || dador >= manos.length || mano !== (dador + 1) % manos.length) return false;
 
   const cartas: unknown[] = [muestra];
   for (const terna of manos) {
@@ -58,7 +68,7 @@ export function esRepartoV1(valor: unknown): valor is RepartoV1 {
 }
 
 export function esRepartoOnline(valor: unknown): valor is RepartoOnline {
-  return esDistribucion(valor) && "versionReparto" in valor && valor.versionReparto === "online-1";
+  return esDistribucion(valor) && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
 }
 
 /**
