@@ -46,6 +46,22 @@ El perfil destinó cinco minutos a cada una de tres semillas por formato. El pil
 
 Usá Node 24 y la revisión que figura en el registro público del formato. Guardá los archivos grandes en `runs/`. La liga conserva cada checkpoint bajo `runs/league-130-01/snapshots/<etapa>/<formato>/<semilla>/checkpoint`, y los pesos finales bajo `runs/league-130-01/championship-input/<formato>/`. El árbitro conserva la clave local y los artefactos junto al plan. Los paquetes por secuencia viven en `runs/championship-118/evaluation/<formato>/`. Se puede verificar el resultado desde otro checkout con el mismo build.
 
+Se reanudó una copia de cada uno de los tres checkpoints finales en un checkout independiente. El argumento indica el total al que se desea llegar.
+
+| Formato | Semilla | SHA-256 del checkpoint del piloto | Argumento probado |
+| --- | ---: | --- | --- |
+| duel | 73061 | `fa10fa6491223fc70ae885a32d82d380f9e49d08bd573b0d1b42c4b2bafee1b4` | `--iterations 486401` |
+| pairs | 72043 | `6778687b05e0e261e89ac158276fcac58a49a46024dd0f5d2b1405fbb31c15e7` | `--matches 25092` |
+| pairs-senas | 73061 | `491102759f6678a90937710b32e0b96841e10c04e6bfd0a5148301e6edd60337` | `--matches 17560` |
+
+```sh
+uv sync --frozen --project training/partners/python
+export TRUCO_PYTHON="$PWD/training/partners/python/.venv/bin/python"
+COPY_DIR=$(mktemp -d)
+cp runs/league-130-01/snapshots/pilot/pairs/72043/checkpoint "$COPY_DIR/checkpoint"
+npm run train -- --resume "$COPY_DIR/checkpoint" --matches 25092
+```
+
 ```sh
 FORMAT=duel
 PLAN_SHA256=0bc5055db4fda618809d74cf7f5745c3b7d20f9f4bb05200d19b6bc5ebd79cdb
