@@ -34,7 +34,7 @@ export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnli
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { reglaFlor: "inmediata", versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
+  return { reglaFlor: "inmediata-v2", versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
 function dueloDelPico(mano: Asiento, duelo: 1 | 2 | 3): LanceTercetos {
@@ -297,6 +297,7 @@ export function elegirAccionOnline(vista: VistaOnline): AccionOnlineV1 | null {
   const ofertas: TipoAccionOnlineV1[] = [];
   if (total >= 42) ofertas.push("contraflor-al-resto");
   if (total >= 33) ofertas.push("con-flor-envido");
+  if (total >= 33) ofertas.push("con-flor-quiero");
   ofertas.push("flor", "paso-flor");
   if (total >= 35) ofertas.push("falta-envido");
   if (total >= 31) ofertas.push("real-envido");

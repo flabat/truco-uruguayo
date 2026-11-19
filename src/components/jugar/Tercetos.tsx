@@ -1,4 +1,4 @@
-import { canto } from "../../lib/cantos";
+import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
@@ -164,6 +164,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
           {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
             <p>Cantá tu flor antes de jugar una carta.</p>}
+          {opciones.includes("con-flor-quiero") && <p>{respuestaConFlor}</p>}
           {opciones.includes("paso-flor") && <p>No tenés flor en esta mano.</p>}
           {vista.pendiente && (vista.pendiente.tipo !== "flor" || vista.porDeclararFlor == null) &&
             <p>{nombre(vista.pendiente.asiento)} cantó {canto[vista.pendiente.tipo].toLowerCase()}.</p>}

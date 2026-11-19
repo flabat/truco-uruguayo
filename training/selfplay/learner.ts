@@ -134,7 +134,7 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
     if (action.includes("/")) continue;
     const id=action as Move, card=esCardId(id);
     const position=card?c.cards.indexOf(id):-1;
-    const group=card?position:3+bids.indexOf(id as typeof bids[number]);
+    const group=card?position:3+bids.indexOf(id === "con-flor-quiero" ? "quiero" : id as typeof bids[number]);
     if (group<0 || (!card && group===2)) throw Error("Unknown move");
     let f=c.features;
     if (card) {

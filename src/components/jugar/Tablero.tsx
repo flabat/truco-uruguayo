@@ -1,4 +1,4 @@
-import { canto } from "../../lib/cantos";
+import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
@@ -10,7 +10,7 @@ import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
-  { nombre: "Responder", opciones: ["quiero", "no-quiero", "paso-flor"] },
+  { nombre: "Responder", opciones: ["con-flor-quiero", "quiero", "no-quiero", "paso-flor"] },
   { nombre: "Truco", opciones: ["truco", "retruco", "vale-cuatro"] },
   {
     nombre: "Envido y flor",
@@ -166,6 +166,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   }
   if (porDeclararFlor !== null) {
     const esTuTurno = porDeclararFlor === mesa.miAsiento;
+    if (legales.includes("con-flor-quiero")) return { titulo: "Te toca declarar", indicacion: respuestaConFlor };
     return {
       titulo: esTuTurno ? "Te toca declarar" : "Declara " + mesa.asientos[porDeclararFlor].nombre,
       indicacion: esTuTurno

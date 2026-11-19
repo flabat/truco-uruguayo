@@ -309,7 +309,7 @@ test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno s
 });
 
 test("el segundo jugador puede declarar y subir con un botón antes de la tercera flor", async ({ page }) => {
-  let mano = { estado: iniciarOnline({ ...tresFlores, reglaFlor: "inmediata" }), turnos: [] };
+  let mano = { estado: iniciarOnline({ ...tresFlores, reglaFlor: "inmediata-v2" }), turnos: [] };
   mano = confirmar(mano, "pairs", { tipo: "envido", asiento: 1 });
   mano = confirmar(mano, "pairs", { tipo: "flor", asiento: 2 });
   await simular(page, (path, req) => {
@@ -330,6 +330,29 @@ test("el segundo jugador puede declarar y subir con un botón antes de la tercer
   await expect(historial.getByRole("listitem")).toHaveText([
     "Bruno dijo «Envido».", "CPU 1 dijo «Flor».", "Diego dijo «Con flor envido».",
   ]);
+  expect(vistaOnline(mano.estado, 0).legales).toEqual(["flor", "contraflor-al-resto", "con-flor-quiero"]);
+});
+
+test("Con flor quiero acepta la subida de salida en una sola jugada", async ({ page }) => {
+  let mano = { estado: iniciarOnline({ ...tresFlores, reglaFlor: "inmediata-v2" }), turnos: [] };
+  mano = confirmar(mano, "pairs", { tipo: "envido", asiento: 1 });
+  mano = confirmar(mano, "pairs", { tipo: "con-flor-envido", asiento: 2 });
+  await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", personas, 3) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "con-flor-quiero" });
+      mano = confirmar(mano, "pairs", { tipo: "con-flor-quiero", asiento: 3 });
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones"))
+      return { json: { ...partida, version: mano.turnos.length, vista: vistaOnline(mano.estado, 3) } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await expect(page.getByText(/«Flor» rechaza la apuesta por vos/)).toBeVisible();
+  await page.getByRole("button", { name: "Con flor quiero", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Historial de la mano" }).getByRole("listitem")).toHaveText([
+    "Bruno dijo «Envido».", "CPU 1 dijo «Con flor envido».", "Diego dijo «Con flor quiero».",
+  ]);
+  expect(mano.estado.cobros).toEqual([]);
   expect(vistaOnline(mano.estado, 0).legales).toEqual(["flor", "contraflor-al-resto"]);
 });
 
