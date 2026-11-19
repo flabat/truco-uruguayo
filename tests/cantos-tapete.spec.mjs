@@ -96,7 +96,7 @@ test("una contraflor al resto entre una computadora y un rival remoto se escucha
     { tipo: "contraflor-al-resto", asiento: 2 }, { tipo: "quiero", asiento: 1 },
   ]);
   for (const [puesto, texto] of [
-    [rival, "Flor"], [pareja, "Flor"], [dador, "Sin flor"], [pareja, "Contraflor al resto"],
+    [rival, "Flor"], [pareja, "Flor"], [dador, "Yo no canto"], [pareja, "Contraflor al resto"],
     [rival, "Quiero"], [rival, "33 de flor"], [pareja, "44 de flor"],
   ]) {
     const voz = puesto.locator(".j-voz");
