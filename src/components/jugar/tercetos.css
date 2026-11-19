@@ -1,0 +1,109 @@
+.j-seis {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+.j-seis .j-tapete header span {
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.j-seis-puestos {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-areas: ". frente ." "lejos-izq centro lejos-der" "cerca-izq centro cerca-der" ". vos .";
+  align-items: center;
+  gap: .65rem .4rem;
+  min-height: 340px;
+  padding-block: .8rem;
+}
+.j-seis-puestos::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 12% 7%;
+  border: 1px solid #dbcc8f50;
+  border-radius: 50%;
+}
+.j-seis-puesto {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
+  min-width: 0;
+  text-align: center;
+}
+.j-seis-puesto[data-pos="0"] { grid-area: vos; }
+.j-seis-puesto[data-pos="1"] { grid-area: cerca-der; }
+.j-seis-puesto[data-pos="2"] { grid-area: lejos-der; }
+.j-seis-puesto[data-pos="3"] { grid-area: frente; }
+.j-seis-puesto[data-pos="4"] { grid-area: lejos-izq; }
+.j-seis-puesto[data-pos="5"] { grid-area: cerca-izq; }
+.j-seis-nombre {
+  min-width: 0;
+  line-height: 1.2;
+  display: grid;
+  gap: .15rem;
+  overflow-wrap: anywhere;
+}
+.j-seis-nombre strong { font-size: clamp(.84rem, 1.5vw, 1rem); }
+.j-seis-nombre span, .j-seis-nombre b, .j-seis-jugada small {
+  color: #f0dfb4;
+  font-size: .72rem;
+}
+.j-seis-nombre b { font-weight: 650; }
+.j-seis-puesto[data-activo="false"] .j-seis-nombre { color: #d8ded4; }
+.j-seis-muestra { position: relative; width: 36px; margin-inline: .18rem; }
+.j-seis-muestra img {
+  display: block;
+  width: 23px;
+  height: auto;
+  border-radius: 2px;
+}
+.j-seis-muestra .j-seis-mazo {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  transform: rotate(10deg);
+  box-shadow: 0 2px 3px #16271c;
+}
+.j-seis-puesto[data-pos="3"] .j-seis-muestra,
+.j-seis-puesto[data-pos="2"] .j-seis-muestra { grid-row: 1; grid-column: 1; }
+.j-seis-jugada { grid-column: 1 / -1; display: grid; justify-items: center; }
+.j-seis-jugada img { width: 35px; height: auto; border-radius: 2px; }
+.j-seis-centro {
+  grid-area: centro;
+  display: grid;
+  gap: .24rem;
+  text-align: center;
+}
+.j-seis-centro strong { font: 400 1.25rem/1.15 var(--serif); }
+.j-seis-centro span { color: #f0dfb4; font-size: .75rem; }
+.j-seis .j-mano { border-top: 1px solid #83988288; padding-top: .65rem; }
+.j-seis-lance { display: block; margin-bottom: .5rem; color: var(--muted); font-size: .87rem; }
+.j-seis .j-seis-falta { font-size: .88rem; margin: .6rem 0; }
+.j-seis-historial ul { padding-inline-start: 1.4rem; }
+@media (max-width: 760px) {
+  .j-seis { grid-template-columns: minmax(0, 1fr); }
+  .j-seis .j-jugada-panel { order: 0; }
+  .j-seis-puestos {
+    grid-template-areas: none;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 .55rem;
+    min-height: auto;
+    align-items: stretch;
+    padding-block: 0;
+  }
+  .j-seis-puestos::before { display: none; }
+  .j-seis-puesto[data-pos] {
+    grid-area: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    border-bottom: 1px solid #83988266;
+    gap: .25rem;
+    padding: .45rem 0;
+    text-align: left;
+  }
+  .j-seis-puesto[data-pos] .j-seis-muestra { grid-area: auto; }
+  .j-seis-jugada { grid-column: 1 / -1; justify-items: start; }
+  .j-seis-centro { grid-area: auto; grid-column: 1 / -1; padding-top: .55rem; }
+}

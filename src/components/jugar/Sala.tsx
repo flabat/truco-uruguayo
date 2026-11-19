@@ -11,8 +11,15 @@ import {
   type Modo,
 } from "./cliente";
 import { EnJuego } from "./Tablero";
+import { MesaDeTercetos } from "./Tercetos";
 import { MesaConSenas } from "./Senas";
 import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
+
+const modalidades = {
+  "1v1": ["1 contra 1", "Mano a mano"],
+  "2v2": ["2 contra 2", "En parejas"],
+  "3v3": ["3 contra 3", "En tercetos"],
+} as const;
 
 function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
   return (
@@ -41,6 +48,14 @@ function AbrirMesa({
   abrir: (id: string, aviso: string) => void;
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
+  const [tercetos, habilitarTercetos] = useState(false);
+  useEffect(() => {
+    const cancel = new AbortController();
+    pedir<{ modos: Modo[] }>("/api/modalidades", undefined, cancel.signal)
+      .then(({ modos }) => habilitarTercetos(Array.isArray(modos) && modos.includes("3v3")))
+      .catch(() => { /* Un servidor anterior sigue ofreciendo duelo y parejas. */ });
+    return () => cancel.abort();
+  }, []);
   const [puntaje, cambiarPuntaje] = useState(String(metaPorModalidad[modo]));
   const meta = Number(puntaje);
   const metaValida = esMetaDeChico(meta);
@@ -86,12 +101,15 @@ function AbrirMesa({
         <fieldset disabled={ocupado}>
           <legend>Modalidad</legend>
           <div className="j-modos">
-            {(["1v1", "2v2"] as const).map((m, i) => (
+            {(["1v1", "2v2", "3v3"] as const).filter(m => m !== "3v3" || tercetos).map(m => (
               <label key={m} className={modo === m ? "elegido" : ""}>
-                <input type="radio" name="modo" checked={m === modo} onChange={() => elegir(m)} />
+                <input type="radio" name="modo" checked={m === modo} onChange={() => {
+                  elegir(m);
+                  cambiarPuntaje(String(metaPorModalidad[m]));
+                }} />
                 <span>
-                  <strong>{i ? "2 contra 2" : "1 contra 1"}</strong>
-                  <small>{i ? "En parejas" : "Mano a mano"}</small>
+                  <strong>{modalidades[m][0]}</strong>
+                  <small>{modalidades[m][1]}</small>
                 </span>
               </label>
             ))}
@@ -230,13 +248,13 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.versionSenas !== "senas-publicas-v1";
+  const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== "senas-publicas-v1";
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida);
   return (
     <>
       <div className="j-barra">
         <span>
-          {mesa.formato === "pairs-senas" ? "Parejas con señas" : mesa.modo === "1v1" ? "Mano a mano" : "En parejas"} · {jugador.nombre}
+          {mesa.formato === "pairs-senas" ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
         </span>
         <a className="j-link" href={base + "jugar/"}>
           Volver al salón
@@ -254,7 +272,9 @@ function MesaAbierta({
         </p>
       )}
       {mesa.lista && partida?.vista ? (
-        mesa.formato === "pairs-senas" && partida.versionSenas === "senas-publicas-v1" ? (
+        partida.formato === "triples" ? (
+          <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
+        ) : mesa.formato === "pairs-senas" && partida.versionSenas === "senas-publicas-v1" ? (
           <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
         ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
       ) : (
@@ -284,7 +304,7 @@ function MesaAbierta({
                     {a.asiento === mesa.miAsiento && " · Vos"}
                   </strong>
                   <small>
-                    {mesa.modo === "2v2"
+                    {mesa.modo !== "1v1"
                       ? "Equipo " + (a.equipo + 1)
                       : a.asiento === mesa.miAsiento
                         ? "Tu asiento"
