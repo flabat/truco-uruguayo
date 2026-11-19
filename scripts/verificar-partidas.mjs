@@ -11,9 +11,9 @@ const jugadores = [];
 const mesas = [];
 const comando = (version, accion) => ({ id: randomUUID(), version, ...(accion && { accion }) });
 
-async function preparar(modo) {
-  const { rows: [mesa] } = await pool.query("INSERT INTO juego.mesas (modo, creador, invitacion) VALUES ($1,$2,$3) RETURNING id",
-    [modo, jugadores[0], randomUUID()]);
+async function preparar(modo, meta = 40) {
+  const { rows: [mesa] } = await pool.query("INSERT INTO juego.mesas (modo, creador, invitacion, meta) VALUES ($1,$2,$3,$4) RETURNING id",
+    [modo, jugadores[0], randomUUID(), meta]);
   mesas.push(mesa.id);
   return mesa.id;
 }
@@ -80,14 +80,15 @@ async function probarMesa() {
   assert.deepEqual(await accion(0, truco), cantado);
 }
 
-async function probarComputadoras(modo) {
-  const id = await preparar(modo);
+async function probarComputadoras(modo, meta) {
+  const id = await preparar(modo, meta);
   const cantidad = modo === "1v1" ? 2 : 4;
   await sentar(id, 0, jugadores[0]);
   for (let i = 1; i < cantidad; i++) await sentar(id, i, null);
   let partida = await servicio.leer(id, jugadores[0]);
   let pasos = 0;
   while (partida.ganadorPartida === null) {
+    assert.equal(partida.meta, meta);
     assert.ok(++pasos < 2500);
     if (partida.vista.resultado) {
       partida = await servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version));
@@ -99,7 +100,8 @@ async function probarComputadoras(modo) {
     assert.equal(asiento, 0);
     partida = await servicio.ejecutar(id, jugadores[0], "acciones", comando(partida.version, accion));
   }
-  assert.equal(partida.puntos[partida.ganadorPartida], 40);
+  assert.equal(partida.puntos[partida.ganadorPartida], meta);
+  assert.deepEqual(await servicio.leer(id, jugadores[0]), partida);
   await assert.rejects(servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version)), { status: 409 });
 }
 
@@ -109,9 +111,9 @@ try {
     jugadores.push(j.id);
   }
   await probarMesa();
-  await probarComputadoras("1v1");
-  await probarComputadoras("2v2");
-  console.log("Partidas verificadas: carrera de reparto y respuesta, manos privadas, reintentos, cambio de mano y partidos a 40 con computadoras.");
+  await probarComputadoras("1v1", 26);
+  await probarComputadoras("2v2", 50);
+  console.log("Partidas verificadas: reparto, manos privadas, reintentos y chicos a 26 y a 50 con computadoras.");
 } finally {
   for (const tabla of ["comandos", "manos", "asientos"]) await pool.query("DELETE FROM juego." + tabla + " WHERE mesa = ANY($1::uuid[])", [mesas]);
   await pool.query("DELETE FROM juego.mesas WHERE id = ANY($1::uuid[])", [mesas]);

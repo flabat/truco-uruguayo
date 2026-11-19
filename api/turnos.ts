@@ -44,11 +44,11 @@ export function guardarAcciones(mano: ManoPublicable): Confirmada[] {
   return mano.turnos.map(t => t.signal ? {...t.action, sena: t.signal} : t.action);
 }
 
-export function restaurar(fila: Registro, formato: Format): ManoPublicable {
+export function restaurar(fila: Registro, formato: Format, meta?: number): ManoPublicable {
   if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== (formato === "pairs-senas" ? versions.signals : null)) {
     throw new Error("Versión de reglas desconocida.");
   }
-  const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio), turnos: []};
+  const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio, meta), turnos: []};
   return fila.acciones.reduce((mano, accion) => confirmar(mano, formato, accion), inicial);
 }
 

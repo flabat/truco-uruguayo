@@ -1,0 +1,42 @@
+---
+import { metaMaxima, metaPorModalidad, mitadesDelChico } from "../motor/chico";
+const meta = metaPorModalidad["3v3"];
+---
+<div class="meta-de-seis">
+  <label for="meta-seis">Tantos para ganar el chico de a seis</label>
+  <input id="meta-seis" type="number" required min="2" max={metaMaxima} step="2" value={meta} aria-describedby="mitades-seis" />
+  <output id="mitades-seis" for="meta-seis">{mitadesDelChico(meta)}</output>
+</div>
+
+<script>
+  import { esMetaDeChico, metaPorModalidad, mitadesDelChico } from "../motor/chico";
+  const campo = document.querySelector<HTMLInputElement>("#meta-seis");
+  const mitades = document.querySelector<HTMLOutputElement>("#mitades-seis");
+  if (campo && mitades) {
+    const url = new URL(location.href);
+    const inicial = Number(url.searchParams.get("meta"));
+    if (esMetaDeChico(inicial)) {
+      campo.value = String(inicial);
+      mitades.value = mitadesDelChico(inicial);
+    }
+    campo.addEventListener("input", () => {
+      const meta = campo.valueAsNumber;
+      if (!esMetaDeChico(meta)) {
+        mitades.value = "Elegí un número par desde 2.";
+        return;
+      }
+      mitades.value = mitadesDelChico(meta);
+      const actual = new URL(location.href);
+      if (meta === metaPorModalidad["3v3"]) actual.searchParams.delete("meta");
+      else actual.searchParams.set("meta", String(meta));
+      history.replaceState(history.state, "", actual);
+    });
+  }
+</script>
+
+<style>
+  .meta-de-seis { margin-block: 1.25rem; }
+  label { display: block; font-weight: 700; margin-bottom: .4rem; }
+  input { width: 7rem; padding: .45rem; font: inherit; }
+  output { margin-left: .4rem; color: var(--body); }
+</style>

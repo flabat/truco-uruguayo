@@ -3,6 +3,7 @@ import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VueltaCerrada } from "../../motor/mano";
 import type { VistaOnline } from "../../motor/mesa-online";
+import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
 
 const canto = {
@@ -21,6 +22,7 @@ const canto = {
 } satisfies Record<Exclude<Tipo, "carta">, string>;
 const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
+
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
   { nombre: "Responder", opciones: ["quiero", "no-quiero", "paso-flor"] },
@@ -220,14 +222,16 @@ export function EnJuego({
   const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
   return (
     <>
-      <div className="j-tanteador" aria-label="Tanteador">
-        <span className="j-meta">
-          Partida a <b>{partida.meta}</b>
-        </span>
+      <div className="j-tanteador" role="group" aria-label="Tanteador">
+        <div className="j-meta">
+          <b>Chico a {partida.meta}</b>
+          <small>{mitadesDelChico(partida.meta)}</small>
+        </div>
         {[propio, ajeno].map((e) => (
-          <div key={e}>
-            <span>{equipo(e)}</span>
+          <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
+            <span id={"j-equipo-" + e}>{equipo(e)}</span>
             <strong>{partida.puntos[e]}</strong>
+            <small>{cuentaDelChico(partida.puntos[e], partida.meta)}</small>
           </div>
         ))}
       </div>
