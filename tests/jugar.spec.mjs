@@ -148,6 +148,59 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
 });
 
+test("muestra las salidas de las computadoras en orden al crear la mesa y al día al retomarla", async ({ page }) => {
+  const libres = personas.slice(1).map(p => seat(p.asiento, "vacio", null));
+  const bots = libres.map(p => seat(p.asiento, "computadora", "CPU " + p.asiento));
+  const jugadas = ["copas-06", "bastos-04", "oros-05"].map((carta, i) => ({ carta, asiento: i + 1 }));
+  const mano = {
+    ...vista, mano: 1, dador: 0,
+    acciones: jugadas.map(j => ({ tipo: "carta", ...j })),
+    vueltaActual: { salida: 1, jugadas },
+  };
+  let recibida = { ...partida, vista: mano };
+  const sockets = await simular(page, path => {
+    if (path === "/api/mesas") return { json: mesa("2v2", [personas[0], ...libres]) };
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", [personas[0], ...bots]) };
+    if (path.endsWith("/partida")) return { json: recibida };
+  });
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  await page.goto("jugar/");
+  await page.getByRole("button", { name: "Jugar con computadoras" }).press("Enter");
+  const cartas = page.getByRole("region", { name: "Tapete" }).locator(".j-jugada img");
+  const jugar = page.getByRole("button", { name: "Jugar As de espadas" });
+  for (const [i, nombre] of ["6 de copas", "4 de bastos", "5 de oros"].entries()) {
+    await expect(cartas).toHaveCount(i + 1);
+    const nueva = cartas.nth(i);
+    await expect(nueva).toHaveAttribute("alt", nombre);
+    if (i < 2) {
+      await expect(jugar).toBeDisabled();
+      await nueva.evaluate(img => img.decode());
+      await page.clock.runFor(450);
+    }
+  }
+  await expect(jugar).toBeEnabled();
+  await page.reload();
+  await expect(cartas).toHaveCount(3);
+  await expect(jugar).toBeEnabled();
+
+  // Si el aviso posterior trae otra mano sin su cierre anterior, el tanteador parte del estado recibido.
+  const siguientes = jugadas.slice(1);
+  recibida = {
+    ...partida, manoNumero: 2, version: 7, puntos: [2, 3],
+    vista: {
+      ...mano, mano: 2, dador: 1,
+      acciones: siguientes.map(j => ({ tipo: "carta", ...j })),
+      vueltaActual: { salida: 2, jugadas: siguientes },
+    },
+  };
+  sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+  await expect(page.getByText("Mano 2", { exact: true })).toBeVisible();
+  await expect(cartas).toHaveCount(2);
+  await expect(jugar).toBeEnabled();
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["2", "3"]);
+});
+
 test("reserva la invitación para el ingreso y recupera la pareja con un canto pendiente", async ({
   page,
   isMobile,

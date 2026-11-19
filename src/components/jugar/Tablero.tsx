@@ -192,7 +192,9 @@ export function EnJuego({
   const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : undefined;
   const ganadora = cerrada?.jugadas.find(j => j.asiento === ganador);
   const veredicto = ganadora ? "Ganó " + nombre(ganadora.asiento) : cerrada && "Parda";
-  const ultima = (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
+  // La presentación mantiene la vuelta completa abierta mientras carga su último naipe.
+  const cargandoCierre = v.vueltaActual?.jugadas.length === mesa.asientos.length;
+  const ultima = cargandoCierre ? undefined : (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
   const jugadaVisible = ultima ? nombre(ultima.asiento) + " jugó " + nombrar(ultima.carta).toLowerCase() + "." : "";
   const detalleVuelta = cerrada && [
     ultima?.asiento !== ganador ? jugadaVisible : "",

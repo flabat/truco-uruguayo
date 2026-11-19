@@ -157,15 +157,17 @@ function MesaAbierta({
   id,
   jugador,
   base,
-  avisoInicial,
+  avisoInicial = "",
+  recienCreada = false,
 }: {
   id: string;
   jugador: Jugador;
   base: string;
-  avisoInicial: string;
+  avisoInicial?: string;
+  recienCreada?: boolean;
 }) {
   const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
-  const { tablero, partida, mostrandoCartas } = usePresentacionVueltas(recibida);
+  const { tablero, partida, mostrandoCartas } = usePresentacionVueltas(recibida, recienCreada);
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
   useEffect(() => {
@@ -298,12 +300,11 @@ function MesaAbierta({
 
 export default function Sala({ base }: { base: string }) {
   const [jugador, identificar] = useState<Jugador | null>();
-  const [mesa, abrir] = useState("");
+  const [mesa, abrir] = useState<{ id: string; avisoInicial?: string; recienCreada?: boolean }>();
   const [invitacion, invitar] = useState("");
   const [volver, regresar] = useState("/jugar/");
   const [error, avisar] = useState<Error | null>(null);
   const [anterior, recordar] = useState<string | null>(null);
-  const [avisoMesa, informar] = useState("");
   useEffect(() => {
     let vigente = true;
     const params = new URLSearchParams(location.search);
@@ -327,8 +328,8 @@ export default function Sala({ base }: { base: string }) {
           const mesa = await pedir<Mesa>("/api/invitaciones/" + encodeURIComponent(token) + "/unirse", {});
           if (!vigente) return;
           history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(mesa.id));
-          abrir(mesa.id);
-        } else if (id) abrir(id);
+          abrir({ id: mesa.id });
+        } else if (id) abrir({ id });
         identificar(yo);
       } catch (e) {
         if (!vigente) return;
@@ -375,15 +376,12 @@ export default function Sala({ base }: { base: string }) {
       ) : jugador === null ? (
         <Ingreso volver={volver} invitada={Boolean(invitacion)} />
       ) : mesa ? (
-        <MesaAbierta key={mesa} id={mesa} jugador={jugador} base={base} avisoInicial={avisoMesa} />
+        <MesaAbierta key={mesa.id} {...mesa} jugador={jugador} base={base} />
       ) : (
         <AbrirMesa
           base={base}
           anterior={anterior}
-          abrir={(id, aviso) => {
-            informar(aviso);
-            abrir(id);
-          }}
+          abrir={(id, avisoInicial) => abrir({ id, avisoInicial, recienCreada: true })}
         />
       )}
     </>
