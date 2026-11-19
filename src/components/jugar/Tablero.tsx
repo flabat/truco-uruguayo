@@ -127,7 +127,6 @@ function AsientoEnMesa({
               onClick={() => jugar({ tipo: "carta", carta: c })}
             >
               <Naipe base={base} id={c} />
-              <span>{nombrar(c)}</span>
             </button>
           ))}
         </div>

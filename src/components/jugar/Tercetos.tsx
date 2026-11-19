@@ -137,7 +137,7 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
         {jugando && <div className="j-mano" role="group" aria-label="Tus cartas">
           {jugando.cartas.map(carta => <button key={carta} disabled={bloqueada || !jugando.legales.includes("carta")}
             aria-label={"Jugar " + nombrar(carta)} onClick={() => jugar({ tipo: "carta", carta })}>
-            <Naipe base={base} id={carta} /><span>{nombrar(carta)}</span>
+            <Naipe base={base} id={carta} />
           </button>)}
         </div>}
       </section>
