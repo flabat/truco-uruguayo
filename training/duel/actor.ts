@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { esCardId, mazo, paloDe, pieza, rangoDe } from "../../src/motor/cartas.ts";
 import { compararCartas } from "../../src/motor/jerarquia.ts";
@@ -35,13 +36,20 @@ export function coordinates(observation: SeatObservation, legal: readonly Action
   const suit = paloDe(view.muestra);
   const strength = (card: typeof view.muestra) => compararCartas(card, "oros-03", view.muestra);
   const hand = [...observation.originalCards].sort().map(c => [strength(c), paloDe(c), pieza(c, view.muestra)]);
-  const history = view.acciones.map(a => [relative(a.asiento), a.tipo === "carta" ? [strength(a.carta), paloDe(a.carta)] : a.tipo]);
+  const history = observation.history.map(({ action: a, awards }) => [
+    relative(a.asiento), a.tipo === "carta" ? [strength(a.carta), paloDe(a.carta)] : a.tipo,
+    awards.map(c => [c.motivo, relative(c.equipo), c.tantos, c.asiento == null ? null : relative(c.asiento), c.tantoGanador]),
+  ]);
   const info = JSON.stringify([relative(view.mano), observation.startScore[view.asiento], observation.startScore[1 - view.asiento],
     observation.score[view.asiento], observation.score[1 - view.asiento], suit, rangoDe(view.muestra),
-    hand, view.tantosPropios.total, history, observation.stakes, slots]);
+    hand, view.tantosPropios.total, history, observation.stakes, [...slots].sort((a, b) => a - b)]);
   let hash = 2166136261;
   for (let i = 0; i < info.length; i++) hash = Math.imul(hash ^ info.charCodeAt(i), 16777619);
   return { bucket: String((hash >>> 0) % buckets), slots };
+}
+
+export function duelActorId(buckets: number, average: DuelExport["average"]) {
+  return "duel-" + createHash("sha256").update(JSON.stringify([buckets, average])).digest("hex");
 }
 
 export function asDuelActor(artifact: DuelExport): Policy {
@@ -55,6 +63,7 @@ export function asDuelActor(artifact: DuelExport): Policy {
     if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= artifact.buckets || !Array.isArray(row) || row.length !== width
         || !row.every(v => Number.isFinite(v) && v >= 0)) throw new Error("Fila de actor inválida.");
   }
+  if (artifact.id !== duelActorId(artifact.buckets, artifact.average)) throw new Error("La identidad del actor no coincide con sus pesos.");
   return { id: artifact.id, decide(obs, legal) {
     if (obs.format !== "duel") throw new Error("El actor de duelo requiere formato duel.");
     if (!legal.length) return [];
