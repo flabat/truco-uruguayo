@@ -23,6 +23,7 @@ export interface VistaMesa {
   modo: Modo;
   creadorId: string;
   formato: Format;
+  politica: string;
   miAsiento: number;
   invitacion: string;
   lista: boolean;
@@ -41,7 +42,7 @@ export function esRutaMesas(pathname: string) {
 export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: string, web: URL): Promise<VistaMesa | null> {
   if (!esId(id)) return null;
   const { rows } = await db.query(`
-    SELECT m.id, m.modo, m.creador, m.invitacion, m.version_senas, propio.asiento AS mio,
+    SELECT m.id, m.modo, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
            a.asiento, a.computadora, j.nombre
       FROM juego.mesas m
       JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
@@ -62,7 +63,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   });
   const enlace = new URL("/jugar/", web);
   enlace.searchParams.set("invitacion", mesa.invitacion);
-  return { id: mesa.id, modo: mesa.modo, formato: formatoMesa(mesa.modo, mesa.version_senas), creadorId: mesa.creador, miAsiento: mesa.mio,
+  return { id: mesa.id, modo: mesa.modo, politica: mesa.politica, formato: formatoMesa(mesa.modo, mesa.version_senas), creadorId: mesa.creador, miAsiento: mesa.mio,
     invitacion: enlace.href, lista: rows.length === asientos.length, asientos };
 }
 
@@ -80,8 +81,9 @@ async function crear(db: PoolClient, jugador: string, modo: unknown, formato: un
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
   const token = randomBytes(24).toString("base64url");
-  const { rows: [mesa] } = await db.query("INSERT INTO juego.mesas (modo, creador, invitacion, version_senas) VALUES ($1,$2,$3,$4) RETURNING id",
-    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null]);
+  const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, politica) VALUES ($1,$2,$3,$4,
+    COALESCE((SELECT pin FROM juego.activaciones WHERE formato=$5), 'incumbent-online-v1')) RETURNING id`,
+    [modo, jugador, token, formato === "pairs-senas" ? versions.signals : null, formato ?? defaultFormat]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };
 }
