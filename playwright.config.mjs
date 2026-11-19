@@ -1,8 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const port = Number(process.env.TEST_PORT ?? 4322);
-const path = new URL(process.env.PAGES_URL ?? "https://example.org/").pathname;
-const baseURL = new URL(path, `http://127.0.0.1:${port}`).href;
+const baseURL = `http://127.0.0.1:${port}/`;
 
 export default defineConfig({
   testDir: "./tests",
