@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
     "test:unit": "node --test \"tests/unit/*.test.ts\"",
