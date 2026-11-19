@@ -182,7 +182,7 @@ test("en parejas una parda muestra las cuatro cartas y la vuelta decisiva señal
   const sena = page.getByRole("combobox", { name: "Seña para esta jugada" });
   const seis = page.getByRole("button", { name: "Jugar 6 de espadas" });
   await publicar("espadas-04");
-  await expect(page.getByRole("status").filter({ hasText: /parda/i })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: /parda/i })).toContainText("Diego jugó 4 de espadas.");
   await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
   await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
   await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
@@ -215,6 +215,8 @@ test("en parejas una parda muestra las cuatro cartas y la vuelta decisiva señal
   const pareja = tapete.getByRole("group", { name: "Tu pareja · Clara" });
   await expect(pareja.getByRole("img", { name: "As de espadas" })).toBeVisible();
   await expect(pareja.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Ganaste la mano" }))
+    .toContainText("Diego jugó 7 de oros. Clara ganó la vuelta con su as de espadas.");
   await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(1);
   await captura(tapete, "pareja-ganadora");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

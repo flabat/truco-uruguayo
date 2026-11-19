@@ -192,11 +192,14 @@ export function EnJuego({
   const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : undefined;
   const ganadora = cerrada?.jugadas.find(j => j.asiento === ganador);
   const veredicto = ganadora ? "Ganó " + nombre(ganadora.asiento) : cerrada && "Parda";
-  const detalleVuelta = ganadora
-    ? nombre(ganadora.asiento) + " ganó la vuelta con su " + nombrar(ganadora.carta).toLowerCase() + "."
-    : cerrada ? "La vuelta fue parda." : "";
   const ultima = (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
   const jugadaVisible = ultima ? nombre(ultima.asiento) + " jugó " + nombrar(ultima.carta).toLowerCase() + "." : "";
+  const detalleVuelta = cerrada && [
+    ultima?.asiento !== ganador ? jugadaVisible : "",
+    ganadora
+      ? nombre(ganadora.asiento) + " ganó la vuelta con su " + nombrar(ganadora.carta).toLowerCase() + "."
+      : "La vuelta fue parda.",
+  ].filter(Boolean).join(" ");
   const { titulo, indicacion } = mostrandoCartas && !resultado
     ? { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible }
     : estadoDelTurno(mesa, partida, v);
