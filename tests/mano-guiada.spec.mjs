@@ -47,7 +47,7 @@ test("mano de tres vueltas, regreso desde la ruta, replay y dador nuevo", async 
   await boton(page, "Pedir una pista").click();
   await page.reload();
   await expect(page.getByRole("status")).toContainText("Apartá la pieza");
-  await boton(page, "Sin flor").focus();
+  await boton(page, "Yo no canto").focus();
   await page.keyboard.press("Enter");
   await expect(titulo(page, "¿Qué cartas entran en la cuenta?")).toBeFocused();
   await page.keyboard.press("Tab");
@@ -143,7 +143,7 @@ test("flor y dos vueltas a 320 px con almacenamiento bloqueado", async ({ page }
 test("si el compañero ya gana se puede jugar cualquiera de las dos cartas", async ({ page }) => {
   await semillaFija(page, 6);
   await page.goto("aprender/mano/");
-  await boton(page, "Sin flor").click();
+  await boton(page, "Yo no canto").click();
   await seleccionar(page, ["Rey de copas", "5 de copas"]);
   await contar(page, 25);
   await jugar(page, "rey de copas");
@@ -169,7 +169,7 @@ test("consultar la regla conserva las cartas y la ayuda tras volver o recargar",
   await regla.press("Enter");
   await expect(page.locator("#regla-mesa")).toContainText("Hay flor con tres cartas");
   await page.reload();
-  await boton(page, "Sin flor").click();
+  await boton(page, "Yo no canto").click();
   await seleccionar(page, ["2 de copas", "5 de oros"]);
   await page.getByRole("spinbutton").fill("35");
   await regla.press("Enter");
@@ -192,7 +192,7 @@ test("consultar la regla conserva las cartas y la ayuda tras volver o recargar",
 async function turnoDeApertura(page) {
   await page.goto("aprender/mano/");
   await expect(boton(page, "Comparar mis cartas")).toBeHidden();
-  await boton(page, "Sin flor").click();
+  await boton(page, "Yo no canto").click();
   await seleccionar(page, ["2 de copas", "5 de oros"]);
   await expect(boton(page, "Comparar mis cartas")).toBeHidden();
   await contar(page, 35);

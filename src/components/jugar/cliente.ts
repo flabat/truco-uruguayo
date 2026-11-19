@@ -20,6 +20,8 @@ export interface Mesa {
   modo: Modo;
   meta: number;
   formato?: Format | "triples";
+  versionReglas?: number;
+  politica?: string;
   creadorId: string;
   miAsiento: number;
   invitacion: string;

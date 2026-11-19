@@ -59,6 +59,30 @@ async function simular(page, handler) {
   return sockets;
 }
 
+test("el pie muestra el motor y el modelo asignados a la mesa y los quita al volver al salón", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  const pin = "0123456789abcdef".repeat(4);
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId))
+      return { json: { ...mesa("2v2", personas), versionReglas: 1, politica: pin } };
+    if (path.endsWith("/partida")) return { json: { ...partida, version: 37 } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const pie = page.getByRole("contentinfo");
+  const motor = pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd");
+  const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  await expect(motor).toHaveText("v1");
+  await expect(modelo).toHaveText(pin);
+  await expect(modelo).toBeVisible();
+  expect(await pie.evaluate(el => el.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  if (process.env.CAPTURAS_VERSIONES)
+    await pie.screenshot({ path: `${process.env.CAPTURAS_VERSIONES}/versiones-${test.info().project.name}.png`, scale: "css" });
+
+  await page.getByRole("link", { name: "Volver al salón" }).click();
+  await expect(motor).toHaveText("Sin mesa");
+  await expect(modelo).toHaveText("Sin mesa");
+});
+
 test("desde la portada sin sesión se puede abrir la sala y seguir a la práctica", async ({ page }) => {
   await page.route("**/api/jugador", (route) =>
     route.fulfill({ status: 401, contentType: "application/json", body: "null" })
@@ -118,6 +142,8 @@ test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
     await page.locator(".j-crear .j-panel").screenshot({ path: `${process.env.CAPTURAS_UI}/crear-meta-${test.info().project.name}.png`, scale: "css" });
   await crear.press("Enter");
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+  // Una API anterior puede omitir ambos datos de la mesa.
+  await expect(page.getByRole("contentinfo").getByText("Sin informar", { exact: true })).toHaveCount(2);
   await page.reload();
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
 });
@@ -222,6 +248,38 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
 });
 
+test("la mano alinea las tres cartas y conserva sus nombres accesibles", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+  const cartas = ["oros-05", "copas-12", "bastos-11"];
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", personas) };
+    if (path.endsWith("/partida")) return { json: { ...partida, vista: {
+      ...vista, cartas, dador: 1, mano: 2, turno: 2, vueltaActual: { salida: 2, jugadas: [] }, legales: [],
+    } } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const puesto = page.getByRole("group", { name: "Vos · Ana", exact: true });
+  const mano = puesto.getByRole("group", { name: "Tus cartas" });
+  const nombres = ["5 de oros", "Rey de copas", "Caballo de bastos"];
+  for (const nombre of nombres) {
+    const boton = mano.getByRole("button", { name: "Jugar " + nombre, exact: true });
+    await expect(boton.getByAltText(nombre, { exact: true })).toBeVisible();
+  }
+  await expect(mano.getByRole("button")).toHaveText(["", "", ""], { useInnerText: true });
+  const bordes = await mano.locator("img").evaluateAll(async imagenes => {
+    await Promise.all(imagenes.map(imagen => imagen.decode()));
+    await document.fonts.ready;
+    return imagenes.map(imagen => imagen.getBoundingClientRect().toJSON());
+  });
+  for (let i = 1; i < bordes.length; i++) {
+    expect(bordes[i].top).toBe(bordes[0].top);
+    expect(bordes[i].bottom).toBe(bordes[0].bottom);
+    expect(bordes[i].left).toBeGreaterThanOrEqual(bordes[i - 1].right);
+  }
+  if (process.env.CAPTURAS_UI)
+    await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+});
+
 for (const [caso, cantos] of [
   ["la flor de salida en duelo", ["flor"]],
   ["la flor seguida de dos declaraciones en parejas", ["flor", "paso-flor", "paso-flor"]],
@@ -258,7 +316,7 @@ for (const [caso, cantos] of [
     });
     await page.goto("jugar/?mesa=" + mesaId);
     const panel = page.locator(".j-jugada-panel");
-    const respuesta = panel.getByRole("button", { name: "Sin flor", exact: true });
+    const respuesta = panel.getByRole("button", { name: "Yo no canto", exact: true });
     const estadoDelTurno = panel.getByRole("status");
     const anuncio = estadoDelTurno.getByText(/Computadora 2 cantó flor/i);
     const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
@@ -286,10 +344,10 @@ for (const [caso, cantos] of [
     await respuesta.press("Enter");
     await expect(respuesta).toHaveCount(0);
     await expect(anuncio).toHaveCount(0);
-    await expect(historial.getByRole("listitem")).toContainText([/Ana dijo «Sin flor»/]);
+    await expect(historial.getByRole("listitem")).toContainText([/Ana dijo «Yo no canto»/]);
     if (duelo) {
       await page.reload();
-      await expect(historial.getByRole("listitem")).toContainText([/Computadora 2 dijo «Flor»/, /Ana dijo «Sin flor»/]);
+      await expect(historial.getByRole("listitem")).toContainText([/Computadora 2 dijo «Flor»/, /Ana dijo «Yo no canto»/]);
     }
   });
 }

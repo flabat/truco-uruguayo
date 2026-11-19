@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { canto } from "../src/lib/cantos.ts";
 import { probarTercetos } from "./verificar-tercetos-navegador.mjs";
 import { chromium, expect } from "@playwright/test";
 
@@ -9,8 +10,6 @@ assert.ok(/^truco-check-\d+-\d+$/.test(proyecto), "El reinicio requiere el proye
 const compose = (...args) => promisify(execFile)("docker", ["compose", "--project-name", proyecto, ...args]);
 const browser = await chromium.launch();
 const espera = { timeout: 20_000 };
-const nombres = { "paso-flor": "Sin flor", "no-quiero": "No quiero", "falta-envido": "Falta envido",
-  "contraflor-al-resto": "Contraflor al resto", flor: "Flor", quiero: "Quiero", truco: "Truco" };
 const boton = (p, name) => p.getByRole("button", { name, exact: true });
 const tapete = p => p.getByRole("region", { name: "Tapete" });
 
@@ -61,7 +60,7 @@ async function partida(p) {
 function control(p, tipo) {
   return tipo === "carta"
     ? p.getByRole("group", { name: "Tus cartas" }).getByRole("button").first()
-    : boton(p, nombres[tipo]);
+    : boton(p, canto[tipo]);
 }
 
 async function jugar(p, tipo) {

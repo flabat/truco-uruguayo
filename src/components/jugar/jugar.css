@@ -119,12 +119,11 @@
 .j-muestra img.j-mazo { transform: translateY(32%) rotate(90deg); }
 .j-muestra small { color: #e6d099; font-weight: 650; font-size: .7rem; margin-top: 5px; }
 .j-muestra strong { font-size: .8rem; }
-.j-mano { grid-column: 1 / -1; display: flex; justify-content: center; gap: clamp(4px,1vw,12px); margin: 5px auto 0; }
-.j-mano button { width: clamp(62px, 7.7vw, 86px); border: 1px solid transparent; border-radius: 4px; background: none; color: #fff8e5; padding: 3px; font-size: .73rem; font-weight: 650; line-height: 1.15; }
+.j-mano { grid-column: 1 / -1; display: flex; align-items: flex-start; justify-content: center; gap: clamp(4px,1vw,12px); margin: 5px auto 0; }
+.j-mano button { width: clamp(62px, 7.7vw, 86px); border: 1px solid transparent; border-radius: 4px; background: none; color: #fff8e5; padding: 3px; }
 .j-mano button:enabled { background: #ffffff10; border-color: #dcc79a99; }
 .j-mano button:enabled:hover, .j-mano button:focus-visible { background: #ffffff2b; outline-color: #f0c47d; border-color: #f0c47d; }
 .j-mano img { display: block; width: 100%; height: auto; border-radius: 3px; box-shadow: 0 2px 4px #122b1b; }
-.j-mano span { display: block; padding: 4px 0; }
 .j-jugada-panel { align-self: stretch; min-width: 0; }
 .j-jugada-panel .j-flor-anunciada {
   margin: 0 0 .85rem;
