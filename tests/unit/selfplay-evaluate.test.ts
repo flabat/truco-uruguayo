@@ -25,3 +25,12 @@ test("la confirmación adicional puede exigir intervalos simultáneos más conse
   assert(strict.direct.lower<=usual.direct.lower && strict.direct.upper>=usual.direct.upper);
   assert.throws(()=>summarize(field,"champion",2000,0));
 });
+
+test("el desempate conserva las parejas de repartos y solo adopta ante una ventaja suficiente", async () => {
+  const {playoffResult}=await import("../../training/selfplay/playoff.ts");
+  const plan={schema:"qualified-playoff-v1",seed:"0123456789abcdef",pairs:1000,maxFormats:3,familyError:0.01};
+  const draws=Array(1000).fill(1);
+  assert.equal(playoffResult(plan,draws).preferSupplement,false);
+  assert.equal(playoffResult(plan,Array(1000).fill(2)).preferSupplement,true);
+  assert.throws(()=>playoffResult(plan,[1,2]));
+});

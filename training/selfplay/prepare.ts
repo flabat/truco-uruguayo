@@ -5,6 +5,7 @@ import {dirname, join, resolve} from "node:path";
 import {fileURLToPath} from "node:url";
 import {dealSeed,read} from "../anchored/io.ts";
 import {summarize} from "../eval/statistics.ts";
+import {verifyPlayoff} from "./playoff.ts";
 import {qualifies, qualificationFamilies} from "./evaluate.ts";
 import {activeFormats, teamSignalsVersion} from "../contracts/index.ts";
 import {initial,type CycleFormat} from "../anchored/actor.ts";
@@ -43,7 +44,7 @@ function verifyFinal(assessment:string,format:CycleFormat,source:EvidenceProtoco
 const fileHash=(file:string)=>createHash("sha256").update(readFileSync(file)).digest("hex");
 
 type Profile = "standard" | "pilot" | "extended";
-export function prepare(root: string, previous: string, seed = randomBytes(24).toString("hex"), profile:Profile="standard", supplement?:string) {
+export function prepare(root: string, previous: string, seed = randomBytes(24).toString("hex"), profile:Profile="standard", supplement?:string, playoff?:string) {
   assert(["standard","pilot","extended"].includes(profile),"Unknown league profile");
   const paired = profile!=="standard";
   const field = join(previous, "field"), files: Record<string,string> = {};
@@ -86,9 +87,9 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
       if (extra && supplement) {
         const fixed=verifyFinal(join(supplement,format),format,extra,incumbent);
         assert(fixed.final.pin===extra.challengers[format] && fixed.final.counter===extra.counters[format]);
-        // Both prospective claims compare against the same immutable reference.
-        // The primary study has precedence when both candidates qualify.
-        if (fixed.final.improved && !final.improved) adopted=fixed.challenger;
+        const tied=final.improved && fixed.final.improved && final.pin!==fixed.final.pin;
+        const preferFixed=tied && playoff && verifyPlayoff(playoff,format,final.pin,fixed.final.pin).preferSupplement;
+        if (fixed.final.improved && (!final.improved || preferFixed)) adopted=fixed.challenger;
         extraModels[format]={pin:fixed.final.pin,improved:fixed.final.improved,adopted:adopted!==null};
       }
       const winner = adopted ?? (final.improved ? challenger : incumbent);
@@ -161,6 +162,7 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
     ...(continuing ? {parent:{protocolSha256:createHash("sha256").update(readFileSync(join(previous,"protocol.json"))).digest("hex"),models:parentModels}} : {}),
     selection:"Compare frozen candidate checkpoints on a separate screening pool. Rank mean win rate across the reference, caller, strong-cards, frequent-bluff and folder. Gates use independent paired deals per epoch. Final confirms one finalist vs the immutable starting research champion.",
     ...(extra && supplement ? {supplement:{protocolSha256:fileHash(join(supplement,"protocol.json")),models:extraModels}} : {}),
+    ...(playoff ? {playoffPlanSha256:fileHash(join(playoff,"plan.json"))} : {}),
     ...(paired ? {
       profile, sampler:"paired-regression-v1", epochs:profile==="pilot"?3:18, trainingHours:profile==="pilot"?1:6,
       maxWallHours:profile==="pilot"?2:8, epochPairs:256, finalPairs:4096,
@@ -175,7 +177,7 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
   return protocol;
 }
 if (process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  const [root,previous,seed,profile,supplement]=process.argv.slice(2);
-  if (!root || !previous) throw new Error("prepare.ts NEW_RUN PREVIOUS_CYCLE [SEED] [standard|pilot|extended] [FIXED_CONFIRMATION]");
-  prepare(resolve(root),resolve(previous),seed,profile as Profile|undefined,supplement && resolve(supplement));
+  const [root,previous,seed,profile,supplement,playoff]=process.argv.slice(2);
+  if (!root || !previous) throw new Error("prepare.ts NEW_RUN PREVIOUS_CYCLE [SEED] [standard|pilot|extended] [FIXED_CONFIRMATION] [PLAYOFF]");
+  prepare(resolve(root),resolve(previous),seed,profile as Profile|undefined,supplement && resolve(supplement),playoff && resolve(playoff));
 }
