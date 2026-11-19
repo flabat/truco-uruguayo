@@ -1,7 +1,7 @@
 import { esCardId, type CardId } from "./cartas.ts";
 import { compararCartas } from "./jerarquia.ts";
 import {
-  equipoPorAsiento, esAsiento, esRepartoV1, esRepartoOnline, type Asiento, type Equipo, type Reparto, type RepartoV1,
+  equipoDelAsiento, esAsientoOnline, esRepartoV1, esRepartoOnline, type Asiento, type Equipo, type Reparto, type RepartoV1,
 } from "./reparto.ts";
 
 export interface Jugada {
@@ -31,6 +31,8 @@ interface Mesa {
 
 export interface EstadoMano<R extends Reparto = RepartoV1> extends Mesa {
   readonly reparto: R;
+  /** Orden circular desde el mano del lance, en asientos físicos. */
+  readonly participantes?: readonly Asiento[];
   /** Cartas aún en juego, por asiento. */
   readonly restantes: readonly (readonly CardId[])[];
 }
@@ -50,15 +52,28 @@ export type ResultadoJugada<R extends Reparto = RepartoV1> =
   | { readonly ok: true; readonly estado: EstadoMano<R> }
   | { readonly ok: false; readonly error: ErrorJugada };
 
-export function iniciarMano<R extends Reparto>(reparto: R): EstadoMano<R> {
+function ordenDelReparto({ mano, manos }: Reparto): Asiento[] {
+  return manos.map((_, i) => ((mano + i) % manos.length) as Asiento);
+}
+
+export function participantesDe(estado: EstadoMano<Reparto>): readonly Asiento[] {
+  return estado.participantes ?? ordenDelReparto(estado.reparto);
+}
+
+export function iniciarMano<R extends Reparto>(reparto: R, activos?: readonly Asiento[]): EstadoMano<R> {
   if (!esRepartoV1(reparto) && !esRepartoOnline(reparto)) throw new TypeError("El reparto no es válido.");
   const copia = structuredClone(reparto);
-  const { mano, manos } = copia;
+  const { manos } = copia;
+  const participantes = activos ? [...activos] : ordenDelReparto(copia);
+  if (activos && (reparto.versionReparto !== "online-2" || activos.length !== 2 ||
+      !activos.every(esAsientoOnline) || activos[1] !== (activos[0] + 3) % 6)) {
+    throw new RangeError("El duelo requiere dos asientos enfrentados.");
+  }
   return {
-    reparto: copia,
+    reparto: copia, ...(copia.versionReparto === "online-2" && { participantes }),
     restantes: manos,
-    turno: mano,
-    vueltaActual: { salida: mano, jugadas: [] },
+    turno: participantes[0],
+    vueltaActual: { salida: participantes[0], jugadas: [] },
     vueltas: [],
     equipoGanador: null,
   };
@@ -68,9 +83,9 @@ function resolverVuelta(jugadas: readonly Jugada[], muestra: CardId): ResultadoV
   // El orden de juego desempata entre compañeros que alcanzaron el mismo máximo.
   const mayor = jugadas.reduce((primera, otra) =>
     compararCartas(otra.carta, primera.carta, muestra) > 0 ? otra : primera);
-  const equipo = equipoPorAsiento[mayor.asiento];
+  const equipo = equipoDelAsiento(mayor.asiento);
   const parda = jugadas.some(({ asiento, carta }) =>
-    equipoPorAsiento[asiento] !== equipo && compararCartas(carta, mayor.carta, muestra) === 0);
+    equipoDelAsiento(asiento) !== equipo && compararCartas(carta, mayor.carta, muestra) === 0);
   return parda ? { tipo: "parda" } : { tipo: "ganada", equipo, asiento: mayor.asiento };
 }
 
@@ -79,7 +94,7 @@ function ganadorDeMano(vueltas: readonly VueltaCerrada[], mano: Asiento): Equipo
     resultado.tipo === "ganada" ? resultado.equipo : null);
   if (segunda === undefined) return null;
   // Solo se llega a la tercera con una vuelta por equipo o con dos pardas.
-  if (tercera !== undefined) return tercera ?? primera ?? equipoPorAsiento[mano];
+  if (tercera !== undefined) return tercera ?? primera ?? equipoDelAsiento(mano);
   if (primera === null) return segunda;
   if (segunda === null || primera === segunda) return primera;
   return null;
@@ -88,7 +103,7 @@ function ganadorDeMano(vueltas: readonly VueltaCerrada[], mano: Asiento): Equipo
 export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jugada): ResultadoJugada<R> {
   const { vueltaActual, reparto } = estado;
   if (vueltaActual === null) return { ok: false, error: "mano-cerrada" };
-  if (!esAsiento(jugada?.asiento) || jugada.asiento >= reparto.manos.length || !esCardId(jugada.carta)) {
+  if (!esAsientoOnline(jugada?.asiento) || jugada.asiento >= reparto.manos.length || !esCardId(jugada.carta)) {
     return { ok: false, error: "jugada-invalida" };
   }
   const { asiento, carta } = jugada;
@@ -101,8 +116,9 @@ export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jug
   const restantes = estado.restantes.map((cartas, posicion) =>
     posicion === asiento ? cartas.filter((propia) => propia !== carta) : cartas);
   const jugadas = [...vueltaActual.jugadas, { asiento, carta }];
-  if (jugadas.length < reparto.manos.length) {
-    const turno = ((asiento + 1) % reparto.manos.length) as Asiento;
+  const participantes = participantesDe(estado);
+  if (jugadas.length < participantes.length) {
+    const turno = participantes[(participantes.indexOf(asiento) + 1) % participantes.length];
     return {
       ok: true,
       estado: { ...estado, restantes, turno, vueltaActual: { salida: vueltaActual.salida, jugadas } },
@@ -111,12 +127,12 @@ export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jug
 
   const resultado = resolverVuelta(jugadas, reparto.muestra);
   const vueltas = [...estado.vueltas, { salida: vueltaActual.salida, jugadas, resultado }];
-  const equipoGanador = ganadorDeMano(vueltas, reparto.mano);
-  const salida = resultado.tipo === "ganada" ? resultado.asiento : reparto.mano;
+  const equipoGanador = ganadorDeMano(vueltas, participantes[0]);
+  const salida = resultado.tipo === "ganada" ? resultado.asiento : participantes[0];
   return {
     ok: true,
     estado: {
-      reparto, restantes, vueltas, equipoGanador,
+      ...estado, restantes, vueltas, equipoGanador,
       turno: equipoGanador === null ? salida : null,
       vueltaActual: equipoGanador === null ? { salida, jugadas: [] } : null,
     },
@@ -124,15 +140,19 @@ export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jug
 }
 
 /** Los bots y la mesa guiada reciben sus cartas y una copia de los hechos públicos. */
-export function vistaPara(estado: EstadoMano<Reparto>, asiento: Asiento): VistaAsiento {
-  if (!esAsiento(asiento) || asiento >= estado.reparto.manos.length) throw new RangeError("El asiento debe estar en la mesa.");
+export function vistaPublicaPara(estado: EstadoMano<Reparto>, asiento: Asiento): Omit<VistaAsiento, "cartas"> {
+  if (!esAsientoOnline(asiento) || asiento >= estado.reparto.manos.length) throw new RangeError("El asiento debe estar en la mesa.");
   const { muestra, dador, mano } = estado.reparto;
   return structuredClone({
-    asiento, cartas: estado.restantes[asiento], muestra, dador, mano,
-    equipoPorAsiento: equipoPorAsiento.slice(0, estado.reparto.manos.length),
+    asiento, muestra, dador, mano,
+    equipoPorAsiento: estado.reparto.manos.map((_, i) => equipoDelAsiento(i as Asiento)),
     turno: estado.turno,
     vueltaActual: estado.vueltaActual,
     vueltas: estado.vueltas,
     equipoGanador: estado.equipoGanador,
   });
+}
+
+export function vistaPara(estado: EstadoMano<Reparto>, asiento: Asiento): VistaAsiento {
+  return { ...vistaPublicaPara(estado, asiento), cartas: [...estado.restantes[asiento]] };
 }

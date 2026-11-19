@@ -9,7 +9,7 @@ import { decodeMove } from "../seat/index.ts";
 const bids = {
   truco: true, retruco: true, "vale-cuatro": true, envido: true, "real-envido": true,
   "falta-envido": true, flor: true, "paso-flor": true, "con-flor-envido": true,
-  "contraflor-al-resto": true, quiero: true, "no-quiero": true,
+  "contraflor-al-resto": true, quiero: true, "no-quiero": true, mazo: true,
 } satisfies Record<Exclude<Move, CardId>, true>;
 
 function isMove(value: string): value is Move {
@@ -50,9 +50,9 @@ export function commitTurn(state: EstadoOnline, seat: Asiento, format: Format, i
   }
   const { move, signal } = decode(id);
   if (signal !== undefined && !hasSignals(format)) throw new RangeError("Este formato no admite señas.");
-  const step = aplicarOnline(state, decodeMove(move, seat));
+  const action = decodeMove(move, seat);
+  const step = aplicarOnline(state, action);
   if (!step.ok) throw new RangeError("Acción rechazada por el árbitro: " + step.error);
-  const action = step.estado.acciones.at(-1)!;
   const awards = step.estado.cobros.slice(state.cobros.length);
   const turn = signal === undefined ? { action, awards } : { signal, action, awards };
   return { state: step.estado, turn };

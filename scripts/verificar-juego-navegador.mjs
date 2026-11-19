@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { probarTercetos } from "./verificar-tercetos-navegador.mjs";
 import { chromium, expect } from "@playwright/test";
 
 const [web, proyecto] = process.argv.slice(2);
@@ -28,9 +29,10 @@ async function ingresar(p, usuario) {
   await p.locator("#kc-login").click();
 }
 
-async function crear(p, modo, computadoras = false) {
+async function crear(p, modo, computadoras = false, meta) {
   await p.goto("/jugar/");
-  await p.getByRole("radio", { name: modo === "1v1" ? /1 contra 1/ : /2 contra 2/ }).check();
+  await p.getByRole("radio", { name: { "1v1": /1 contra 1/, "2v2": /2 contra 2/, "3v3": /3 contra 3/ }[modo] }).check();
+  if (meta) await p.getByRole("spinbutton").fill(String(meta));
   await boton(p, computadoras ? "Jugar con computadoras" : "Crear mesa").click();
   await p.waitForURL(url => url.searchParams.has("mesa"));
 }
@@ -234,6 +236,8 @@ try {
   await probarParejas(paginas);
   await probarDuelo(paginas);
   await probarComputadoras(...paginas.slice(0, 2));
+  paginas.push(await navegador(false), await navegador(true));
+  await probarTercetos(paginas, { crear, invitar, partida, jugar, boton, tapete, ruta });
 } finally {
   await browser.close();
 }
