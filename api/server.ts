@@ -60,7 +60,7 @@ const vivo = crearVivo(server, web, {
   ejecutar: partidas.ejecutar,
 });
 
-const detenerEnsayos = procesarEnsayos(pool);
+const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
   detenerEnsayos();
