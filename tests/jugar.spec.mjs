@@ -83,6 +83,22 @@ test("el pie muestra el motor y el modelo asignados a la mesa y los quita al vol
   await expect(modelo).toHaveText("Sin mesa");
 });
 
+test("desde la portada sin sesión se puede abrir la sala y seguir a la práctica", async ({ page }) => {
+  await page.route("**/api/jugador", (route) =>
+    route.fulfill({ status: 401, contentType: "application/json", body: "null" })
+  );
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Ingresar al juego" })).toBeVisible();
+
+  const navegacion = page.getByRole("navigation", { name: "Navegación principal" });
+  await navegacion.getByRole("link", { name: "Jugar", exact: true }).click();
+  await expect(page).toHaveURL("/jugar/");
+  await expect(page.getByRole("heading", { name: "Entrá con tu jugador" })).toBeVisible();
+
+  await navegacion.getByRole("link", { name: "Aprender" }).click();
+  await expect(page.getByRole("link", { name: "Empezar con un ejemplo" })).toBeVisible();
+});
+
 test("de a seis se proponen 25 malas y 25 buenas y la mesa puede pactar otra meta", async ({ page }) => {
   await page.goto("reglas/seis-jugadores/");
   const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico de a seis" });
