@@ -77,6 +77,11 @@ async function configurar() {
   }
 
   function representacion(actual) {
+    const config = { ...actual?.config, clientId, clientSecret };
+    // Keycloak heredaría prompt=login del juego. Google admite select_account para elegir quién entra.
+    if (proveedor === "google" && (!config.prompt || config.prompt === "login")) {
+      config.prompt = "select_account";
+    }
     return JSON.stringify({
       firstBrokerLoginFlowAlias: "first broker login",
       ...actual,
@@ -88,7 +93,7 @@ async function configurar() {
       hideOnLogin: false,
       trustEmail: false,
       storeToken: false,
-      config: { ...actual?.config, clientId, clientSecret },
+      config,
     });
   }
 

@@ -76,6 +76,7 @@ for (const [proveedor, campoId, campoSecreto] of [
     assert.equal(creado.firstBrokerLoginFlowAlias, "first broker login");
     assert.equal(creado.config.clientId, "aplicacion");
     assert.equal(creado.config.clientSecret, secreto);
+    assert.equal(creado.config.prompt, proveedor === "google" ? "select_account" : undefined);
     assert.ok(!resultado.salida.includes(token) && !resultado.salida.includes(secreto));
   });
 }
@@ -108,6 +109,7 @@ for (const concurrente of [false, true]) {
     assert.equal(actualizado.config.defaultScope, existente.config.defaultScope);
     assert.equal(actualizado.config.clientId, "nueva");
     assert.equal(actualizado.config.clientSecret, secreto);
+    assert.equal(actualizado.config.prompt, "select_account");
   });
 }
 

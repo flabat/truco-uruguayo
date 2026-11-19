@@ -25,6 +25,7 @@ try {
     const destino = new URL(salida.headers().location);
     assert.equal(destino.origin, "https://" + dominio);
     assert.equal(destino.searchParams.get("client_id"), clientId);
+    if (proveedor === "google") assert.equal(destino.searchParams.get("prompt"), "select_account");
     assert.equal(destino.searchParams.get("redirect_uri"), new URL("broker/" + proveedor + "/endpoint", issuer).href);
     assert.ok(destino.searchParams.get("state"));
     await page.goto(new URL("/api/auth/login", web).href);
