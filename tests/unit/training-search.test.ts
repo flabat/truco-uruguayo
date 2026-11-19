@@ -43,13 +43,20 @@ test("la falta inicial de la regresión pondera 7140 manos y cambia con el estil
 test("los repartos conjuntos respetan cartas vistas, rechazan revelaciones incompatibles y reproducen las señas", () => {
   const pairs = { ...duel, dador: 3, mano: 0, manos: [...duel.manos,
     ["espadas-01","espadas-02","espadas-04"], ["oros-01","copas-01","espadas-05"]] } as RepartoOnline;
-  const first = commitTurn(iniciarOnline(pairs), 0, "pairs-senas", "cejas/espadas-03");
-  const obs = seatView(first.state, 1, "pairs-senas", [first.turn]);
+  const first = commitTurn(iniciarOnline(pairs), 0, "pairs-private-senas", "cejas/espadas-03");
+  const obs = seatView(first.state, 2, "pairs-private-senas", [first.turn]);
+  const seenByOpponent = seatView(first.state, 1, "pairs-private-senas", [first.turn]);
+  const silentTurn = {action:first.turn.action, awards:first.turn.awards};
+  assert.deepEqual(seenByOpponent, seatView(first.state, 1, "pairs-private-senas", [silentTurn]));
+  const alwaysSignals = () => ({id:"seña con cada carta", decide(_obs, legal) {
+    return legal.map(id => Number(id === "cejas/espadas-03"));
+  }}) satisfies ReturnType<typeof field>;
+  assert.equal(inferWorld(seenByOpponent, pairs, alwaysSignals)?.logLikelihood, 0);
   const rng = crearAzar(12);
   for (let i = 0; i < 60; i++) {
     const d = drawDeal(obs, rng);
     assert.equal(new Set([d.muestra, ...d.manos.flat()]).size, 13);
-    assert.deepEqual(d.manos[1], obs.originalCards);
+    assert.deepEqual(d.manos[2], obs.originalCards);
     assert.ok(d.manos[0].includes("espadas-03"));
     const world = inferWorld(obs, d, field);
     if (evaluarTantos(d.manos[0], d.muestra).modalidad === "flor") assert.equal(world, null);
@@ -68,7 +75,7 @@ test("continuación usa formato, ambos tanteadores y el siguiente dador, con ext
   assert.equal(continuation(evidence,[39,40],0), 0);
   assert.throws(() => continuation(evidence,[40,40],0), /inválido/);
   assert.throws(() => continuation(evidence,[20,20],2), /inválido/);
-  for (const format of ["duel","pairs","pairs-senas"] as const) {
+  for (const format of ["duel","pairs","pairs-private-senas"] as const) {
     const trained = fitContinuation(format, field, 218, 4);
     const calibration = calibrate(trained, field, 219, 3);
     assert.ok(calibration[0].hands >= 3);

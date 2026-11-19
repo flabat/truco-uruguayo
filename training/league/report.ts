@@ -3,7 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { formats } from "../contracts/index.ts";
+import { supportedFormats, type Format } from "../contracts/index.ts";
 import type { evidence } from "./evidence.ts";
 import { field, json, save, sha, type Matchup } from "./development.ts";
 
@@ -56,6 +56,8 @@ export function cycles(edges: Matchup[]) {
 export function publicSummary(root: string) {
   const plan = json(join(root, "plan.json"));
   const decisions = json(join(root, "resource-decision.json"));
+  const formats: Format[] = plan.formats;
+  if (!Array.isArray(formats) || !formats.every(f => supportedFormats.includes(f))) throw new Error("Plan de liga inválido.");
   return {
     schema: "league-public-report-v1",
     runDirectory: "runs/" + basename(root),

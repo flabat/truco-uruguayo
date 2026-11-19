@@ -70,7 +70,9 @@ test("la seña se confirma con su jugada, precede a los cobros y llega una vez a
   }
   assert.deepEqual(restored, state);
   for (const seat of [0, 1, 2, 3] as const) {
-    assert.deepEqual(observe(restored, seat, "pairs-senas", persisted).history, history);
+    const expected = history.map(({signal, action, awards}) =>
+      signal && action.asiento % 2 === seat % 2 ? {signal, action, awards} : {action, awards});
+    assert.deepEqual(observe(restored, seat, "pairs-senas", persisted).history, expected);
   }
 });
 

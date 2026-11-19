@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { gzipSync, gunzipSync } from "node:zlib";
 import { baseline, styles } from "../baselines/index.ts";
-import { formats, versions, type Format } from "../contracts/index.ts";
+import { requireTrainingFormat, supportedFormats, trainingVersions, versions, type Format } from "../contracts/index.ts";
 import { incumbent } from "../seat/index.ts";
 import { replayMatch, streamVersion, type MatchRecord } from "../arena/index.ts";
 import { hash, runPair, type Team } from "./tournament.ts";
@@ -35,7 +35,7 @@ export interface Field {
 }
 interface Plan extends Field {
   schema: "paired-eval-v1"; code: string; source: string; commitment: string; bootstrap: number;
-  versions: typeof versions; streams: typeof streamVersion;
+  versions: typeof versions | typeof trainingVersions; streams: typeof streamVersion;
 }
 
 function source() {
@@ -44,7 +44,7 @@ function source() {
   return hash(json(files.map(f => [f,hash(readFileSync(join(root,f)))])));
 }
 function validate(field: Field) {
-  assert.ok(formats.includes(field.format) && pools.includes(field.pool));
+  assert.ok(supportedFormats.includes(field.format) && pools.includes(field.pool));
   assert.ok(Number.isSafeInteger(field.pairs) && field.pairs >= 2);
   assert.ok(Array.isArray(field.opponents) && field.opponents.some(e => e.id === incumbent.id));
   assert.equal(new Set(field.opponents.map(o=>o.id)).size, field.opponents.length);
@@ -69,12 +69,13 @@ function exclusive(path: string, content: Buffer | string) {
   finally { unlinkSync(temp); }
 }
 export function freeze(field: Field, directory: string) {
+  requireTrainingFormat(field.format);
   validate(field);
   mkdirSync(dirname(resolve(directory)), {recursive:true});
   mkdirSync(directory, {mode:0o700});
   const secret = randomBytes(32).toString("hex");
   const plan: Plan = {...field, schema:"paired-eval-v1", code:execFileSync("git",["rev-parse","HEAD"],{cwd:root,encoding:"utf8"}).trim(),
-    source:source(), commitment:hash(secret), bootstrap:10000, versions, streams:streamVersion};
+    source:source(), commitment:hash(secret), bootstrap:10000, versions:trainingVersions, streams:streamVersion};
   exclusive(join(directory,"referee-key"), secret);
   exclusive(join(directory,"plan.json"), json(plan)+"\n");
   return plan;
@@ -113,9 +114,10 @@ function readPair(packet: Packet, planHash: string, opponent: string, pair: numb
 export async function evaluate(path: string, out: string, verifyOnly = false) {
   const raw = readFileSync(path);
   const plan: Plan = JSON.parse(raw.toString());
+  if (!verifyOnly) requireTrainingFormat(plan.format);
   validate(plan);
   assert.equal(plan.schema,"paired-eval-v1");
-  assert.deepEqual(plan.versions,versions);
+  assert.deepEqual(plan.versions,verifyOnly && plan.versions.signals === versions.signals ? versions : trainingVersions);
   assert.equal(plan.streams,streamVersion);
   assert.equal(plan.source,source(),"Cambió el código de evaluación. Usá el checkout congelado.");
   assert.equal(plan.bootstrap,10000);

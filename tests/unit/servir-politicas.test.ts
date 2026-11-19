@@ -5,7 +5,7 @@ import { artifactPin, createServing } from "../../api/serving.ts";
 import { playMatch, playMatchAsync, replayMatch, sample } from "../../training/arena/index.ts";
 import { initialize, exportActor } from "../../training/partners/train.ts";
 import { newDuel, exportDuel } from "../../training/duel/train.ts";
-import { formats, type SeatObservation } from "../../training/contracts/index.ts";
+import { formats, signalVersionFor, type SeatObservation } from "../../training/contracts/index.ts";
 import { incumbent } from "../../training/seat/index.ts";
 
 test("los lectores exportados sirven chicos completos desde la misma vista y simulan fallos con respaldo legal", async () => {
@@ -40,7 +40,7 @@ test("los lectores exportados sirven chicos completos desde la misma vista y sim
       const h = saved!.hands[0];
       const acciones = h.turns.map(t => t.signal ? {...t.action, sena:t.signal} : t.action);
       const restored = restaurar({numero:1,version:acciones.length + 1,version_reglas:1,
-        version_senas:format === "pairs-senas" ? "senas-publicas-v1" : null,reparto:h.deal,
+        version_senas:signalVersionFor(format),reparto:h.deal,
         puntos_inicio:[...h.startScore],acciones},format);
       assert.deepEqual(restored.turnos,h.turns);
       const stale = await reemplazo.decide(pin,seatView!,.5);

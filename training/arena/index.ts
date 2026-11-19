@@ -3,10 +3,10 @@ import { createHash } from "node:crypto";
 import { mazo } from "../../src/motor/cartas.ts";
 import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento, Equipo, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
-import { seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
+import { requireTrainingFormat, hasSignals, seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
   type RefereeHand, type Score, type SeatObservation, type Signal } from "../contracts/index.ts";
 import { observe } from "../seat/index.ts";
-import { commitTurn, signalRules as publicSignals } from "../signals/index.ts";
+import { commitTurn, signalRules as defaultSignals } from "../signals/index.ts";
 
 export const streamVersion = "sha256-counter-u32be-v1";
 
@@ -94,8 +94,8 @@ function matchId(format: Format, pair: number, leg: 0 | 1) {
   return format + "-" + pair + "-" + leg;
 }
 function checkSignals(format: Format, signals?: SignalRules) {
-  if (format === "pairs-senas" && !signals) throw new Error("Falta el adaptador de señas para pairs-senas.");
-  if (format !== "pairs-senas" && signals) throw new Error("El formato no admite señas.");
+  if (hasSignals(format) && !signals) throw new Error("Falta el adaptador de señas.");
+  if (!hasSignals(format) && signals) throw new Error("El formato no admite señas.");
 }
 function viewFor(state: EstadoOnline, seat: Asiento, format: Format, history: readonly PublicTurn[], rules?: SignalRules) {
   const view = observe(state, seat, format, history);
@@ -134,7 +134,8 @@ type Request = Pick<Decision, "hand" | "seat" | "state" | "observation"> & {unif
 
 function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionId> {
   const {format, seed, pair, leg} = options;
-  const signalRules = options.signalRules ?? (format === "pairs-senas" ? publicSignals : undefined);
+  requireTrainingFormat(format);
+  const signalRules = options.signalRules ?? (hasSignals(format) ? defaultSignals : undefined);
   natural(seed, "seed"); natural(pair, "pair");
   if (leg !== 0 && leg !== 1) throw new RangeError("Manga inválida.");
   checkSignals(format, signalRules);
@@ -195,7 +196,7 @@ export async function playMatchAsync(options: Schedule & {responders(seat: Asien
 /** Re-run committed commands independently of policy decisions. Validate the referee deal when given the seed. */
 export function replayMatch(record: MatchRecord, seed?: number, rules?: SignalRules): Score {
   const {format, pair, leg} = record;
-  rules ??= format === "pairs-senas" ? publicSignals : undefined;
+  rules ??= hasSignals(format) ? defaultSignals : undefined;
   checkSignals(format, rules);
   natural(pair, "pair");
   assert.ok(leg === 0 || leg === 1);
