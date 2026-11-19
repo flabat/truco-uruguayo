@@ -15,6 +15,7 @@ const mesa = (modo, asientos, miAsiento = 0) => ({
   creadorId: "ana",
   miAsiento,
   modo,
+  meta: 40,
   asientos,
   lista: asientos.every((a) => a.tipo !== "vacio"),
   invitacion: "http://localhost/jugar/?invitacion=" + token,
@@ -54,6 +55,53 @@ async function simular(page, handler) {
   });
   return sockets;
 }
+
+test("de a seis se proponen 25 malas y 25 buenas y la mesa puede pactar otra meta", async ({ page }) => {
+  await page.goto("reglas/seis-jugadores/");
+  const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico de a seis" });
+  const mitades = page.locator("output[for=meta-seis]");
+  await expect(campo).toHaveValue("50");
+  await expect(mitades).toHaveText("25 malas y 25 buenas");
+  if (process.env.CAPTURAS_UI)
+    await page.locator(".meta-de-seis").screenshot({ path: `${process.env.CAPTURAS_UI}/meta-seis-${test.info().project.name}.png`, scale: "css" });
+  await campo.fill("26");
+  await campo.press("ArrowUp");
+  await expect(mitades).toHaveText("14 malas y 14 buenas");
+  await page.reload();
+  await expect(campo).toHaveValue("28");
+  await campo.fill("25");
+  await expect(mitades).toHaveText("Elegí un número par desde 2.");
+  await campo.fill("50");
+  await expect(page).not.toHaveURL(/meta=/);
+});
+
+test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
+  const asientos = [personas[0], seat(1, "vacio", null)];
+  let meta;
+  await simular(page, (path, req) => {
+    if (path === "/api/mesas") {
+      const datos = req.postDataJSON();
+      expect(datos).toEqual({ modo: "1v1", meta: 26 });
+      meta = datos.meta;
+    }
+    if (path === "/api/mesas" || path.endsWith("/" + mesaId)) return { json: { ...mesa("1v1", asientos), meta } };
+  });
+  await page.goto("jugar/");
+  await page.getByRole("radio", { name: /1 contra 1/ }).check();
+  const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico" });
+  const crear = page.getByRole("button", { name: "Crear mesa", exact: true });
+  await expect(campo).toHaveValue("40");
+  await campo.fill("25");
+  await expect(crear).toBeDisabled();
+  await campo.fill("26");
+  await expect(page.getByText("13 malas y 13 buenas")).toBeVisible();
+  if (process.env.CAPTURAS_UI)
+    await page.locator(".j-crear .j-panel").screenshot({ path: `${process.env.CAPTURAS_UI}/crear-meta-${test.info().project.name}.png`, scale: "css" });
+  await crear.press("Enter");
+  await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+});
 
 test("crea un duelo con computadora y juega desde su mano", async ({ page }) => {
   let bot = false,

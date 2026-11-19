@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VistaOnline } from "../../motor/mesa-online";
+import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
 
 const canto = {
@@ -20,12 +21,6 @@ const canto = {
 } satisfies Record<Exclude<Tipo, "carta">, string>;
 const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
-
-function cuentaDelChico(total: number, mitad: number) {
-  if (total < mitad) return total + (total === 1 ? " mala" : " malas");
-  const buenas = total - mitad;
-  return buenas + (buenas === 1 ? " buena" : " buenas");
-}
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -202,13 +197,13 @@ export function EnJuego({
       <div className="j-tanteador" role="group" aria-label="Tanteador">
         <div className="j-meta">
           <b>Chico a {partida.meta}</b>
-          <small>{partida.meta / 2} malas y {partida.meta / 2} buenas</small>
+          <small>{mitadesDelChico(partida.meta)}</small>
         </div>
         {[propio, ajeno].map((e) => (
           <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
             <span id={"j-equipo-" + e}>{equipo(e)}</span>
             <strong>{partida.puntos[e]}</strong>
-            <small>{cuentaDelChico(partida.puntos[e], partida.meta / 2)}</small>
+            <small>{cuentaDelChico(partida.puntos[e], partida.meta)}</small>
           </div>
         ))}
       </div>

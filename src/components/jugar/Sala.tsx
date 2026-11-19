@@ -12,6 +12,7 @@ import {
 } from "./cliente";
 import { EnJuego } from "./Tablero";
 import { MesaConSenas } from "./Senas";
+import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
 
 function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
   return (
@@ -40,15 +41,20 @@ function AbrirMesa({
   abrir: (id: string, aviso: string) => void;
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
+  const [puntaje, cambiarPuntaje] = useState(String(metaPorModalidad[modo]));
+  const meta = Number(puntaje);
+  const metaValida = esMetaDeChico(meta);
   const [senas, habilitarSenas] = useState(false);
   const [ocupado, ocupar] = useState(false);
   const [error, avisar] = useState("");
   async function crear(conBots: boolean) {
-    if (ocupado) return;
+    if (ocupado || !metaValida) return;
     ocupar(true);
     avisar("");
     try {
-      const mesa = await pedir<Mesa>("/api/mesas", { modo, ...(modo === "2v2" && senas && { formato: "pairs-senas" }) });
+      const mesa = await pedir<Mesa>("/api/mesas", {
+        modo, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-senas" }),
+      });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
       history.replaceState(null, "", destino);
@@ -97,11 +103,20 @@ function AbrirMesa({
             </label>
           )}
         </fieldset>
+        <div className="j-elegir-meta">
+          <label htmlFor="meta-chico">Tantos para ganar el chico</label>
+          <input id="meta-chico" type="number" min="2" max={metaMaxima} step="2" required value={puntaje}
+            disabled={ocupado} aria-describedby="mitades-chico" aria-invalid={!metaValida}
+            onChange={e => cambiarPuntaje(e.target.value)} />
+          <small id="mitades-chico" aria-live="polite">
+            {metaValida ? mitadesDelChico(meta) : "Elegí un número par desde 2."}
+          </small>
+        </div>
         <div className="j-acciones">
-          <button className="button" disabled={ocupado} onClick={() => crear(false)}>
+          <button className="button" disabled={ocupado || !metaValida} onClick={() => crear(false)}>
             Crear mesa
           </button>
-          <button className="j-sec" disabled={ocupado} onClick={() => crear(true)}>
+          <button className="j-sec" disabled={ocupado || !metaValida} onClick={() => crear(true)}>
             Jugar con computadoras
           </button>
         </div>
@@ -246,6 +261,7 @@ function MesaAbierta({
         <div className="j-espera">
           <div className="j-panel">
             <h2>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
+            <p>Chico a {mesa.meta} tantos.</p>
             <p>
               {faltan === 1
                 ? "Falta un jugador para repartir."

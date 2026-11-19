@@ -15,6 +15,10 @@
 .j-crear, .j-espera, .j-partida { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; display: grid; grid-template-columns: 1.1fr 1fr; }
 .j-crear fieldset { border: 0; padding: 0; margin: 1.5rem 0; }
 .j-crear legend, .j-invita label { display: block; margin-bottom: .65rem; font-size: .87rem; font-weight: 700; }
+.j-elegir-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; margin-bottom: 1rem; }
+.j-elegir-meta label { flex-basis: 100%; font-size: .87rem; font-weight: 700; }
+.j-elegir-meta input { width: 7rem; padding: .45rem; font: inherit; }
+.j-elegir-meta small { color: var(--muted); }
 .j-modos, .j-acciones, .j-cantos { display: flex; gap: .6rem; flex-wrap: wrap; }
 .j-recuperar { margin-top: 1rem; align-items: center; gap: 1rem; }
 .j-modos label { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; flex: 1; cursor: pointer; min-width: 115px; }

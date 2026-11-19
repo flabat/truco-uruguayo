@@ -119,11 +119,11 @@
   {
     "id": "puntaje",
     "title": "El tanteador",
-    "intro": "En las mesas de Truco Oriental, tanto en duelo como en parejas (2 contra 2), el chico se juega a 40 tantos. Los primeros 20 se llaman malas y los siguientes 20, buenas. Gana el chico quien llega primero a 40.",
+    "intro": "En Truco Oriental el chico es a 40 tantos en duelo y en parejas, y a 50 de a seis. Podés acordar otro total par antes de jugar. La primera mitad son las malas y la segunda, las buenas. Gana quien llega primero al total elegido.",
     "blocks": [
       {
         "heading": "Pasar a buenas",
-        "text": "Cada lado lleva su propia cuenta. Si vas 19 a 14 y ganás un tanto, completás las 20 malas y entrás en buenas con cero. Si ganás otro, tenés una buena (21 tantos en total). Tu rival sigue con 14 malas."
+        "text": "Cada lado lleva su propia cuenta. En un chico a 40, si vas 19 a 14 y ganás un tanto, completás las 20 malas y entrás en buenas con cero. Si ganás otro, tenés una buena (21 tantos en total). Tu rival sigue con 14 malas."
       },
       {
         "heading": "Qué se anota",
@@ -153,7 +153,7 @@
   {
     "id": "seis-jugadores",
     "title": "El juego de a seis",
-    "intro": "Dos tercetos comparten mesa y tanteador. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
+    "intro": "Dos equipos de tres juegan por defecto a 50 tantos, con 25 malas y 25 buenas. Con 25 tantos entrás en buenas y con 26 tenés una buena. Podés acordar otra meta antes del reparto. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
     "blocks": [
       {
         "heading": "Alternar las manos",

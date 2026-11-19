@@ -18,6 +18,7 @@ export interface Asiento {
 export interface Mesa {
   id: string;
   modo: Modo;
+  meta: number;
   formato?: Format;
   creadorId: string;
   miAsiento: number;
