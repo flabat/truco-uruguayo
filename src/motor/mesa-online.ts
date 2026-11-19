@@ -123,7 +123,7 @@ export interface VistaOnline extends VistaAsiento {
   readonly pendiente: Oferta | null;
   readonly trucoPendiente: EstadoOnline["trucoPendiente"];
   readonly porDeclararFlor: Asiento | null;
-  readonly cobros: readonly Cobro[];
+  readonly cobros: readonly (Cobro & Pick<EstadoOnline, "comparacionFlor">)[];
   readonly tantosPropios: ReturnType<typeof tantosPropios>;
 }
 
@@ -152,7 +152,11 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   if (estado.lance && (estado.resultado || !estado.lance.activos.includes(asiento))) {
     throw new RangeError("Ese asiento necesita la proyección pública de tercetos.");
   }
-  return privadaJugable(estado, asiento);
+  const vista = privadaJugable(estado, asiento);
+  if (!estado.comparacionFlor) return vista;
+  // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
+  const comparacionFlor = structuredClone(estado.comparacionFlor);
+  return { ...vista, cobros: vista.cobros.map(c => c.motivo === "flor" ? { ...c, comparacionFlor } : c) };
 }
 
 export interface VistaOnlineV1 extends VistaOnline {

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline,
+  aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline, vistaOnlineV1, type AccionOnline, type EstadoOnline,
   type RepartoOnline, type TipoAccionOnline,
 } from "../../src/motor/mesa-online.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
@@ -123,7 +123,7 @@ test("flor contra flor, con flor envido y contraflor al resto en el chico a 40",
   for (const [subida, valor] of [[null, 3], ["con-flor-envido", 5], ["contraflor-al-resto", 12]] as const) {
     const oferta = subida === null ? base : cantar(base, [1, subida]);
     const rival = subida === null ? 1 : 0;
-    assert.deepEqual(cantar(oferta, [rival, "quiero"]).cobros,
+    assert.deepEqual(vistaOnline(cantar(oferta, [rival, "quiero"]), rival).cobros,
       [{ equipo: 1, tantos: valor, motivo: "flor", asiento: 1, tantoGanador: 38,
         comparacionFlor: { indiceAccion: oferta.acciones.length, participantes: [{ asiento: 0, total: 29 }, { asiento: 1, total: 38 }] } }]);
     assert.deepEqual(cantar(oferta, [rival, "no-quiero"]).cobros,
@@ -142,7 +142,7 @@ test("en parejas una flor tardía cancela un envido aceptado y la collera vale s
   assert.deepEqual(condicion.cobros, []);
   assert.equal(vistaOnline(condicion, 0).porDeclararFlor, 2);
   const florTardia = cantar(condicion, [2, "flor"], [3, "flor"], [3, "quiero"]);
-  assert.deepEqual(florTardia.cobros, [{ motivo: "flor", equipo: 1, tantos: 3, asiento: 3, tantoGanador: 35,
+  assert.deepEqual(vistaOnline(florTardia, 1).cobros, [{ motivo: "flor", equipo: 1, tantos: 3, asiento: 3, tantoGanador: 35,
     comparacionFlor: { indiceAccion: 5, participantes: [{ asiento: 2, total: 26 }, { asiento: 3, total: 35 }] } }]);
   assert.deepEqual(vistaOnline(florTardia, 1).pendiente, { tipo: "truco", asiento: 0 });
   const collera: RepartoOnline = { ...reparto, manos: [reparto.manos[0], reparto.manos[2], reparto.manos[1], reparto.manos[3]] };
@@ -168,7 +168,7 @@ test("los empates de tantos se deciden por el orden desde mano también en parej
   assert.deepEqual(igual.cobros, [{ equipo: 0, tantos: 2, asiento: 2, motivo: "envido", tantoGanador: 7 }]);
   const duelo = { ...flores, dador: 0, mano: 1, manos: [flores.manos[0], ["espadas-02", "espadas-03", "espadas-04"] as const] } as const;
   const empateFlor = cantar(iniciarOnline(duelo), [1, "flor"], [0, "flor"], [0, "quiero"]);
-  assert.deepEqual(empateFlor.cobros, [{ equipo: 1, tantos: 3, asiento: 1, motivo: "flor", tantoGanador: 29,
+  assert.deepEqual(vistaOnline(empateFlor, 0).cobros, [{ equipo: 1, tantos: 3, asiento: 1, motivo: "flor", tantoGanador: 29,
     comparacionFlor: { indiceAccion: 2, participantes: [{ asiento: 1, total: 29 }, { asiento: 0, total: 29 }] } }]);
 });
 
@@ -186,7 +186,10 @@ test("tres flores con truco pendiente: el Quiero publica solo los totales y cons
     equipo: 1, tantos: 5, motivo: "flor", asiento: 3, tantoGanador: 36,
     comparacionFlor: { indiceAccion: 5, participantes: [{ asiento: 2, total: 30 }, { asiento: 3, total: 36 }, { asiento: 0, total: 32 }] },
   };
+  const cobroV1 = { equipo: 1, tantos: 5, motivo: "flor", asiento: 3, tantoGanador: 36 };
+  assert.deepEqual(recargado.cobros, [cobroV1]);
   for (const asiento of [0, 1, 2, 3] as const) {
+    assert.deepEqual(vistaOnlineV1(recargado, asiento).cobros, [cobroV1]);
     const pendiente = vistaOnline(oferta, asiento);
     assert.deepEqual(pendiente.cobros, []);
     const resuelta = vistaOnline(florQuerida, asiento);

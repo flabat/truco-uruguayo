@@ -24,10 +24,6 @@ export interface Cobro {
   motivo: "truco" | "flor" | "envido";
   asiento?: Asiento;
   tantoGanador?: number;
-  comparacionFlor?: {
-    indiceAccion: number;
-    participantes: readonly { asiento: Asiento; total: number }[];
-  };
 }
 
 export type LanceTercetos =
@@ -43,6 +39,10 @@ export type ResumenLance = LanceTercetos & {
 };
 
 export interface EstadoOnline {
+  comparacionFlor?: {
+    indiceAccion: number;
+    participantes: readonly { asiento: Asiento; total: number }[];
+  };
   lance?: LanceTercetos;
   historialLances?: readonly ResumenLance[];
   mano: EstadoMano<RepartoOnline>;
@@ -187,9 +187,11 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
     // El resto querido se lleva todas las flores. En los otros casos suman las propias.
     tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
   }
+  if (flor && participantes && !esTerceto(estado)) {
+    estado.comparacionFlor = { indiceAccion: estado.acciones.length - 1, participantes };
+  }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
-    ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }),
-    ...(flor && participantes && { comparacionFlor: { indiceAccion: estado.acciones.length - 1, participantes } }) });
+    ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });
   estado.lateral = null;
   estado.lateralCerrado = true;
   estado.respuestaEnvido = null;
