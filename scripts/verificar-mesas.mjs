@@ -33,7 +33,7 @@ async function crear(p, modo, meta) {
   assert.equal(r.datos.miAsiento, 0);
   assert.equal(r.datos.creadorId, p.id);
   assert.equal(r.datos.lista, false);
-  assert.equal(r.datos.meta, meta ?? 40);
+  assert.equal(r.datos.meta, meta ?? (modo === "3v3" ? 50 : 40));
   return r.datos;
 }
 
@@ -52,12 +52,15 @@ try {
   } else {
     assert.equal((await llamar(null, "POST", "/api/mesas", {modo:"2v2"})).estado, 401);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"2v2"}, "https://example.org")).estado, 403);
-    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"3v3"})).estado, 400);
+    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"4v4"})).estado, 400);
     assert.equal((await llamar(ana, "POST", "/api/invitaciones/invalida/unirse")).estado, 404);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "1v1", formato: "pairs-senas"})).estado, 400);
     for (const meta of [0, 25, 1.5, "50", null, 2147483648]) {
       assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "2v2", meta})).estado, 400);
     }
+    const seis = await crear(ana, "3v3");
+    assert.equal(seis.formato, "triples");
+    assert.deepEqual(seis.asientos.map(a => a.equipo), [0,1,0,1,0,1]);
     const dupla = await crear(ana, "2v2", 50);
     assert.equal(dupla.formato, "pairs");
     assert.equal(dupla.asientos.length, 4);
