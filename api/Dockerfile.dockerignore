@@ -19,3 +19,10 @@
 !training/duel/math.ts
 !training/partners/
 !training/partners/policy.ts
+!training/anchored/
+!training/anchored/actor.ts
+!training/anchored/duel.ts
+!training/anchored/partners.ts
+!training/selfplay/
+!training/selfplay/learner.ts
+!training/selfplay/team-mixture.ts
