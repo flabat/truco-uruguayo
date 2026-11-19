@@ -16,7 +16,7 @@ export interface Learner { networks: Network[]; critic: number[]; rate: number; 
 export interface Checkpoint {
   schema: typeof versions.checkpoint; format: Partnership; seed: number; completed: number; goal: number;
   learner: Learner; values: Values[]; examples: number; mcExamples: number; loss: number | null; parity: number;
-  device: "cpu" | "mps"; batchMatches: number;
+  device: "cpu" | "mps"; batchMatches: number; opponent?: Actor;
 }
 export function initialize(format: Partnership, seed: number, goal: number, rate: number, batchMatches: number,
     device: "cpu" | "mps"): Checkpoint {
@@ -54,8 +54,9 @@ function activeSeat(index: number, seat: Asiento) {
   return index % 4 < 2 || seat % 2 === index % 2;
 }
 function collect(cp: Checkpoint, index: number, mc: boolean) {
-  const active = [0, 1, 2, 3].map(s => activeSeat(index, s as Asiento));
-  const policies: Policy[] = active.map((learn, s) => !learn ? incumbent : {
+  const frozen = cp.opponent ? seatPolicies(cp.opponent) : undefined;
+  const active = [0, 1, 2, 3].map(s => frozen ? s % 2 === index % 2 : activeSeat(index, s as Asiento));
+  const policies: Policy[] = active.map((learn, s) => !learn ? frozen?.[s] ?? incumbent : {
     id: mc ? monteCarloId : recurrentId,
     decide(obs, legal) {
       const input = encode(obs, legal);
