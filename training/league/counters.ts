@@ -5,11 +5,12 @@ import { versions, type Policy } from "../contracts/index.ts";
 import { coordinates, duelActorId, duelSchema, loadDuelActor, width, type DuelExport } from "../duel/actor.ts";
 import { incumbent } from "../seat/index.ts";
 import { main as trainPartners } from "../partners/cli.ts";
-import { json, save, sha } from "./development.ts";
+import { domainSeed, digest } from "../partners/policy.ts";
+import { interval, json, loadTeam, pairOutcomes, rate, save, sha } from "./development.ts";
 
 interface CounterState {
   schema: "duel-mc-counter-v1"; target: string; seed:number; completed:number; decisions:number; buckets:number;
-  cells: Record<string, {sum:number[]; count:number[]; prior:number[]}>;
+  cells: Record<string, {sum:number[]; count:number[]; prior:number[]; baseSum?:number; baseCount?:number}>;
 }
 const zeros=()=>Array(width).fill(0) as number[];
 function strengths(row:CounterState["cells"][string], slot:number) {
@@ -43,6 +44,7 @@ function duelCounter(path:string,out:string,seed:number,matches:number) {
     for(const {bucket,slot,fallback} of visits){
       const row=state.cells[bucket]??= {sum:zeros(),count:zeros(),prior:zeros()};
       row.sum[slot]+=reward;row.count[slot]++;row.prior[fallback]++;state.decisions++;
+      if(slot===fallback){row.baseSum=(row.baseSum??0)+reward;row.baseCount=(row.baseCount??0)+1;}
     }
     state.completed++;
     if(state.completed%checkpointEvery===0||state.completed===matches)save(checkpoint,state);
@@ -51,13 +53,44 @@ function duelCounter(path:string,out:string,seed:number,matches:number) {
     [bucket,row.count.map((n,s)=>n?strengths(row,s):0)]));
   const artifact:DuelExport={schema:duelSchema,actor:versions.actor,observation:versions.observation,actions:versions.actions,
     rules:versions.rules,format:"duel",buckets:state.buckets,id:duelActorId(state.buckets,average),average};
-  const result=join(out,"counter.json");save(result,artifact);return result;
+  const dense=join(out,"mc-dense.json");save(dense,artifact);
+  const conservative:Record<string,number[]>={};
+  for(const [key,row] of Object.entries(state.cells)){
+    const base=(row.baseSum??0)/((row.baseCount??0)+1);
+    const sorted=row.count.map((n,slot)=>({slot,n,value:row.sum[slot]/(n+1)-base-1.28/Math.sqrt(n||1)}))
+      .filter(a=>a.n>=8&&a.value>0).sort((a,b)=>b.value-a.value);
+    if(sorted.length){const weights=zeros();weights[sorted[0].slot]=1;conservative[key]=weights;}
+  }
+  const sparse=join(out,"mc-sparse.json");
+  save(sparse,{...artifact,id:duelActorId(state.buckets,conservative),average:conservative});
+  return [dense,...(Object.keys(conservative).length?[sparse]:[])];
 }
 export async function trainCounter(format:"duel"|"pairs"|"pairs-senas",target:string,out:string,seed:number,
     configFile:string,matches:number) {
-  if(format==="duel")return duelCounter(target,out,seed,matches);
-  const checkpoint=join(out,"checkpoint");
-  const args=existsSync(checkpoint)?["--resume",checkpoint]:["--format",format,"--config",configFile,"--run",out,"--seed",String(seed)];
-  await trainPartners([...args,"--opponent",target,"--matches",String(matches)]);
-  return join(out,"mc-actor.json");
+  let paths:string[];
+  let checkpoint:string;
+  let against:string;
+  if(format==="duel"){
+    paths=duelCounter(target,out,seed,matches);
+    checkpoint=join(out,"counter-state.json");
+    against=json(checkpoint).target;
+  }else{
+    checkpoint=join(out,"checkpoint");
+    const args=existsSync(checkpoint)?["--resume",checkpoint]:["--format",format,"--config",configFile,"--run",out,"--seed",String(seed)];
+    await trainPartners([...args,"--opponent",target,"--matches",String(matches)]);
+    const state=json(checkpoint).state;
+    if(digest(state.opponent)!==digest(json(target))||state.seed!==seed||state.completed!==matches)throw Error("El checkpoint no confirma el rival.");
+    against=sha(target);paths=[join(out,"mc-actor.json"),join(out,"actor.json")];
+  }
+  if(against!==sha(target))throw Error("El contrajugador se entrenó contra otro actor.");
+  const selectionSeed=domainSeed(seed,"counter-response-selection-v1");
+  const champion=loadTeam(format,target);
+  const selection=paths.map(path=>{
+    const {results}=pairOutcomes(format,loadTeam(format,path),champion,48,selectionSeed);
+    return {path,sha256:sha(path),winRate:rate(results),interval:interval(results),outcomes:results};
+  }).sort((a,b)=>b.winRate-a.winRate);
+  save(join(out,"training-receipt.json"),{format,trainingSeed:seed,completedMatches:matches,
+    trainedAgainstSha256:against,storedOpponentContent:format==="duel"?null:digest(json(checkpoint).state.opponent),
+    checkpointSha256:sha(checkpoint),selectionSeed,selectionPairs:48,selection,chosen:selection[0].sha256});
+  return selection[0].path;
 }

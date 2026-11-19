@@ -67,14 +67,19 @@ export async function freezeBundle(run:string, fmt:Format, stage:"pilot"|"overni
   const path=await trainCounter(fmt,join(bundle,candidate.file),join(bundle,"counter-training"),seed,
     join(run,fmt,"config.json"),counterMatches);
   const counter={...artifact(bundle,path,"counter",fmt,seed,"targeted-mc"),trainedAgainstSha256:candidate.sha256,
-    matches:counterMatches};
+    matches:counterMatches,trainingReceipt:"counter-training/training-receipt.json",
+    trainingReceiptSha256:sha(join(bundle,"counter-training","training-receipt.json"))};
   const registryPaths=registryPath?[resolve(registryPath)]:[resolve("api/actor-registry.ts")];
+  if(registryPath&&!existsSync(registryPaths[0]))throw Error("No se encontró el registro solicitado.");
   const pins:Record<string,string>={};
   if(existsSync(registryPaths[0])){
     const {openActor,artifactPin}=await import(pathToFileURL(registryPaths[0]).href);
     for(const entry of [candidate,independent,counter,...(partner?[partner]:[])]){
-      const object=json(join(bundle,entry.file));openActor(object,fmt,0);pins[entry.id]=artifactPin(object);
+      const object=json(join(bundle,entry.file));
+      for(const seat of (fmt==="duel"?[0,1]:[0,1,2,3]))openActor(object,fmt,seat);
+      pins[entry.id]=artifactPin(object);
     }
+    if(new Set(Object.values(pins)).size!==Object.keys(pins).length)throw Error("Dos linajes comparten el mismo pin de servicio.");
   }
   save(join(bundle,"bundle.json"),{schema:"league-championship-input-v1",format:fmt,stage,
     candidate,independent,partner,counter,registryPins:pins,trainingSeeds,development:{seed:final.seed,pairsPerEdge:final.budget,
@@ -87,9 +92,14 @@ export async function freezeBundle(run:string, fmt:Format, stage:"pilot"|"overni
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
  const {values:v}=parseArgs({options:{run:{type:"string"},format:{type:"string"},stage:{type:"string"},
-   counterMatches:{type:"string"},registry:{type:"string"}}});
+   counterMatches:{type:"string"},registry:{type:"string"},"decision-only":{type:"boolean"}}});
  if(!v.run||!formats.includes(v.format as Format)||!["pilot","overnight"].includes(v.stage??""))throw Error("Argumentos inválidos.");
  const matches=Number(v.counterMatches??1024);
  if(!Number.isSafeInteger(matches)||matches<2)throw Error("Presupuesto de contraestrategia inválido.");
- console.log(await freezeBundle(v.run,v.format as Format,v.stage as "pilot"|"overnight",matches,v.registry));
+ if(v["decision-only"]){
+   const dir=join(v.run,"development",v.format!);
+   const curve=learningCurve(...(["early","profile","pilot"].map(stage=>json(join(dir,stage+".json"))) as
+      [Parameters<typeof learningCurve>[0], Parameters<typeof learningCurve>[1], Parameters<typeof learningCurve>[2]]));
+   save(join(dir,"pilot-decision.json"),curve);
+ }else console.log(await freezeBundle(v.run,v.format as Format,v.stage as "pilot"|"overnight",matches,v.registry));
 }

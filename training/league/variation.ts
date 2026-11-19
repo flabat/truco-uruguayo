@@ -38,8 +38,9 @@ export async function variation(run:string,format:Format,units:number,pairs:numb
         if(format==="duel"){
           const cfg=json(join(run,format,"config.json")); cfg.buckets*=alternative?4:1;
           const configPath=join(dir,"config.json");save(configPath,cfg);
-          trainDuel(["--format","duel","--run",dir,"--config",configPath,"--seed",String(seed),
-            "--iterations",String(units),"--eval-pairs","8"]);
+          const checkpoint=join(dir,"checkpoint");
+          const args=existsSync(checkpoint)?["--resume",checkpoint]:["--format","duel","--run",dir,"--config",configPath,"--seed",String(seed)];
+          trainDuel([...args,"--iterations",String(units),"--eval-pairs","8"]);
         }else await partners(run,format,seed,alternative,dir,units);
       }
       paths.push(actor);

@@ -59,13 +59,13 @@ interface Report {
   artifacts:{id:string;sha256?:string}[]; edges:Matchup[];
   durationSeconds?:number; actorLatencyMs:Record<string,{samples:number;p50:number;p95:number;p99:number}>;
 }
-export function pairOutcomes(format:Format, a:Team,b:Team, pairs:number) {
+export function pairOutcomes(format:Format, a:Team,b:Team, pairs:number, seed=developmentSeed) {
   const results=[], times=[];
   for (let pair=0;pair<pairs;pair++) {
     const start=performance.now();
     let wins=0;
     for (const leg of [0,1] as const) {
-      const match=playMatch({format,seed:developmentSeed,pair,leg,
+      const match=playMatch({format,seed,pair,leg,
         policies:seat=>(seat%2===leg?a:b)(seat)});
       wins+=Number(match.winner===leg);
     }

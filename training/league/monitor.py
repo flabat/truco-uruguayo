@@ -64,10 +64,16 @@ def watch(run, phase, pid, deadline=None, child=None):
             time.sleep(min(5, max(0,deadline-time.time())) if deadline else 5)
 
 
-def freeze(run, phase, seeds):
+def freeze(run, phase, seeds, formats=FORMATS):
     stage = run / "snapshots" / phase
+    index=stage/"index.json"
+    if index.exists():
+        for entry in json.loads(index.read_text()):
+            if hashlib.sha256((run/entry["file"]).read_bytes()).hexdigest()!=entry["sha256"]:
+                raise RuntimeError("Una instantánea publicada cambió.")
+        return
     files = []
-    for fmt in FORMATS:
+    for fmt in formats:
         for seed in seeds:
             source = run / fmt / str(seed)
             dest = stage / fmt / str(seed)
@@ -77,8 +83,9 @@ def freeze(run, phase, seeds):
                 names.append("mc-actor.json")
             for name in names:
                 target = dest / name
-                if not target.exists():
-                    shutil.copyfile(source / name,target)
+                temp=dest/(name+".copy.tmp")
+                shutil.copyfile(source/name,temp)
+                os.replace(temp,target)
                 data = target.read_bytes()
                 files.append({"format":fmt,"seed":seed,"file":str(target.relative_to(run)),
                               "sha256":hashlib.sha256(data).hexdigest(),"bytes":len(data)})
@@ -92,6 +99,46 @@ def validate_profile(run, plan):
             seconds=sum(s["seconds"] for s in report["samples"] if s["seed"]==seed)
             if seconds < plan["budgets"]["profile"]/len(plan["seeds"]):
                 raise RuntimeError(f"Perfil interrumpido: {fmt} {seed} {seconds}s")
+
+
+def timed_stage(run, phase, runtime, plan, selected):
+    clock = run / (phase + "-clock.json")
+    if not clock.exists():
+        start = time.time()
+        write(clock, {"startedUTC": start, "deadlineUTC": start + plan["budgets"][phase],
+                      "formats": list(selected), "status": "running"})
+    timing = json.loads(clock.read_text())
+    if list(selected) != timing.get("formats", list(FORMATS)):
+        raise RuntimeError("Los formatos deben coincidir al reanudar la etapa.")
+    if timing["status"] == "running":
+        signature = "training/league/cli.ts " + phase + " --run " + str(run)
+        pids = [pid for pid, row in processes().items()
+                if signature in row[2] and Path(row[2].split()[0]).name == "node"]
+        if len(pids) > 1:
+            raise RuntimeError("Se encontraron dos ejecuciones de la misma etapa.")
+        if pids or time.time() < timing["deadlineUTC"]:
+            args = ["node", "training/league/cli.ts", phase, "--run", run]
+            if tuple(selected) != FORMATS:
+                args.extend(["--formats", ",".join(selected)])
+            with (run / (phase + "-process.log")).open("a") as out:
+                child = None if pids else subprocess.Popen(args, cwd=runtime, stdout=out, stderr=out, start_new_session=True)
+                pid = pids[0] if pids else child.pid
+                deadline_reached = watch(run, phase, pid, timing["deadlineUTC"], child)
+                if child is not None and not deadline_reached and child.returncode != 0:
+                    raise RuntimeError("El entrenador falló. Revisá el log y reanudá dentro del presupuesto.")
+        timing.update(status="budget-finished", finishedUTC=time.time())
+        write(clock, timing)
+    if not (run / "snapshots" / phase / "index.json").exists():
+        for fmt in selected:
+            for seed in plan["seeds"]:
+                checkpoint = run / fmt / str(seed) / "checkpoint"
+                state = json.loads(checkpoint.read_text())["state"]
+                target = state.get("iteration", state.get("completed"))
+                args = ["node", "training/cli.ts", "--resume", checkpoint,
+                        "--iterations" if fmt == "duel" else "--matches", str(target)]
+                subprocess.run(args, cwd=runtime, stdout=subprocess.DEVNULL, check=True)
+    freeze(run, phase, plan["seeds"], selected)
+    return timing
 
 
 def main():
@@ -116,35 +163,8 @@ def main():
                 watch(run,"profile",args.attach_profile)
         validate_profile(run,plan)
         freeze(run,"profile",plan["seeds"])
-        clock=run/"pilot-clock.json"
-        if not clock.exists():
-            now=time.time()
-            write(clock,{"startedUTC":now,"deadlineUTC":now+plan["budgets"]["pilot"],"status":"running"})
-        timing=json.loads(clock.read_text())
-        if timing["status"]=="running" and time.time() < timing["deadlineUTC"]:
-            signature="training/league/cli.ts pilot --run "+str(run)
-            pids=[pid for pid,row in processes().items() if signature in row[2] and
-                  Path(row[2].split()[0]).name=="node"]
-            if len(pids)>1:
-                raise RuntimeError("Hay pilotos en conflicto.")
-            with (run/"pilot-process.log").open("a") as log:
-                child=None if pids else subprocess.Popen(["node","training/league/cli.ts","pilot","--run",run],
-                    cwd=args.runtime,stdout=log,stderr=log,start_new_session=True)
-                timed=watch(run,"pilot",pids[0] if pids else child.pid,timing["deadlineUTC"],child)
-                if child is not None and not timed and child.returncode != 0:
-                    raise RuntimeError("El piloto falló. Revisá pilot-process.log y reanudá dentro del presupuesto.")
-        timing.update(status="budget-finished",finishedUTC=time.time())
-        write(clock,timing)
-        # Recover the serving export of the last atomic checkpoint if the timer fired mid-batch.
-        for fmt in FORMATS:
-            for seed in plan["seeds"]:
-                checkpoint=run/fmt/str(seed)/"checkpoint"
-                state=json.loads(checkpoint.read_text())["state"]
-                target=state.get("iteration",state.get("completed"))
-                args_cli=["--resume",checkpoint,"--iterations" if fmt=="duel" else "--matches",str(target)]
-                subprocess.run(["node","training/cli.ts",*args_cli],cwd=args.runtime,check=True,stdout=subprocess.DEVNULL)
-        freeze(run,"pilot",plan["seeds"])
-        print("Pilot frozen",clock,flush=True)
+        timed_stage(run, "pilot", args.runtime, plan, FORMATS)
+        print("Pilot frozen", run / "pilot-clock.json", flush=True)
 
 
 if __name__=="__main__":
