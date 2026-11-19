@@ -210,6 +210,21 @@ function MesaAbierta({
   const partida = esTerceto ? recibida : presentada;
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
+  const enMesa = Boolean(mesa && !error);
+  useEffect(() => {
+    if (!enMesa) return;
+    const motor = document.getElementById("version-motor-mesa");
+    const modelo = document.getElementById("version-modelo-mesa");
+    if (!motor || !modelo) return;
+    const sinMotor = motor.textContent;
+    const sinModelo = modelo.textContent;
+    motor.textContent = mesa?.versionReglas == null ? "Sin informar" : `v${mesa.versionReglas}`;
+    modelo.textContent = mesa?.politica || "Sin informar";
+    return () => {
+      motor.textContent = sinMotor;
+      modelo.textContent = sinModelo;
+    };
+  }, [enMesa, mesa?.versionReglas, mesa?.politica]);
   useEffect(() => {
     const clave = "truco.ultima-mesa." + jugador.id;
     try {

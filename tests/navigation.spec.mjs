@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import paquete from "../package.json" with { type: "json" };
+import { versionModeloPractica, versionMotorPractica } from "../src/probabilidad/perfil.ts";
 
 test("del tema de la portada al último capítulo y sus fuentes", async ({ page }) => {
   await page.goto("./");
@@ -39,6 +41,22 @@ test("abre una variante de mesa y vuelve al capítulo que la explica", async ({ 
 
 test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
+
+  test("el pie de la guía y la práctica identifica las versiones locales", async ({ page }) => {
+    const pie = page.getByRole("contentinfo");
+    for (const ruta of ["./", "aprender/mano/"]) {
+      await page.goto(ruta);
+      for (const [etiqueta, valor] of [
+        ["Interfaz", "v" + paquete.version],
+        ["Motor local", versionMotorPractica],
+        ["Modelo local", versionModeloPractica],
+      ]) {
+        const dato = pie.getByText(etiqueta, { exact: true }).locator("+ dd");
+        await expect(dato).toBeVisible();
+        await expect(dato).toHaveText(valor);
+      }
+    }
+  });
 
   test("el enlace de búsqueda abre el índice y permite leer el primer capítulo", async ({ page }) => {
     await page.goto("./");

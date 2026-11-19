@@ -41,7 +41,7 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
       plazas[asiento] = { ...plazas[asiento], nombre: "Computadora " + asiento, tipo: "computadora" };
       json = crearSala(0, plazas);
     }
-    if (pathname.endsWith("/" + id)) json = crearSala(0, plazas);
+    if (pathname.endsWith("/" + id)) json = { ...crearSala(0, plazas), versionReglas: 2, politica: "tercetos-basica-v1" };
     if (pathname.endsWith("/partida")) json = lectura(abrirRedondilla(), 0, 1);
     await route.fulfill({ json });
   });
@@ -70,6 +70,9 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(page.locator(".j-lugar small")).toHaveText(["Equipo 1","Equipo 2","Equipo 1","Equipo 2","Equipo 1","Equipo 2"]);
   for (let i = 1; i < 6; i++) await page.getByRole("button", { name: "Agregar computadora al asiento " + (i+1) }).click();
   await expect(page.getByRole("region", { name: "Tapete" })).toBeVisible();
+  const pie = page.getByRole("contentinfo");
+  await expect(pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd")).toHaveText("v2");
+  await expect(pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd")).toHaveText("tercetos-basica-v1");
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {

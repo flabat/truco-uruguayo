@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
+import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
@@ -28,6 +29,7 @@ export interface VistaMesa {
   meta: number;
   creadorId: string;
   formato: FormatoMesa;
+  versionReglas: number;
   politica: string;
   miAsiento: number;
   invitacion: string;
@@ -69,8 +71,11 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   });
   const enlace = new URL("/jugar/", web);
   enlace.searchParams.set("invitacion", mesa.invitacion);
-  return { id: mesa.id, modo: mesa.modo, meta: mesa.meta, politica: mesa.politica, formato: formatoMesa(mesa.modo, mesa.version_senas), creadorId: mesa.creador, miAsiento: mesa.mio,
-    invitacion: enlace.href, lista: rows.length === asientos.length, asientos };
+  return {
+    id: mesa.id, modo: mesa.modo, meta: mesa.meta, formato: formatoMesa(mesa.modo, mesa.version_senas),
+    versionReglas: mesa.modo === "3v3" ? versionReglasTercetos : versionReglasOnline, politica: mesa.politica,
+    creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
+  };
 }
 
 export function verificarPerfil(modo: Modo, perfil: string | null) {

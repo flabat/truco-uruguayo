@@ -59,6 +59,30 @@ async function simular(page, handler) {
   return sockets;
 }
 
+test("el pie muestra el motor y el modelo asignados a la mesa y los quita al volver al salón", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  const pin = "0123456789abcdef".repeat(4);
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId))
+      return { json: { ...mesa("2v2", personas), versionReglas: 1, politica: pin } };
+    if (path.endsWith("/partida")) return { json: { ...partida, version: 37 } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const pie = page.getByRole("contentinfo");
+  const motor = pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd");
+  const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  await expect(motor).toHaveText("v1");
+  await expect(modelo).toHaveText(pin);
+  await expect(modelo).toBeVisible();
+  expect(await pie.evaluate(el => el.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  if (process.env.CAPTURAS_VERSIONES)
+    await pie.screenshot({ path: `${process.env.CAPTURAS_VERSIONES}/versiones-${test.info().project.name}.png`, scale: "css" });
+
+  await page.getByRole("link", { name: "Volver al salón" }).click();
+  await expect(motor).toHaveText("Sin mesa");
+  await expect(modelo).toHaveText("Sin mesa");
+});
+
 test("de a seis se proponen 25 malas y 25 buenas y la mesa puede pactar otra meta", async ({ page }) => {
   await page.goto("reglas/seis-jugadores/");
   const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico de a seis" });
@@ -102,6 +126,8 @@ test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
     await page.locator(".j-crear .j-panel").screenshot({ path: `${process.env.CAPTURAS_UI}/crear-meta-${test.info().project.name}.png`, scale: "css" });
   await crear.press("Enter");
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
+  // Una API anterior puede omitir ambos datos de la mesa.
+  await expect(page.getByRole("contentinfo").getByText("Sin informar", { exact: true })).toHaveCount(2);
   await page.reload();
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
 });

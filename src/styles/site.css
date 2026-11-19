@@ -480,6 +480,29 @@ footer {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
+.footer-versiones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 24px;
+  margin-block: 0;
+  padding-block: 12px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.footer-versiones > div {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 4px;
+  max-width: 100%;
+}
+.footer-versiones dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
 .page-intro {
   background: var(--canvas);
   border-bottom: 1px solid var(--line);

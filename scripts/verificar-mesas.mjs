@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { randomBytes, createHash } from "node:crypto";
 import pg from "pg";
+import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
@@ -34,6 +35,8 @@ async function crear(p, modo, meta) {
   assert.equal(r.datos.creadorId, p.id);
   assert.equal(r.datos.lista, false);
   assert.equal(r.datos.meta, meta ?? (modo === "3v3" ? 50 : 40));
+  assert.equal(r.datos.versionReglas, modo === "3v3" ? versionReglasTercetos : versionReglasOnline);
+  assert.equal(r.datos.politica, modo === "3v3" ? "tercetos-basica-v1" : "incumbent-online-v1");
   return r.datos;
 }
 

@@ -2,6 +2,8 @@
 import Brand from "../components/Brand.astro";
 import Search from "../components/Search.astro";
 import { url } from "../lib/guide";
+import { version as versionInterfaz } from "../../package.json";
+import { versionModeloPractica, versionMotorPractica } from "../probabilidad/perfil";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-600.css";
@@ -15,6 +17,7 @@ interface Props {
   active?: "inicio" | "jugar" | "aprender" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
+const enSalon = active === "jugar";
 const multijugador = import.meta.env.PUBLIC_MULTIJUGADOR === "1";
 const pages = [
   { name: "Inicio", path: "", key: "inicio" },
@@ -64,6 +67,20 @@ const pages = [
           Fuentes y variantes <span aria-hidden="true">↗</span>
         </a>
       </div>
+      <dl class="shell footer-versiones" aria-label="Versiones">
+        <div>
+          <dt>Interfaz</dt>
+          <dd>v{versionInterfaz}</dd>
+        </div>
+        <div>
+          <dt>{enSalon ? "Motor de la mesa" : "Motor local"}</dt>
+          <dd id={enSalon ? "version-motor-mesa" : undefined}>{enSalon ? "Sin mesa" : versionMotorPractica}</dd>
+        </div>
+        <div>
+          <dt>{enSalon ? "Modelo de la mesa" : "Modelo local"}</dt>
+          <dd id={enSalon ? "version-modelo-mesa" : undefined}>{enSalon ? "Sin mesa" : versionModeloPractica}</dd>
+        </div>
+      </dl>
     </footer>
   </body>
 </html>
