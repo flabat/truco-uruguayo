@@ -47,3 +47,15 @@ Cuando estén verificadas las entradas y el código de la corrida, `touch "$RUN/
 Las curvas de desarrollo miden victorias contra el campeón de cada época. La confirmación final usa un conjunto de repartos independiente y el campeón congelado al inicio. El tablero separa las victorias observadas en entrenamiento de esas evaluaciones. Los informes finales están en `$RUN/<formato>/eval-final.json` y el resumen en `$RUN/ops/summary.json`.
 
 Para arrancar otra noche, pasá el directorio de la liga anterior como `PREVIOUS_CYCLE`. La preparación lee las tres confirmaciones finales y comprueba las huellas de modelos e insumos. En cada modalidad, una mejora confirmada inicia los nuevos linajes con sus pesos aprendidos. Si el aspirante no califica, se conserva el campeón inicial. La nueva liga usa repartos nuevos, reinicia el optimizador y el crítico, y guarda el aspirante y el contrincante anteriores entre sus rivales. El protocolo registra el parentesco por modalidad. Reanudar el mismo directorio tras una interrupción conserva todo el estado del optimizador.
+
+## Piloto de regresiones pareadas
+
+Los perfiles opcionales `pilot` y `extended` toman como punto de partida una liga terminada. Ejemplo para ejecutar tres épocas de 20 minutos con una semilla nueva:
+
+~~~sh
+node training/selfplay/prepare.ts RUN PARENT NEW_SEED pilot
+~~~
+
+El perfil `extended` ejecuta 18 épocas. Los dos perfiles comparan políticas congeladas en repartos de entrenamiento idénticos con asientos intercambiados. Una caída respecto del campeón aumenta el peso de ese rival y de esa composición de equipo. En parejas también se juega frente al estilo de cartas fuertes con los dos asientos aprendidos y con un compañero congelado. Los cuatro chicos de cada sondeo no actualizan el optimizador y se contabilizan por separado en `probeGames`.
+
+La selección pondera el peor cambio entre los estilos de desarrollo y exige preferentemente una mayoría directa del 55 %. La confirmación final usa nuevos repartos, 4.096 pares por familia y los umbrales originales. En el piloto, los dos aspirantes de coordinación ajustados solo en entrenamiento deben congelarse en `RUN/training-candidates/<modalidad>/team.json` antes del cribado final. El informe por modalidad incluye los cambios emparejados respecto del finalista anterior y sus intervalos exploratorios. La regla de extensión figura en el protocolo antes de comenzar.

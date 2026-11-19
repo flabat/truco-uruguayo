@@ -10,7 +10,10 @@ import {activeFormats, teamSignalsVersion} from "../contracts/index.ts";
 import {initial} from "../anchored/actor.ts";
 import {artifactPin, openActor} from "../../api/actor-registry.ts";
 
-export function prepare(root: string, previous: string, seed = randomBytes(24).toString("hex")) {
+type Profile = "standard" | "pilot" | "extended";
+export function prepare(root: string, previous: string, seed = randomBytes(24).toString("hex"), profile:Profile="standard") {
+  assert(["standard","pilot","extended"].includes(profile),"Unknown league profile");
+  const paired = profile!=="standard";
   const field = join(previous, "field"), files: Record<string,string> = {};
   if (existsSync(join(root, "protocol.json"))) throw new Error("Run already prepared");
   function store(path: string, value: unknown, tracked=true) {
@@ -25,6 +28,7 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
   const source = read(join(previous,"protocol.json"));
   const continuing = source.schema === "continual-selfplay-league-v1";
   const parentModels: Record<string,{candidate:string; reference:string; improved:boolean}> = {};
+  if (paired) assert(continuing,"The paired league needs a completed parent league");
   if (continuing) {
     assert.equal(source.computerOnly,true);
     assert.equal(source.signals,teamSignalsVersion);
@@ -64,7 +68,12 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
       const winner = final.improved ? challenger : incumbent;
       parentModels[format] = {candidate:final.pin,reference:final.reference,improved:final.improved};
       store(join(input,"anchor-v1.json"),registered(join(input,"anchor-v1.json")));
-      store(join(input,"starter.json"),winner);
+      // A research finalist can be used for optimization without being named the
+      // champion. Context routers keep their residual expert as trainable weights.
+      const researchStarter = paired ? challenger : winner;
+      const starter = researchStarter.kind==="team-context-mixture-v1" ? researchStarter.finalist : researchStarter;
+      openActor(starter,format,0);
+      store(join(input,"starter.json"),starter);
       store(join(input,"champion-at-start.json"),winner);
       store(join(format,"champion.json"),winner,false);
       // Keep the original field and the immediately preceding league. Replacing
@@ -123,13 +132,21 @@ export function prepare(root: string, previous: string, seed = randomBytes(24).t
     directLowerBound:0.5, familyDeltaLowerBound:-0.02, files,
     ...(continuing ? {parent:{protocolSha256:createHash("sha256").update(readFileSync(join(previous,"protocol.json"))).digest("hex"),models:parentModels}} : {}),
     selection:"Compare frozen candidate checkpoints on a separate screening pool. Rank mean win rate across the reference, caller, strong-cards, frequent-bluff and folder. Gates use independent paired deals per epoch. Final confirms one finalist vs the immutable starting research champion.",
+    ...(paired ? {
+      profile, sampler:"paired-regression-v1", epochs:profile==="pilot"?3:18, trainingHours:profile==="pilot"?1:6,
+      maxWallHours:profile==="pilot"?2:8, epochPairs:256, finalPairs:4096,
+      screeningPairs:128,finalScreeningPairs:768,
+      screen:"Paired development games against the starting/current reference, scripted styles, and a training archive opponent. Prefer direct rate >=55%, minimize observed regression beyond 1pp, then maximize total wins.",
+      externalTeamCandidate:profile==="pilot",
+      extendIf:"Both partnership finalists win directly with simultaneous lower bounds >50%, neither loses over 2 points against its prior finalist in the strong-cards matchup and at least one gains >=1 point on those same fresh deals. Confirmed champions are retained per format."
+    } : {}),
     deployment:"Local research only; no automatic activation."
   };
   store("protocol.json",protocol,false);
   return protocol;
 }
 if (process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
-  const [root,previous,seed]=process.argv.slice(2);
-  if (!root || !previous) throw new Error("prepare.ts NEW_RUN PREVIOUS_CYCLE [SEED]");
-  prepare(resolve(root),resolve(previous),seed);
+  const [root,previous,seed,profile]=process.argv.slice(2);
+  if (!root || !previous) throw new Error("prepare.ts NEW_RUN PREVIOUS_CYCLE [SEED] [standard|pilot|extended]");
+  prepare(resolve(root),resolve(previous),seed,profile as Profile|undefined);
 }

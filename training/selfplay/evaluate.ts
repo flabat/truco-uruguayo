@@ -55,6 +55,7 @@ export function evaluate(root:string,format:Format,label:string) {
   const dir=join(root,format), stage=join(dir,"assessments",label), evidence=join(root,"evaluation-input",format);
   const file=join(dir,"eval-"+label+".json");
   if(existsSync(file)) return read(file);
+  const paired = protocol.sampler==="paired-regression-v1";
   mkdirSync(stage,{recursive:true});
   function event(message:string,fields:Record<string,unknown>={}) {
     appendFileSync(join(root,"events","eval-"+format+".jsonl"),JSON.stringify({ts:new Date().toISOString(),stage:final?"final evaluation":"checkpoint evaluation",
@@ -76,7 +77,14 @@ export function evaluate(root:string,format:Format,label:string) {
   // Keep a small, reproducible shortlist, including the strongest archived research champion.
   if(final) {
     add(join(dir,"champion.json"));
-    for(const k of [3,6,9,12,15,18]) add(join(dir,"assessments",String(k),"selected.json"));
+    const epochs=paired && protocol.epochs<=3 ? [1,2,3] : [3,6,9,12,15,18];
+    for(const k of epochs) add(join(dir,"assessments",String(k),"selected.json"));
+    if (paired) add(join(root,"input",format,"archive","last-finalist.json"));
+    if (protocol.externalTeamCandidate && format!=="duel") {
+      const external=join(root,"training-candidates",format,"team.json");
+      assert(existsSync(external),"Missing preregistered team challenger");
+      add(external);
+    }
   }
   assert(candidates.size>0,"No distinct trained challenger available");
   const selection=join(stage,"screen.json");
@@ -84,21 +92,33 @@ export function evaluate(root:string,format:Format,label:string) {
     const rows=[];
     const fixtures:Fixture[]=[{id:"champion",opponent:reference},...["caller","strong-cards","frequent-bluff","folder"].map(id=>({id,opponent:team(id)}))];
     const seed=dealSeed(protocol.seed,format,"screen",label);
-    for(const [pin,model] of candidates) {
-      const tested=open(model,format);
-      const scores=fixtures.map(f=>{
+    if (paired) {
+      const opponent=open(load(join(root,"input",format,"archive","older-candidate.json")),format);
+      fixtures.push({id:"training-archive",opponent});
+      if (format!=="duel") fixtures.push({id:"training-partner/strong-cards",opponent:team("strong-cards"),mate:opponent});
+    }
+    const pairs=final && paired ? protocol.finalScreeningPairs : protocol.screeningPairs;
+    function scoresFor(tested:Team) {
+      return fixtures.map(f=>{
         let wins=0;
-        for(let i=0;i<protocol.screeningPairs;i++) {
+        for(let i=0;i<pairs;i++) {
           const row=play(format,tested,f,seed,i).wins;
           wins+=row[0]+row[1];
         }
         return wins;
       });
-      rows.push({pin,scores,total:scores.reduce((a,b)=>a+b,0)});
     }
-    rows.sort((a,b)=>b.total-a.total || a.pin.localeCompare(b.pin));
+    const referenceScores=paired?scoresFor(reference):[];
+    for(const [pin,model] of candidates) {
+      const scores=scoresFor(open(model,format));
+      // A one-point indifference band prevents noise in tied development
+      // outcomes from overruling improvements on the rest of the field.
+      const floor=paired ? Math.min(0,...scores.map((w,i)=>(w-referenceScores[i])/(2*pairs)+0.01)) : 0;
+      rows.push({pin,scores,total:scores.reduce((a,b)=>a+b,0),floor,eligible:!paired || scores[0]>=0.55*2*pairs});
+    }
+    rows.sort((a,b)=>Number(b.eligible)-Number(a.eligible) || b.floor-a.floor || b.total-a.total || a.pin.localeCompare(b.pin));
     save(join(stage,"selected.json"),candidates.get(rows[0].pin));
-    save(selection,{reference:refPin,seed,pairs:protocol.screeningPairs,rows});
+    save(selection,{reference:refPin,seed,pairs,fixtures:fixtures.map(f=>f.id),referenceScores,rows});
   }
   const model=load(join(stage,"selected.json")), pin=artifactPin(model), tested=open(model,format);
   const screening=read(selection);
@@ -125,22 +145,34 @@ export function evaluate(root:string,format:Format,label:string) {
   assert.deepEqual(fixtures.map(f=>f.id),qualificationFamilies(format));
   const n=final?protocol.finalPairs:protocol.epochPairs, seed=dealSeed(protocol.seed,format,"gate",label);
   const families=[], total=4*n*fixtures.length;
-  let emitted=0;
+  const priorModel=final && paired ? load(join(root,"input",format,"archive","last-finalist.json")) : null;
+  const prior=priorModel && open(priorModel,format), priorPin=priorModel && artifactPin(priorModel);
+  const comparisons:Record<string,ReturnType<typeof difference>>={};
+  let comparisonGames=0, emitted=0;
   for(const [idx,f] of fixtures.entries()) {
     const receipt=join(stage,"family-"+idx+".json");
     if(!existsSync(receipt)) {
-      const rows:PairOutcome[]=[]; let signalsSent=0;
+      const rows:PairOutcome[]=[], priorWins:[number,number][]=[];
+      const compare=prior && ["champion","strong-cards","unfamiliar-teammate","strong-cards/unfamiliar"].includes(f.id);
+      let signalsSent=0;
       event("Playing paired 40-point games against "+f.id,{opponent:f.id,completed:idx*n*4,total,unit:"chicos"});
       for(let i=0;i<n;i++) {
         const a=play(format,tested,f,seed,i),b=play(format,reference,f,seed,i);
         rows.push({pair:i,candidate:a.wins,incumbent:b.wins});
         signalsSent+=a.signalsSent;
+        if (compare) priorWins.push(priorPin===pin?a.wins:priorPin===refPin?b.wins:play(format,prior!,f,seed,i).wins);
         if((i+1)%64===0) event("Replaying equal deals from both teams.",{opponent:f.id,completed:(idx*n+i+1)*4,total,unit:"chicos"});
       }
-      save(receipt,{pin,refPin,seed,id:f.id,rows,signalsSent});
+      save(receipt,{pin,refPin,seed,id:f.id,rows,signalsSent,...(priorWins.length?{priorPin,priorWins}:{})});
     }
     const saved=read(receipt);
     assert(saved.id===f.id && saved.seed===seed && saved.pin===pin && saved.refPin===refPin && saved.rows.length===n);
+    if (saved.priorWins) {
+      assert(saved.priorPin===priorPin && saved.priorWins.length===n);
+      const changes=saved.rows.map((r:PairOutcome,i:number)=>(r.candidate[0]+r.candidate[1]-saved.priorWins[i][0]-saved.priorWins[i][1])/2);
+      comparisons[f.id]=difference(changes);
+      if (priorPin!==pin && priorPin!==refPin) comparisonGames+=2*n;
+    }
     families.push({id:f.id,pairs:saved.rows as PairOutcome[]});emitted+=saved.signalsSent;
   }
   const evaluation=summarize(families,"champion",final?protocol.finalResamples:protocol.epochResamples);
@@ -149,7 +181,8 @@ export function evaluate(root:string,format:Format,label:string) {
   const relative=(id:string)=>evaluation.families.find(f=>f.id===id);
   const report={format,epoch:final?"final":Number(label),finishedAt:new Date().toISOString(),games:total,seed,pin,reference:refPin,
     counter:artifactPin(counter),improved,evaluation,teamSignalsSent:emitted,
-    screeningGames:screening.rows.length*5*protocol.screeningPairs*2,
+    screeningGames:(screening.rows.length+Number(paired))*(screening.fixtures?.length??5)*screening.pairs*2,
+    ...(prior ? {previousFinalist:priorPin,versusPrevious:comparisons,comparisonGames} : {}),
     worst:worst.id,unfamiliarPartner:relative("unfamiliar-teammate")?.winRate??null,
     signalEffect:format==="pairs-private-senas"?pairedSignalEffect(families):null,
     role:final?"single confirmatory comparison against the starting research champion":"development gate against the current research champion"};
@@ -165,6 +198,9 @@ function pairedSignalEffect(families:{id:string;pairs:PairOutcome[]}[]) {
   const on=families.find(f=>f.id==="signaling-teammate")!.pairs;
   const off=families.find(f=>f.id==="signaling-teammate/masked")!.pairs;
   const changes=on.map((x,i)=>(x.candidate[0]+x.candidate[1]-off[i].candidate[0]-off[i].candidate[1])/2);
+  return difference(changes);
+}
+function difference(changes:number[]) {
   const estimate=changes.reduce((a,b)=>a+b)/changes.length;
   const radius=1.96*Math.sqrt(changes.reduce((a,b)=>a+(b-estimate)**2,0)/(changes.length*(changes.length-1)));
   return {estimate,lower:estimate-radius,upper:estimate+radius,scope:"exploratory paired 95% interval"};
