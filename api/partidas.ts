@@ -9,6 +9,8 @@ import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
   type Confirmada, type ManoPublicable, type Registro } from "./turnos.ts";
+import { incumbent } from "../training/seat/index.ts";
+import { programarTurno } from "./bot-pendiente.ts";
 import { seatsFor, versions, type Format } from "../training/contracts/index.ts";
 
 const meta = 40;
@@ -63,13 +65,14 @@ function asientosHumanos(mesa: VistaMesa) {
 }
 
 async function repartir(db: PoolClient, mesa: string, formato: Format, humanos: number[], numero: number,
-    version: number, puntos: Tanteador, dador?: number, ensayo = false) {
+    version: number, puntos: Tanteador, dador?: number, diferida = false) {
   const reparto = repartirOnline(seatsFor(formato), dador);
   const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
-  const mano = jugarComputadoras(inicial, formato, humanos, ensayo);
+  const mano = diferida ? inicial : jugarComputadoras(inicial, formato, humanos);
   await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [mesa, numero, version, versionReglasOnline, reparto, puntos,
     JSON.stringify(guardarAcciones(mano)), formato === "pairs-senas" ? versions.signals : null]);
+  if (diferida) await programarTurno(db, mesa, mano, humanos);
   return mano;
 }
 
@@ -84,7 +87,8 @@ export async function avanzarEnsayo(pool: Pool) {
   try {
     await db.query("BEGIN");
     const {rows: [mesa]} = await db.query(`SELECT id, modo, version_senas FROM juego.mesas
-      WHERE solo_computadoras AND NOT ensayo_terminado ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
+      WHERE solo_computadoras AND NOT ensayo_terminado
+      AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t WHERE t.mesa=juego.mesas.id) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
     if (mesa) {
       const formato = formatoMesa(mesa.modo, mesa.version_senas);
       const asientos = await db.query(`SELECT asiento FROM juego.asientos WHERE mesa=$1 AND computadora ORDER BY asiento`, [mesa.id]);
@@ -94,7 +98,11 @@ export async function avanzarEnsayo(pool: Pool) {
       const fila = await ultimaMano(db, mesa.id);
       const previo = fila && restaurar(fila, formato);
       const puntos: Tanteador = previo ? tantos(previo.estado) : [0, 0];
-      if (previo && !previo.estado.resultado) throw new Error("La mano del ensayo no está cerrada.");
+      if (previo && !previo.estado.resultado) {
+        await programarTurno(db, mesa.id, previo, []);
+        await db.query("COMMIT");
+        return true;
+      }
       let final = ganador(puntos) !== null;
       if (!final) {
         const dador = fila ? (fila.reparto.dador + 1) % seatsFor(formato) : undefined;
@@ -124,6 +132,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const mesa = await leerMesa(db, id, jugador, web);
     if (!mesa) throw new ErrorPeticion(404, "No se encontró tu mesa.");
     const asiento = mesa.miAsiento as Asiento;
+    const diferida = mesa.politica !== incumbent.id;
     const comando = op && validar(op, datos, asiento, mesa.formato);
     if (!mesa.lista) {
       if (comando) throw new ErrorPeticion(409, "La mesa todavía tiene asientos libres.");
@@ -140,7 +149,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const fila = await ultimaMano(db, id);
     if (!fila) {
       if (comando) throw new ErrorPeticion(409, "Actualizá la mesa para recibir tu mano.");
-      const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0]);
+      const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0], undefined, diferida);
       return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento) };
     }
     const mano = restaurar(fila, mesa.formato);
@@ -153,7 +162,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const puntos = tantos(estado);
       if (!estado.resultado || ganador(puntos) !== null) throw new ErrorPeticion(409, "No corresponde repartir otra mano.");
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
-      const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, dador);
+      const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, dador, diferida);
       partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento);
     } else {
       let paso: ManoPublicable;
@@ -163,7 +172,8 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         if (!(error instanceof RangeError || error instanceof TypeError)) throw error;
         throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
       }
-      const siguiente = jugarComputadoras(paso, mesa.formato, asientosHumanos(mesa));
+      const siguiente = diferida ? paso : jugarComputadoras(paso, mesa.formato, asientosHumanos(mesa));
+      if (diferida) await programarTurno(db, id, siguiente, asientosHumanos(mesa));
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
         [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
       partida = vista(siguiente, mesa.formato, fila.numero, version, asiento);
