@@ -34,7 +34,7 @@ export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnli
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
+  return { reglaFlor: "inmediata", versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
 function dueloDelPico(mano: Asiento, duelo: 1 | 2 | 3): LanceTercetos {
@@ -192,6 +192,9 @@ export interface VistaOnline extends VistaAsiento {
 
 function vistaPublicaOnline(estado: EstadoOnline, asiento: Asiento) {
   const mesa = vistaPublicaPara(estado.mano, asiento);
+  const proximo = estado.consultaFlor[0];
+  // En las manos nuevas la cola contiene únicamente flores reales, todavía privadas.
+  const porDeclararFlor = estado.mano.reparto.reglaFlor && proximo !== asiento ? null : proximo ?? null;
   const { resultado, valorTruco } = estado;
   const trucoPendiente = resultado ? null : estado.trucoPendiente;
   const pendiente = resultado ? null : estado.lateral ?? trucoPendiente;
@@ -201,7 +204,7 @@ function vistaPublicaOnline(estado: EstadoOnline, asiento: Asiento) {
     ...mesa, turno: resultado ? null : estado.antesDeSalida ?? mesa.turno, vueltaActual: resultado ? null : mesa.vueltaActual,
     equipoGanador: resultado?.equipo ?? null, apuesta, valorTruco,
     resultado: resultado && { ...resultado }, pendiente: pendiente && { tipo: pendiente.tipo, asiento: pendiente.asiento },
-    trucoPendiente: trucoPendiente && { ...trucoPendiente }, porDeclararFlor: estado.consultaFlor[0] ?? null,
+    trucoPendiente: trucoPendiente && { ...trucoPendiente }, porDeclararFlor,
     acciones: structuredClone(estado.acciones), cobros: structuredClone(estado.cobros),
   };
 }

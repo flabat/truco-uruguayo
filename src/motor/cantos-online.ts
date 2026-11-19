@@ -208,7 +208,7 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
 }
 
 function sinDeclaracion(estado: EstadoOnline) {
-  // Determinado solo por actos públicos. No saltar asientos mirando sus cartas.
+  // Una primera acción distinta de flor ya descarta la flor propia.
   return participantesDe(estado.mano).filter(a => !estado.acciones.some(j => j.asiento === a));
 }
 
@@ -226,7 +226,10 @@ function terminarConsultas(estado: EstadoOnline) {
 }
 
 function consultarFlores(estado: EstadoOnline) {
-  estado.consultaFlor = estado.lateralCerrado ? [] : sinDeclaracion(estado);
+  const pendientes = estado.lateralCerrado ? [] : sinDeclaracion(estado);
+  estado.consultaFlor = estado.mano.reparto.reglaFlor === "inmediata"
+    ? pendientes.filter(a => tantosPropios(estado, a).modalidad === "flor")
+    : pendientes;
   terminarConsultas(estado);
 }
 
@@ -249,9 +252,11 @@ export function resolverCanto(estado: EstadoOnline, accion: Exclude<AccionOnline
     case "envido":
     case "real-envido":
     case "falta-envido": {
+      const apertura = estado.lateral === null;
       const anterior = estado.lateral?.valor ?? 0;
       const valor = tipo === "falta-envido" ? Math.max(falta, anterior) : anterior + (tipo === "real-envido" ? 3 : 2);
       estado.lateral = { tipo, asiento, anterior: Math.max(1, anterior), valor };
+      if (apertura && estado.mano.reparto.reglaFlor === "inmediata") consultarFlores(estado);
       break;
     }
     case "flor":

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, confirmarComputadora, jugarComputadoras, restaurar } from "../api/turnos.ts";
 import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { mesaFabian } from "./fixtures/mesa-flor-fabian.ts";
 import { dueloFlor, dueloMazo } from "./fixtures/duelo-mazo.ts";
 
 const mesaId = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
@@ -278,6 +279,32 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
   }
   if (process.env.CAPTURAS_UI)
     await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+});
+
+test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno sin pases", async ({ page }) => {
+  const asientos = ["Fabián", "Computadora 2", "Computadora 3", "Computadora 4"]
+    .map((nombre, i) => seat(i, i === 0 ? "humano" : "computadora", nombre));
+  let mano = confirmar({ estado: iniciarOnline(mesaFabian), turnos: [] }, "pairs",
+    { tipo: "carta", asiento: 3, carta: "bastos-12" });
+  await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", asientos) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "envido" });
+      mano = jugarComputadoras(confirmar(mano, "pairs", { tipo: "envido", asiento: 0 }), "pairs", [0]);
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones")) {
+      return { json: { ...partida, version: mano.turnos.length, puntos: marcadorOnline(mano.estado), vista: vistaOnline(mano.estado, 0) } };
+    }
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await page.getByRole("button", { name: "Envido", exact: true }).click();
+  const historial = page.getByRole("region", { name: "Historial de la mano" });
+  await expect(historial.getByRole("listitem")).toHaveText([
+    "Computadora 4 jugó rey de bastos.", "Fabián dijo «Envido».", "Computadora 3 dijo «Flor».",
+  ]);
+  await expect(page.getByRole("button", { name: "Yo no canto", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Jugar 6 de bastos" })).toBeEnabled();
+  await expect(page.getByText("Tu equipo · 3 tantos por flor")).toBeVisible();
 });
 
 for (const [caso, cantos] of [
