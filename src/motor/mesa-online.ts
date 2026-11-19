@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
-import { esCardId, mazo, pieza } from "./cartas.ts";
-import { evaluarTantos } from "./tantos.ts";
+import { esCardId, mazo, pieza, type CardId } from "./cartas.ts";
+import { evaluarTantos, type Desglose } from "./tantos.ts";
 import { faltaDelGanador, tipoDeReparto } from "./reglas-tercetos.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
@@ -76,7 +76,8 @@ function cerrarLance(estado: EstadoOnline): EstadoOnline {
   if (!lance || !resultado) return estado;
   const puntos = marcadorOnline(estado);
   const resumen: ResumenLance = { ...lance, resultado, puntos, acciones: estado.acciones,
-    cobros: estado.cobros, vueltas: estado.mano.vueltas };
+    cobros: estado.cobros, vueltas: estado.mano.vueltas,
+    ...(estado.indiceCobroLateral !== undefined && { indiceCobroLateral: estado.indiceCobroLateral }) };
   const historial = [...estado.historialLances!, resumen];
   if (!puntos.includes(estado.meta) && lance.tipo === "pico-a-pico" && lance.duelo < 3) {
     const proximo = dueloDelPico(estado.mano.reparto.mano, lance.duelo === 1 ? 2 : 3);
@@ -166,6 +167,14 @@ export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoO
   return { ok: true, estado: cerrarLance(siguiente) };
 }
 
+export interface PruebaDeTantos {
+  readonly asiento: Asiento;
+  readonly motivo: "flor" | "envido";
+  readonly total: number;
+  readonly cartas: readonly CardId[];
+  readonly duelo?: 1 | 2 | 3;
+}
+
 export interface VistaOnline extends VistaAsiento {
   readonly apuesta: "sin-canto" | "pendiente" | "querido" | "rechazado";
   readonly acciones: readonly AccionOnline[];
@@ -176,6 +185,8 @@ export interface VistaOnline extends VistaAsiento {
   readonly trucoPendiente: EstadoOnline["trucoPendiente"];
   readonly porDeclararFlor: Asiento | null;
   readonly cobros: readonly (Cobro & Pick<EstadoOnline, "comparacionFlor">)[];
+  readonly indiceCobroLateral?: number;
+  readonly pruebasDeTantos?: readonly PruebaDeTantos[];
   readonly tantosPropios: ReturnType<typeof tantosPropios>;
 }
 
@@ -200,11 +211,34 @@ function privadaJugable(estado: EstadoOnline, asiento: Asiento): VistaOnline {
     legales: legalesOnline(estado, asiento), tantosPropios: tantosPropios(estado, asiento) };
 }
 
+function cantosPublicos(estado: EstadoOnline): Pick<VistaOnline, "indiceCobroLateral" | "pruebasDeTantos"> {
+  const indice = estado.indiceCobroLateral === undefined ? {} : { indiceCobroLateral: estado.indiceCobroLateral };
+  if (!estado.resultado) return indice;
+
+  // El pico conserva el reparto en los tres duelos. Las pruebas de los duelos anteriores
+  // también se muestran recién al cerrar ese reparto.
+  const lances = estado.historialLances ?? [{ cobros: estado.cobros, acciones: estado.acciones, duelo: null }];
+  const pruebasDeTantos: PruebaDeTantos[] = [];
+  const { manos, muestra } = estado.mano.reparto;
+  for (const { cobros, duelo, acciones } of lances) {
+    const jugadas = new Set(acciones.flatMap(a => a.tipo === "carta" ? [a.carta] : []));
+    const porMostrar = (d: Desglose) => d.aportes.filter(a => !jugadas.has(a.carta)).length;
+    for (const { motivo, asiento, tantoGanador } of cobros) {
+      if (motivo === "truco" || asiento === undefined || tantoGanador === undefined) continue;
+      const { desgloses } = evaluarTantos(manos[asiento], muestra);
+      const prueba = desgloses.reduce((mejor, otra) => porMostrar(otra) < porMostrar(mejor) ? otra : mejor);
+      pruebasDeTantos.push({ asiento, motivo, total: tantoGanador, cartas: prueba.aportes.map(a => a.carta),
+        ...(duelo !== null && { duelo }) });
+    }
+  }
+  return pruebasDeTantos.length ? { ...indice, pruebasDeTantos } : indice;
+}
+
 export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline {
   if (estado.lance && (estado.resultado || !estado.lance.activos.includes(asiento))) {
     throw new RangeError("Ese asiento necesita la proyección pública de tercetos.");
   }
-  const vista = privadaJugable(estado, asiento);
+  const vista = { ...privadaJugable(estado, asiento), ...cantosPublicos(estado) };
   if (!estado.comparacionFlor) return vista;
   // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
   const comparacionFlor = structuredClone(estado.comparacionFlor);
@@ -233,12 +267,13 @@ export type VistaTercetos = FaltaPorEquipo & (
 
 export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTercetos {
   if (!estado.lance) throw new RangeError("Se necesita una mesa de tercetos.");
-  const faltaPorEquipo = estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number];
+  const comunes = { faltaPorEquipo: estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number],
+    ...cantosPublicos(estado) };
   if (estado.resultado || !estado.lance.activos.includes(asiento)) {
-    return { ...vistaPublicaOnline(estado, asiento), faltaPorEquipo,
+    return { ...vistaPublicaOnline(estado, asiento), ...comunes,
       estado: estado.resultado ? "terminado" : "esperando", legales: [] };
   }
-  return { ...privadaJugable(estado, asiento), estado: "jugando", faltaPorEquipo };
+  return { ...privadaJugable(estado, asiento), ...comunes, estado: "jugando" };
 }
 
 /** Las políticas ya entrenadas expresan la entrega eligiendo una de sus cartas. */

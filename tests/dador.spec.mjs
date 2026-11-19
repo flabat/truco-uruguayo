@@ -97,7 +97,9 @@ for (const [modo, cantidad, miAsiento, ladoAna, ladoSiguiente] of [
         estado = paso.estado;
         version++;
         socket.send(JSON.stringify({ tipo: "actualizar" }));
-        await expect(page.locator(".j-historia li")).toHaveCount(estado.acciones.length);
+        const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
+        await expect(historial.locator("li")).toHaveCount(estado.acciones.length);
+        await expect(historial.getByRole("listitem")).toHaveCount(Math.min(3, estado.acciones.length));
         if (i === cantidad - 2 || estado.resultado) await comprobarDador(page, estado, nombres, ladoAna);
         if (vuelta === 0 && i === cantidad - 2) await capturarTapete();
       }

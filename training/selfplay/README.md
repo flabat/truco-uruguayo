@@ -47,3 +47,23 @@ Cuando estén verificadas las entradas y el código de la corrida, `touch "$RUN/
 Las curvas de desarrollo miden victorias contra el campeón de cada época. La confirmación final usa un conjunto de repartos independiente y el campeón congelado al inicio. El tablero separa las victorias observadas en entrenamiento de esas evaluaciones. Los informes finales están en `$RUN/<formato>/eval-final.json` y el resumen en `$RUN/ops/summary.json`.
 
 Para arrancar otra noche, pasá el directorio de la liga anterior como `PREVIOUS_CYCLE`. La preparación lee las tres confirmaciones finales y comprueba las huellas de modelos e insumos. En cada modalidad, una mejora confirmada inicia los nuevos linajes con sus pesos aprendidos. Si el aspirante no califica, se conserva el campeón inicial. La nueva liga usa repartos nuevos, reinicia el optimizador y el crítico, y guarda el aspirante y el contrincante anteriores entre sus rivales. El protocolo registra el parentesco por modalidad. Reanudar el mismo directorio tras una interrupción conserva todo el estado del optimizador.
+
+## Piloto de regresiones pareadas
+
+Los perfiles opcionales `pilot` y `extended` toman como punto de partida una liga terminada. Ejemplo para ejecutar tres épocas de 20 minutos con una semilla nueva:
+
+~~~sh
+node training/selfplay/prepare.ts RUN PARENT NEW_SEED pilot
+~~~
+
+El perfil `extended` ejecuta 18 épocas. Los dos perfiles comparan políticas congeladas en repartos de entrenamiento idénticos con asientos intercambiados. Una caída respecto del campeón aumenta el peso de ese rival y de esa composición de equipo. En parejas también se juega frente al estilo de cartas fuertes con los dos asientos aprendidos y con un compañero congelado. Los cuatro chicos de cada sondeo no actualizan el optimizador y se contabilizan por separado en `probeGames`.
+
+La selección pondera el peor cambio entre los estilos de desarrollo y exige preferentemente una mayoría directa del 55 %. La confirmación final usa nuevos repartos, 4.096 pares por familia y los umbrales originales. En el piloto, los dos aspirantes de coordinación ajustados solo en entrenamiento deben congelarse en `RUN/training-candidates/<modalidad>/team.json` antes del cribado final. El informe por modalidad incluye los cambios emparejados respecto del finalista anterior y sus intervalos exploratorios. La regla de extensión figura en el protocolo antes de comenzar.
+
+`calibrate-duel.ts LEAGUE OUTPUT` congela una rejilla de ajustes de pesos de cartas y apuestas, selecciona en repartos distintos y conserva un único actor de duelo antes de la auditoría de desarrollo. Usa solo los rivales de entrenamiento.
+
+Para una confirmación adicional de actores ya congelados, escribí en `RUN/plan.json` la semilla nueva, `finalPairs`, `resamples`, la probabilidad de error simultáneo `familyError` y las reglas `gates.directLowerAbove` (0,5) y `gates.everyFamilyDeltaLowerAbove` (−0,02). Ejecutá `confirm.ts RUN PARENT DUEL PAREJAS PAREJAS_PRIVADAS` con Node y, por cada modalidad, `evaluate.ts RUN FORMATO final`. El comando congela los tres candidatos, sus rivales y las huellas de los insumos antes de jugar.
+
+Al preparar una continuación, se puede pasar el directorio de la confirmación fija como último argumento después del perfil. Se comprueba su protocolo padre, se reconstruyen los resultados de cada familia y se verifican las huellas y los umbrales. Si el aspirante del ciclo principal califica, tiene precedencia. Si solo califica el aspirante de la confirmación, se conserva su actor completo como campeón. Un experto trasladado de modalidad sigue disponible para jugar con su adaptador y el nuevo aprendiz usa el último punto de partida nativo.
+
+Si ambos estudios califican a políticas diferentes, se puede preregistrar un desempate en un directorio separado y ejecutar `playoff.ts PRIMARY EXTRA PLAYOFF FORMAT`. El límite unilateral de Hoeffding usa los promedios de cada par de repartos y controla un error total del 1 % en tres formatos. La continuación acepta `PLAYOFF` como último argumento; solo reemplaza al aspirante principal por el adicional si gana con ese criterio.

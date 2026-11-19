@@ -47,7 +47,7 @@
   overflow-wrap: anywhere;
 }
 .j-seis-nombre strong { font-size: clamp(.84rem, 1.5vw, 1rem); }
-.j-seis-nombre span, .j-seis-nombre b, .j-seis-jugada small {
+.j-seis-nombre span:not(.j-voz), .j-seis-nombre b, .j-seis-jugada small {
   color: #f0dfb4;
   font-size: .72rem;
 }
@@ -90,7 +90,6 @@
 .j-seis-historial ul { padding-inline-start: 1.4rem; }
 @media (max-width: 760px) {
   .j-seis { grid-template-columns: minmax(0, 1fr); }
-  .j-seis .j-jugada-panel { order: 0; }
   .j-seis-puestos {
     grid-template-areas: none;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

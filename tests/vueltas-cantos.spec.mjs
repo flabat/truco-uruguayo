@@ -58,6 +58,12 @@ for (const { canto, manos, valor, puntos } of casos) {
     await expect(quiero).toBeEnabled();
     await quiero.press("Enter");
     const tapete = page.getByRole("region", { name: "Tapete" });
+    if (canto === "Real envido") {
+      const rival = tapete.getByRole("group", { name: "Rival · CPU", exact: true });
+      await expect(rival.locator(".j-voz")).toHaveText("33 de envido");
+      await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
+      await page.clock.runFor(1500);
+    }
     await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
     await expect(tapete.getByText("Vuelta 1", { exact: true })).toBeVisible();
     await expect(page.locator(".j-cuenta div").filter({ hasText: "Valor de la mano" }).locator("dd")).toHaveText(valor);

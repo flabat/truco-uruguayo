@@ -145,6 +145,23 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
         expect(Math.abs((yo.x + yo.width/2) - (enfrente.x + enfrente.width/2))).toBeLessThan(2);
       }
     }
+    const florDeAna = aplicarOnline(iniciarOnline({ ...ejemplo.reparto, mano: 0, dador: 5 }), { asiento: 0, tipo: "flor" });
+    expect(florDeAna.ok).toBe(true);
+    estado = florDeAna.estado;
+    avisar();
+    const aviso = paginas[1].getByRole("status").getByText("Ana cantó flor.", { exact: true });
+    const sinFlor = paginas[1].getByRole("button", { name: "Sin flor", exact: true });
+    await expect(aviso).toBeVisible();
+    await expect(sinFlor).toBeEnabled();
+    const cajaAviso = await aviso.boundingBox();
+    const cajaRespuesta = await sinFlor.boundingBox();
+    expect(cajaAviso.y + cajaAviso.height).toBeLessThanOrEqual(cajaRespuesta.y);
+    const redondilla = paginas[1].getByRole("region", { name: "Historial de la redondilla" });
+    await expect(redondilla.getByRole("listitem")).toHaveText(["Ana dijo «Flor»."]);
+    if (ancho <= 760) {
+      const tapete = await paginas[1].getByRole("region", { name: "Tapete" }).boundingBox();
+      expect((await redondilla.boundingBox()).y).toBeLessThan(tapete.y);
+    }
     estado = iniciarOnline(ejemplo.reparto, ejemplo.puntosInicio, ejemplo.meta, ejemplo.numero);
     avisar();
     for (const [i, page] of paginas.entries()) {
@@ -157,6 +174,8 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await paginas[2].getByRole("button", { name: "Quiero", exact: true }).click();
     await expect(paginas[4].getByText("1 buena", { exact: true })).toBeVisible();
     await expect(paginas[4].getByText(/Duelo 1 de 3 ·/)).toBeVisible();
+    const historia = paginas[4].getByRole("region", {name: "Historial del duelo"});
+    await expect(historia.getByRole("listitem")).toHaveText(["Félix dijo «Envido».", "Clara dijo «Quiero»."]);
     const retiro = paginas[5].getByRole("button", { name: "Irse al mazo" });
     await expect(paginas[5].getByText("1 buena", { exact: true })).toBeVisible();
     await expect(retiro).toBeDisabled();
@@ -189,6 +208,8 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await paginas[0].getByRole("button", { name: "Flor", exact: true }).click();
     await paginas[3].reload();
     await expect(paginas[3].getByRole("heading", { name: "Te toca declarar" })).toBeVisible();
+    await expect(paginas[3].getByRole("status").getByText("Ana cantó flor.", { exact: true })).toBeVisible();
+    await expect(historia.getByRole("listitem")).toHaveText(["Ana dijo «Flor»."]);
     await paginas[3].getByRole("button", { name: "Flor", exact: true }).click();
     await paginas[3].getByRole("button", { name: "Contraflor al resto", exact: true }).click();
     await paginas[0].getByRole("button", { name: "Quiero", exact: true }).click();
@@ -199,10 +220,58 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
     }
     expect(confirmadas).toEqual(ejemplo.acciones);
+    await expect(historia.getByRole("listitem")).toHaveText([
+      "Diego dijo «Flor».", "Diego dijo «Contraflor al resto».", "Ana dijo «Quiero».",
+    ]);
     await paginas[4].getByText(/Duelo 2 de 3 · Ganó el equipo 1/).click();
     await expect(paginas[4].getByText("Equipo 1 · 11 tantos por flor (Ana con 38) · valor del canto 15 tantos.")).toBeVisible();
+    await expect(paginas[4].getByText("Diego dijo «Contraflor al resto».", { exact: true })).toHaveCount(1);
   } finally {
     acuseEnvido.resolve();
     await Promise.all(contextos.map(ctx => ctx.close()));
   }
+});
+
+test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambos ganadores al final del reparto", async ({ page }) => {
+  const espectadora = 4; // No llegó a jugar su duelo.
+  let estado = iniciarOnline(ejemplo.reparto, ejemplo.puntosInicio, ejemplo.meta, ejemplo.numero);
+  let version = 1;
+  let canal;
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  await page.routeWebSocket("**/vivo", socket => { canal = socket; });
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    const json = pathname === "/api/jugador" ? jugadores[espectadora] : pathname.endsWith("/partida")
+      ? lectura(estado, espectadora, version) : crearSala(espectadora);
+    return route.fulfill({ json });
+  });
+  await page.goto("jugar/?mesa=" + id);
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  await expect(tapete).toBeVisible();
+  await expect(page.getByText("Reconectando con tu mesa…")).toHaveCount(0);
+  for (const { duelo, ...accion } of ejemplo.acciones) {
+    expect(estado.lance.duelo).toBe(duelo);
+    const paso = aplicarOnline(estado, accion);
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  canal.send(JSON.stringify({ tipo: "actualizar" }));
+  for (const [asiento, canto] of [
+    [5, "Envido"], [2, "Quiero"], [2, "37 de envido"], [5, "Me voy al mazo"],
+    [0, "Flor"], [3, "Flor"], [3, "Contraflor al resto"], [0, "Quiero"], [0, "38 de flor"],
+  ]) {
+    const puesto = tapete.getByRole("group", { name: "Asiento " + (asiento + 1) + " · " + nombres[asiento], exact: true });
+    await expect(puesto.locator(".j-voz")).toHaveText(canto);
+    await expect(tapete.locator(".j-prueba-tantos")).toHaveCount(0);
+    await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+    await page.clock.runFor(1500);
+  }
+  const flor = tapete.getByRole("figure", { name: "Flor ganadora · 38 tantos" });
+  const envido = tapete.getByRole("figure", { name: "Envido ganador · 37 tantos" });
+  await expect(flor.getByRole("img")).toHaveCount(3);
+  await expect(flor).toContainText("Duelo 2");
+  await expect(envido.getByRole("img")).toHaveCount(2);
+  await expect(envido).toContainText("Duelo 1");
 });
