@@ -10,7 +10,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { replayMatch } from "../arena/index.ts";
 import { summarize, type FamilyResult, type PairOutcome } from "../eval/statistics.ts";
 import { incumbent } from "../seat/index.ts";
-import { buildId, families, prepare, referee, root, sha, type Field, type Receipt } from "./field.ts";
+import { buildId, families, prepare, referee, root, sha, type Field, type Receipt, type RoleDiagnostics } from "./field.ts";
 
 const json=(v:unknown)=>JSON.stringify(v);
 const bytes=(f:string)=>readFileSync(f);
@@ -86,7 +86,7 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
   const planHash=sha(bytes(join(dir,"plan.json")));
   const service=referee(field,file=>bytes(join(dir,file)));
   const summaries:FamilyResult[]=[],files:{path:string;sha256:string}[]=[];
-  const latency:number[]=[],fallbacks:Record<string,number>={};
+  const latency:number[]=[],roleTotals:Record<string,RoleDiagnostics>={};
   const awards:Record<string,{won:number;conceded:number}>={};
   const bands:Record<string,{matches:number;wins:number;scorePriorSum:number}>={};
   if(!verifyOnly) mkdirSync(output,{recursive:true,mode:0o700});
@@ -108,9 +108,24 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
         for(const r of receipts) {
           assert.equal(r.match.format,field.format);
           replayMatch(r.match,seed);
+          const actionCount = r.match.hands.reduce((n,h)=>n+h.turns.length,0);
+          assert.equal(r.roles.opponent.decisions+r.roles.tested.decisions+r.roles.teammate.decisions,actionCount);
+          assert.equal(r.roles.tested.decisions,r.latencyUs.length);
+          for(const [role,metric] of Object.entries(r.roles)) {
+            const key=[r.arm,f.id,role].join(":");
+            const total=roleTotals[key]??={decisions:0,fallbacks:{}};
+            assert.ok(Number.isSafeInteger(metric.decisions)&&metric.decisions>=0);
+            total.decisions+=metric.decisions;
+            let reasons=0;
+            for(const [reason,n] of Object.entries(metric.fallbacks)) {
+              assert.ok(Number.isSafeInteger(n)&&n>0);
+              reasons+=n;
+              total.fallbacks[reason]=(total.fallbacks[reason]??0)+n;
+            }
+            assert.ok(reasons<=metric.decisions);
+          }
           if(r.arm!=="candidate") continue;
           for(const us of r.latencyUs) {assert.ok(Number.isSafeInteger(us)&&us>=0); latency.push(us);}
-          for(const [reason,n] of Object.entries(r.fallbacks)) fallbacks[reason]=(fallbacks[reason]??0)+n;
           const team=r.match.leg;
           const visited=new Set<string>();
           for(const h of r.match.hands) {
@@ -137,10 +152,17 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
   assert.ok(latency.length);
   latency.sort((a,b)=>a-b);
   const pct=(p:number)=>latency[Math.ceil(latency.length*p)-1]/1000;
-  const fallbackRate=Object.values(fallbacks).reduce((a,b)=>a+b,0)/latency.length;
+  let testedFallbacks=0,invalidField=false;
+  for(const [key,metric] of Object.entries(roleTotals)) {
+    const count=Object.values(metric.fallbacks).reduce((a,b)=>a+b,0);
+    if(key.startsWith("candidate:") && key.endsWith(":tested")) testedFallbacks+=count;
+    if(Object.keys(metric.fallbacks).some(reason=>reason!=="timeout")) invalidField=true;
+    if(!key.endsWith(":tested") && metric.decisions && count/metric.decisions>field.fallbackLimit) invalidField=true;
+  }
+  const fallbackRate=testedFallbacks/latency.length;
   const report={format:field.format,planSha256:planHash,matchCount:4*plan.pairs*summaries.length,
-    field:stats,latencyMs:{p50:pct(.5),p95:pct(.95),p99:pct(.99)},decisions:latency.length,fallbackRate,fallbacks,
-    awards,scoreBands:bands,receiptSha256:sha(json(files)),result:decision(stats,fallbackRate,field.fallbackLimit)};
+    field:stats,latencyMs:{p50:pct(.5),p95:pct(.95),p99:pct(.99)},decisions:latency.length,fallbackRate,roleTotals,invalidField,
+    awards,scoreBands:bands,receiptSha256:sha(json(files)),result:invalidField?"inconclusive":decision(stats,fallbackRate,field.fallbackLimit)};
   const manifest=join(output,"manifest.json");
   if(!verifyOnly && !existsSync(manifest)) publish(manifest,json({schema:"chico-championship-result-v1",report,files,
     elapsedMs:Math.round(performance.now()-start),runtime:{node:process.version,cpu:cpus()[0].model,arch:arch(),system:release(),memory:totalmem()}})+"\n");

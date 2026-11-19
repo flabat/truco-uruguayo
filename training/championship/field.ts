@@ -8,7 +8,8 @@ import { artifactPin, openActor } from "../../api/actor-registry.ts";
 import { createServing, type ServingDecision } from "../../api/serving.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { playMatchAsync, replayMatch, sample, type MatchRecord } from "../arena/index.ts";
-import { formats, versions, type Format, type SeatObservation } from "../contracts/index.ts";
+import type { Asiento } from "../../src/motor/reparto.ts";
+import { formats, seatsFor, versions, type Format, type SeatObservation } from "../contracts/index.ts";
 import { incumbent, challenger } from "../seat/index.ts";
 
 export const deadlineMs = 200;
@@ -27,6 +28,12 @@ export function buildId() {
     .split("\0").filter(p=>/\.(ts|sql|py)$/.test(p)).sort();
   return sha(JSON.stringify(paths.map(p=>[p,sha(readFileSync(join(root,p)))])));
 }
+export function checkArtifact(raw:Buffer, format:Format, expectedHash:string) {
+  assert.equal(sha(raw),expectedHash,"Hash externo del artefacto incorrecto.");
+  const model=JSON.parse(raw.toString());
+  for (let seat=0; seat<seatsFor(format); seat++) openActor(model,format,seat as Asiento);
+  return {model, pin:artifactPin(model)};
+}
 export function prepare(bundlePath:string) {
   const b:Bundle=JSON.parse(readFileSync(bundlePath,"utf8"));
   assert.ok(formats.includes(b.format));
@@ -34,10 +41,8 @@ export function prepare(bundlePath:string) {
   function register(e:Entry):Registered {
     assert.ok(e.id && e.lineage && e.file);
     const raw=readFileSync(resolve(dirname(bundlePath),e.file));
-    assert.equal(sha(raw),e.sha256,"Hash externo del artefacto incorrecto.");
-    const model=JSON.parse(raw.toString());
-    openActor(model,b.format,0);
-    const pin=artifactPin(model), file=pin+".json";
+    const {pin}=checkArtifact(raw,b.format,e.sha256);
+    const file=pin+".json";
     artifacts.set(file,raw);
     return {...e,file,pin};
   }
@@ -46,7 +51,9 @@ export function prepare(bundlePath:string) {
   assert.equal(counter.trainedAgainstSha256,candidate.sha256,"El contrajugador debe entrenarse contra este candidato.");
   if(b.format !== "duel") assert.ok(b.partner,"Falta el compañero no visto.");
   const partner=b.partner && register(b.partner);
-  if(partner) assert.ok(partner.pin!==candidate.pin && partner.pin!==independent.pin);
+  const entrants=[candidate,independent,counter,...(partner?[partner]:[])];
+  assert.equal(new Set(entrants.map(e=>e.pin)).size,entrants.length,"El campo requiere artefactos distintos.");
+  assert.equal(new Set(entrants.map(e=>e.lineage)).size,entrants.length,"El campo requiere linajes identificados por separado.");
   const field:Field={format:b.format,candidate,independent,counter,partner,deadlineMs,fallbackLimit,versions,
     build:buildId(),builtinHash:sha(readFileSync(join(root,"training/baselines/index.ts")))};
   return {field,artifacts};
@@ -58,32 +65,37 @@ export function families(field:Field) {
   })));
 }
 export type Family=ReturnType<typeof families>[number];
+export interface RoleDiagnostics { decisions:number; fallbacks:Record<string,number>; }
+export type Role = "tested"|"teammate"|"opponent";
 export interface Receipt {
   arm:"candidate"|"incumbent"; match:MatchRecord;
   // Only actions by the designated player(s) in the tested arm, excluding frozen teammates and opponents.
-  latencyUs:number[]; fallbacks:Record<string,number>;
+  latencyUs:number[]; roles:Record<Role,RoleDiagnostics>;
 }
 export function referee(field:Field, load:(file:string)=>Buffer) {
   const entries=[field.candidate,field.independent,field.counter,...(field.partner?[field.partner]:[])];
-  const service=createServing({deadlineMs:field.deadlineMs, async loadArtifact(pin) {
-    const entry=entries.find(e=>e.pin===pin);
-    if(!entry) throw Error("missing");
-    const raw=load(entry.file);
-    assert.equal(sha(raw),entry.sha256);
-    return JSON.parse(raw.toString());
-  }});
+  const models=new Map<string,unknown>();
+  for(const e of entries) {
+    assert.equal(e.file,e.pin+".json");
+    const {model,pin}=checkArtifact(load(e.file),field.format,e.sha256);
+    assert.equal(pin,e.pin);
+    models.set(pin,model);
+  }
+  const service=createServing({deadlineMs:field.deadlineMs,async loadArtifact(pin){return models.get(pin);}});
   async function play(f:Family,seed:number,pair:number) {
     const results:Receipt[]=[];
     const oppositePin=f.opponent==="independent"?field.independent.pin:f.opponent==="counter"?field.counter.pin:null;
     const opposite=oppositePin ? undefined : baseline(f.opponent);
     for(const arm of ["candidate","incumbent"] as const) for(const leg of [0,1] as const) {
       const latencyUs:number[]=[];
-      const fallbacks:Record<string,number>={};
+      const roles:Record<Role,RoleDiagnostics>={tested:{decisions:0,fallbacks:{}},teammate:{decisions:0,fallbacks:{}},opponent:{decisions:0,fallbacks:{}}};
       const tested=arm==="candidate"?field.candidate.pin:incumbent.id;
       const match=await playMatchAsync({format:field.format,seed,pair,leg,responders(seat) {
         const onTeam=seat%2===leg;
         const teammate=onTeam && f.lineup==="unseen" && Math.floor(seat/2)===(pair%2);
         return async (obs:SeatObservation,u:number) => {
+          const role=roles[!onTeam?"opponent":teammate?"teammate":"tested"];
+          role.decisions++;
           let result:ServingDecision;
           if(!onTeam && !oppositePin && f.opponent!==incumbent.id) {
             const p=opposite!.decide(obs,obs.legalActions);
@@ -91,15 +103,13 @@ export function referee(field:Field, load:(file:string)=>Buffer) {
           }
           const pin=onTeam?(teammate?field.partner!.pin:tested):(oppositePin??incumbent.id);
           result=await service.decide(pin,obs,u);
-          if(onTeam && !teammate) {
-            latencyUs.push(Math.round(result.latencyMs*1000));
-            if(result.fallback) fallbacks[result.fallback]=(fallbacks[result.fallback]??0)+1;
-          }
+          if(result.fallback) role.fallbacks[result.fallback]=(role.fallbacks[result.fallback]??0)+1;
+          if(onTeam && !teammate) latencyUs.push(Math.round(result.latencyMs*1000));
           return result.action;
         };
       }});
       replayMatch(match,seed);
-      results.push({arm,match,latencyUs,fallbacks});
+      results.push({arm,match,latencyUs,roles});
     }
     return results;
   }
