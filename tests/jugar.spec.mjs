@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { confirmarComputadora, restaurar } from "../api/turnos.ts";
+import { vistaOnline } from "../src/motor/mesa-online.ts";
+import { dueloMazo } from "./fixtures/duelo-mazo.ts";
 
 const mesaId = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
 const token = "t".repeat(32);
@@ -146,6 +149,28 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await page.getByRole("button", { name: "Jugar As de espadas" }).press("Enter");
   await expect(page.getByRole("heading", { name: "Turno de CPU 1" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
+});
+
+test("la entrega en duelo deja el cobro y el historial visibles al volver a la mesa", async ({ page }) => {
+  const rival = seat(1, "computadora", "Computadora 2");
+  const fin = confirmarComputadora(restaurar(dueloMazo, "duel"), "duel", 1, "oros-07");
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("1v1", [personas[0], rival]) };
+    if (path.endsWith("/partida")) return { json: { ...partida, manoNumero: 5,
+      vista: vistaOnline(fin.estado, 0), puntos: [2, 1] } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeVisible();
+  await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
+  const historial = page.locator(".j-historia");
+  await historial.locator("summary").press("Enter");
+  await expect(historial.getByRole("listitem")).toHaveCount(8);
+  await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
+  await expect(historial).not.toContainText(/7 de oros|as de bastos/i);
+  await expect(page.getByRole("button", { name: "Repartir otra mano" })).toBeEnabled();
+  if (process.env.CAPTURAS_MAZO)
+    await historial.screenshot({ path: process.env.CAPTURAS_MAZO + "/mazo-" + test.info().project.name + ".png" });
 });
 
 test("reserva la invitación para el ingreso y recupera la pareja con un canto pendiente", async ({

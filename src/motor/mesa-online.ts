@@ -47,13 +47,27 @@ export function iniciarOnline(reparto: RepartoOnline, puntosInicio: readonly [nu
 
 type PasoOnline = { ok: true; estado: EstadoOnline } | { ok: false; error: ErrorJugada | "accion-invalida" | "accion-no-permitida" };
 
+/** La parda en la segunda también le da la mano a quien ganó la primera. */
+export function segundaPerdidaEnDuelo({ mano }: EstadoOnline, asiento: Asiento): boolean {
+  const primera = mano.vueltas[0]?.resultado;
+  const salida = mano.vueltaActual?.jugadas[0];
+  return mano.reparto.manos.length === 2 && mano.vueltas.length === 1
+    && primera?.tipo === "ganada" && primera.asiento !== asiento
+    && mano.turno === asiento && salida?.asiento === primera.asiento
+    && mano.restantes[asiento].every(carta => compararCartas(carta, salida.carta, mano.reparto.muestra) <= 0);
+}
+
 export function aplicarOnline(estado: EstadoOnline, accion: AccionOnline): PasoOnline {
   if (estado.resultado) return { ok: false, error: "mano-cerrada" };
   if (!accion || !esAsiento(accion.asiento) || accion.asiento >= estado.mano.reparto.manos.length) {
     return { ok: false, error: "accion-invalida" };
   }
   const { tipo, asiento } = accion;
-  if (!legalesOnline(estado, asiento).includes(tipo)) {
+  const legales = legalesOnline(estado, asiento);
+  const permitida = tipo === "mazo"
+    ? legales.includes("carta") && segundaPerdidaEnDuelo(estado, asiento)
+    : legales.includes(tipo);
+  if (!permitida) {
     return { ok: false, error: !aDecidir(estado).includes(asiento) ? "fuera-de-turno" : "accion-no-permitida" };
   }
   const siguiente = { ...estado };

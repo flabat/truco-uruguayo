@@ -7,7 +7,7 @@ type CantoEnvido = "envido" | "real-envido" | "falta-envido";
 type CantoFlor = "flor" | "con-flor-envido" | "contraflor-al-resto";
 type CantoLateral = CantoEnvido | CantoFlor;
 type Canto = CantoTruco | CantoLateral;
-export type TipoAccionOnline = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta";
+export type TipoAccionOnline = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta" | "mazo";
 export type AccionOnline = ({ tipo: "carta" } & Jugada)
   | { tipo: Exclude<TipoAccionOnline, "carta">; asiento: Asiento };
 
@@ -27,7 +27,7 @@ export interface EstadoOnline {
   meta: number;
   acciones: readonly AccionOnline[];
   cobros: readonly Cobro[];
-  resultado: { equipo: Equipo; tantos: number; motivo: "vueltas" | "rechazo" | "flor" | "envido" } | null;
+  resultado: { equipo: Equipo; tantos: number; motivo: "vueltas" | "rechazo" | "mazo" | "flor" | "envido" } | null;
   valorTruco: number;
   trucoPendiente: Oferta<CantoTruco> | null;
   ultimoCantorTruco: Asiento | null;
@@ -96,7 +96,7 @@ export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccio
   return legales;
 }
 
-function cobrar(estado: EstadoOnline, cobro: Cobro, cierre?: "vueltas" | "rechazo") {
+function cobrar(estado: EstadoOnline, cobro: Cobro, cierre?: "vueltas" | "rechazo" | "mazo") {
   estado.cobros = [...estado.cobros, cobro];
   const { equipo, tantos } = cobro;
   const acumulado = estado.cobros.reduce((total, c) => total + (c.equipo === equipo ? c.tantos : 0), estado.puntosInicio[equipo]);
@@ -172,6 +172,9 @@ export function resolverCanto(estado: EstadoOnline, accion: Exclude<AccionOnline
   const { tipo, asiento } = accion;
   const falta = estado.meta - Math.max(...estado.puntosInicio);
   switch (tipo) {
+    case "mazo":
+      cobrar(estado, { equipo: asiento === 0 ? 1 : 0, tantos: estado.valorTruco, motivo: "truco" }, "mazo");
+      break;
     case "truco":
     case "retruco":
     case "vale-cuatro":

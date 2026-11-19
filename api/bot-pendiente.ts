@@ -3,10 +3,10 @@ import { aDecidir } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { Move, SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
-import { commitTurn, signalRules } from "../training/signals/index.ts";
+import { signalRules } from "../training/signals/index.ts";
 import { formatoMesa } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { guardarAcciones, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarComputadora, guardarAcciones, restaurar, type ManoPublicable, type Registro } from "./turnos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -53,8 +53,7 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
       await db.query("ROLLBACK");
       return false;
     }
-    const paso = commitTurn(mano.estado, seat, formato, decision.action);
-    const nueva = {estado: paso.state, turnos: [...mano.turnos, paso.turn]};
+    const nueva = confirmarComputadora(mano, formato, seat, decision.action);
     await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
       [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
     await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
