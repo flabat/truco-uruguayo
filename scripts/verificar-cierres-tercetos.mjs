@@ -42,7 +42,7 @@ async function precargar(mesa, meta, cartas, acciones = []) {
     [mesa, 20 + acciones.length, cartas, [0, meta/2 - 1], JSON.stringify(acciones), meta]);
 }
 
-async function probarCobros(personas, meta, primerDuelo) {
+async function probarCobros(personas, meta, primerDuelo, dosRestos = false) {
   const [anfitrion] = personas;
   const m = await peticion(anfitrion, "/api/mesas", {modo: "3v3", meta}, 201);
   const ruta = "/api/mesas/" + m.id;
@@ -53,6 +53,11 @@ async function probarCobros(personas, meta, primerDuelo) {
     [cartas.manos[0],cartas.manos[4]] = [cartas.manos[4],cartas.manos[0]];
     [cartas.manos[3],cartas.manos[1]] = [cartas.manos[1],cartas.manos[3]];
   }
+  if (dosRestos) {
+    cartas.manos[0] = ["copas-10", "copas-11", "copas-12"];
+    cartas.manos[3] = ["espadas-01", "espadas-02", "espadas-03"];
+    cartas.manos[5] = ["oros-03", "oros-06", "bastos-04"];
+  }
   await precargar(m.id, meta, cartas);
   let p = await peticion(anfitrion, ruta + "/partida");
   const jugar = async (asiento, tipo) => {
@@ -60,7 +65,16 @@ async function probarCobros(personas, meta, primerDuelo) {
     p = await peticion(personas[asiento], ruta + "/acciones", orden);
     assert.deepEqual(await peticion(personas[asiento], ruta + "/acciones", orden), p);
   };
-  if (!primerDuelo) {
+  if (dosRestos) {
+    await jugar(0, "flor");
+    await jugar(3, "flor");
+    await jugar(3, "contraflor-al-resto");
+    await jugar(0, "quiero");
+    assert.deepEqual(p.puntos, [0,39]);
+    await jugar(0, "mazo");
+    assert.deepEqual(p.puntos, [0,40]);
+    assert.equal(p.lance.duelo, 2);
+  } else if (!primerDuelo) {
     await jugar(0, "mazo");
     await jugar(3, "paso-flor");
     assert.equal(p.lance.duelo, 2);
@@ -72,7 +86,7 @@ async function probarCobros(personas, meta, primerDuelo) {
   await jugar(primerDuelo ? mayor : menor, "flor");
   await jugar(primerDuelo ? mayor : menor, "contraflor-al-resto");
   await jugar(primerDuelo ? menor : mayor, "quiero");
-  if (meta === 50) {
+  if (meta === 50 && !dosRestos) {
     assert.deepEqual(p.puntos, [0,40]);
     assert.equal(p.ganadorPartida, null);
     await jugar(1, "mazo");
@@ -85,7 +99,7 @@ async function probarCobros(personas, meta, primerDuelo) {
     assert.deepEqual(siguiente.puntos, [1,41]);
   } else {
     assert.equal(p.ganadorPartida, 1);
-    assert.deepEqual(p.puntos, [0,26]);
+    assert.deepEqual(p.puntos, [0,meta]);
     assert.equal(p.lance.duelo, primerDuelo ? 1 : 2);
     for (const persona of personas) {
       const final = await peticion(persona, ruta + "/partida");
@@ -134,6 +148,7 @@ try {
   } else {
     const personas = await Promise.all(Array.from({length:6}, (_,i) => sesion(i)));
     await probarCobros(personas, 50, false);
+    await probarCobros(personas, 50, false, true);
     await probarCobros(personas, 26, false);
     await probarCobros(personas, 26, true);
   }
