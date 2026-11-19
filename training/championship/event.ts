@@ -81,6 +81,7 @@ export async function championship(dir:string,output:string,verifyOnly:boolean,e
   assert.equal(planHash,expectedHash,"El plan difiere del compromiso prerregistrado.");
   const plan=read(join(dir,"plan.json")),field=plan.field as Field;
   assert.equal(plan.schema,"chico-championship-v1"); assert.equal(field.build,buildId());
+  assert.equal(sha(bytes(join(dir,"counter-training.json"))),field.counter.trainingReceiptSha256);
   assert.deepEqual(plan.fieldFamilies,families(field)); assert.ok(Number.isSafeInteger(plan.pairs)&&plan.pairs>=24&&plan.pairs<=256);
   assert.deepEqual(plan.thresholds,{direct:0.5,delta:-0.02}); assert.equal(field.deadlineMs,200); assert.equal(field.fallbackLimit,0.005);
   const secret=bytes(join(dir,"referee-key")).toString();

@@ -16,8 +16,9 @@ export const deadlineMs = 200;
 export const fallbackLimit = 0.005;
 export const root = fileURLToPath(new URL("../../",import.meta.url));
 export const sha = (v:string|Buffer) => createHash("sha256").update(v).digest("hex");
-export interface Entry {id:string; lineage:string; file:string; sha256:string; trainedAgainstSha256?:string}
-export interface Bundle {format:Format; candidate:Entry; independent:Entry; counter:Entry; partner?:Entry}
+export interface Entry {id:string; lineage:string; file:string; sha256:string; trainingSeed:number;
+  trainedAgainstSha256?:string; trainingReceipt?:string; trainingReceiptSha256?:string}
+export interface Bundle {schema:string; registryPins:Record<string,string>; format:Format; candidate:Entry; independent:Entry; counter:Entry; partner?:Entry}
 export interface Registered extends Entry {pin:string}
 export interface Field {
   format:Format; candidate:Registered; independent:Registered; counter:Registered; partner?:Registered;
@@ -36,12 +37,14 @@ export function checkArtifact(raw:Buffer, format:Format, expectedHash:string) {
 }
 export function prepare(bundlePath:string) {
   const b:Bundle=JSON.parse(readFileSync(bundlePath,"utf8"));
+  assert.equal(b.schema,"league-championship-input-v1");
   assert.ok(formats.includes(b.format));
   const artifacts = new Map<string, Buffer>();
   function register(e:Entry):Registered {
-    assert.ok(e.id && e.lineage && e.file);
+    assert.ok(e.id && e.lineage && e.file && Number.isSafeInteger(e.trainingSeed));
     const raw=readFileSync(resolve(dirname(bundlePath),e.file));
     const {pin}=checkArtifact(raw,b.format,e.sha256);
+    assert.equal(b.registryPins[e.id],pin,"El pin del registro difiere del artefacto.");
     const file=pin+".json";
     artifacts.set(file,raw);
     return {...e,file,pin};
@@ -49,11 +52,23 @@ export function prepare(bundlePath:string) {
   const candidate=register(b.candidate), independent=register(b.independent), counter=register(b.counter);
   assert.ok(independent.pin !== candidate.pin && counter.pin !== candidate.pin);
   assert.equal(counter.trainedAgainstSha256,candidate.sha256,"El contrajugador debe entrenarse contra este candidato.");
+  assert.ok(b.counter.trainingReceipt && b.counter.trainingReceiptSha256);
+  const receipt=readFileSync(resolve(dirname(bundlePath),b.counter.trainingReceipt));
+  assert.equal(sha(receipt),b.counter.trainingReceiptSha256);
+  const proof=JSON.parse(receipt.toString());
+  assert.equal(proof.format,b.format);
+  assert.equal(proof.trainingSeed,counter.trainingSeed);
+  assert.ok(Number.isSafeInteger(proof.completedMatches) && proof.completedMatches>0);
+  assert.equal(proof.trainedAgainstSha256,candidate.sha256);
+  assert.equal(proof.chosen,counter.sha256);
+  counter.trainingReceipt="counter-training.json";
+  artifacts.set(counter.trainingReceipt,receipt);
   if(b.format !== "duel") assert.ok(b.partner,"Falta el compañero no visto.");
   const partner=b.partner && register(b.partner);
   const entrants=[candidate,independent,counter,...(partner?[partner]:[])];
   assert.equal(new Set(entrants.map(e=>e.pin)).size,entrants.length,"El campo requiere artefactos distintos.");
   assert.equal(new Set(entrants.map(e=>e.lineage)).size,entrants.length,"El campo requiere linajes identificados por separado.");
+  assert.equal(new Set(entrants.map(e=>e.trainingSeed)).size,entrants.length,"Se requieren semillas de entrenamiento distintas.");
   const field:Field={format:b.format,candidate,independent,counter,partner,deadlineMs,fallbackLimit,versions,
     build:buildId(),builtinHash:sha(readFileSync(join(root,"training/baselines/index.ts")))};
   return {field,artifacts};
