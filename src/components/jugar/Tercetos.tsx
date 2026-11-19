@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
-import { AvisoFlor, canto, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
+import { canto } from "../../lib/cantos";
+import { AvisoFlor, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import { Naipe, Tanteador } from "./Tablero";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import "./tercetos.css";

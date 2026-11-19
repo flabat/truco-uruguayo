@@ -2,6 +2,7 @@ import type { Ejemplo, Tema } from "../../aprendizaje/lecciones";
 import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
+import { canto } from "../../lib/cantos";
 import type { CardId } from "../../motor/cartas";
 import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";
@@ -152,7 +153,7 @@ export function montarEjercicio(base: string) {
         if (paso?.tipo === "decidir-flor") {
           instruccion.textContent = "Mirá los palos y las piezas antes de decidir.";
           opciones.append(boton("Tengo flor", () => responder({ tipo: paso.tipo, hayFlor: true }), "ap-opcion"),
-            boton("Sin flor", () => responder({ tipo: paso.tipo, hayFlor: false }), "ap-opcion"));
+            boton(canto["paso-flor"], () => responder({ tipo: paso.tipo, hayFlor: false }), "ap-opcion"));
         } else if (paso?.tipo === "responder-total") {
           instruccion.textContent = "Sumá los tantos de las cartas que elegiste.";
           cuenta.hidden = false;

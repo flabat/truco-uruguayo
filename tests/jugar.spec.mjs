@@ -242,7 +242,7 @@ for (const [caso, cantos] of [
     });
     await page.goto("jugar/?mesa=" + mesaId);
     const panel = page.locator(".j-jugada-panel");
-    const respuesta = panel.getByRole("button", { name: "Sin flor", exact: true });
+    const respuesta = panel.getByRole("button", { name: "Yo no canto", exact: true });
     const estadoDelTurno = panel.getByRole("status");
     const anuncio = estadoDelTurno.getByText(/Computadora 2 cantó flor/i);
     const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
@@ -270,10 +270,10 @@ for (const [caso, cantos] of [
     await respuesta.press("Enter");
     await expect(respuesta).toHaveCount(0);
     await expect(anuncio).toHaveCount(0);
-    await expect(historial.getByRole("listitem")).toContainText([/Ana dijo «Sin flor»/]);
+    await expect(historial.getByRole("listitem")).toContainText([/Ana dijo «Yo no canto»/]);
     if (duelo) {
       await page.reload();
-      await expect(historial.getByRole("listitem")).toContainText([/Computadora 2 dijo «Flor»/, /Ana dijo «Sin flor»/]);
+      await expect(historial.getByRole("listitem")).toContainText([/Computadora 2 dijo «Flor»/, /Ana dijo «Yo no canto»/]);
     }
   });
 }

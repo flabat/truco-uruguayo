@@ -148,7 +148,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     estado = florDeAna.estado;
     avisar();
     const aviso = paginas[1].getByRole("status").getByText("Ana cantó flor.", { exact: true });
-    const sinFlor = paginas[1].getByRole("button", { name: "Sin flor", exact: true });
+    const sinFlor = paginas[1].getByRole("button", { name: "Yo no canto", exact: true });
     await expect(aviso).toBeVisible();
     await expect(sinFlor).toBeEnabled();
     const cajaAviso = await aviso.boundingBox();

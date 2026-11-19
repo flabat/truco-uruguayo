@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { AvisoFlor, canto, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
+import { canto } from "../../lib/cantos";
+import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
 import type { VueltaCerrada } from "../../motor/mano";
 import type { VistaOnline } from "../../motor/mesa-online";

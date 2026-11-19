@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { signals, type Signal } from "../../../training/contracts/index";
+import { canto } from "../../lib/cantos";
 import { cartasPorId } from "../../lib/cartas";
 import juego from "../../data/juego.json";
 import { EnJuego } from "./Tablero";
@@ -38,7 +39,7 @@ export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, 
           const {action} = turn;
           const gesto = menu.find(s => s.id === turn.signal)!.texto;
           const jugada = action.tipo === "carta" ? cartasPorId.get(action.carta)!.nombre
-            : action.tipo === "paso-flor" ? "Sin flor" : action.tipo.replaceAll("-", " ");
+            : action.tipo === "paso-flor" ? canto[action.tipo] : action.tipo.replaceAll("-", " ");
           return <li key={i}><strong>{mesa.asientos[action.asiento].nombre}</strong> · {gesto} · {jugada}</li>;
         })}</ol>
       </section>
