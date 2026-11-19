@@ -3,9 +3,11 @@ import test from "node:test";
 import fixture from "../fixtures/pico-tercetos-v2.json" with { type: "json" };
 import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos, versionReglasTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import { esRepartoOnline, type Asiento } from "../../src/motor/reparto.ts";
 
-const reparto = fixture.reparto as RepartoOnline;
+const guardado: unknown = fixture.reparto;
+assert.ok(esRepartoOnline(guardado));
+const reparto: RepartoOnline = guardado;
 const asientos = [0, 1, 2, 3, 4, 5] as const;
 
 function confirmar(estado: EstadoOnline, accion: AccionOnline) {
