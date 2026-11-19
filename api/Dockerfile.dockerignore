@@ -7,3 +7,10 @@
 !src/
 !src/motor/
 !src/motor/*.ts
+!training/
+!training/contracts/
+!training/contracts/*.ts
+!training/seat/
+!training/seat/*.ts
+!training/signals/
+!training/signals/*.ts
