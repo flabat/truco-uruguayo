@@ -13,3 +13,6 @@
 !scripts/tatu/**
 !infra/
 !infra/web.conf
+!training/
+!training/contracts/
+!training/contracts/index.ts
