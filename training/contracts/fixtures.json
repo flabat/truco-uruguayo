@@ -1,0 +1,360 @@
+[
+  {
+    "id": "falta-duel",
+    "referee": {
+      "schema": "committed-v1",
+      "format": "duel",
+      "hand": 0,
+      "deal": {
+        "versionReparto": "online-1",
+        "dador": 1,
+        "mano": 0,
+        "manos": [
+          [
+            "espadas-03",
+            "oros-06",
+            "bastos-02"
+          ],
+          [
+            "oros-07",
+            "oros-11",
+            "bastos-03"
+          ]
+        ],
+        "muestra": "bastos-01"
+      },
+      "startScore": [
+        0,
+        0
+      ],
+      "turns": [
+        {
+          "action": {
+            "tipo": "falta-envido",
+            "asiento": 0
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "quiero",
+            "asiento": 1
+          },
+          "awards": [
+            {
+              "equipo": 0,
+              "tantos": 40,
+              "motivo": "envido",
+              "asiento": 0,
+              "tantoGanador": 36
+            }
+          ]
+        }
+      ],
+      "endScore": [
+        40,
+        0
+      ]
+    },
+    "expected": [
+      {
+        "after": 0,
+        "actor": 0,
+        "baseActions": [
+          "espadas-03",
+          "oros-06",
+          "bastos-02",
+          "truco",
+          "envido",
+          "real-envido",
+          "falta-envido"
+        ],
+        "ownTotal": 36,
+        "score": [
+          0,
+          0
+        ],
+        "pending": null
+      },
+      {
+        "after": 1,
+        "actor": 1,
+        "baseActions": [
+          "quiero",
+          "no-quiero"
+        ],
+        "ownTotal": 27,
+        "score": [
+          0,
+          0
+        ],
+        "pending": "falta-envido"
+      },
+      {
+        "after": 2,
+        "actor": null,
+        "baseActions": [],
+        "score": [
+          40,
+          0
+        ],
+        "pending": null
+      }
+    ]
+  },
+  {
+    "id": "falta-pairs",
+    "referee": {
+      "schema": "committed-v1",
+      "format": "pairs",
+      "hand": 0,
+      "deal": {
+        "versionReparto": "online-1",
+        "dador": 3,
+        "mano": 0,
+        "manos": [
+          [
+            "espadas-03",
+            "oros-06",
+            "bastos-02"
+          ],
+          [
+            "oros-07",
+            "oros-11",
+            "bastos-03"
+          ],
+          [
+            "oros-01",
+            "copas-03",
+            "espadas-07"
+          ],
+          [
+            "copas-05",
+            "espadas-02",
+            "oros-03"
+          ]
+        ],
+        "muestra": "bastos-01"
+      },
+      "startScore": [
+        0,
+        0
+      ],
+      "turns": [
+        {
+          "action": {
+            "tipo": "falta-envido",
+            "asiento": 0
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "quiero",
+            "asiento": 1
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "paso-flor",
+            "asiento": 2
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "paso-flor",
+            "asiento": 3
+          },
+          "awards": [
+            {
+              "equipo": 0,
+              "tantos": 40,
+              "motivo": "envido",
+              "asiento": 0,
+              "tantoGanador": 36
+            }
+          ]
+        }
+      ],
+      "endScore": [
+        40,
+        0
+      ]
+    },
+    "expected": [
+      {
+        "after": 0,
+        "actor": 0,
+        "baseActions": [
+          "espadas-03",
+          "oros-06",
+          "bastos-02",
+          "truco",
+          "envido",
+          "real-envido",
+          "falta-envido"
+        ],
+        "ownTotal": 36,
+        "score": [
+          0,
+          0
+        ],
+        "pending": null
+      },
+      {
+        "after": 1,
+        "actor": 1,
+        "baseActions": [
+          "quiero",
+          "no-quiero"
+        ],
+        "ownTotal": 27,
+        "score": [
+          0,
+          0
+        ],
+        "pending": "falta-envido"
+      },
+      {
+        "after": 4,
+        "actor": null,
+        "baseActions": [],
+        "score": [
+          40,
+          0
+        ],
+        "pending": null
+      }
+    ]
+  },
+  {
+    "id": "falta-pairs-senas",
+    "referee": {
+      "schema": "committed-v1",
+      "format": "pairs-senas",
+      "hand": 0,
+      "deal": {
+        "versionReparto": "online-1",
+        "dador": 3,
+        "mano": 0,
+        "manos": [
+          [
+            "espadas-03",
+            "oros-06",
+            "bastos-02"
+          ],
+          [
+            "oros-07",
+            "oros-11",
+            "bastos-03"
+          ],
+          [
+            "oros-01",
+            "copas-03",
+            "espadas-07"
+          ],
+          [
+            "copas-05",
+            "espadas-02",
+            "oros-03"
+          ]
+        ],
+        "muestra": "bastos-01"
+      },
+      "startScore": [
+        0,
+        0
+      ],
+      "turns": [
+        {
+          "signal": "cejas",
+          "action": {
+            "tipo": "falta-envido",
+            "asiento": 0
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "quiero",
+            "asiento": 1
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "paso-flor",
+            "asiento": 2
+          },
+          "awards": []
+        },
+        {
+          "action": {
+            "tipo": "paso-flor",
+            "asiento": 3
+          },
+          "awards": [
+            {
+              "equipo": 0,
+              "tantos": 40,
+              "motivo": "envido",
+              "asiento": 0,
+              "tantoGanador": 36
+            }
+          ]
+        }
+      ],
+      "endScore": [
+        40,
+        0
+      ]
+    },
+    "expected": [
+      {
+        "after": 0,
+        "actor": 0,
+        "baseActions": [
+          "espadas-03",
+          "oros-06",
+          "bastos-02",
+          "truco",
+          "envido",
+          "real-envido",
+          "falta-envido"
+        ],
+        "ownTotal": 36,
+        "score": [
+          0,
+          0
+        ],
+        "pending": null
+      },
+      {
+        "after": 1,
+        "actor": 1,
+        "baseActions": [
+          "quiero",
+          "no-quiero"
+        ],
+        "ownTotal": 27,
+        "score": [
+          0,
+          0
+        ],
+        "pending": "falta-envido"
+      },
+      {
+        "after": 4,
+        "actor": null,
+        "baseActions": [],
+        "score": [
+          40,
+          0
+        ],
+        "pending": null
+      }
+    ]
+  }
+]
