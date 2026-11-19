@@ -1,5 +1,7 @@
 # Campeonato de computadoras
 
+El primer campeonato local jugó 41.984 chicos. Los tres candidatos perdieron el contraste directo simultáneo contra V1. [Decisiones, resultados por rival y ejemplos de replay](results/2026-11-local/README.md)
+
 Un árbitro independiente recibe tres bundles congelados de la liga, uno por formato. Cada bundle identifica por SHA-256 de archivo el candidato, un checkpoint independiente y un contrajugador entrenado específicamente contra el candidato. En parejas incluye un cuarto artefacto para el compañero desconocido. Al registrar se verifican los archivos, se prueban con el lector del servicio y se copian a la carpeta del árbitro. Los modelos se sirven con el mismo pin canónico que la API.
 
 Sobre el checkout registrado con Node 24:
