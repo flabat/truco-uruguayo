@@ -68,6 +68,10 @@ const fraction = (a: readonly number[]) => (a[0] + a[1]) / 2;
 /** Independent development draws only; size is fixed before the secret final key exists. */
 export async function register(bundle: string, dir: string) {
   const { field, artifacts } = prepare(bundle);
+  assert.ok(
+    field.counter.family,
+    "El campeonato requiere un recibo que identifique la familia del contrajugador.",
+  );
   const fieldFamilies = families(field);
   function registration() {
     const raw = bytes(join(dir, "plan.json"));
@@ -335,6 +339,7 @@ export async function championship(
           id: e.id,
           lineage: e.lineage,
           trainingSeed: e.trainingSeed,
+          ...(e.family && { family: e.family }),
           sha256: e.sha256,
           pin: e.pin,
         }]),

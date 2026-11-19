@@ -22,6 +22,7 @@ export interface Entry {
   file: string;
   sha256: string;
   trainingSeed: number;
+  family?: string;
   trainedAgainstSha256?: string;
   trainingReceipt?: string;
   trainingReceiptSha256?: string;
@@ -91,6 +92,20 @@ export function prepare(bundlePath: string) {
   assert.ok(Number.isSafeInteger(proof.completedMatches) && proof.completedMatches > 0);
   assert.equal(proof.trainedAgainstSha256, candidate.sha256);
   assert.equal(proof.chosen, counter.sha256);
+  if (counter.family !== undefined || proof.chosenFamily !== undefined) {
+    const saved = JSON.parse(artifacts.get(counter.file)!.toString());
+    const family = b.format === "duel" ? "duel-mc" : saved.kind;
+    assert.ok(["duel-mc", "pairs-mc-v1", "pairs-recurrent-v1"].includes(family));
+    assert.equal(counter.family, family, "La familia declarada debe coincidir con los pesos del contrajugador.");
+    assert.equal(proof.chosenFamily, family);
+    assert.equal(proof.trainingStateSchema, b.format === "duel" ? "duel-mc-counter-v1" : versions.checkpoint);
+    assert.match(proof.checkpointSha256, /^[0-9a-f]{64}$/);
+    assert.ok(
+      proof.selection.some((entry: { sha256: string; family: string }) =>
+        entry.sha256 === counter.sha256 && entry.family === family
+      ),
+    );
+  }
   counter.trainingReceipt = "counter-training.json";
   artifacts.set(counter.trainingReceipt, receipt);
   if (b.format !== "duel") assert.ok(b.partner, "Falta el compañero no visto.");

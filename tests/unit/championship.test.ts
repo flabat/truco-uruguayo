@@ -60,10 +60,15 @@ test("reintentar la inscripción conserva el compromiso y comprueba sus archivos
     trainingSeed: response.trainingSeed,
     trainedAgainstSha256: candidate.sha256,
     chosen: response.sha256,
+    chosenFamily: "duel-mc",
+    trainingStateSchema: "duel-mc-counter-v1",
+    checkpointSha256: sha("fixture-checkpoint"),
+    selection: [{ sha256: response.sha256, family: "duel-mc" }],
   });
   writeFileSync(join(dir, "proof.json"), proof);
   const counter = {
     ...response,
+    family: "duel-mc",
     trainedAgainstSha256: candidate.sha256,
     trainingReceipt: "proof.json",
     trainingReceiptSha256: sha(proof),
@@ -85,6 +90,10 @@ test("reintentar la inscripción conserva el compromiso y comprueba sus archivos
   assert.equal(sha(readFileSync(join(target, "plan.json"))), registered.sha256);
   writeFileSync(join(target, "referee-key"), "alterada");
   await assert.rejects(register(bundle, target));
+  const mislabeled = JSON.parse(readFileSync(bundle, "utf8"));
+  mislabeled.counter.family = "pairs-recurrent-v1";
+  writeFileSync(bundle, JSON.stringify(mislabeled));
+  await assert.rejects(register(bundle, target), /familia declarada/);
 });
 
 test("se pesa igual a los adversarios, con ambos tipos de compañero en parejas", () => {
