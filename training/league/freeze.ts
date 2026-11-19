@@ -4,7 +4,7 @@ import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
 import { formats, type Format } from "../contracts/index.ts";
 import { digest, loadPartnerPolicy } from "../partners/policy.ts";
-import { trainCounter } from "./counters.ts";
+import { trainCounter, verifyCounterFamily } from "./counters.ts";
 import { field, json, learningCurve, outcomes, rate, save, sha, trainingSeeds, type Matchup } from "./development.ts";
 
 function artifact(dir:string, source:string, name:string, fmt:Format, seed:number, label:string) {
@@ -66,9 +66,15 @@ export async function freezeBundle(run:string, fmt:Format, stage:"pilot"|"overni
   const seed=923711+formats.indexOf(fmt);
   const path=await trainCounter(fmt,join(bundle,candidate.file),join(bundle,"counter-training"),seed,
     join(run,fmt,"config.json"),counterMatches);
-  const counter={...artifact(bundle,path,"counter",fmt,seed,"targeted-mc"),trainedAgainstSha256:candidate.sha256,
+  const receiptPath=join(bundle,"counter-training","training-receipt.json");
+  const receipt=json(receiptPath);
+  if(receipt.trainingSeed!==seed||receipt.completedMatches!==counterMatches||receipt.trainedAgainstSha256!==candidate.sha256) {
+    throw Error("El entrenamiento no corresponde al campeón congelado y su presupuesto.");
+  }
+  const family=verifyCounterFamily(fmt,path,receipt);
+  const counter={...artifact(bundle,path,"counter",fmt,seed,"targeted-"+family),family,trainedAgainstSha256:candidate.sha256,
     matches:counterMatches,trainingReceipt:"counter-training/training-receipt.json",
-    trainingReceiptSha256:sha(join(bundle,"counter-training","training-receipt.json"))};
+    trainingReceiptSha256:sha(receiptPath)};
   const registryPaths=registryPath?[resolve(registryPath)]:[resolve("api/actor-registry.ts")];
   if(registryPath&&!existsSync(registryPaths[0]))throw Error("No se encontró el registro solicitado.");
   const pins:Record<string,string>={};

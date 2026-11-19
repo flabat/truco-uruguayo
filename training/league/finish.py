@@ -72,6 +72,8 @@ def main():
             if future:
                 future.result()
         write(run/"championship-input"/"index.json",{fmt:fmt+"/bundle.json" for fmt in FORMATS})
+        subprocess.run(["node","training/league/report.ts","--run",run,"--output",run/"public-summary.json"],
+                       cwd=repo,check=True)
 
 
 if __name__=="__main__":
