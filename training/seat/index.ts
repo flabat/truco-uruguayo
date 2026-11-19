@@ -1,21 +1,21 @@
 import { isDeepStrictEqual } from "node:util";
 import { esCardId } from "../../src/motor/cartas.ts";
 import {
-  elegirAccionOnline, vistaOnline, type AccionOnline, type EstadoOnline, type VistaOnline,
+  elegirAccionOnline, vistaOnlineV1, type AccionOnlineV1, type EstadoOnline, type VistaOnlineV1,
 } from "../../src/motor/mesa-online.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento, AsientoV1 } from "../../src/motor/reparto.ts";
 import {
   formats, seatsFor, signals, versions, type ActionId, type Format, type Move,
   type Policy, type PublicTurn, type SeatObservation,
 } from "../contracts/index.ts";
 
-export function decodeMove(move: Move, seat: Asiento): AccionOnline {
+export function decodeMove(move: Move, seat: Asiento): AccionOnlineV1 {
   return esCardId(move) ? { tipo: "carta", carta: move, asiento: seat } : { tipo: move, asiento: seat };
 }
 
 // El árbitro conserva en qué turno se agregaron los cobros. Solo cruzan el límite
 // hacia el actor los datos de la vista pública y la seña reconocida de ese turno.
-function publicHistory(state: EstadoOnline, view: VistaOnline, history: readonly PublicTurn[], format: Format): PublicTurn[] {
+function publicHistory(state: EstadoOnline, view: VistaOnlineV1, history: readonly PublicTurn[], format: Format): PublicTurn[] {
   if (history.length !== state.acciones.length) throw new Error("El historial no cubre las acciones de la mano.");
   let awardIndex = 0;
   const turns = history.map((turn, i) => {
@@ -38,7 +38,7 @@ export function observe(state: EstadoOnline, seat: Asiento, format: Format, hist
   if (!formats.includes(format) || state.mano.reparto.manos.length !== seats) {
     throw new RangeError("El formato no coincide con el número de asientos.");
   }
-  const view = vistaOnline(state, seat);
+  const view = vistaOnlineV1(state, seat);
   const legalActions: Move[] = [];
   for (const type of view.legales) {
     if (type === "carta") legalActions.push(...view.cartas);
@@ -51,7 +51,7 @@ export function observe(state: EstadoOnline, seat: Asiento, format: Format, hist
   const side = state.resultado ? null : state.lateral;
   return {
     schema: versions.observation, format, seats,
-    relativeSeats: Array.from({ length: seats }, (_, i) => ((seat + i) % seats) as Asiento),
+    relativeSeats: Array.from({ length: seats }, (_, i) => ((seat + i) % seats) as AsientoV1),
     view, originalCards: [...state.mano.reparto.manos[seat]], startScore: [...state.puntosInicio], score, target: state.meta,
     history: publicHistory(state, view, history, format), legalActions,
     stakes: {
