@@ -56,6 +56,7 @@ function AsientoEnMesa({
   jugar: (a: Eleccion) => void;
 }) {
   const propio = asiento.asiento === mesa.miAsiento;
+  const dador = asiento.asiento === vista.dador;
   const n = mesa.asientos.length;
   const relativo = (asiento.asiento - mesa.miAsiento + n) % n;
   const lugar = propio
@@ -77,20 +78,46 @@ function AsientoEnMesa({
       : "Tu pareja";
   return (
     <div className={"j-puesto j-" + lugar} role="group" aria-label={papel + " · " + asiento.nombre}>
-      <div className="j-persona">
-        <b>{asiento.nombre}</b>
-        <span>
-          {papel}
-          {asiento.asiento === vista.mano && " · Mano"}
-        </span>
+      <div className="j-ocupante">
+        <div className="j-persona">
+          <b>{asiento.nombre}</b>
+          <span>
+            {papel}
+            {dador && " · Dador"}
+            {asiento.asiento === vista.mano && " · Mano"}
+          </span>
+        </div>
+        {jugada && (
+          <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
+            <Naipe base={base} id={jugada.carta} />
+            {ganadora && <small>Ganó la vuelta</small>}
+          </div>
+        )}
+        {!jugada && !propio && restantes > 0 && (
+          <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
+            {Array.from({ length: restantes }, (_, i) => (
+              <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
+            ))}
+          </div>
+        )}
       </div>
-      {jugada && (
-        <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
-          <Naipe base={base} id={jugada.carta} />
-          {ganadora && <small>Ganó la vuelta</small>}
+      {dador && (
+        <div className="j-muestra" role="img" aria-label={"Muestra " + nombrar(vista.muestra)}>
+          <div aria-hidden="true">
+            <Naipe base={base} id={vista.muestra} />
+            <img
+              className="j-mazo"
+              src={base + "img/cartas/tatu/reverso.webp"}
+              alt=""
+              width={384}
+              height={596}
+            />
+          </div>
+          <small aria-hidden="true">Muestra</small>
+          <strong aria-hidden="true">{nombrar(vista.muestra)}</strong>
         </div>
       )}
-      {propio ? (
+      {propio && (
         <div className="j-mano" role="group" aria-label="Tus cartas">
           {vista.cartas.map((c) => (
             <button
@@ -104,15 +131,6 @@ function AsientoEnMesa({
             </button>
           ))}
         </div>
-      ) : (
-        !jugada &&
-        restantes > 0 && (
-          <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
-            {Array.from({ length: restantes }, (_, i) => (
-              <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
-            ))}
-          </div>
-        )
       )}
     </div>
   );
@@ -272,20 +290,6 @@ export function EnJuego({
                 jugar={jugar}
               />
             ))}
-            <div className="j-muestra">
-              <div>
-                <Naipe base={base} id={v.muestra} />
-                <img
-                  className="j-mazo"
-                  src={base + "img/cartas/tatu/reverso.webp"}
-                  alt=""
-                  width={384}
-                  height={596}
-                />
-              </div>
-              <small>Muestra</small>
-              <strong>{nombrar(v.muestra)}</strong>
-            </div>
           </div>
         </section>
         <section className="j-jugada-panel">

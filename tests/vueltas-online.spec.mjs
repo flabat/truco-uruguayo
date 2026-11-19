@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
-import { versions } from "../training/contracts/index.ts";
+import { signalVersionFor } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
 
 const id = "c81ab831-4566-44a9-9915-041919edc73d";
@@ -18,7 +18,7 @@ const parejas = [
 
 // La misma notificación puede traer varias cartas, incluida la salida de la vuelta siguiente.
 async function abrirMesa(page, formato, manos, jugadasIniciales) {
-  const senas = formato === "pairs-senas";
+  const versionSenas = signalVersionFor(formato);
   const reparto = { versionReparto: "online-1", mano: 0, dador: manos.length - 1, muestra: "oros-06", manos };
   const mesa = {
     id, modo: manos.length === 2 ? "1v1" : "2v2", formato, creadorId: "ana", miAsiento: 0, lista: true,
@@ -70,7 +70,7 @@ async function abrirMesa(page, formato, manos, jugadasIniciales) {
     if (ruta.endsWith("/partida")) {
       datos = {
         version, manoNumero, puntos: tanteador(), meta: 40, ganadorPartida: null,
-        vista: vistaOnline(estado, 0), formato, ...(senas && { versionSenas: versions.signals, turnos }),
+        vista: vistaOnline(estado, 0), formato, ...(versionSenas && { versionSenas, turnos }),
       };
     }
     await route.fulfill({ json: datos });
@@ -181,69 +181,71 @@ test("el duelo conserva la ganadora dos segundos aunque la computadora ya haya s
   await expect(ganadora).toHaveCount(0);
 });
 
-test("en parejas una parda muestra las cuatro cartas y la vuelta decisiva señala a la compañera", async ({ page, isMobile }) => {
-  if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
-  const { tapete, publicar } = await abrirMesa(page, "pairs-senas", parejas, ["copas-03", "bastos-03", "copas-06"]);
-  const sena = page.getByRole("combobox", { name: "Seña para esta jugada" });
-  const seis = page.getByRole("button", { name: "Jugar 6 de espadas" });
-  const mostrarCuatro = await demorarNaipe(page, "espadas-04");
-  await publicar("espadas-04");
-  await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
-  await expect(page.getByText("Parda", { exact: true })).toHaveCount(0);
-  await expect(page.locator(".j-jugada-panel").getByRole("status")).not.toContainText(/parda|4 de espadas/i);
-  await expect(page.getByRole("list", { name: "Vueltas terminadas" })).toHaveCount(0);
-  mostrarCuatro();
-  await expect(page.getByRole("status").filter({ hasText: /parda/i })).toContainText("Diego jugó 4 de espadas.");
-  await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
-  await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
-  await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
-  await expect(tapete.locator(".j-ganadora")).toHaveCount(0);
-  await expect(seis).toBeDisabled();
-  await expect(page.locator("select:enabled")).toHaveCount(0);
-  await esperarNaipes(tapete);
-  await captura(tapete, "parda");
-  await page.clock.runFor(1999);
-  await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
-  await page.clock.runFor(1);
-  await expect(sena).toBeEnabled();
-  await expect(seis).toBeEnabled();
-  await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
-  await sena.selectOption("cejas");
-  await seis.press("Enter");
-  await expect(cartaEn(tapete, "Vos · Ana", "6 de espadas")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Señas de esta mano" })).toContainText(/Alzar ambas cejas/);
+for (const formato of ["pairs-senas", "pairs-private-senas"]) {
+  test(`en ${formato} una parda muestra las cuatro cartas y la vuelta decisiva señala a la compañera`, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const { tapete, publicar } = await abrirMesa(page, formato, parejas, ["copas-03", "bastos-03", "copas-06"]);
+    const sena = page.getByRole("combobox", { name: "Seña para esta jugada" });
+    const seis = page.getByRole("button", { name: "Jugar 6 de espadas" });
+    const mostrarCuatro = await demorarNaipe(page, "espadas-04");
+    await publicar("espadas-04");
+    await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
+    await expect(page.getByText("Parda", { exact: true })).toHaveCount(0);
+    await expect(page.locator(".j-jugada-panel").getByRole("status")).not.toContainText(/parda|4 de espadas/i);
+    await expect(page.getByRole("list", { name: "Vueltas terminadas" })).toHaveCount(0);
+    mostrarCuatro();
+    await expect(page.getByRole("status").filter({ hasText: /parda/i })).toContainText("Diego jugó 4 de espadas.");
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
+    await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
+    await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
+    await expect(tapete.locator(".j-ganadora")).toHaveCount(0);
+    await expect(seis).toBeDisabled();
+    await expect(page.locator("select:enabled")).toHaveCount(0);
+    await esperarNaipes(tapete);
+    await captura(tapete, "parda");
+    await page.clock.runFor(1999);
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
+    await page.clock.runFor(1);
+    await expect(sena).toBeEnabled();
+    await expect(seis).toBeEnabled();
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
+    await sena.selectOption("cejas");
+    await seis.press("Enter");
+    await expect(cartaEn(tapete, "Vos · Ana", "6 de espadas")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Señas de esta mano" })).toContainText(/Alzar ambas cejas/);
 
-  await esperarNaipes(tapete);
-  await page.clock.runFor(1000);
-  const mostrarSiete = await demorarNaipe(page, "oros-07");
-  await publicar("copas-05", "espadas-01", "oros-07");
-  await expect(cartaEn(tapete, "Rival · CPU 1", "5 de copas")).toBeVisible();
-  await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
-  await esperarNaipes(tapete);
-  await page.clock.runFor(600);
-  await expect(cartaEn(tapete, "Tu pareja · Clara", "As de espadas")).toBeVisible();
-  await expect(cartaEn(tapete, "Rival · Diego", "7 de oros")).toHaveCount(0);
-  await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
-  await esperarNaipes(tapete);
-  await page.clock.runFor(3000);
-  await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
-  await expect(tapete.getByText("Ganó Clara")).toHaveCount(0);
-  await expect(tapete.getByText("Ganó la vuelta")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
-  await expect(page.getByRole("list", { name: "Vueltas terminadas" }).locator("summary")).toHaveCount(1);
-  await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "0"]);
-  mostrarSiete();
-  const pareja = tapete.getByRole("group", { name: "Tu pareja · Clara" });
-  await expect(pareja.getByRole("img", { name: "As de espadas" })).toBeVisible();
-  await expect(pareja.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
-  await expect(page.getByRole("status").filter({ hasText: "Ganaste la mano" }))
-    .toContainText("Diego jugó 7 de oros. Clara ganó la vuelta con su as de espadas.");
-  await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(1);
-  await expect(page.locator(".j-tanteador strong")).toHaveText(["1", "0"]);
-  await captura(tapete, "pareja-ganadora");
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-});
+    await esperarNaipes(tapete);
+    await page.clock.runFor(1000);
+    const mostrarSiete = await demorarNaipe(page, "oros-07");
+    await publicar("copas-05", "espadas-01", "oros-07");
+    await expect(cartaEn(tapete, "Rival · CPU 1", "5 de copas")).toBeVisible();
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
+    await esperarNaipes(tapete);
+    await page.clock.runFor(600);
+    await expect(cartaEn(tapete, "Tu pareja · Clara", "As de espadas")).toBeVisible();
+    await expect(cartaEn(tapete, "Rival · Diego", "7 de oros")).toHaveCount(0);
+    await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
+    await esperarNaipes(tapete);
+    await page.clock.runFor(3000);
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
+    await expect(tapete.getByText("Ganó Clara")).toHaveCount(0);
+    await expect(tapete.getByText("Ganó la vuelta")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
+    await expect(page.getByRole("list", { name: "Vueltas terminadas" }).locator("summary")).toHaveCount(1);
+    await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "0"]);
+    mostrarSiete();
+    const pareja = tapete.getByRole("group", { name: "Tu pareja · Clara" });
+    await expect(pareja.getByRole("img", { name: "As de espadas" })).toBeVisible();
+    await expect(pareja.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Ganaste la mano" }))
+      .toContainText("Diego jugó 7 de oros. Clara ganó la vuelta con su as de espadas.");
+    await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(1);
+    await expect(page.locator(".j-tanteador strong")).toHaveText(["1", "0"]);
+    await captura(tapete, "pareja-ganadora");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
 
 test("al volver a una mano terminada en parejas, la última parda sigue en el tapete", async ({ page }) => {
   const { tapete } = await abrirMesa(page, "pairs", parejas, [

@@ -15,7 +15,7 @@ test("el perfil legado reproduce las ofertas y aceptaciones en 20000 aperturas",
 });
 test("dos copias deterministas intercambian el ganador al invertir la perspectiva en los tres formatos", () => {
   const team = () => incumbent;
-  for (const format of ["duel","pairs","pairs-senas"] as const) {
+  for (const format of ["duel","pairs","pairs-private-senas"] as const) {
     const p = runPair(format,7712,0,team,team,team,() => {});
     assert.equal(p.candidate[0]+p.candidate[1],1);
     assert.deepEqual(p.candidate,p.incumbent);
@@ -35,7 +35,7 @@ test("el signo informa la ventaja del candidato y remuestrea el par completo", (
 test("se congela el campo antes de evaluar y se regenera el informe desde todos los chicos confirmados", async () => {
   const dir = mkdtempSync(join(tmpdir(),"truco-eval-"));
   try {
-    const field:Field = {format:"pairs-senas",pool:"development",pairs:2,
+    const field:Field = {format:"pairs-private-senas",pool:"development",pairs:2,
       candidate:{id:"folder",lineage:"fold-v1"},opponents:[{id:incumbent.id,lineage:"v1"}]};
     const registration = join(dir,"frozen"), file = join(registration,"plan.json"), out = join(dir,"games");
     const plan = freeze(field,registration);

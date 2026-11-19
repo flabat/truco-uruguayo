@@ -82,9 +82,43 @@ async function vistas(sesiones, ruta) {
   return todas;
 }
 
-async function iniciar(sesiones, ajena) {
+async function verificarPartidaAnterior(sesiones) {
+  // Una llamada de un cliente previo crea una mesa privada. Simular luego
+  // una mesa que ya estaba guardada con el contrato de señas anterior.
   const mesa = await http(sesiones[0], "/api/mesas", { modo: "2v2", formato: "pairs-senas" });
-  assert.equal(mesa.formato, "pairs-senas");
+  assert.equal(mesa.formato, "pairs-private-senas");
+  await pool.query("UPDATE juego.mesas SET version_senas='senas-publicas-v1' WHERE id=$1", [mesa.id]);
+  const token = new URL(mesa.invitacion).searchParams.get("invitacion");
+  for (const s of sesiones.slice(1)) await http(s, "/api/invitaciones/" + token + "/unirse", {});
+  const ruta = "/api/mesas/" + mesa.id;
+  const antes = await vistas(sesiones, ruta + "/partida");
+  const emisor = antes.findIndex(p => p.vista.legales.length);
+  const {vista, version} = antes[emisor];
+  const accion = vista.legales.includes("carta") ? {tipo:"carta", carta:vista.cartas[0]} : {tipo:"flor"};
+  await http(sesiones[emisor], ruta + "/acciones", {id:randomUUID(), version, accion:{...accion, sena:"nariz"}});
+  const despues = await vistas(sesiones, ruta + "/partida");
+  for (const [asiento, p] of despues.entries()) {
+    assert.equal(p.formato, "pairs-senas");
+    assert.equal(p.versionSenas, "senas-publicas-v1");
+    assert.equal(JSON.stringify(p).includes("nariz"), asiento % 2 === emisor % 2);
+  }
+  // Las confirmaciones idempotentes antiguas también incluían el historial
+  // entero. Reproducir una fila de aquel esquema al reintentar como rival.
+  const rival = (emisor + 1) % 4;
+  const id = randomUUID();
+  const orden = { id, version, operacion:"siguiente" };
+  const recibo = {...despues[rival], turnos:despues[emisor].turnos};
+  await pool.query(`INSERT INTO juego.comandos (mesa,jugador,id,peticion,respuesta)
+    SELECT $1,jugador,$3,$4,$5 FROM juego.asientos WHERE mesa=$1 AND asiento=$2`,
+    [mesa.id, rival, id, orden, recibo]);
+  const recuperada = await http(sesiones[rival], ruta + "/siguiente", {id, version});
+  assert.deepEqual(recuperada, despues[rival]);
+}
+
+async function iniciar(sesiones, ajena) {
+  await verificarPartidaAnterior(sesiones);
+  const mesa = await http(sesiones[0], "/api/mesas", { modo: "2v2", formato: "pairs-private-senas" });
+  assert.equal(mesa.formato, "pairs-private-senas");
   const id = mesa.id;
   const token = new URL(mesa.invitacion).searchParams.get("invitacion");
   for (const s of sesiones.slice(1)) await http(s, "/api/invitaciones/" + token + "/unirse", {});
@@ -109,11 +143,15 @@ async function iniciar(sesiones, ajena) {
   }
   const despues = await vistas(sesiones, ruta);
   assert.ok(despues[0].version > version);
-  for (const p of despues) {
-    assert.equal(p.versionSenas, "senas-publicas-v1");
-    assert.equal(p.formato, "pairs-senas");
-    assert.deepEqual(p.turnos, despues[0].turnos);
-    assert.deepEqual(p.turnos.map(t => t.signal), ["cejas"]);
+  for (const [i, p] of despues.entries()) {
+    assert.equal(p.versionSenas, "senas-equipo-v1");
+    assert.equal(p.formato, "pairs-private-senas");
+    assert.equal(p.turnos.length, 1);
+    if (i % 2 === turno % 2) assert.equal(p.turnos[0].signal, "cejas");
+    else {
+      assert.ok(!Object.hasOwn(p.turnos[0], "signal"));
+      assert.ok(!JSON.stringify(p).includes("cejas"));
+    }
     assert.deepEqual(p.turnos.map(t => t.action), p.vista.acciones);
   }
   const regreso = conectar(sesiones[turno], id);
