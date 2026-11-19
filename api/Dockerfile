@@ -7,6 +7,7 @@ COPY api/migrations ./migrations
 COPY src/motor /app/src/motor
 COPY training/contracts /app/training/contracts
 COPY training/seat /app/training/seat
+COPY training/anchored/actor.ts training/anchored/duel.ts training/anchored/partners.ts /app/training/anchored/
 COPY training/signals /app/training/signals
 COPY training/duel/actor.ts training/duel/math.ts /app/training/duel/
 COPY training/partners/policy.ts /app/training/partners/

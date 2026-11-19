@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
+export TERCETOS_HABILITADOS=1
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 
 cleanup() {
@@ -35,15 +36,19 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
-for formato in duel pairs pairs-senas; do
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-cierres-tercetos.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-persistencia-tercetos.mjs
+for formato in duel pairs pairs-private-senas; do
   pin=$(node scripts/actor-ensayo.ts "$formato" | "${compose[@]}" exec -T api node policyctl.ts register "$formato")
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
-for formato in duel pairs pairs-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
+for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
 "${compose[@]}" run --no-deps --rm -T api node --input-type=module < scripts/verificar-inferencia.mjs
+"${compose[@]}" run --no-deps --rm -T api node --input-type=module - preparar-bot < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" up --wait api
+"${compose[@]}" exec -T api node --input-type=module - auditar-bot < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - recuperado < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module - iniciar < scripts/verificar-vivo.mjs
 node scripts/verificar-juego-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
@@ -57,7 +62,10 @@ migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-jueg
 "${compose[@]}" stop db
 [[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
+export TERCETOS_HABILITADOS=0
 up
+"${compose[@]}" exec -T api node --input-type=module - cerrar-altas < scripts/verificar-cierres-tercetos.mjs
+"${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-persistencia-tercetos.mjs
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
 "${compose[@]}" exec -T api node --input-type=module - reinicio < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-vivo.mjs

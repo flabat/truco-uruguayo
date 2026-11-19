@@ -2,7 +2,7 @@ import { esCardId, type CardId } from "../../src/motor/cartas.ts";
 import { aplicarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
 import {
-  formats, seatsFor, signals, type ActionId, type Format, type Move, type PublicTurn, type Signal,
+  hasSignals, supportedFormats, seatsFor, signals, type ActionId, type Format, type Move, type PublicTurn, type Signal,
 } from "../contracts/index.ts";
 import { decodeMove } from "../seat/index.ts";
 
@@ -45,14 +45,14 @@ export const signalRules = { legalActions, decode };
 /** El árbitro confirma la seña y la jugada juntas. Un rechazo no publica ningún evento. */
 export function commitTurn(state: EstadoOnline, seat: Asiento, format: Format, id: ActionId):
     { state: EstadoOnline; turn: PublicTurn } {
-  if (!formats.includes(format) || seatsFor(format) !== state.mano.reparto.manos.length) {
+  if (!supportedFormats.includes(format) || seatsFor(format) !== state.mano.reparto.manos.length) {
     throw new RangeError("El formato no coincide con el reparto.");
   }
   const { move, signal } = decode(id);
-  if (signal !== undefined && format !== "pairs-senas") throw new RangeError("Este formato no admite señas.");
-  const step = aplicarOnline(state, decodeMove(move, seat));
+  if (signal !== undefined && !hasSignals(format)) throw new RangeError("Este formato no admite señas.");
+  const action = decodeMove(move, seat);
+  const step = aplicarOnline(state, action);
   if (!step.ok) throw new RangeError("Acción rechazada por el árbitro: " + step.error);
-  const action = step.estado.acciones.at(-1)!;
   const awards = step.estado.cobros.slice(state.cobros.length);
   const turn = signal === undefined ? { action, awards } : { signal, action, awards };
   return { state: step.estado, turn };

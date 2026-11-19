@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { playMatch, replayMatch } from "../arena/index.ts";
-import { formats, seatsFor, versions, type Format, type Policy } from "../contracts/index.ts";
+import { formats, seatsFor, trainingVersions, type Format, type Policy } from "../contracts/index.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
 import { loadDuelActor } from "../duel/actor.ts";
 import { summarize, type PairOutcome } from "../eval/statistics.ts";
@@ -80,7 +80,7 @@ for (const format of requested) {
   const saved = JSON.stringify(table) + "\n";
   const tableName = format + "-continuation.json";
   writeFileSync(join(output, tableName), saved);
-  const report = { format, schemas: versions, revision: execFileSync("git", ["rev-parse", "HEAD"], {encoding:"utf8"}).trim(),
+  const report = { format, schemas: trainingVersions, revision: execFileSync("git", ["rev-parse", "HEAD"], {encoding:"utf8"}).trim(),
     runtime: process.version, field: table.field, artifact: path ? { path: resolve(path), sha256: digest(readFileSync(path)) } : incumbent.id,
     seeds: { fit: seed, heldoutCalibration: seed + 1, heldoutComparison: seed + 2 }, fitMatches: fit, holdoutMatches: holdout,
     worlds, proposals: options.proposals, duelRisk: options.duelRisk, deadlineMs, calibration, table: { path: tableName, sha256: digest(saved) },

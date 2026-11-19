@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import time
-from monitor import FORMATS, timed_stage, write
+from monitor import FORMATS, require_training_plan, timed_stage, write
 
 
 def main():
@@ -18,6 +18,7 @@ def main():
     run=args.run.resolve()
     repo=Path(__file__).resolve().parents[2]
     plan=json.loads((run/"plan.json").read_text())
+    require_training_plan(plan)
     expected=subprocess.check_output(["git","-C",args.runtime,"rev-parse","HEAD"],text=True).strip()
     if expected!=plan["revision"]:
         raise RuntimeError("La revisión de entrenamiento cambió.")

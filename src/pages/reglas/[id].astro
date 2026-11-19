@@ -1,6 +1,7 @@
 ---
 import Site from "../../layouts/Site.astro";
 import EjemploDelRey from "../../components/EjemploDelRey.astro";
+import MetaDeSeis from "../../components/MetaDeSeis.astro";
 import Icon from "../../components/Icon.astro";
 import SourceList from "../../components/SourceList.astro";
 import { groups, rules, ruleUrl, url } from "../../lib/guide";
@@ -50,6 +51,7 @@ const next = rules[index + 1];
         <h1>{rule.title}</h1>
         <p class="standfirst">{rule.intro}</p>
       </header>
+      {rule.id === "seis-jugadores" && <MetaDeSeis />}
       {rule.blocks.map((block) => (
         <section class="rule-block" id={block.id}>
           <h2>{block.heading}</h2>

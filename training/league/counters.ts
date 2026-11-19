@@ -96,7 +96,7 @@ function duelCounter(path:string,out:string,seed:number,matches:number) {
   save(sparse,{...artifact,id:duelActorId(state.buckets,conservative),average:conservative});
   return [dense,...(Object.keys(conservative).length?[sparse]:[])];
 }
-export async function trainCounter(format:"duel"|"pairs"|"pairs-senas",target:string,out:string,seed:number,
+export async function trainCounter(format:"duel"|"pairs"|"pairs-private-senas",target:string,out:string,seed:number,
     configFile:string,matches:number) {
   let paths:string[];
   let checkpoint:string;
