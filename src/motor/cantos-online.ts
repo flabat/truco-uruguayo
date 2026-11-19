@@ -1,5 +1,5 @@
 import { equipoDelAsiento, type Asiento, type Equipo, type RepartoOnline } from "./reparto.ts";
-import type { EstadoMano, Jugada } from "./mano.ts";
+import { participantesDe, type EstadoMano, type Jugada } from "./mano.ts";
 import { faltaDelGanador, restoQuerido, tantosAcreditados } from "./reglas-tercetos.ts";
 import { evaluarTantos } from "./tantos.ts";
 
@@ -61,7 +61,7 @@ export function aDecidir(estado: EstadoOnline): Asiento[] {
   if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
   const oferta = estado.lateral ?? estado.trucoPendiente;
   if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
-  const posibles = estado.flores.length && estado.lateral ? estado.flores : estado.mano.participantes;
+  const posibles = estado.flores.length && estado.lateral ? estado.flores : participantesDe(estado.mano);
   return posibles.filter(a => equipoDelAsiento(a) !== equipoDelAsiento(oferta.asiento));
 }
 
@@ -143,7 +143,7 @@ function plenaFlor(estado: EstadoOnline, equipo: Equipo) {
 }
 
 function compararTantos(estado: EstadoOnline, flor: boolean) {
-  const participantes = estado.mano.participantes.filter(a => !flor || estado.flores.includes(a));
+  const participantes = participantesDe(estado.mano).filter(a => !flor || estado.flores.includes(a));
   // Ante igualdad queda el primero en el orden original de esta mano.
   return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }))
     .reduce((mejor, otro) => otro.total > mejor.total ? otro : mejor);
@@ -158,7 +158,7 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   if (esTerceto(estado) && querido && oferta.tipo === "falta-envido") {
     tantos = faltaDelGanador(estado.puntosInicio[equipo], estado.meta);
   } else if (esTerceto(estado) && querido && oferta.tipo === "contraflor-al-resto") {
-    const tipo = estado.mano.participantes.length === 2 ? "pico-a-pico" : "redondilla";
+    const tipo = participantesDe(estado.mano).length === 2 ? "pico-a-pico" : "redondilla";
     tantos = restoQuerido(tipo, estado.puntosInicio[equipo], estado.meta);
   } else if (flor) {
     // El resto querido se lleva todas las flores. En los otros casos suman las propias.
@@ -174,7 +174,7 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
 
 function sinDeclaracion(estado: EstadoOnline) {
   // Determinado solo por actos públicos. No saltar asientos mirando sus cartas.
-  return estado.mano.participantes.filter(a => !estado.acciones.some(j => j.asiento === a));
+  return participantesDe(estado.mano).filter(a => !estado.acciones.some(j => j.asiento === a));
 }
 
 function terminarConsultas(estado: EstadoOnline) {
