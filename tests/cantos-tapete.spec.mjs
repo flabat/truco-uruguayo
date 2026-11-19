@@ -90,7 +90,7 @@ test("una contraflor al resto entre una computadora y un rival remoto se escucha
   const dador = tapete.getByRole("group", { name: "Rival · Computadora 4", exact: true });
   const flor = pareja.getByRole("figure", { name: "Flor ganadora · 44 tantos" });
   const fin = page.getByRole("heading", { name: "Ganaste la partida" });
-  const historia = page.locator("details.j-historia");
+  const historia = page.getByRole("region", { name: "Historial de la mano" });
   await publicar([
     { tipo: "flor", asiento: 1 }, { tipo: "flor", asiento: 2 }, { tipo: "paso-flor", asiento: 3 },
     { tipo: "contraflor-al-resto", asiento: 2 }, { tipo: "quiero", asiento: 1 },
@@ -109,7 +109,9 @@ test("una contraflor al resto entre una computadora y un rival remoto se escucha
   }
   async function comprobarFinal() {
     await expect(fin).toBeVisible();
-    await expect(historia).not.toHaveAttribute("open", "");
+    await expect(historia.getByRole("listitem")).toHaveCount(3);
+    await expect(historia.locator("details")).not.toHaveAttribute("open", "");
+    await expect(historia.getByText("Flor querida.", { exact: true })).toBeVisible();
     await expect(flor).toBeVisible();
     await expect(flor.getByText("Contraflor al resto", { exact: true })).toBeVisible();
     await expect(rival.locator(".j-voz")).toHaveText("33 de flor");
