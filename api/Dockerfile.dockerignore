@@ -26,3 +26,4 @@
 !training/selfplay/
 !training/selfplay/learner.ts
 !training/selfplay/team-mixture.ts
+!training/selfplay/team-transfer.ts
