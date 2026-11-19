@@ -11,6 +11,7 @@ import {
   type Modo,
 } from "./cliente";
 import { EnJuego } from "./Tablero";
+import { MesaConSenas } from "./Senas";
 
 function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
   return (
@@ -39,6 +40,7 @@ function AbrirMesa({
   abrir: (id: string, aviso: string) => void;
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
+  const [senas, habilitarSenas] = useState(false);
   const [ocupado, ocupar] = useState(false);
   const [error, avisar] = useState("");
   async function crear(conBots: boolean) {
@@ -46,7 +48,7 @@ function AbrirMesa({
     ocupar(true);
     avisar("");
     try {
-      const mesa = await pedir<Mesa>("/api/mesas", { modo });
+      const mesa = await pedir<Mesa>("/api/mesas", { modo, ...(modo === "2v2" && senas && { formato: "pairs-senas" }) });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
       history.replaceState(null, "", destino);
@@ -88,6 +90,12 @@ function AbrirMesa({
               </label>
             ))}
           </div>
+          {modo === "2v2" && (
+            <label className="j-habilitar-senas">
+              <input type="checkbox" checked={senas} onChange={e => habilitarSenas(e.target.checked)} />
+              Permitir señas públicas
+            </label>
+          )}
         </fieldset>
         <div className="j-acciones">
           <button className="button" disabled={ocupado} onClick={() => crear(false)}>
@@ -186,7 +194,7 @@ function MesaAbierta({
       ocupar(false);
     }
   }
-  function jugada(accion?: Eleccion) {
+  function jugada(accion?: Eleccion & { sena?: string }) {
     if (ocupado || !conectada || !partida) return;
     void enviar(accion ? "/acciones" : "/siguiente", {
       id: idComando(),
@@ -207,12 +215,13 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const bloqueada = ocupado || !conectada;
+  const versionDesconocida = mesa.formato === "pairs-senas" && partida?.vista && partida.versionSenas !== "senas-publicas-v1";
+  const bloqueada = ocupado || !conectada || Boolean(versionDesconocida);
   return (
     <>
       <div className="j-barra">
         <span>
-          {mesa.modo === "1v1" ? "Mano a mano" : "En parejas"} · {jugador.nombre}
+          {mesa.formato === "pairs-senas" ? "Parejas con señas" : mesa.modo === "1v1" ? "Mano a mano" : "En parejas"} · {jugador.nombre}
         </span>
         <a className="j-link" href={base + "jugar/"}>
           Volver al salón
@@ -223,13 +232,16 @@ function MesaAbierta({
           Reconectando con tu mesa…
         </p>
       )}
+      {versionDesconocida && <p role="alert">Actualizá la aplicación para jugar con esta versión de señas.</p>}
       {aviso && (
         <p role="alert" className="j-aviso">
           {aviso}
         </p>
       )}
       {mesa.lista && partida?.vista ? (
-        <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
+        mesa.formato === "pairs-senas" && partida.versionSenas === "senas-publicas-v1" ? (
+          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} jugar={jugada} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">

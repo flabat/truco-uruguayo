@@ -2,12 +2,14 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import type { Asiento } from "../src/motor/reparto.ts";
 import {
-  aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, repartirOnline, versionReglasOnline, vistaOnline,
-  type AccionOnline, type EstadoOnline, type RepartoOnline,
+  iniciarOnline, repartirOnline, versionReglasOnline, vistaOnline, type EstadoOnline,
 } from "../src/motor/mesa-online.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
-import { leerMesa, type VistaMesa } from "./mesas.ts";
+import { formatoMesa, leerMesa, type VistaMesa } from "./mesas.ts";
+import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, restaurar,
+  type Confirmada, type ManoPublicable, type Registro } from "./turnos.ts";
+import { seatsFor, versions, type Format } from "../training/contracts/index.ts";
 
 const meta = 40;
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -16,23 +18,14 @@ export const esRutaPartida = (path: string) => rutaPartida.test(path);
 type Operacion = "acciones" | "siguiente";
 type Tanteador = [number, number];
 
-interface Registro {
-  numero: number;
-  version: number;
-  version_reglas: number;
-  reparto: RepartoOnline;
-  puntos_inicio: Tanteador;
-  acciones: AccionOnline[];
-}
-
 interface Comando {
   id: string;
   version: number;
   operacion: Operacion;
-  accion?: AccionOnline;
+  accion?: Confirmada;
 }
 
-function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: Asiento): Comando {
+function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: Asiento, formato: Format): Comando {
   if (typeof datos.id !== "string" || !uuid.test(datos.id) || typeof datos.version !== "number"
       || !Number.isSafeInteger(datos.version) || datos.version < 0) {
     throw new ErrorPeticion(400, "El comando requiere un identificador y una versión válidos.");
@@ -42,42 +35,8 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
     if (datos.accion !== undefined) throw new ErrorPeticion(400, "El reparto no lleva una acción.");
     return comando;
   }
-  const accion = datos.accion;
-  if (!accion || typeof accion !== "object" || Array.isArray(accion) || !("tipo" in accion) || typeof accion.tipo !== "string") {
-    throw new ErrorPeticion(400, "Falta la acción de juego.");
-  }
-  const claves = accion.tipo === "carta" ? ["tipo", "carta"] : ["tipo"];
-  if (Object.keys(accion).length !== claves.length || !claves.every(k => Object.hasOwn(accion, k))) {
-    throw new ErrorPeticion(400, "La acción solo admite el canto o la carta elegida.");
-  }
-  // El motor comprueba el tipo de canto y la carta contra las opciones legales.
-  comando.accion = { ...accion, asiento } as AccionOnline;
+  comando.accion = leerAccion(datos.accion, asiento, formato);
   return comando;
-}
-
-function restaurar(fila: Registro) {
-  if (fila.version_reglas !== versionReglasOnline) throw new Error("Versión de reglas desconocida.");
-  let estado = iniciarOnline(fila.reparto, fila.puntos_inicio, meta);
-  for (const accion of fila.acciones) {
-    const paso = aplicarOnline(estado, accion);
-    if (!paso.ok) throw new Error("El historial de la mano no se pudo reproducir.");
-    estado = paso.estado;
-  }
-  return estado;
-}
-
-function jugarComputadoras(estado: EstadoOnline, mesa: VistaMesa) {
-  while (!estado.resultado) {
-    const posibles = aDecidir(estado);
-    if (posibles.some(i => mesa.asientos[i].tipo === "humano")) break;
-    const bot = posibles[0];
-    if (bot === undefined) throw new Error("La mano carece de un asiento en turno.");
-    const accion = elegirAccionOnline(vistaOnline(estado, bot));
-    const paso = accion && aplicarOnline(estado, accion);
-    if (!paso?.ok) throw new Error("La computadora no pudo completar su turno.");
-    estado = paso.estado;
-  }
-  return estado;
 }
 
 function tantos(estado: EstadoOnline): Tanteador {
@@ -92,17 +51,67 @@ function ganador(puntos: Tanteador) {
   return null;
 }
 
-function vista(estado: EstadoOnline, numero: number, version: number, asiento: Asiento) {
-  const puntos = tantos(estado);
-  return { version, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos), vista: vistaOnline(estado, asiento) };
+function vista(mano: ManoPublicable, formato: Format, numero: number, version: number, asiento: Asiento) {
+  const puntos = tantos(mano.estado);
+  return { version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos),
+    ...(formato === "pairs-senas" && {versionSenas: versions.signals, turnos: mano.turnos}),
+    vista: vistaOnline(mano.estado, asiento) };
 }
 
-async function repartir(db: PoolClient, mesa: VistaMesa, numero: number, version: number, puntos: Tanteador, dador?: number) {
-  const reparto = repartirOnline(mesa.modo === "1v1" ? 2 : 4, dador);
-  const estado = jugarComputadoras(iniciarOnline(reparto, puntos, meta), mesa);
-  await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones)
-    VALUES ($1,$2,$3,$4,$5,$6,$7)`, [mesa.id, numero, version, versionReglasOnline, reparto, puntos, JSON.stringify(estado.acciones)]);
-  return vista(estado, numero, version, mesa.miAsiento as Asiento);
+function asientosHumanos(mesa: VistaMesa) {
+  return mesa.asientos.filter(a => a.tipo === "humano").map(a => a.asiento);
+}
+
+async function repartir(db: PoolClient, mesa: string, formato: Format, humanos: number[], numero: number,
+    version: number, puntos: Tanteador, dador?: number, ensayo = false) {
+  const reparto = repartirOnline(seatsFor(formato), dador);
+  const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
+  const mano = jugarComputadoras(inicial, formato, humanos, ensayo);
+  await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [mesa, numero, version, versionReglasOnline, reparto, puntos,
+    JSON.stringify(guardarAcciones(mano)), formato === "pairs-senas" ? versions.signals : null]);
+  return mano;
+}
+
+async function ultimaMano(db: PoolClient, id: string) {
+  const {rows: [fila]} = await db.query<Registro>("SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero DESC LIMIT 1", [id]);
+  return fila;
+}
+
+/** Un único paso de una mesa de laboratorio. El servidor reanuda los ensayos reservados en PostgreSQL. */
+export async function avanzarEnsayo(pool: Pool) {
+  const db = await pool.connect();
+  try {
+    await db.query("BEGIN");
+    const {rows: [mesa]} = await db.query(`SELECT id, modo, version_senas FROM juego.mesas
+      WHERE solo_computadoras AND NOT ensayo_terminado ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
+    if (mesa) {
+      const formato = formatoMesa(mesa.modo, mesa.version_senas);
+      const asientos = await db.query(`SELECT asiento FROM juego.asientos WHERE mesa=$1 AND computadora ORDER BY asiento`, [mesa.id]);
+      if (asientos.rows.length !== seatsFor(formato) || asientos.rows.some((a, i) => a.asiento !== i)) {
+        throw new Error("El ensayo requiere un asiento de computadora por posición.");
+      }
+      const fila = await ultimaMano(db, mesa.id);
+      const previo = fila && restaurar(fila, formato);
+      const puntos: Tanteador = previo ? tantos(previo.estado) : [0, 0];
+      if (previo && !previo.estado.resultado) throw new Error("La mano del ensayo no está cerrada.");
+      let final = ganador(puntos) !== null;
+      if (!final) {
+        const dador = fila ? (fila.reparto.dador + 1) % seatsFor(formato) : undefined;
+        const mano = await repartir(db, mesa.id, formato, [], (fila?.numero ?? 0) + 1,
+          (fila?.version ?? 0) + 1, puntos, dador, true);
+        final = ganador(tantos(mano.estado)) !== null;
+      }
+      if (final) await db.query("UPDATE juego.mesas SET ensayo_terminado=true WHERE id=$1", [mesa.id]);
+    }
+    await db.query("COMMIT");
+    return Boolean(mesa);
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  } finally {
+    db.release();
+  }
 }
 
 export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}) {
@@ -115,10 +124,10 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const mesa = await leerMesa(db, id, jugador, web);
     if (!mesa) throw new ErrorPeticion(404, "No se encontró tu mesa.");
     const asiento = mesa.miAsiento as Asiento;
-    const comando = op && validar(op, datos, asiento);
+    const comando = op && validar(op, datos, asiento, mesa.formato);
     if (!mesa.lista) {
       if (comando) throw new ErrorPeticion(409, "La mesa todavía tiene asientos libres.");
-      return { cambio: false, partida: { version: 0, manoNumero: 0, puntos: [0, 0], meta, ganadorPartida: null, vista: null } };
+      return { cambio: false, partida: { version: 0, formato: mesa.formato, manoNumero: 0, puntos: [0, 0], meta, ganadorPartida: null, vista: null } };
     }
     if (comando) {
       const { rows: [previo] } = await db.query(`SELECT respuesta, peticion = $4::jsonb AS coincide
@@ -128,14 +137,15 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         return { cambio: false, partida: previo.respuesta };
       }
     }
-    const { rows: [fila] } = await db.query<Registro>(
-      "SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero DESC LIMIT 1", [id]);
+    const fila = await ultimaMano(db, id);
     if (!fila) {
       if (comando) throw new ErrorPeticion(409, "Actualizá la mesa para recibir tu mano.");
-      return { cambio: true, partida: await repartir(db, mesa, 1, 1, [0, 0]) };
+      const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0]);
+      return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento) };
     }
-    const estado = restaurar(fila);
-    if (!comando) return { cambio: false, partida: vista(estado, fila.numero, fila.version, asiento) };
+    const mano = restaurar(fila, mesa.formato);
+    const estado = mano.estado;
+    if (!comando) return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento) };
     if (comando.version !== fila.version) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
     const version = fila.version + 1;
     let partida;
@@ -143,14 +153,20 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const puntos = tantos(estado);
       if (!estado.resultado || ganador(puntos) !== null) throw new ErrorPeticion(409, "No corresponde repartir otra mano.");
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
-      partida = await repartir(db, mesa, fila.numero + 1, version, puntos, dador);
+      const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, dador);
+      partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento);
     } else {
-      const paso = aplicarOnline(estado, comando.accion!);
-      if (!paso.ok) throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
-      const siguiente = jugarComputadoras(paso.estado, mesa);
+      let paso: ManoPublicable;
+      try {
+        paso = confirmar(mano, mesa.formato, comando.accion!);
+      } catch (error) {
+        if (!(error instanceof RangeError || error instanceof TypeError)) throw error;
+        throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
+      }
+      const siguiente = jugarComputadoras(paso, mesa.formato, asientosHumanos(mesa));
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
-        [id, fila.numero, version, JSON.stringify(siguiente.acciones)]);
-      partida = vista(siguiente, fila.numero, version, asiento);
+        [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
+      partida = vista(siguiente, mesa.formato, fila.numero, version, asiento);
     }
     await db.query("INSERT INTO juego.comandos (mesa,jugador,id,peticion,respuesta) VALUES ($1,$2,$3,$4,$5)",
       [id, jugador, comando.id, comando, partida]);
