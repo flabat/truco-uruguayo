@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import pg from "pg";
+import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
@@ -59,8 +60,10 @@ const vivo = crearVivo(server, web, {
   ejecutar: partidas.ejecutar,
 });
 
+const detenerEnsayos = procesarEnsayos(pool);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
+  detenerEnsayos();
   vivo.cerrar();
   server.close(() => pool.end());
 });
