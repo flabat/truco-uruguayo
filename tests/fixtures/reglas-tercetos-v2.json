@@ -1,0 +1,16 @@
+{
+  "falta": [
+    {"meta": 50, "puntos": [32, 19], "ganador": 1, "tantos": 6},
+    {"meta": 50, "puntos": [32, 19], "ganador": 0, "tantos": 18},
+    {"meta": 50, "puntos": [24, 25], "ganador": 0, "tantos": 1},
+    {"meta": 50, "puntos": [24, 25], "ganador": 1, "tantos": 25},
+    {"meta": 50, "puntos": [26, 49], "ganador": 1, "tantos": 1},
+    {"meta": 26, "puntos": [13, 11], "ganador": 0, "tantos": 13}
+  ],
+  "resto": [
+    {"meta": 50, "tipo": "pico-a-pico", "inicio": 2, "valor": 15, "final": 17},
+    {"meta": 50, "tipo": "pico-a-pico", "inicio": 24, "valor": 15, "final": 39},
+    {"meta": 26, "tipo": "pico-a-pico", "inicio": 14, "valor": 15, "final": 26},
+    {"meta": 50, "tipo": "redondilla", "inicio": 2, "valor": 48, "final": 50}
+  ]
+}
