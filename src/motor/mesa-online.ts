@@ -5,16 +5,16 @@ import { faltaDelGanador, tipoDeReparto } from "./reglas-tercetos.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
 import { iniciarMano, jugarCarta, vistaPublicaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
-import { esAsientoOnline, esRepartoOnline, type Asiento, type RepartoOnline, type TresCartas } from "./reparto.ts";
+import { esAsientoOnline, esRepartoOnline, type Asiento, type AsientoV1, type RepartoOnline, type TresCartas } from "./reparto.ts";
 import {
-  aDecidir, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios, type AccionOnline, type Cobro,
-  type EstadoOnline, type LanceTercetos, type ResumenLance, type Oferta, type TipoAccionOnline,
+  aDecidir, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios, type AccionOnline, type AccionOnlineV1, type Cobro,
+  type EstadoOnline, type LanceTercetos, type ResumenLance, type Oferta, type TipoAccionOnline, type TipoAccionOnlineV1,
 } from "./cantos-online.ts";
 
 export { aDecidir };
 export { marcadorOnline } from "./cantos-online.ts";
 export { versionReglasTercetos } from "./reglas-tercetos.ts";
-export type { AccionOnline, Cobro, EstadoOnline, LanceTercetos, ResumenLance, RepartoOnline, TipoAccionOnline };
+export type { AccionOnline, AccionOnlineV1, Cobro, EstadoOnline, LanceTercetos, ResumenLance, RepartoOnline, TipoAccionOnline, TipoAccionOnlineV1 };
 export const versionReglasOnline = 1;
 
 /** Reparte en el servidor una carta por asiento en cada una de las tres rondas. */
@@ -155,6 +155,21 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   return privadaJugable(estado, asiento);
 }
 
+export interface VistaOnlineV1 extends VistaOnline {
+  readonly asiento: AsientoV1;
+  readonly mano: AsientoV1;
+  readonly dador: AsientoV1;
+  readonly turno: AsientoV1 | null;
+  readonly acciones: readonly AccionOnlineV1[];
+  readonly legales: readonly TipoAccionOnlineV1[];
+}
+
+export function vistaOnlineV1(estado: EstadoOnline, asiento: Asiento): VistaOnlineV1 {
+  if (estado.mano.reparto.versionReparto !== "online-1") throw new RangeError("La liga usa un reparto V1.");
+  // El árbitro V1 nunca habilita el retiro de tercetos.
+  return privadaJugable(estado, asiento) as VistaOnlineV1;
+}
+
 type FaltaPorEquipo = { faltaPorEquipo: readonly [number, number] };
 export type VistaTercetos = FaltaPorEquipo & (
   | (VistaOnline & { estado: "jugando" })
@@ -172,13 +187,13 @@ export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTerc
 }
 
 /** El bot recibe la misma vista que un humano en ese asiento y elige entre sus acciones legales. */
-export function elegirAccionOnline(vista: VistaOnline): AccionOnline | null {
+export function elegirAccionOnline(vista: VistaOnline): AccionOnlineV1 | null {
   const { asiento, cartas, muestra, legales, tantosPropios: { total } } = vista;
   if (!legales.length) return null;
   const fuertes = cartas.filter(carta => compararCartas(carta, "oros-03", muestra) >= 0);
   const primera = vista.vueltas[0]?.resultado;
   const ventaja = primera?.tipo === "ganada" && primera.equipo === vista.equipoPorAsiento[asiento];
-  const ofertas: TipoAccionOnline[] = ["flor", "paso-flor"];
+  const ofertas: TipoAccionOnlineV1[] = ["flor", "paso-flor"];
   if (total >= 42) ofertas.push("contraflor-al-resto");
   if (total >= 33) ofertas.push("con-flor-envido");
   if (total >= 35) ofertas.push("falta-envido");

@@ -8,9 +8,11 @@ type CantoEnvido = "envido" | "real-envido" | "falta-envido";
 type CantoFlor = "flor" | "con-flor-envido" | "contraflor-al-resto";
 type CantoLateral = CantoEnvido | CantoFlor;
 type Canto = CantoTruco | CantoLateral;
-export type TipoAccionOnline = Canto | "mazo" | "quiero" | "no-quiero" | "paso-flor" | "carta";
-export type AccionOnline = ({ tipo: "carta" } & Jugada)
-  | { tipo: Exclude<TipoAccionOnline, "carta">; asiento: Asiento };
+export type TipoAccionOnlineV1 = Canto | "quiero" | "no-quiero" | "paso-flor" | "carta";
+export type TipoAccionOnline = TipoAccionOnlineV1 | "mazo";
+export type AccionOnlineV1 = ({ tipo: "carta" } & Jugada)
+  | { tipo: Exclude<TipoAccionOnlineV1, "carta">; asiento: Asiento };
+export type AccionOnline = AccionOnlineV1 | { tipo: "mazo"; asiento: Asiento };
 
 export interface Oferta<T extends Canto = Canto> { tipo: T; asiento: Asiento }
 interface Envite extends Oferta<CantoLateral> { valor: number; anterior: number }

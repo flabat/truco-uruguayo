@@ -1,7 +1,7 @@
 import { esCardId, mazo, type CardId } from "./cartas.ts";
 
 export const versionReparto = 1;
-type AsientoV1 = 0 | 1 | 2 | 3;
+export type AsientoV1 = 0 | 1 | 2 | 3;
 export type Asiento = AsientoV1 | 4 | 5;
 export type Equipo = 0 | 1;
 /** Distribución histórica de las prácticas de cuatro. */
@@ -20,6 +20,8 @@ interface Distribucion {
 }
 
 export interface RepartoV1 extends Distribucion {
+  readonly mano: AsientoV1;
+  readonly dador: AsientoV1;
   readonly versionReparto: typeof versionReparto;
   readonly semilla: number;
   readonly manos: readonly [TresCartas, TresCartas, TresCartas, TresCartas];
