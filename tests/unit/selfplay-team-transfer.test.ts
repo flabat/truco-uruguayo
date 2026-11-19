@@ -1,3 +1,8 @@
+import {mkdtempSync, mkdirSync, rmSync} from "node:fs";
+import {tmpdir} from "node:os";
+import {join} from "node:path";
+import {save} from "../../training/anchored/io.ts";
+import {runTransferStudy} from "../../training/selfplay/team-transfer-study.ts";
 import assert from "node:assert/strict";
 import test from "node:test";
 import {artifactPin, openActor} from "../../api/actor-registry.ts";
@@ -54,3 +59,30 @@ for (const origin of ["pairs-private-senas", "pairs"] as const) {
     else assert.equal(signedTurns, 0);
   });
 }
+
+test("la medición emparejada reanuda el protocolo fijo y detecta una modificación de datos", () => {
+  const area = mkdtempSync(join(tmpdir(), "team-transfer-"));
+  try {
+    const formats = ["pairs", "pairs-private-senas"] as const;
+    const pins:Record<string,string> = {}, inputs:Record<string,string> = {};
+    for (const format of formats) {
+      const anchor = initial(format);
+      const source = initialTeamMixture(createLearner(anchor).actor, anchor);
+      const artifact = silentTransfer(source);
+      mkdirSync(join(area,artifact.format));
+      save(join(area,artifact.format,"transfer.json"), artifact);
+      pins[artifact.format]=artifactPin(artifact); inputs[format]=artifactPin(source);
+    }
+    const protocol = {rules:"senas-equipo-v1",computerOnly:true,pins,inputs,controls:["native","anchor","finalist"],
+      fixtures:["strong-cards","champion","finalist","V1","caller","strong-cards/V1-teammate","native"],
+      pairs:{train:2,dev:2},seeds:{pairs:{train:10,dev:11},"pairs-private-senas":{train:12,dev:13}}};
+    save(join(area,"protocol.json"), protocol);
+    const result = runTransferStudy(area, "pairs");
+    assert.equal(result[1].games, 112);
+    assert.ok(result[1].fixtures.every(row => row.pairedDifferences.native.mean===0));
+    assert.deepEqual(runTransferStudy(area,"pairs"), result);
+    protocol.seeds.pairs.dev = 14;
+    save(join(area,"protocol.json"), protocol);
+    assert.throws(() => runTransferStudy(area,"pairs"));
+  } finally {rmSync(area,{recursive:true,force:true});}
+});
