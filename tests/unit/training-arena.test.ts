@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -72,4 +73,24 @@ test("reanudar en un límite de chico reproduce el manifiesto y detecta corrupci
   assert.equal(decoded.record.id, "duel-0-0");
   writeFileSync(record, "interrumpido");
   assert.throws(() => verify(path));
+});
+
+test("un cambio de política permite reproducir lo confirmado y protege el torneo sin terminar", t => {
+  const dir = mkdtempSync(join(tmpdir(), "truco-replay-"));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const path = join(dir, "finished"), planPath = join(path, "plan.json"), manifestPath = join(path, "manifest.json");
+  newRun(path, ["duel"], 1, 708);
+  run(path);
+  const plan = JSON.parse(readFileSync(planPath, "utf8"));
+  plan.policies[incumbent.id] = "f".repeat(64);
+  const recorded = JSON.stringify(plan) + "\n";
+  writeFileSync(planPath, recorded);
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  manifest.planSha256 = createHash("sha256").update(recorded).digest("hex");
+  writeFileSync(manifestPath, JSON.stringify(manifest));
+  assert.equal(verify(manifestPath, {}, "duel-0-0").verified, 1);
+  const pending = join(dir, "pending");
+  newRun(pending, ["duel"], 1, 708);
+  writeFileSync(join(pending, "plan.json"), recorded);
+  assert.throws(() => run(pending), /política/);
 });

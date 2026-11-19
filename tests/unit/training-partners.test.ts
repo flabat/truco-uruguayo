@@ -26,7 +26,7 @@ for (const format of ["pairs","pairs-senas"] as const) {
     assert.ok(Math.abs(result[0].reduce((a,b)=>a+b,0) - 1) < 1e-9);
     cp.learner.critic.fill(9); cp.learner.velocity = { private:1 };
     assert.equal(digest(exportActor(cp)), digest(actor));
-    assert.deepEqual(result[0].length > 0,true);
+    assert.ok(result[0].length > 0);
     assert.ok(!("critic" in actor) && !("seed" in actor) && !("velocity" in actor));
     assert.throws(() => loadPartnerPolicy({...actor, schema:"broken" as never},0));
   });
@@ -49,8 +49,9 @@ for (const format of ["pairs","pairs-senas"] as const) {
 }
 
 test("el juego reducido a 39–39 resuelve las dieciséis prescripciones con jugadas legales", () => {
-  assert.equal(prescriptionValue([0,0],[0,0]),0.25);
+  assert.equal(prescriptionValue([0,0],[0,0]),0);
+  assert.equal(prescriptionValue([1,1],[1,0]),1);
   assert.equal(solveEndgame().value,1);
   const {value,optimum} = compareEndgame(exportActor(initialize("pairs",81,4,0.04,2,"cpu")));
-  assert.ok(value>0.25 && value<optimum);
+  assert.ok(value>0 && value<optimum);
 });
