@@ -5,7 +5,7 @@ import {
 } from "../../src/motor/mesa-online.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
 import {
-  formats, seatsFor, signals, versions, type ActionId, type Format, type Move,
+  canSeeSignal, hasSignals, supportedFormats, seatsFor, signals, versions, type ActionId, type Format, type Move,
   type Policy, type PublicTurn, type SeatObservation,
 } from "../contracts/index.ts";
 
@@ -26,7 +26,8 @@ function publicHistory(state: EstadoOnline, view: VistaOnline, history: readonly
     }
     const entry = { action: view.acciones[i], awards: view.cobros.slice(start, awardIndex) };
     if (turn.signal === undefined) return entry;
-    if (format !== "pairs-senas" || !signals.includes(turn.signal)) throw new Error("Seña inválida en el historial.");
+    if (!hasSignals(format) || !signals.includes(turn.signal)) throw new Error("Seña inválida en el historial.");
+    if (!canSeeSignal(format, turn.action.asiento, view.asiento)) return entry;
     return { signal: turn.signal, ...entry };
   });
   if (awardIndex !== state.cobros.length) throw new Error("Faltan cobros en el historial.");
@@ -35,7 +36,7 @@ function publicHistory(state: EstadoOnline, view: VistaOnline, history: readonly
 
 export function observe(state: EstadoOnline, seat: Asiento, format: Format, history: readonly PublicTurn[]): SeatObservation {
   const seats = seatsFor(format);
-  if (!formats.includes(format) || state.mano.reparto.manos.length !== seats) {
+  if (!supportedFormats.includes(format) || state.mano.reparto.manos.length !== seats) {
     throw new RangeError("El formato no coincide con el número de asientos.");
   }
   const view = vistaOnline(state, seat);

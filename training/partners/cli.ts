@@ -7,7 +7,7 @@ import { once } from "node:events";
 import { pathToFileURL } from "node:url";
 import { versions } from "../contracts/index.ts";
 import { crossplay } from "./crossplay.ts";
-import { digest, type Partnership } from "./policy.ts";
+import { digest, partnerships, type Partnership } from "./policy.ts";
 import { exportActor, initialize, optimizer, pythonDir, seatPolicies, trainingBatch, update, type Checkpoint } from "./train.ts";
 import { compareEndgame } from "./oracle.ts";
 
@@ -83,7 +83,7 @@ export async function main(args = process.argv.slice(2)) {
       if (!v.config || !v.run) throw Error("Especificá --config y --run.");
       const config = read(v.config);
       const format = v.format ?? config.format;
-      if (!["pairs","pairs-senas"].includes(format) || config.format !== format) throw Error("Configuración de formato inválida.");
+      if (!partnerships.includes(format) || config.format !== format) throw Error("Configuración de formato inválida.");
       if (!(config.rate > 0 && config.rate <= 1)) throw Error("Tasa de aprendizaje inválida.");
       const device = v.device ?? config.device;
       if (device !== "cpu" && device !== "mps") throw Error("Usá cpu o mps.");

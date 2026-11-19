@@ -6,7 +6,7 @@ import { arch, cpus, platform, release, totalmem } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync, gunzipSync } from "node:zlib";
-import { formats, signals, versions, type ActionId, type Format, type Policy } from "../contracts/index.ts";
+import { canSeeSignal, hasSignals, supportedFormats, signals, versions, type ActionId, type Format, type Policy } from "../contracts/index.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 import { playMatch, replayMatch, streamVersion, type MatchRecord, type SignalRules } from "./index.ts";
 
@@ -82,7 +82,7 @@ function validate(plan: Plan) {
   assert.ok(Number.isSafeInteger(plan.seed) && plan.seed >= 0, "Semilla inválida.");
   assert.ok(Number.isSafeInteger(plan.pairs) && plan.pairs >= 1, "Cantidad de pares inválida.");
   assert.ok(plan.formats.length && new Set(plan.formats).size === plan.formats.length
-    && plan.formats.every(f => formats.includes(f)), "Formatos inválidos.");
+    && plan.formats.every(f => supportedFormats.includes(f)), "Formatos inválidos.");
 }
 
 function immutableFile(path: string, bytes: Buffer | string) {
@@ -102,7 +102,7 @@ function immutableFile(path: string, bytes: Buffer | string) {
 export function newRun(directory: string, selected: Format[], pairs: number, seed: number) {
   const plan: Plan = {
     schema: "arena-plan-v1", formats: selected, pairs, seed, versions, streams: streamVersion,
-    schedule: "mano=(pair+hand)%seats; every hand/deal shared across legs; team=leg uses falta challenger in duel or signal probe in pairs-senas; V1 elsewhere",
+    schedule: "mano=(pair+hand)%seats; every hand/deal shared across legs; team=leg uses falta challenger in duel or signal probe in signal formats; V1 elsewhere",
     ...sourceHashes(),
     revision: execFileSync("git", ["rev-parse", "HEAD"], {cwd: root, encoding: "utf8"}).trim(),
     runtime: {node: process.version, system: platform() + " " + release(), arch: arch(), cpu: cpus()[0].model, memory: totalmem()},
@@ -156,7 +156,7 @@ export function run(directory: string, limit = Infinity, adapters: Adapters = {}
         policies: seat => {
           if (seat % 2 !== leg) return incumbent;
           if (format === "duel") return challenger;
-          return format === "pairs-senas" ? signalProbe : incumbent;
+          return hasSignals(format) ? signalProbe : incumbent;
         }});
       validateRecord(record, schedule, plan, adapters);
       immutableFile(file, gzipSync(json({record, sha256: digest(json(record))}), {level: 1}));
@@ -182,7 +182,8 @@ function writeManifest(directory: string, manifest: Manifest) {
 export function publicReplay(record: MatchRecord) {
   return {id: record.id, score: record.score, winner: record.winner,
     hands: record.hands.map(h => ({hand: h.hand, dador: h.deal.dador, muestra: h.deal.muestra,
-      startScore: h.startScore, endScore: h.endScore, turns: h.turns}))};
+      startScore: h.startScore, endScore: h.endScore, turns: h.turns.map(turn =>
+        canSeeSignal(record.format, turn.action.asiento) ? turn : {action: turn.action, awards: turn.awards})}))};
 }
 
 export function verify(manifestPath: string, adapters: Adapters = {}, match?: string) {
