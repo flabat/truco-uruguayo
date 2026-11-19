@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import pg from "pg";
+import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
@@ -52,15 +53,17 @@ const server = createServer(async (request, response) => {
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
 const partidas = crearPartidas(pool, web, alCambiar);
-const mesas = crearRutasMesas(pool, web, alCambiar);
+const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1");
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
   ejecutar: partidas.ejecutar,
 });
 
+const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
+  detenerEnsayos();
   vivo.cerrar();
   server.close(() => pool.end());
 });

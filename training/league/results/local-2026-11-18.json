@@ -1,0 +1,1511 @@
+{
+  "schema": "league-public-report-v1",
+  "runDirectory": "runs/league-130-01",
+  "objective": "Computer-only full 40-point chicos; outcome measured against the preregistered development field.",
+  "trainingRevision": "e0af39f2e9380f151c8180b6f0122257b7285b67",
+  "evidenceRevision": "174fcee0589865d70c4a4708d7f781eaf04e4697",
+  "rules": "online-1",
+  "formats": [
+    {
+      "format": "duel",
+      "finalStage": "pilot",
+      "trainingSeeds": [
+        71039,
+        72043,
+        73061
+      ],
+      "stages": [
+        {
+          "stage": "profile",
+          "frozenManifest": {
+            "file": "snapshots/profile/index.json",
+            "sha256": "aff0f60f7b9913959904714b8173c0f32fb2a9e159a6b996900e5f7e7d3ce4d2",
+            "bytes": 6202
+          },
+          "evidence": {
+            "file": "evidence/duel/profile.json",
+            "sha256": "df6d7665c154202b299e2565e71191383d8bdc4236d1f14046bc1f3edc0f8def",
+            "bytes": 3948
+          },
+          "matrix": {
+            "file": "development/duel/profile.json",
+            "sha256": "209ae5ad76d92a3fdceb87ab122dfb61888a0092a7d14b62cf07042386894758",
+            "bytes": 49402
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 0,
+              "unitsAfter": 23040,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 1206636,
+              "mcDecisions": null,
+              "completedChunkHours": 0.08335382501194452,
+              "timedCompletedUnits": 23040,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 4021.1312032607525,
+              "peakSampledProcessTreeMiB": 123.265625,
+              "actorLatencyMs": {
+                "samples": 27294,
+                "p50": 0.00541699999996581,
+                "p95": 0.008582999999930507,
+                "p99": 0.020666000000005624
+              },
+              "meanWinRate": 0.30902777777777773,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.20833333333333334
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/duel/71039/checkpoint",
+                "sha256": "c5724e2ef80cad60a7b40f0dc30b9556087a84d8bbe528e2c4e10db27ce1242e",
+                "bytes": 1079701
+              },
+              "actor": {
+                "file": "snapshots/profile/duel/71039/actor.json",
+                "sha256": "76ec2f6775f2d9a9cec7f12ee452aca1f5b6f743ff3a205092bbe367db9bf778",
+                "bytes": 595081
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 0,
+              "unitsAfter": 24064,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 1257403,
+              "mcDecisions": null,
+              "completedChunkHours": 0.08412631356361105,
+              "timedCompletedUnits": 24064,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 4151.835452138391,
+              "peakSampledProcessTreeMiB": 122.6875,
+              "actorLatencyMs": {
+                "samples": 25815,
+                "p50": 0.005625000000236469,
+                "p95": 0.007624999999961801,
+                "p99": 0.01383399999986068
+              },
+              "meanWinRate": 0.3194444444444445,
+              "worstFamily": {
+                "id": "rare-bluff",
+                "winRate": 0.1875
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/duel/72043/checkpoint",
+                "sha256": "33640e6a9d2b6b4a75f1ad16b0fd469f31287b0568a9c62100e3c94922c5f0ca",
+                "bytes": 1084038
+              },
+              "actor": {
+                "file": "snapshots/profile/duel/72043/actor.json",
+                "sha256": "4a90f9f78b63ae01cd37102290774632a961f8ff69edc460d77110ce1d40e6e9",
+                "bytes": 595604
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 0,
+              "unitsAfter": 23040,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 1216387,
+              "mcDecisions": null,
+              "completedChunkHours": 0.08363893271999989,
+              "timedCompletedUnits": 23040,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 4039.8085770525627,
+              "peakSampledProcessTreeMiB": 122.78125,
+              "actorLatencyMs": {
+                "samples": 25659,
+                "p50": 0.0049999999999954525,
+                "p95": 0.006834000000253582,
+                "p99": 0.010000000000218279
+              },
+              "meanWinRate": 0.26909722222222227,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.14583333333333334
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/duel/73061/checkpoint",
+                "sha256": "6c25db9bd4d6c981cde9dd3406064af6c1971614bd3ed4820eae51077ddbe175",
+                "bytes": 1079563
+              },
+              "actor": {
+                "file": "snapshots/profile/duel/73061/actor.json",
+                "sha256": "a904112dc5fce01f0f04feaf5dff49ff9def6548985b712fc15e236eea7ac3ae",
+                "bytes": 596518
+              }
+            }
+          ]
+        },
+        {
+          "stage": "pilot",
+          "frozenManifest": {
+            "file": "snapshots/pilot/index.json",
+            "sha256": "dc1610fdd1231bf5edac27fa0a0028ea5045e1f61edb63688bbf737d6cdc8fc3",
+            "bytes": 6148
+          },
+          "evidence": {
+            "file": "evidence/duel/pilot.json",
+            "sha256": "99c609a0cb6c0700e620a01a4ba93412c79a65dd36148b7ac41bc6e8bb848f4f",
+            "bytes": 3987
+          },
+          "matrix": {
+            "file": "development/duel/pilot.json",
+            "sha256": "583472747b86625bf6179da155e365ea1a03d578c21e90e9f4fdd87003835317",
+            "bytes": 49990
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 23040,
+              "unitsAfter": 497152,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 24863896,
+              "mcDecisions": null,
+              "completedChunkHours": 0.6636258796763899,
+              "timedCompletedUnits": 474112,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0,
+              "decisionsPerMeasuredSecond": 10407.426818775853,
+              "peakSampledProcessTreeMiB": 129.234375,
+              "actorLatencyMs": {
+                "samples": 25228,
+                "p50": 0.002541000000007898,
+                "p95": 0.0032910000000185846,
+                "p99": 0.0050829999999990605
+              },
+              "meanWinRate": 0.31076388888888884,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.17708333333333334
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/duel/71039/checkpoint",
+                "sha256": "3d9961bcf6caab007bf7a84a3df17ae9eb39dacb354b22a514b45dc9dd9143f1",
+                "bytes": 1144964
+              },
+              "actor": {
+                "file": "snapshots/pilot/duel/71039/actor.json",
+                "sha256": "07bb9521f871720a2bfca726c8e710b31f466875b5bbd2d5d4e4ef939d95c145",
+                "bytes": 586048
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 24064,
+              "unitsAfter": 503808,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 25195693,
+              "mcDecisions": null,
+              "completedChunkHours": 0.6639286378430547,
+              "timedCompletedUnits": 479744,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0,
+              "decisionsPerMeasuredSecond": 10541.499812161364,
+              "peakSampledProcessTreeMiB": 130.203125,
+              "actorLatencyMs": {
+                "samples": 24689,
+                "p50": 0.0024159999999255888,
+                "p95": 0.0030830000000037217,
+                "p99": 0.004209000000003016
+              },
+              "meanWinRate": 0.2951388888888889,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.14583333333333334
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/duel/72043/checkpoint",
+                "sha256": "1e656901ff5e4cba374cef1113d998d367778aad223499e4f3f5db3f74221b20",
+                "bytes": 1145515
+              },
+              "actor": {
+                "file": "snapshots/pilot/duel/72043/actor.json",
+                "sha256": "ef127c88f942a621e1aeb6c3b85cd8b7e64c233c2ebd745c27b50bb73126af69",
+                "bytes": 585950
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 23040,
+              "unitsAfter": 486400,
+              "tableEntries": 2048,
+              "tableCapacity": 2048,
+              "decisions": 24348150,
+              "mcDecisions": null,
+              "completedChunkHours": 0.6638125535424984,
+              "timedCompletedUnits": 463360,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0,
+              "decisionsPerMeasuredSecond": 10188.681976420317,
+              "peakSampledProcessTreeMiB": 129.375,
+              "actorLatencyMs": {
+                "samples": 24675,
+                "p50": 0.002375000000029104,
+                "p95": 0.0029170000000249274,
+                "p99": 0.0036249999999995453
+              },
+              "meanWinRate": 0.32118055555555564,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.15625
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/duel/73061/checkpoint",
+                "sha256": "fa10fa6491223fc70ae885a32d82d380f9e49d08bd573b0d1b42c4b2bafee1b4",
+                "bytes": 1144924
+              },
+              "actor": {
+                "file": "snapshots/pilot/duel/73061/actor.json",
+                "sha256": "c9d050fff73317a42714de21f39f9b6f0796acc1876239d6e7d7a03868dfded1",
+                "bytes": 586073
+              }
+            }
+          ]
+        }
+      ],
+      "learning": {
+        "earlyToPilot": {
+          "mean": 0.01678240740740741,
+          "lower": -0.019097222222222234,
+          "upper": 0.052083333333333315
+        },
+        "profileToPilot": {
+          "mean": 0.00983796296296296,
+          "lower": -0.017939814814814794,
+          "upper": 0.03761574074074075
+        },
+        "seeds": [
+          {
+            "seed": 73061,
+            "early": 0.27777777777777773,
+            "profile": 0.26909722222222227,
+            "pilot": 0.32118055555555564
+          },
+          {
+            "seed": 71039,
+            "early": 0.30729166666666674,
+            "profile": 0.30902777777777773,
+            "pilot": 0.31076388888888884
+          },
+          {
+            "seed": 72043,
+            "early": 0.2916666666666667,
+            "profile": 0.3194444444444445,
+            "pilot": 0.2951388888888889
+          }
+        ]
+      },
+      "extension": {
+        "used": false,
+        "rule": "Both 95% paired lower limits positive, plus positive median seed change since profile.",
+        "finding": "Pilot did not establish sustained progress under this criterion."
+      },
+      "alternative": {
+        "change": "cuadruplicar tablas de agrupación, misma política de muestreo",
+        "unitsPerSeed": 2048,
+        "pairsPerFamily": 48,
+        "comparisons": [
+          {
+            "seed": 71039,
+            "pairedDelta": {
+              "mean": 0.03298611111111111,
+              "lower": -0.010416666666666666,
+              "upper": 0.07812499999999999
+            }
+          },
+          {
+            "seed": 72043,
+            "pairedDelta": {
+              "mean": -0.013888888888888893,
+              "lower": -0.06597222222222222,
+              "upper": 0.03645833333333334
+            }
+          },
+          {
+            "seed": 73061,
+            "pairedDelta": {
+              "mean": 0.010416666666666666,
+              "lower": -0.032986111111111105,
+              "upper": 0.05381944444444441
+            }
+          }
+        ],
+        "report": {
+          "file": "representation/duel/comparison.json",
+          "sha256": "81a1e2ec34df680fd03d2075d4ee4fc92a3a45ef9b764a8e2a0c9d0b687dedfa",
+          "bytes": 8179
+        }
+      },
+      "matrix": {
+        "opponents": [
+          "incumbent-online-v1",
+          "caller",
+          "folder",
+          "frequent-bluff",
+          "rare-bluff",
+          "strong-cards"
+        ],
+        "seed": 18890627,
+        "pairsPerEdge": 48,
+        "edges": 36,
+        "cycles": {
+          "count": 7,
+          "examples": [
+            [
+              "71039",
+              "folder",
+              "72043"
+            ],
+            [
+              "71039",
+              "folder",
+              "caller"
+            ],
+            [
+              "71039",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "73061",
+              "folder",
+              "caller"
+            ],
+            [
+              "73061",
+              "folder",
+              "strong-cards"
+            ]
+          ],
+          "threePairwiseBoundsExcludeHalf": []
+        }
+      },
+      "profileCounter": {
+        "seed": 831193,
+        "fullTrainingChicos": 512,
+        "championWinRate": {
+          "mean": 0.5625,
+          "lower": 0.46875,
+          "upper": 0.65625
+        }
+      },
+      "championshipInput": {
+        "bundle": {
+          "file": "championship-input/duel/bundle.json",
+          "sha256": "3405924d9fce54b03961a96361cfdef2e6e43f1cc75fcc3f0cb2b95b25e78633",
+          "bytes": 3811
+        },
+        "roles": {
+          "candidate": {
+            "id": "league-duel-73061",
+            "lineage": "league-duel-73061",
+            "trainingSeed": 73061,
+            "actor": {
+              "file": "championship-input/duel/candidate.json",
+              "sha256": "c9d050fff73317a42714de21f39f9b6f0796acc1876239d6e7d7a03868dfded1",
+              "bytes": 586073
+            },
+            "contentSHA256": "bfff60cbada1b2f7cd19f91aa23ea86c33cfc38a57944dc9ba63f05a5e523f08",
+            "registryPin": "fc66f3ce3198a1289fcfa02e5e97e0dcf95d503b1f59b345a8ac6dee9c20de29"
+          },
+          "independent": {
+            "id": "league-duel-71039",
+            "lineage": "league-duel-71039",
+            "trainingSeed": 71039,
+            "actor": {
+              "file": "championship-input/duel/independent.json",
+              "sha256": "07bb9521f871720a2bfca726c8e710b31f466875b5bbd2d5d4e4ef939d95c145",
+              "bytes": 586048
+            },
+            "contentSHA256": "1717359ebe870ed0a48a7e636077be1e3cd60859ce4e9cbc92e3668a489dbad3",
+            "registryPin": "53f746f530a4383d69271e768ef6273553540a94657d3fd1acc24cfe2a5a402d"
+          },
+          "counter": {
+            "id": "targeted-duel-mc-duel-923711",
+            "lineage": "targeted-duel-mc-duel-923711",
+            "trainingSeed": 923711,
+            "family": "duel-mc",
+            "actor": {
+              "file": "championship-input/duel/counter.json",
+              "sha256": "aab6bf934eff8f27f5593e1f5f24f5fe334303efe8fac1c1162f464732e19d94",
+              "bytes": 2810
+            },
+            "contentSHA256": "43eba1a760203768da97f5e040386d6b1b817d25661220fb94aa547bb829f42f",
+            "registryPin": "20c1b2f3ea92bb39be8150572a9838296f99418c0a0eeaff92cfe3c623a6a90e",
+            "trainedAgainstSHA256": "c9d050fff73317a42714de21f39f9b6f0796acc1876239d6e7d7a03868dfded1"
+          }
+        },
+        "counterTrainingReceipt": {
+          "file": "championship-input/duel/counter-training/training-receipt.json",
+          "sha256": "364dd157d71fa561cc50de34a89468ff87dcdd9d7c850030e0399ac04d71749b",
+          "bytes": 1406
+        },
+        "counterTrainingChicos": 1024,
+        "frozenAgainstSHA256": "c9d050fff73317a42714de21f39f9b6f0796acc1876239d6e7d7a03868dfded1",
+        "suggestedBudget": {
+          "seconds": 1800,
+          "families": 9,
+          "variancePilot": 0.18439716312056736,
+          "p95TwoLegSeconds": 0.004534250000000156,
+          "desiredEffect": 0.04,
+          "normalCritical": 3,
+          "powerZ": 0.842,
+          "affordable": 11027,
+          "powered": 1702,
+          "pairs": 1702,
+          "minimumDetectableChange": 0.03999030351424543,
+          "scope": "development estimate; service build may reduce budget before opening final draw"
+        },
+        "counterTrainingCheckpoint": {
+          "file": "championship-input/duel/counter-training/counter-state.json",
+          "sha256": "5905b65e9b57539ce5efb5b7ac43865bbf7c938876a1e8a228b523fc6383f531",
+          "bytes": 43084
+        }
+      }
+    },
+    {
+      "format": "pairs",
+      "finalStage": "pilot",
+      "trainingSeeds": [
+        71039,
+        72043,
+        73061
+      ],
+      "stages": [
+        {
+          "stage": "profile",
+          "frozenManifest": {
+            "file": "snapshots/profile/index.json",
+            "sha256": "aff0f60f7b9913959904714b8173c0f32fb2a9e159a6b996900e5f7e7d3ce4d2",
+            "bytes": 6202
+          },
+          "evidence": {
+            "file": "evidence/pairs/profile.json",
+            "sha256": "c70b963e6826cc4339b671fd554c97bd2efe618bab28b64d8b3db066675c0108",
+            "bytes": 3942
+          },
+          "matrix": {
+            "file": "development/pairs/profile.json",
+            "sha256": "bc6f6f50c193bb1e9828de5e5e225042bdb4244cbe3c5b40f361aae0575c6a6f",
+            "bytes": 48897
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 0,
+              "unitsAfter": 2560,
+              "tableEntries": 104174,
+              "tableCapacity": null,
+              "decisions": 171515,
+              "mcDecisions": 169795,
+              "completedChunkHours": 0.0841363502661111,
+              "timedCompletedUnits": 2560,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 566.2600695759617,
+              "peakSampledProcessTreeMiB": 520.890625,
+              "actorLatencyMs": {
+                "samples": 35105,
+                "p50": 0.009374999999977263,
+                "p95": 0.019000000000005457,
+                "p99": 0.035458000000062384
+              },
+              "meanWinRate": 0.4322916666666667,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.3020833333333333
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs/71039/checkpoint",
+                "sha256": "1fb9182f3d0e2ecfab185a5180e7dcb43427b201a4782165156c41a566f956d4",
+                "bytes": 3234230
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs/71039/actor.json",
+                "sha256": "d87480f8a8a24470931329ca33ce62f69e9425cd518b386425b93299a5c9ee54",
+                "bytes": 75324
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 0,
+              "unitsAfter": 2560,
+              "tableEntries": 100602,
+              "tableCapacity": null,
+              "decisions": 168224,
+              "mcDecisions": 164493,
+              "completedChunkHours": 0.08381470336833333,
+              "timedCompletedUnits": 2560,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 557.5261500781482,
+              "peakSampledProcessTreeMiB": 561.59375,
+              "actorLatencyMs": {
+                "samples": 34855,
+                "p50": 0.008083000000169704,
+                "p95": 0.016000000000076398,
+                "p99": 0.026582999999845924
+              },
+              "meanWinRate": 0.4288194444444445,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.3020833333333333
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs/72043/checkpoint",
+                "sha256": "2f11e1bf500180699ec15e1d47c9f5a6064d0d67369b2aceca9889ec3ddae679",
+                "bytes": 3127572
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs/72043/actor.json",
+                "sha256": "f36d456cd7d16302124a5875cf6f94067106445285458b1a7bf4e8401168cf90",
+                "bytes": 75386
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 0,
+              "unitsAfter": 2560,
+              "tableEntries": 104954,
+              "tableCapacity": null,
+              "decisions": 165297,
+              "mcDecisions": 172485,
+              "completedChunkHours": 0.0845771179738889,
+              "timedCompletedUnits": 2560,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 542.8871831209561,
+              "peakSampledProcessTreeMiB": 577.734375,
+              "actorLatencyMs": {
+                "samples": 34268,
+                "p50": 0.008625000000392902,
+                "p95": 0.017832999999882304,
+                "p99": 0.03383399999984249
+              },
+              "meanWinRate": 0.4027777777777779,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.2708333333333333
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs/73061/checkpoint",
+                "sha256": "fba982d45fb5b70840d301937f9802cd324a8ea1d3534c22871ae18bfaff4737",
+                "bytes": 3256742
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs/73061/actor.json",
+                "sha256": "2909aca258db996de900e1eb0149f50c3b42a4287b80da6140ec34701b00673c",
+                "bytes": 75384
+              }
+            }
+          ]
+        },
+        {
+          "stage": "pilot",
+          "frozenManifest": {
+            "file": "snapshots/pilot/index.json",
+            "sha256": "dc1610fdd1231bf5edac27fa0a0028ea5045e1f61edb63688bbf737d6cdc8fc3",
+            "bytes": 6148
+          },
+          "evidence": {
+            "file": "evidence/pairs/pilot.json",
+            "sha256": "6906c3f5ffe802797ddce9559cabe41bee455742dacf204fb4214b1a4427088e",
+            "bytes": 3993
+          },
+          "matrix": {
+            "file": "development/pairs/pilot.json",
+            "sha256": "2be4d6a72b1f12f984ba565fac4e3af483a26aff1e01d0a90f4d20934c0303d9",
+            "bytes": 49651
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 2560,
+              "unitsAfter": 24916,
+              "tableEntries": 535378,
+              "tableCapacity": null,
+              "decisions": 1201452,
+              "mcDecisions": 1565824,
+              "completedChunkHours": 0.655691865057776,
+              "timedCompletedUnits": 22272,
+              "unitsOutsideTimedChunks": 84,
+              "cpuHoursObservedLowerBound": 0.3254583333333338,
+              "decisionsPerMeasuredSecond": 507.34154249864,
+              "peakSampledProcessTreeMiB": 992.140625,
+              "actorLatencyMs": {
+                "samples": 26487,
+                "p50": 0.004165999999997894,
+                "p95": 0.007624999999990223,
+                "p99": 0.011458000000004631
+              },
+              "meanWinRate": 0.41840277777777773,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.25
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs/71039/checkpoint",
+                "sha256": "cb1cca3f9dc0eca03f26b11f41c5f8f176408e68fc4666e43b1f85564d1dfaef",
+                "bytes": 15995596
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs/71039/actor.json",
+                "sha256": "d19dac5c5adc7f1588f3d6613501e3dd8feb36831bfd046b99a9b5702c62bc77",
+                "bytes": 75275
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 2560,
+              "unitsAfter": 25088,
+              "tableEntries": 529528,
+              "tableCapacity": null,
+              "decisions": 1157181,
+              "mcDecisions": 1561486,
+              "completedChunkHours": 0.6569966495127765,
+              "timedCompletedUnits": 22528,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0.3215250000000001,
+              "decisionsPerMeasuredSecond": 489.2554123450149,
+              "peakSampledProcessTreeMiB": 962.828125,
+              "actorLatencyMs": {
+                "samples": 27061,
+                "p50": 0.003917000000001281,
+                "p95": 0.007457999999928688,
+                "p99": 0.0098339999999979
+              },
+              "meanWinRate": 0.4340277777777777,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.28125
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs/72043/checkpoint",
+                "sha256": "6778687b05e0e261e89ac158276fcac58a49a46024dd0f5d2b1405fbb31c15e7",
+                "bytes": 15820431
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs/72043/actor.json",
+                "sha256": "183e6228f5e01d65545b20a3135a0cb81c27b3fa4f1cf56c7580497cae38f4da",
+                "bytes": 75357
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 2560,
+              "unitsAfter": 24448,
+              "tableEntries": 519562,
+              "tableCapacity": null,
+              "decisions": 1155146,
+              "mcDecisions": 1514873,
+              "completedChunkHours": 0.6580044392124982,
+              "timedCompletedUnits": 21888,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0.31643611111111114,
+              "decisionsPerMeasuredSecond": 487.6469971432287,
+              "peakSampledProcessTreeMiB": 924.078125,
+              "actorLatencyMs": {
+                "samples": 27325,
+                "p50": 0.0038340000000971486,
+                "p95": 0.0072079999999914435,
+                "p99": 0.00870800000006966
+              },
+              "meanWinRate": 0.4270833333333332,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.23958333333333334
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs/73061/checkpoint",
+                "sha256": "15265be91328d7d3c081b9ef553e12b35673d49fd992cfc7f68ee1e7b0eb4ec2",
+                "bytes": 15527709
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs/73061/actor.json",
+                "sha256": "f0e35dded47d0cb30f56e59b80200eec666ef8b1c0e77bc9217d7424327edd7c",
+                "bytes": 75300
+              }
+            }
+          ]
+        }
+      ],
+      "learning": {
+        "earlyToPilot": {
+          "mean": 0.01099537037037037,
+          "lower": -0.020833333333333332,
+          "upper": 0.045138888888888895
+        },
+        "profileToPilot": {
+          "mean": 0.005208333333333333,
+          "lower": -0.022569444444444458,
+          "upper": 0.037037037037037035
+        },
+        "seeds": [
+          {
+            "seed": 72043,
+            "early": 0.41666666666666674,
+            "profile": 0.4288194444444445,
+            "pilot": 0.4340277777777777
+          },
+          {
+            "seed": 73061,
+            "early": 0.4357638888888888,
+            "profile": 0.4027777777777779,
+            "pilot": 0.4270833333333332
+          },
+          {
+            "seed": 71039,
+            "early": 0.39409722222222227,
+            "profile": 0.4322916666666667,
+            "pilot": 0.41840277777777773
+          }
+        ]
+      },
+      "extension": {
+        "used": false,
+        "rule": "Both 95% paired lower limits positive, plus positive median seed change since profile.",
+        "finding": "Pilot did not establish sustained progress under this criterion."
+      },
+      "alternative": {
+        "change": "rotar cada tres lotes entre autojuego/V1 y dos campeones independientes congelados, mismo presupuesto y semilla",
+        "unitsPerSeed": 256,
+        "pairsPerFamily": 48,
+        "comparisons": [
+          {
+            "seed": 71039,
+            "pairedDelta": {
+              "mean": -0.012152777777777776,
+              "lower": -0.036458333333333336,
+              "upper": 0.010416666666666666
+            }
+          },
+          {
+            "seed": 72043,
+            "pairedDelta": {
+              "mean": -0.008680555555555554,
+              "lower": -0.019097222222222224,
+              "upper": 0.0034722222222222216
+            }
+          },
+          {
+            "seed": 73061,
+            "pairedDelta": {
+              "mean": 0.01909722222222222,
+              "lower": 0,
+              "upper": 0.03993055555555556
+            }
+          }
+        ],
+        "report": {
+          "file": "representation/pairs/comparison.json",
+          "sha256": "7125a9e995af27438157138c10636cc0ed93bd19fd5a57554689ee7ae4eeb57b",
+          "bytes": 8530
+        }
+      },
+      "matrix": {
+        "opponents": [
+          "incumbent-online-v1",
+          "caller",
+          "folder",
+          "frequent-bluff",
+          "rare-bluff",
+          "strong-cards"
+        ],
+        "seed": 18890627,
+        "pairsPerEdge": 48,
+        "edges": 36,
+        "cycles": {
+          "count": 6,
+          "examples": [
+            [
+              "71039",
+              "folder",
+              "caller"
+            ],
+            [
+              "71039",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "72043",
+              "folder",
+              "caller"
+            ],
+            [
+              "72043",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "73061",
+              "folder",
+              "caller"
+            ]
+          ],
+          "threePairwiseBoundsExcludeHalf": [
+            [
+              "71039",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "72043",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "73061",
+              "folder",
+              "strong-cards"
+            ]
+          ]
+        }
+      },
+      "profileCounter": {
+        "seed": 831194,
+        "fullTrainingChicos": 512,
+        "championWinRate": {
+          "mean": 0.5208333333333334,
+          "lower": 0.4270833333333333,
+          "upper": 0.6041666666666666
+        }
+      },
+      "championshipInput": {
+        "bundle": {
+          "file": "championship-input/pairs/bundle.json",
+          "sha256": "f3c2012545fad51e7d55f1e5befbb6811fa3185d9e892fc7992ef8e31dfea950",
+          "bytes": 4185
+        },
+        "roles": {
+          "candidate": {
+            "id": "league-pairs-72043",
+            "lineage": "league-pairs-72043",
+            "trainingSeed": 72043,
+            "actor": {
+              "file": "championship-input/pairs/candidate.json",
+              "sha256": "183e6228f5e01d65545b20a3135a0cb81c27b3fa4f1cf56c7580497cae38f4da",
+              "bytes": 75357
+            },
+            "contentSHA256": "195e78c9ed79ec68e8de67f31d24289abdd38090319c2784af0db79603d9725a",
+            "registryPin": "62c7ad3aa9052200c0fbd8c27e89af105c2bdc4ac85db45edf36afe8b52b0a95"
+          },
+          "independent": {
+            "id": "league-pairs-73061",
+            "lineage": "league-pairs-73061",
+            "trainingSeed": 73061,
+            "actor": {
+              "file": "championship-input/pairs/independent.json",
+              "sha256": "f0e35dded47d0cb30f56e59b80200eec666ef8b1c0e77bc9217d7424327edd7c",
+              "bytes": 75300
+            },
+            "contentSHA256": "3ad793cd1cf5d92118a4378cf35d9e1cfea8774f76ccca59cc4564ab650c4c58",
+            "registryPin": "4558c4536a83037fd374f3880e5d6fee8c0ddcd77c9eecd80be8fee0a417011e"
+          },
+          "partner": {
+            "id": "league-pairs-71039",
+            "lineage": "league-pairs-71039",
+            "trainingSeed": 71039,
+            "actor": {
+              "file": "championship-input/pairs/partner.json",
+              "sha256": "d19dac5c5adc7f1588f3d6613501e3dd8feb36831bfd046b99a9b5702c62bc77",
+              "bytes": 75275
+            },
+            "contentSHA256": "39af44be6de0aee929a15d7297c91603be70d4f07cfcd39072c39413466c23b3",
+            "registryPin": "b161a055759946211bb89bbd4bb9dcba028a0146175da6b62266c9a3a166467e"
+          },
+          "counter": {
+            "id": "targeted-pairs-mc-v1-pairs-923712",
+            "lineage": "targeted-pairs-mc-v1-pairs-923712",
+            "trainingSeed": 923712,
+            "family": "pairs-mc-v1",
+            "actor": {
+              "file": "championship-input/pairs/counter.json",
+              "sha256": "24caef3511e1300f969c5092101729101d775fa68307755e543c0d1ff29614ed",
+              "bytes": 799698
+            },
+            "contentSHA256": "bd2ebefc3dc00921f3f062ea3845c7a8a47301d23e26ebda270260954261c06e",
+            "registryPin": "5c34ffaf29e9748d908ca4a60356a660245375b6f6457bcbf0c66882259980ac",
+            "trainedAgainstSHA256": "183e6228f5e01d65545b20a3135a0cb81c27b3fa4f1cf56c7580497cae38f4da"
+          }
+        },
+        "counterTrainingReceipt": {
+          "file": "championship-input/pairs/counter-training/training-receipt.json",
+          "sha256": "4332ea9eff203318d2814735386fba29821210abaccdfab47a087f685bea03ab",
+          "bytes": 1492
+        },
+        "counterTrainingChicos": 1024,
+        "frozenAgainstSHA256": "183e6228f5e01d65545b20a3135a0cb81c27b3fa4f1cf56c7580497cae38f4da",
+        "suggestedBudget": {
+          "seconds": 1800,
+          "families": 9,
+          "variancePilot": 0.20999556737588654,
+          "p95TwoLegSeconds": 0.008887583000000176,
+          "desiredEffect": 0.04,
+          "normalCritical": 3,
+          "powerZ": 0.842,
+          "affordable": 5625,
+          "powered": 1938,
+          "pairs": 1938,
+          "minimumDetectableChange": 0.03999314318290856,
+          "scope": "development estimate; service build may reduce budget before opening final draw"
+        },
+        "counterTrainingCheckpoint": {
+          "file": "championship-input/pairs/counter-training/checkpoint",
+          "sha256": "5b56ea2f77e769bf5544934c6de6ad9829041df7b62556ff9b170c729f1bb901",
+          "bytes": 1005451
+        }
+      }
+    },
+    {
+      "format": "pairs-senas",
+      "finalStage": "pilot",
+      "trainingSeeds": [
+        71039,
+        72043,
+        73061
+      ],
+      "stages": [
+        {
+          "stage": "profile",
+          "frozenManifest": {
+            "file": "snapshots/profile/index.json",
+            "sha256": "aff0f60f7b9913959904714b8173c0f32fb2a9e159a6b996900e5f7e7d3ce4d2",
+            "bytes": 6202
+          },
+          "evidence": {
+            "file": "evidence/pairs-senas/profile.json",
+            "sha256": "a1da7be4dfb5063cdd1f1fe95691989ded7708e0235c8bcace9ecb0c03ef9010",
+            "bytes": 3896
+          },
+          "matrix": {
+            "file": "development/pairs-senas/profile.json",
+            "sha256": "134d73df3ec735c93305b8d6e1708ba052848770477ca9ee960840c196188245",
+            "bytes": 48619
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 0,
+              "unitsAfter": 2176,
+              "tableEntries": 125604,
+              "tableCapacity": null,
+              "decisions": 149605,
+              "mcDecisions": 141286,
+              "completedChunkHours": 0.08380726293944447,
+              "timedCompletedUnits": 2176,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 495.8632818550787,
+              "peakSampledProcessTreeMiB": 743.828125,
+              "actorLatencyMs": {
+                "samples": 34836,
+                "p50": 0.027208000000200627,
+                "p95": 0.050499999999999545,
+                "p99": 0.0650829999999587
+              },
+              "meanWinRate": 0.4149305555555556,
+              "worstFamily": {
+                "id": "caller",
+                "winRate": 0.28125
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs-senas/71039/checkpoint",
+                "sha256": "024466918d0542456e99e59265d795ce275ffacc29165fe8cb2a7cd3a6bfb421",
+                "bytes": 3975970
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs-senas/71039/actor.json",
+                "sha256": "ed39f143d35ccc647da755eccf294b314ec0acb6c53b4733a9f20cd7a41b1bf5",
+                "bytes": 75288
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 0,
+              "unitsAfter": 2304,
+              "tableEntries": 127296,
+              "tableCapacity": null,
+              "decisions": 151383,
+              "mcDecisions": 142646,
+              "completedChunkHours": 0.08492555196777772,
+              "timedCompletedUnits": 2304,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 495.14936740462014,
+              "peakSampledProcessTreeMiB": 664.15625,
+              "actorLatencyMs": {
+                "samples": 36352,
+                "p50": 0.029290999999830092,
+                "p95": 0.05562499999996362,
+                "p99": 0.06912499999998545
+              },
+              "meanWinRate": 0.4288194444444444,
+              "worstFamily": {
+                "id": "caller",
+                "winRate": 0.2916666666666667
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs-senas/72043/checkpoint",
+                "sha256": "b4d5cfe0892e69ba14fec3301d7cc9449da122e7c8af4a11f2c6f5642b1794fb",
+                "bytes": 4029601
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs-senas/72043/actor.json",
+                "sha256": "e69c426f94b1426634e0937878180a781aaa116ff8e8dd85a642e009ff4cab7f",
+                "bytes": 75372
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 0,
+              "unitsAfter": 2176,
+              "tableEntries": 127788,
+              "tableCapacity": null,
+              "decisions": 145442,
+              "mcDecisions": 142268,
+              "completedChunkHours": 0.08422467739555554,
+              "timedCompletedUnits": 2176,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": null,
+              "decisionsPerMeasuredSecond": 479.67599051542885,
+              "peakSampledProcessTreeMiB": 643.5,
+              "actorLatencyMs": {
+                "samples": 35399,
+                "p50": 0.026499999999941792,
+                "p95": 0.04862500000035652,
+                "p99": 0.06037500000002183
+              },
+              "meanWinRate": 0.4409722222222224,
+              "worstFamily": {
+                "id": "rare-bluff",
+                "winRate": 0.3125
+              },
+              "checkpoint": {
+                "file": "snapshots/profile/pairs-senas/73061/checkpoint",
+                "sha256": "fecf5dacbee438170616c11fa9a1793907c066cf2fcff5ada4ae2a221bf51da0",
+                "bytes": 4043359
+              },
+              "actor": {
+                "file": "snapshots/profile/pairs-senas/73061/actor.json",
+                "sha256": "0a34a3f8d8ff09f6c5883fc84f8371e83d41f36bdcf70ce2a2e1c6cd89e47a0b",
+                "bytes": 75366
+              }
+            }
+          ]
+        },
+        {
+          "stage": "pilot",
+          "frozenManifest": {
+            "file": "snapshots/pilot/index.json",
+            "sha256": "dc1610fdd1231bf5edac27fa0a0028ea5045e1f61edb63688bbf737d6cdc8fc3",
+            "bytes": 6148
+          },
+          "evidence": {
+            "file": "evidence/pairs-senas/pilot.json",
+            "sha256": "42f28563d43dc2e1b28d77bef49b8d76bec497295d1bc53ccabc243cf56aec9c",
+            "bytes": 4014
+          },
+          "matrix": {
+            "file": "development/pairs-senas/pilot.json",
+            "sha256": "0bc2c6d9985166b976e9a33a84e4931ca609e985e70214c3077ece68eed5fad5",
+            "bytes": 49387
+          },
+          "seeds": [
+            {
+              "seed": 71039,
+              "unitsBefore": 2176,
+              "unitsAfter": 18048,
+              "tableEntries": 882743,
+              "tableCapacity": null,
+              "decisions": 908383,
+              "mcDecisions": 1043624,
+              "completedChunkHours": 0.6592927750708325,
+              "timedCompletedUnits": 15872,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0.43595000000000034,
+              "decisionsPerMeasuredSecond": 382.72618880739543,
+              "peakSampledProcessTreeMiB": 1624.125,
+              "actorLatencyMs": {
+                "samples": 28425,
+                "p50": 0.01716700000002902,
+                "p95": 0.03224999999997635,
+                "p99": 0.04220900000001393
+              },
+              "meanWinRate": 0.3958333333333333,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.2604166666666667
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs-senas/71039/checkpoint",
+                "sha256": "86039eb2838a100c9e9258a67507aec46db1ba497fbee13655a1e659ebbe33cc",
+                "bytes": 26968466
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs-senas/71039/actor.json",
+                "sha256": "75c22e1ef420563b35901c8f52397db96e3f73506e93764748d7f99cfb4c5abf",
+                "bytes": 75231
+              }
+            },
+            {
+              "seed": 72043,
+              "unitsBefore": 2304,
+              "unitsAfter": 18048,
+              "tableEntries": 879466,
+              "tableCapacity": null,
+              "decisions": 859541,
+              "mcDecisions": 1031648,
+              "completedChunkHours": 0.6574462793266682,
+              "timedCompletedUnits": 15744,
+              "unitsOutsideTimedChunks": 0,
+              "cpuHoursObservedLowerBound": 0.4371722222222223,
+              "decisionsPerMeasuredSecond": 363.16486441054826,
+              "peakSampledProcessTreeMiB": 1664.859375,
+              "actorLatencyMs": {
+                "samples": 27544,
+                "p50": 0.015874999999596184,
+                "p95": 0.027833000000100583,
+                "p99": 0.03220800000008239
+              },
+              "meanWinRate": 0.40625,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.2604166666666667
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs-senas/72043/checkpoint",
+                "sha256": "a866e30b74fe19045655012bbd9e2823bb5b51d27a3ed68342fdb2a84d72a6ef",
+                "bytes": 26872748
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs-senas/72043/actor.json",
+                "sha256": "f28332efd1523eb7e3ec43a2593143a375834c5cb7bdc01027c9dd9e2e411d6f",
+                "bytes": 75358
+              }
+            },
+            {
+              "seed": 73061,
+              "unitsBefore": 2176,
+              "unitsAfter": 17556,
+              "tableEntries": 867175,
+              "tableCapacity": null,
+              "decisions": 845324,
+              "mcDecisions": 1012017,
+              "completedChunkHours": 0.6527189713077779,
+              "timedCompletedUnits": 15360,
+              "unitsOutsideTimedChunks": 20,
+              "cpuHoursObservedLowerBound": 0.41603611111111116,
+              "decisionsPerMeasuredSecond": 359.3583307836742,
+              "peakSampledProcessTreeMiB": 1719.125,
+              "actorLatencyMs": {
+                "samples": 28690,
+                "p50": 0.014958000000206084,
+                "p95": 0.026624999999967258,
+                "p99": 0.031167000000095868
+              },
+              "meanWinRate": 0.4184027777777777,
+              "worstFamily": {
+                "id": "incumbent-online-v1",
+                "winRate": 0.2708333333333333
+              },
+              "checkpoint": {
+                "file": "snapshots/pilot/pairs-senas/73061/checkpoint",
+                "sha256": "491102759f6678a90937710b32e0b96841e10c04e6bfd0a5148301e6edd60337",
+                "bytes": 26497290
+              },
+              "actor": {
+                "file": "snapshots/pilot/pairs-senas/73061/actor.json",
+                "sha256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04",
+                "bytes": 75334
+              }
+            }
+          ]
+        }
+      ],
+      "learning": {
+        "earlyToPilot": {
+          "mean": -0.022569444444444437,
+          "lower": -0.0590277777777778,
+          "upper": 0.011574074074074082
+        },
+        "profileToPilot": {
+          "mean": -0.021412037037037045,
+          "lower": -0.0630787037037037,
+          "upper": 0.015625000000000014
+        },
+        "seeds": [
+          {
+            "seed": 73061,
+            "early": 0.3993055555555555,
+            "profile": 0.4409722222222224,
+            "pilot": 0.4184027777777777
+          },
+          {
+            "seed": 72043,
+            "early": 0.4756944444444445,
+            "profile": 0.4288194444444444,
+            "pilot": 0.40625
+          },
+          {
+            "seed": 71039,
+            "early": 0.41319444444444436,
+            "profile": 0.4149305555555556,
+            "pilot": 0.3958333333333333
+          }
+        ]
+      },
+      "extension": {
+        "used": false,
+        "rule": "Both 95% paired lower limits positive, plus positive median seed change since profile.",
+        "finding": "Pilot did not establish sustained progress under this criterion."
+      },
+      "alternative": {
+        "change": "rotar cada tres lotes entre autojuego/V1 y dos campeones independientes congelados, mismo presupuesto y semilla",
+        "unitsPerSeed": 256,
+        "pairsPerFamily": 48,
+        "comparisons": [
+          {
+            "seed": 71039,
+            "pairedDelta": {
+              "mean": 0.03124999999999999,
+              "lower": -0.006944444444444451,
+              "upper": 0.06944444444444443
+            }
+          },
+          {
+            "seed": 72043,
+            "pairedDelta": {
+              "mean": 0.0034722222222222272,
+              "lower": -0.046875,
+              "upper": 0.05902777777777777
+            }
+          },
+          {
+            "seed": 73061,
+            "pairedDelta": {
+              "mean": 0.01909722222222222,
+              "lower": -0.024305555555555556,
+              "upper": 0.06250000000000001
+            }
+          }
+        ],
+        "report": {
+          "file": "representation/pairs-senas/comparison.json",
+          "sha256": "3821dc7aed362e27a1aa68902edb94c8f131aa3d12d1e637fb4b7f06130faa14",
+          "bytes": 8499
+        }
+      },
+      "matrix": {
+        "opponents": [
+          "incumbent-online-v1",
+          "caller",
+          "folder",
+          "frequent-bluff",
+          "rare-bluff",
+          "strong-cards"
+        ],
+        "seed": 18890627,
+        "pairsPerEdge": 48,
+        "edges": 36,
+        "cycles": {
+          "count": 6,
+          "examples": [
+            [
+              "71039",
+              "folder",
+              "caller"
+            ],
+            [
+              "71039",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "72043",
+              "folder",
+              "caller"
+            ],
+            [
+              "72043",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "73061",
+              "folder",
+              "caller"
+            ]
+          ],
+          "threePairwiseBoundsExcludeHalf": [
+            [
+              "71039",
+              "folder",
+              "caller"
+            ],
+            [
+              "71039",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "72043",
+              "folder",
+              "caller"
+            ],
+            [
+              "72043",
+              "folder",
+              "strong-cards"
+            ],
+            [
+              "73061",
+              "folder",
+              "caller"
+            ],
+            [
+              "73061",
+              "folder",
+              "strong-cards"
+            ]
+          ]
+        }
+      },
+      "profileCounter": {
+        "seed": 831195,
+        "fullTrainingChicos": 512,
+        "championWinRate": {
+          "mean": 0.5729166666666666,
+          "lower": 0.4895833333333333,
+          "upper": 0.6458333333333334
+        }
+      },
+      "championshipInput": {
+        "bundle": {
+          "file": "championship-input/pairs-senas/bundle.json",
+          "sha256": "c5b02b4c4361f8180714c98b4f5ce784fb8c68059c33a6befe23d57605347f3f",
+          "bytes": 4265
+        },
+        "roles": {
+          "candidate": {
+            "id": "league-pairs-senas-73061",
+            "lineage": "league-pairs-senas-73061",
+            "trainingSeed": 73061,
+            "actor": {
+              "file": "championship-input/pairs-senas/candidate.json",
+              "sha256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04",
+              "bytes": 75334
+            },
+            "contentSHA256": "3174d4b19eb9948433866a56a3bf30554af0d74011f7645c265ae6cbc85fb9b8",
+            "registryPin": "3a16ad442942e650205d91ddf7d246df329a309dcf2177487e30bfc47046fbf1"
+          },
+          "independent": {
+            "id": "league-pairs-senas-72043",
+            "lineage": "league-pairs-senas-72043",
+            "trainingSeed": 72043,
+            "actor": {
+              "file": "championship-input/pairs-senas/independent.json",
+              "sha256": "f28332efd1523eb7e3ec43a2593143a375834c5cb7bdc01027c9dd9e2e411d6f",
+              "bytes": 75358
+            },
+            "contentSHA256": "66edf7b9b75aebd385faaa6a40a06f71bb34b17701f4e774d357a734c380a5da",
+            "registryPin": "cab848d22025acdedb1c20512f400cc09811f4f3eb156774446cbab28ebd8a8c"
+          },
+          "partner": {
+            "id": "league-pairs-senas-71039",
+            "lineage": "league-pairs-senas-71039",
+            "trainingSeed": 71039,
+            "actor": {
+              "file": "championship-input/pairs-senas/partner.json",
+              "sha256": "75c22e1ef420563b35901c8f52397db96e3f73506e93764748d7f99cfb4c5abf",
+              "bytes": 75231
+            },
+            "contentSHA256": "e49d5196091118cc84d4f6115b83f472a4a59f1ba703fae35f424aca14cd2bed",
+            "registryPin": "e035f023428d238778b10f47cefdb90dfe6b76e21e1842745fab2338e131c525"
+          },
+          "counter": {
+            "id": "targeted-pairs-mc-v1-pairs-senas-923713",
+            "lineage": "targeted-pairs-mc-v1-pairs-senas-923713",
+            "trainingSeed": 923713,
+            "family": "pairs-mc-v1",
+            "actor": {
+              "file": "championship-input/pairs-senas/counter.json",
+              "sha256": "db5a3d5492c78b6795922bf393c710c9cdb8a40ef758b840e37bf10d72fba9f8",
+              "bytes": 1065738
+            },
+            "contentSHA256": "5d813ee81156b5279754879bb8293f600c4976349991bdb8f4ddff9dc71275e2",
+            "registryPin": "9f4c4a335bae20e4f85c489116cd1e53e75619f034b3bbac108a3ae6ccc65c5a",
+            "trainedAgainstSHA256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04"
+          }
+        },
+        "counterTrainingReceipt": {
+          "file": "championship-input/pairs-senas/counter-training/training-receipt.json",
+          "sha256": "bcc79796b5e869382d1fcd213c73e55a944936e8a37109e4f21355316e93a540",
+          "bytes": 1496
+        },
+        "counterTrainingChicos": 1024,
+        "frozenAgainstSHA256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04",
+        "suggestedBudget": {
+          "seconds": 1800,
+          "families": 9,
+          "variancePilot": 0.2525487588652483,
+          "p95TwoLegSeconds": 0.01154870799999935,
+          "desiredEffect": 0.04,
+          "normalCritical": 3,
+          "powerZ": 0.842,
+          "affordable": 4329,
+          "powered": 2330,
+          "pairs": 2330,
+          "minimumDetectableChange": 0.03999926575428363,
+          "scope": "development estimate; service build may reduce budget before opening final draw"
+        },
+        "counterTrainingCheckpoint": {
+          "file": "championship-input/pairs-senas/counter-training/checkpoint",
+          "sha256": "5db6fdbd732c4a72e63c7cd8b69a9e22415f930717e7cf12fff3d476709d708d",
+          "bytes": 1294138
+        }
+      }
+    }
+  ],
+  "pilot": {
+    "startedUTC": "2026-11-19T00:24:27.580Z",
+    "deadlineUTC": "2026-11-19T02:24:27.580Z",
+    "finishedUTC": "2026-11-19T02:24:27.665Z",
+    "stageBudgetSeconds": 7200
+  },
+  "overnight": null,
+  "hardware": {
+    "cpu": "Apple M5",
+    "arch": "arm64",
+    "memoryBytes": 25769803776,
+    "node": "v24.22.1",
+    "backend": "cpu"
+  },
+  "resourceDecision": "Sin gasto ni propuesta; el piloto mide el hardware local.",
+  "computeScope": "Per-format elapsed time sums trained chunks. Sampled CPU hours exclude unobserved process startup/exit. RSS is the sampled process-tree sum.",
+  "latencyScope": "Development actor decide calls in the arena. Serving deadline, fallbacks, sealed results and activation are evaluated separately.",
+  "freshCheckout": {
+    "file": "fresh-verification/receipt.json",
+    "sha256": "33c8f1e34e6e2f175faa8b3f8c71a6da43ef9bad0853c1086063d2f9b2fc6463",
+    "bytes": 284
+  },
+  "frozenSummary": {
+    "file": "public-summary.json",
+    "sha256": "148a2c58300bbfbb7e649e7192d4050f48362b13f82d62d33666bd36a5d108c6",
+    "bytes": 33473
+  },
+  "freshPartnershipCheckout": {
+    "file": "fresh-verification/partners-receipt.json",
+    "sha256": "1352c04b0e1b10df2cea146918c9743b3fe2ecd7bbf39fe12218e10d546cffe7",
+    "bytes": 531
+  }
+}

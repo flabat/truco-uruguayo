@@ -1,0 +1,261 @@
+{
+  "pool": "promotion",
+  "registrationSha256": "abd605beee0719c75d530a1a1bed1851edae200177402944085438ab740e3fa8",
+  "formats": {
+    "duel": {
+      "pairs": 96,
+      "chicos": 2688,
+      "candidate": "fc66f3ce3198a1289fcfa02e5e97e0dcf95d503b1f59b345a8ac6dee9c20de29",
+      "reportSha256": "355d01c066691fe7fb79e1c8d5a7eb4ab1d464d36bcc7ad2c14a73e38cd2e0cc",
+      "manifestSha256": "57413d303a80685b654e314213ef17b5315d07f0a1c6a5ff01999ff48f94e2f3",
+      "archivedReceiptSha256": "cf54334587e933e008a7711d682859ef5556ba798e88b12e2e735233854390a7",
+      "engineeringElapsedMs": 9648,
+      "direct": {
+        "estimate": 0.171875,
+        "lower": 0.10416666666666667,
+        "upper": 0.25
+      },
+      "headline": {
+        "estimate": 0.3296130952380952,
+        "lower": 0.3020833333333333,
+        "upper": 0.35788690476190466
+      },
+      "families": [
+        {
+          "id": "incumbent-online-v1",
+          "winRate": 0.171875,
+          "delta": {
+            "estimate": -0.328125,
+            "lower": -0.3958333333333333,
+            "upper": -0.25
+          }
+        },
+        {
+          "id": "caller",
+          "winRate": 0.28125,
+          "delta": {
+            "estimate": -0.4583333333333333,
+            "lower": -0.5677083333333334,
+            "upper": -0.3489583333333333
+          }
+        },
+        {
+          "id": "folder",
+          "winRate": 0.5677083333333334,
+          "delta": {
+            "estimate": 0,
+            "lower": -0.10416666666666667,
+            "upper": 0.09895833333333333
+          }
+        },
+        {
+          "id": "frequent-bluff",
+          "winRate": 0.3958333333333333,
+          "delta": {
+            "estimate": -0.24479166666666666,
+            "lower": -0.3489583333333333,
+            "upper": -0.140625
+          }
+        },
+        {
+          "id": "rare-bluff",
+          "winRate": 0.21875,
+          "delta": {
+            "estimate": -0.3229166666666667,
+            "lower": -0.4166666666666667,
+            "upper": -0.22916666666666666
+          }
+        },
+        {
+          "id": "strong-cards",
+          "winRate": 0.2552083333333333,
+          "delta": {
+            "estimate": -0.4010416666666667,
+            "lower": -0.5052083333333334,
+            "upper": -0.2916666666666667
+          }
+        },
+        {
+          "id": "108fa3543b0f9f1b761d43f24965b94cf213f444aaa56be27d6edc5b614fd53a",
+          "winRate": 0.4166666666666667,
+          "delta": {
+            "estimate": -0.4270833333333333,
+            "lower": -0.5364583333333334,
+            "upper": -0.3177083333333333
+          }
+        }
+      ],
+      "strengthOnly": "failed"
+    },
+    "pairs": {
+      "pairs": 96,
+      "chicos": 2688,
+      "candidate": "62c7ad3aa9052200c0fbd8c27e89af105c2bdc4ac85db45edf36afe8b52b0a95",
+      "reportSha256": "52dcb769bd5eb342f3e37dde2838a0b4baf3b51795a524428f79b450cfc67cc5",
+      "manifestSha256": "6563c0e245646eb68eca84dccdeadc0ec29578f799324f9fa05599723be9f55f",
+      "archivedReceiptSha256": "6276651d500928bee2dd6ecb713aae4ea8ecb58a536c33a263327ae575157da0",
+      "engineeringElapsedMs": 6243,
+      "direct": {
+        "estimate": 0.3333333333333333,
+        "lower": 0.25,
+        "upper": 0.4166666666666667
+      },
+      "headline": {
+        "estimate": 0.47767857142857134,
+        "lower": 0.4449404761904763,
+        "upper": 0.5096726190476191
+      },
+      "families": [
+        {
+          "id": "incumbent-online-v1",
+          "winRate": 0.3333333333333333,
+          "delta": {
+            "estimate": -0.16666666666666666,
+            "lower": -0.25,
+            "upper": -0.08333333333333333
+          }
+        },
+        {
+          "id": "caller",
+          "winRate": 0.375,
+          "delta": {
+            "estimate": -0.3125,
+            "lower": -0.4270833333333333,
+            "upper": -0.203125
+          }
+        },
+        {
+          "id": "folder",
+          "winRate": 0.875,
+          "delta": {
+            "estimate": 0.22395833333333334,
+            "lower": 0.13541666666666666,
+            "upper": 0.3072916666666667
+          }
+        },
+        {
+          "id": "frequent-bluff",
+          "winRate": 0.40625,
+          "delta": {
+            "estimate": -0.15104166666666666,
+            "lower": -0.2604166666666667,
+            "upper": -0.046875
+          }
+        },
+        {
+          "id": "rare-bluff",
+          "winRate": 0.3541666666666667,
+          "delta": {
+            "estimate": -0.15104166666666666,
+            "lower": -0.23958333333333334,
+            "upper": -0.0625
+          }
+        },
+        {
+          "id": "strong-cards",
+          "winRate": 0.40625,
+          "delta": {
+            "estimate": -0.375,
+            "lower": -0.484375,
+            "upper": -0.2604166666666667
+          }
+        },
+        {
+          "id": "bbee5534ef436d459dc1e3c044111f10eaae39ee83407ebed8230882c6550f90",
+          "winRate": 0.59375,
+          "delta": {
+            "estimate": -0.08854166666666667,
+            "lower": -0.20833333333333334,
+            "upper": 0.03125
+          }
+        }
+      ],
+      "strengthOnly": "failed"
+    },
+    "pairs-senas": {
+      "pairs": 96,
+      "chicos": 2688,
+      "candidate": "3a16ad442942e650205d91ddf7d246df329a309dcf2177487e30bfc47046fbf1",
+      "reportSha256": "dbd015f5e3ee954618cf43a7bcf1953c4aa87d8a64a1f699bea56197a3229c47",
+      "manifestSha256": "215cd4f84a9424d58dd6934d62f25b9c6b9623c0356b2790fcf0bf0115efbfb4",
+      "archivedReceiptSha256": "521d1bfb8ea4175fc41e9d4f544c38722357df53438e5d6df15ccbe605422929",
+      "engineeringElapsedMs": 12566,
+      "direct": {
+        "estimate": 0.3072916666666667,
+        "lower": 0.22395833333333334,
+        "upper": 0.390625
+      },
+      "headline": {
+        "estimate": 0.45982142857142844,
+        "lower": 0.4285714285714286,
+        "upper": 0.491815476190476
+      },
+      "families": [
+        {
+          "id": "incumbent-online-v1",
+          "winRate": 0.3072916666666667,
+          "delta": {
+            "estimate": -0.19270833333333334,
+            "lower": -0.2760416666666667,
+            "upper": -0.109375
+          }
+        },
+        {
+          "id": "caller",
+          "winRate": 0.3854166666666667,
+          "delta": {
+            "estimate": -0.20833333333333334,
+            "lower": -0.3177083333333333,
+            "upper": -0.10416666666666667
+          }
+        },
+        {
+          "id": "folder",
+          "winRate": 0.8645833333333334,
+          "delta": {
+            "estimate": 0.234375,
+            "lower": 0.14583333333333334,
+            "upper": 0.3229166666666667
+          }
+        },
+        {
+          "id": "frequent-bluff",
+          "winRate": 0.3541666666666667,
+          "delta": {
+            "estimate": -0.171875,
+            "lower": -0.2864583333333333,
+            "upper": -0.057291666666666664
+          }
+        },
+        {
+          "id": "rare-bluff",
+          "winRate": 0.3333333333333333,
+          "delta": {
+            "estimate": -0.16145833333333334,
+            "lower": -0.24479166666666666,
+            "upper": -0.07291666666666667
+          }
+        },
+        {
+          "id": "strong-cards",
+          "winRate": 0.4270833333333333,
+          "delta": {
+            "estimate": -0.359375,
+            "lower": -0.4739583333333333,
+            "upper": -0.24479166666666666
+          }
+        },
+        {
+          "id": "4b9021cf1fe59226a01aec8a0c29d06a08f80ab4b96e83204394c0635c501567",
+          "winRate": 0.546875,
+          "delta": {
+            "estimate": -0.15625,
+            "lower": -0.2604166666666667,
+            "upper": -0.046875
+          }
+        }
+      ],
+      "strengthOnly": "failed"
+    }
+  }
+}

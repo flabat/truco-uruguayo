@@ -1,0 +1,842 @@
+{
+  "schema": "public-championship-record-v1",
+  "revision": "6747968960ca68d2a8079950cf8b3390abd01c1e",
+  "build": "2550f3889cc19d7abb51f810cca7f731c4b86328d02f1328433bec04e8d62054",
+  "versions": {
+    "rules": "online-1",
+    "competition": "chico-40-v1",
+    "signals": "senas-publicas-v1",
+    "observation": "seat-v1",
+    "actions": "cards-bids-signals-v1",
+    "replay": "committed-v1",
+    "checkpoint": "training-v1",
+    "actor": "policy-v1"
+  },
+  "planSha256": "22115dfe4d0add0185dd0a793174ffe5573884daeb430bebcfab824c5ac3b424",
+  "dealCommitment": "5632946622a5ba21cddbe8433a066adfe09885dabdf86133428515fb64c0e88a",
+  "manifestSha256": "49d9b89607a6a8d7a90119036b5f9c44e076a63a55cd84f4c977688918d09158",
+  "actors": {
+    "candidate": {
+      "id": "league-pairs-senas-73061",
+      "lineage": "league-pairs-senas-73061",
+      "trainingSeed": 73061,
+      "sha256": "0a2ee31e2e21d445a098ac116e8f418675f25c6e9cdf96197a456aba37a38f04",
+      "pin": "3a16ad442942e650205d91ddf7d246df329a309dcf2177487e30bfc47046fbf1"
+    },
+    "independent": {
+      "id": "league-pairs-senas-72043",
+      "lineage": "league-pairs-senas-72043",
+      "trainingSeed": 72043,
+      "sha256": "f28332efd1523eb7e3ec43a2593143a375834c5cb7bdc01027c9dd9e2e411d6f",
+      "pin": "cab848d22025acdedb1c20512f400cc09811f4f3eb156774446cbab28ebd8a8c"
+    },
+    "counter": {
+      "id": "targeted-pairs-mc-v1-pairs-senas-923713",
+      "lineage": "targeted-pairs-mc-v1-pairs-senas-923713",
+      "trainingSeed": 923713,
+      "family": "pairs-mc-v1",
+      "sha256": "db5a3d5492c78b6795922bf393c710c9cdb8a40ef758b840e37bf10d72fba9f8",
+      "pin": "9f4c4a335bae20e4f85c489116cd1e53e75619f034b3bbac108a3ae6ccc65c5a"
+    },
+    "partner": {
+      "id": "league-pairs-senas-71039",
+      "lineage": "league-pairs-senas-71039",
+      "trainingSeed": 71039,
+      "sha256": "75c22e1ef420563b35901c8f52397db96e3f73506e93764748d7f99cfb4c5abf",
+      "pin": "e035f023428d238778b10f47cefdb90dfe6b76e21e1842745fab2338e131c525"
+    }
+  },
+  "counterReceiptSha256": "bcc79796b5e869382d1fcd213c73e55a944936e8a37109e4f21355316e93a540",
+  "baselineSourceSha256": "537df69e9301bd342a88e3eae3323b6c2c8b3c83e18235e8e81d9d498603920b",
+  "thresholds": {
+    "direct": 0.5,
+    "delta": -0.02
+  },
+  "deadlineMs": 200,
+  "fallbackLimit": 0.005,
+  "sizing": {
+    "pilotPairs": 12,
+    "pilotMs": 2745.3472089999996,
+    "variances": {
+      "incumbent-online-v1/fixed": 0.11174242424242423,
+      "direct": 0.11174242424242423,
+      "incumbent-online-v1/unseen": 0.12878787878787878,
+      "caller/fixed": 0.19696969696969696,
+      "caller/unseen": 0.1515151515151515,
+      "folder/fixed": 0.10606060606060605,
+      "folder/unseen": 0.03787878787878787,
+      "frequent-bluff/fixed": 0.24810606060606055,
+      "frequent-bluff/unseen": 0.13636363636363635,
+      "rare-bluff/fixed": 0.1590909090909091,
+      "rare-bluff/unseen": 0.1287878787878788,
+      "strong-cards/fixed": 0.14204545454545456,
+      "strong-cards/unseen": 0.1515151515151515,
+      "independent/fixed": 0.1571969696969697,
+      "independent/unseen": 0.20454545454545456,
+      "counter/fixed": 0.11174242424242427,
+      "counter/unseen": 0.0662878787878788
+    },
+    "z": 3.2,
+    "powerZ": 0.842,
+    "targetDifference": 0.06,
+    "wanted": 1126,
+    "feasible": 7867,
+    "estimatedDetectable": 0.12583313394431572,
+    "maxPairs": 256,
+    "wallBudgetMinutes": 30
+  },
+  "runtime": {
+    "node": "v24.22.1",
+    "cpu": "Apple M5",
+    "arch": "arm64",
+    "system": "27.2.0",
+    "memory": 25769803776
+  },
+  "elapsedMs": 98111,
+  "report": {
+    "format": "pairs-senas",
+    "planSha256": "22115dfe4d0add0185dd0a793174ffe5573884daeb430bebcfab824c5ac3b424",
+    "matchCount": 16384,
+    "field": {
+      "pairs": 256,
+      "resamples": 10000,
+      "simultaneous": "Bonferroni (direct win rate + each family change)",
+      "headline": {
+        "estimate": 0.456787109375,
+        "lower": 0.4422607421875,
+        "upper": 0.47119140625
+      },
+      "direct": {
+        "estimate": 0.3125,
+        "lower": 0.255859375,
+        "upper": 0.369140625
+      },
+      "families": [
+        {
+          "id": "incumbent-online-v1/fixed",
+          "winRate": 0.3125,
+          "delta": {
+            "estimate": -0.1875,
+            "lower": -0.244140625,
+            "upper": -0.130859375
+          }
+        },
+        {
+          "id": "incumbent-online-v1/unseen",
+          "winRate": 0.294921875,
+          "delta": {
+            "estimate": -0.060546875,
+            "lower": -0.126953125,
+            "upper": 0.009765625
+          }
+        },
+        {
+          "id": "caller/fixed",
+          "winRate": 0.3671875,
+          "delta": {
+            "estimate": -0.28125,
+            "lower": -0.349609375,
+            "upper": -0.212890625
+          }
+        },
+        {
+          "id": "caller/unseen",
+          "winRate": 0.375,
+          "delta": {
+            "estimate": -0.046875,
+            "lower": -0.1171875,
+            "upper": 0.0234375
+          }
+        },
+        {
+          "id": "folder/fixed",
+          "winRate": 0.861328125,
+          "delta": {
+            "estimate": 0.232421875,
+            "lower": 0.166015625,
+            "upper": 0.296875
+          }
+        },
+        {
+          "id": "folder/unseen",
+          "winRate": 0.841796875,
+          "delta": {
+            "estimate": 0.095703125,
+            "lower": 0.03515625,
+            "upper": 0.154296875
+          }
+        },
+        {
+          "id": "frequent-bluff/fixed",
+          "winRate": 0.37890625,
+          "delta": {
+            "estimate": -0.173828125,
+            "lower": -0.25,
+            "upper": -0.103515625
+          }
+        },
+        {
+          "id": "frequent-bluff/unseen",
+          "winRate": 0.369140625,
+          "delta": {
+            "estimate": -0.07421875,
+            "lower": -0.13671875,
+            "upper": -0.01171875
+          }
+        },
+        {
+          "id": "rare-bluff/fixed",
+          "winRate": 0.30859375,
+          "delta": {
+            "estimate": -0.189453125,
+            "lower": -0.25,
+            "upper": -0.12890625
+          }
+        },
+        {
+          "id": "rare-bluff/unseen",
+          "winRate": 0.31640625,
+          "delta": {
+            "estimate": -0.056640625,
+            "lower": -0.125,
+            "upper": 0.01171875
+          }
+        },
+        {
+          "id": "strong-cards/fixed",
+          "winRate": 0.41015625,
+          "delta": {
+            "estimate": -0.361328125,
+            "lower": -0.431640625,
+            "upper": -0.291015625
+          }
+        },
+        {
+          "id": "strong-cards/unseen",
+          "winRate": 0.423828125,
+          "delta": {
+            "estimate": -0.109375,
+            "lower": -0.18359375,
+            "upper": -0.041015625
+          }
+        },
+        {
+          "id": "independent/fixed",
+          "winRate": 0.462890625,
+          "delta": {
+            "estimate": -0.251953125,
+            "lower": -0.326171875,
+            "upper": -0.171875
+          }
+        },
+        {
+          "id": "independent/unseen",
+          "winRate": 0.501953125,
+          "delta": {
+            "estimate": -0.044921875,
+            "lower": -0.1171875,
+            "upper": 0.0234375
+          }
+        },
+        {
+          "id": "counter/fixed",
+          "winRate": 0.552734375,
+          "delta": {
+            "estimate": -0.15625,
+            "lower": -0.244140625,
+            "upper": -0.0703125
+          }
+        },
+        {
+          "id": "counter/unseen",
+          "winRate": 0.53125,
+          "delta": {
+            "estimate": -0.046875,
+            "lower": -0.123046875,
+            "upper": 0.02734375
+          }
+        }
+      ]
+    },
+    "latencyMs": {
+      "p50": 0.046,
+      "p95": 0.1,
+      "p99": 0.158
+    },
+    "decisions": 230048,
+    "fallbackRate": 0,
+    "roleTotals": {
+      "candidate:incumbent-online-v1/fixed:tested": {
+        "decisions": 18607,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/fixed:opponent": {
+        "decisions": 19464,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:tested": {
+        "decisions": 31620,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/fixed:opponent": {
+        "decisions": 31620,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/unseen:tested": {
+        "decisions": 9133,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/unseen:teammate": {
+        "decisions": 9152,
+        "fallbacks": {}
+      },
+      "candidate:incumbent-online-v1/unseen:opponent": {
+        "decisions": 19190,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/unseen:tested": {
+        "decisions": 11873,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/unseen:teammate": {
+        "decisions": 12242,
+        "fallbacks": {}
+      },
+      "incumbent:incumbent-online-v1/unseen:opponent": {
+        "decisions": 24646,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:tested": {
+        "decisions": 17434,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:caller/fixed:opponent": {
+        "decisions": 18148,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:tested": {
+        "decisions": 32893,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:caller/fixed:opponent": {
+        "decisions": 32260,
+        "fallbacks": {}
+      },
+      "candidate:caller/unseen:tested": {
+        "decisions": 8965,
+        "fallbacks": {}
+      },
+      "candidate:caller/unseen:teammate": {
+        "decisions": 8921,
+        "fallbacks": {}
+      },
+      "candidate:caller/unseen:opponent": {
+        "decisions": 18636,
+        "fallbacks": {}
+      },
+      "incumbent:caller/unseen:tested": {
+        "decisions": 12076,
+        "fallbacks": {}
+      },
+      "incumbent:caller/unseen:teammate": {
+        "decisions": 12331,
+        "fallbacks": {}
+      },
+      "incumbent:caller/unseen:opponent": {
+        "decisions": 24685,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:tested": {
+        "decisions": 31331,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:folder/fixed:opponent": {
+        "decisions": 35021,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:tested": {
+        "decisions": 35429,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:folder/fixed:opponent": {
+        "decisions": 36470,
+        "fallbacks": {}
+      },
+      "candidate:folder/unseen:tested": {
+        "decisions": 15541,
+        "fallbacks": {}
+      },
+      "candidate:folder/unseen:teammate": {
+        "decisions": 15523,
+        "fallbacks": {}
+      },
+      "candidate:folder/unseen:opponent": {
+        "decisions": 34706,
+        "fallbacks": {}
+      },
+      "incumbent:folder/unseen:tested": {
+        "decisions": 16662,
+        "fallbacks": {}
+      },
+      "incumbent:folder/unseen:teammate": {
+        "decisions": 16863,
+        "fallbacks": {}
+      },
+      "incumbent:folder/unseen:opponent": {
+        "decisions": 35902,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:tested": {
+        "decisions": 14204,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/fixed:opponent": {
+        "decisions": 14865,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:tested": {
+        "decisions": 19314,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/fixed:opponent": {
+        "decisions": 19423,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/unseen:tested": {
+        "decisions": 7159,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/unseen:teammate": {
+        "decisions": 7189,
+        "fallbacks": {}
+      },
+      "candidate:frequent-bluff/unseen:opponent": {
+        "decisions": 15029,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/unseen:tested": {
+        "decisions": 7924,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/unseen:teammate": {
+        "decisions": 8209,
+        "fallbacks": {}
+      },
+      "incumbent:frequent-bluff/unseen:opponent": {
+        "decisions": 16554,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:tested": {
+        "decisions": 18006,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/fixed:opponent": {
+        "decisions": 18826,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:tested": {
+        "decisions": 29512,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/fixed:opponent": {
+        "decisions": 29524,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/unseen:tested": {
+        "decisions": 8945,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/unseen:teammate": {
+        "decisions": 8966,
+        "fallbacks": {}
+      },
+      "candidate:rare-bluff/unseen:opponent": {
+        "decisions": 18771,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/unseen:tested": {
+        "decisions": 11225,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/unseen:teammate": {
+        "decisions": 11571,
+        "fallbacks": {}
+      },
+      "incumbent:rare-bluff/unseen:opponent": {
+        "decisions": 23300,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:tested": {
+        "decisions": 20713,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/fixed:opponent": {
+        "decisions": 21553,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:tested": {
+        "decisions": 32171,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/fixed:opponent": {
+        "decisions": 33565,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/unseen:tested": {
+        "decisions": 10872,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/unseen:teammate": {
+        "decisions": 10799,
+        "fallbacks": {}
+      },
+      "candidate:strong-cards/unseen:opponent": {
+        "decisions": 22534,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/unseen:tested": {
+        "decisions": 12877,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/unseen:teammate": {
+        "decisions": 13475,
+        "fallbacks": {}
+      },
+      "incumbent:strong-cards/unseen:opponent": {
+        "decisions": 27383,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:tested": {
+        "decisions": 14660,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:independent/fixed:opponent": {
+        "decisions": 14670,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:tested": {
+        "decisions": 20060,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:independent/fixed:opponent": {
+        "decisions": 19333,
+        "fallbacks": {}
+      },
+      "candidate:independent/unseen:tested": {
+        "decisions": 7305,
+        "fallbacks": {}
+      },
+      "candidate:independent/unseen:teammate": {
+        "decisions": 7264,
+        "fallbacks": {}
+      },
+      "candidate:independent/unseen:opponent": {
+        "decisions": 14647,
+        "fallbacks": {}
+      },
+      "incumbent:independent/unseen:tested": {
+        "decisions": 8157,
+        "fallbacks": {}
+      },
+      "incumbent:independent/unseen:teammate": {
+        "decisions": 8327,
+        "fallbacks": {}
+      },
+      "incumbent:independent/unseen:opponent": {
+        "decisions": 16188,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:tested": {
+        "decisions": 17659,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "candidate:counter/fixed:opponent": {
+        "decisions": 18046,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:tested": {
+        "decisions": 22942,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:teammate": {
+        "decisions": 0,
+        "fallbacks": {}
+      },
+      "incumbent:counter/fixed:opponent": {
+        "decisions": 22315,
+        "fallbacks": {}
+      },
+      "candidate:counter/unseen:tested": {
+        "decisions": 9514,
+        "fallbacks": {}
+      },
+      "candidate:counter/unseen:teammate": {
+        "decisions": 9545,
+        "fallbacks": {}
+      },
+      "candidate:counter/unseen:opponent": {
+        "decisions": 19367,
+        "fallbacks": {}
+      },
+      "incumbent:counter/unseen:tested": {
+        "decisions": 9919,
+        "fallbacks": {}
+      },
+      "incumbent:counter/unseen:teammate": {
+        "decisions": 10115,
+        "fallbacks": {}
+      },
+      "incumbent:counter/unseen:opponent": {
+        "decisions": 19916,
+        "fallbacks": {}
+      }
+    },
+    "invalidField": false,
+    "awards": {
+      "truco": {
+        "won": 53657,
+        "conceded": 47567
+      },
+      "flor": {
+        "won": 56489,
+        "conceded": 59768
+      },
+      "envido": {
+        "won": 91748,
+        "conceded": 123096
+      }
+    },
+    "scoreBands": {
+      "0/0": {
+        "matches": 8192,
+        "wins": 3742,
+        "scorePriorSum": 4096
+      },
+      "3/0": {
+        "matches": 606,
+        "wins": 603,
+        "scorePriorSum": 513.5464671192319
+      },
+      "0/1": {
+        "matches": 2067,
+        "wins": 688,
+        "scorePriorSum": 908.7301990819496
+      },
+      "1/1": {
+        "matches": 1801,
+        "wins": 852,
+        "scorePriorSum": 900.4559219383087
+      },
+      "2/1": {
+        "matches": 1137,
+        "wins": 872,
+        "scorePriorSum": 687.3640696577577
+      },
+      "2/2": {
+        "matches": 814,
+        "wins": 428,
+        "scorePriorSum": 407.20921448127683
+      },
+      "3/2": {
+        "matches": 888,
+        "wins": 767,
+        "scorePriorSum": 645.4364300531722
+      },
+      "3/3": {
+        "matches": 724,
+        "wins": 369,
+        "scorePriorSum": 348.7445584343418
+      },
+      "1/0": {
+        "matches": 2420,
+        "wins": 1537,
+        "scorePriorSum": 1350.024389329145
+      },
+      "1/3": {
+        "matches": 957,
+        "wins": 49,
+        "scorePriorSum": 161.61818270283885
+      },
+      "1/2": {
+        "matches": 808,
+        "wins": 216,
+        "scorePriorSum": 322.9226833278983
+      },
+      "2/3": {
+        "matches": 916,
+        "wins": 161,
+        "scorePriorSum": 232.18768690147851
+      },
+      "3/1": {
+        "matches": 1133,
+        "wins": 1098,
+        "scorePriorSum": 912.624104539996
+      },
+      "0/3": {
+        "matches": 517,
+        "wins": 7,
+        "scorePriorSum": 54.067600411568584
+      },
+      "0/2": {
+        "matches": 434,
+        "wins": 60,
+        "scorePriorSum": 148.67372307014307
+      },
+      "2/0": {
+        "matches": 865,
+        "wins": 783,
+        "scorePriorSum": 563.2886513590852
+      }
+    },
+    "receiptSha256": "f83d6d06d013b89919d8dde08e3e2936cca1d2891335f39d6fc4bd69f0fded93",
+    "result": "failed"
+  },
+  "example": {
+    "family": "counter/unseen",
+    "arm": "candidate",
+    "pair": 0,
+    "leg": 0,
+    "replay": {
+      "id": "pairs-senas-0-0",
+      "score": [
+        40,
+        0
+      ],
+      "winner": 0,
+      "hands": [
+        {
+          "hand": 0,
+          "dador": 3,
+          "muestra": "copas-04",
+          "startScore": [
+            0,
+            0
+          ],
+          "endScore": [
+            40,
+            0
+          ],
+          "turns": [
+            {
+              "signal": "labios-izquierda",
+              "action": {
+                "tipo": "carta",
+                "asiento": 0,
+                "carta": "bastos-12"
+              },
+              "awards": []
+            },
+            {
+              "signal": "nariz",
+              "action": {
+                "tipo": "real-envido",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "signal": "nariz",
+              "action": {
+                "tipo": "falta-envido",
+                "asiento": 0
+              },
+              "awards": []
+            },
+            {
+              "signal": "boca",
+              "action": {
+                "tipo": "quiero",
+                "asiento": 1
+              },
+              "awards": []
+            },
+            {
+              "signal": "boca",
+              "action": {
+                "tipo": "paso-flor",
+                "asiento": 2
+              },
+              "awards": []
+            },
+            {
+              "signal": "lengua",
+              "action": {
+                "tipo": "paso-flor",
+                "asiento": 3
+              },
+              "awards": [
+                {
+                  "equipo": 0,
+                  "tantos": 40,
+                  "motivo": "envido",
+                  "asiento": 2,
+                  "tantoGanador": 26
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
