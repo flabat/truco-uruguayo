@@ -159,6 +159,7 @@ test("el duelo conserva la ganadora dos segundos aunque la computadora ya haya s
   await expect(as).toHaveCount(0);
   await expect(ganadora).toHaveCount(0);
   await expect(jugarCuatro).toBeEnabled();
+  await esperarNaipes(tapete);
   await page.clock.runFor(600);
   await jugarCuatro.press("Enter");
   await expect(cartaEn(tapete, "Vos · Ana", "4 de copas")).toBeVisible();
@@ -212,15 +213,18 @@ test("en parejas una parda muestra las cuatro cartas y la vuelta decisiva señal
   await expect(cartaEn(tapete, "Vos · Ana", "6 de espadas")).toBeVisible();
   await expect(page.getByRole("region", { name: "Señas de esta mano" })).toContainText(/Alzar ambas cejas/);
 
+  await esperarNaipes(tapete);
   await page.clock.runFor(1000);
   const mostrarSiete = await demorarNaipe(page, "oros-07");
   await publicar("copas-05", "espadas-01", "oros-07");
   await expect(cartaEn(tapete, "Rival · CPU 1", "5 de copas")).toBeVisible();
   await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
+  await esperarNaipes(tapete);
   await page.clock.runFor(600);
   await expect(cartaEn(tapete, "Tu pareja · Clara", "As de espadas")).toBeVisible();
   await expect(cartaEn(tapete, "Rival · Diego", "7 de oros")).toHaveCount(0);
   await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(0);
+  await esperarNaipes(tapete);
   await page.clock.runFor(3000);
   await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
   await expect(tapete.getByText("Ganó Clara")).toHaveCount(0);
