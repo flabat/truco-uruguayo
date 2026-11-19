@@ -1,3 +1,4 @@
+import {teamMixtureKind, openTeamMixture, type TeamMixtureActor} from "../training/selfplay/team-mixture.ts";
 import {selfplayKind, openSelfplay, type SelfplayActor} from "../training/selfplay/learner.ts";
 import {kind, openAnchored, type AnchoredActor} from "../training/anchored/actor.ts";
 import {createHash} from "node:crypto";
@@ -20,6 +21,7 @@ export function openActor(artifact: unknown, format: Format, seat: Asiento): Pol
   if (!artifact || typeof artifact !== "object" || !("format" in artifact) || artifact.format !== format) {
     throw new TypeError("Formato de actor incompatible.");
   }
+  if ("kind" in artifact && artifact.kind === teamMixtureKind) return openTeamMixture(artifact as TeamMixtureActor);
   if ("kind" in artifact && artifact.kind === selfplayKind) return openSelfplay(artifact as SelfplayActor);
   if ("kind" in artifact && artifact.kind === kind) return openAnchored(artifact as AnchoredActor);
   return format === "duel" ? asDuelActor(artifact as DuelExport) : loadPartnerPolicy(artifact as Actor, seat);
