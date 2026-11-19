@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { crearPartidas } from "./partidas.ts";
 import { elegirAccionOnline } from "../src/motor/mesa-online.ts";
+import { reproducirChico } from "../src/motor/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const web = new URL(process.env.WEB_ORIGIN);
@@ -21,6 +22,53 @@ async function preparar(modo, meta = 40) {
 async function sentar(id, asiento, jugador) {
   await pool.query("INSERT INTO juego.asientos (mesa,asiento,jugador,computadora) VALUES ($1,$2,$3,$4)",
     [id, asiento, jugador, jugador === null]);
+}
+
+async function replayDe(mesa) {
+  const { rows } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa]);
+  assert.equal(rows.length, 1);
+  return rows[0].replay;
+}
+
+async function probarReintentoAtomico(mesa, orden) {
+  // La restricción diferida falla al confirmar, después de escribir la mano, el replay y el recibo.
+  orden.id = "00000000-0000-4000-8000-000000000195";
+  const antes = await replayDe(mesa);
+  // Una instancia anterior puede avanzar la mano durante un despliegue sin escribir el evento.
+  const vieja = await pool.connect();
+  try {
+    await vieja.query("BEGIN");
+    await vieja.query("UPDATE juego.manos SET acciones=acciones || $2::jsonb WHERE mesa=$1 AND numero=$3",
+      [mesa, JSON.stringify([{ ...orden.accion, asiento: 0 }]), antes.eventos.filter(e => e.tipo === "reparto").length]);
+    assert.equal((await vieja.query("SELECT mesa FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa])).rowCount, 0);
+  } finally {
+    await vieja.query("ROLLBACK");
+    vieja.release();
+  }
+  await pool.query(`
+    CREATE FUNCTION juego.fallar_recibo_de_prueba() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN RAISE EXCEPTION 'Fallo de prueba antes del commit'; END $$;
+    CREATE CONSTRAINT TRIGGER fallar_recibo AFTER INSERT ON juego.comandos DEFERRABLE INITIALLY DEFERRED
+      FOR EACH ROW WHEN (NEW.id = '00000000-0000-4000-8000-000000000195')
+      EXECUTE FUNCTION juego.fallar_recibo_de_prueba()`);
+  try {
+    await assert.rejects(servicio.ejecutar(mesa, jugadores[0], "acciones", orden), /Fallo de prueba antes del commit/);
+    assert.deepEqual(await replayDe(mesa), antes);
+    assert.equal((await servicio.leer(mesa, jugadores[0])).version, orden.version);
+    assert.equal((await pool.query("SELECT id FROM juego.comandos WHERE mesa=$1 AND id=$2", [mesa, orden.id])).rowCount, 0);
+  } finally {
+    await pool.query("DROP TRIGGER fallar_recibo ON juego.comandos; DROP FUNCTION juego.fallar_recibo_de_prueba()");
+  }
+  const otraInstancia = crearPartidas(pool, web);
+  const [primera, repetida] = await Promise.all([servicio, otraInstancia].map(s => s.ejecutar(mesa, jugadores[0], "acciones", orden)));
+  assert.deepEqual(repetida, primera);
+  const despues = await replayDe(mesa);
+  assert.deepEqual(despues.eventos.slice(0, antes.eventos.length), antes.eventos);
+  const nuevasHumanas = despues.eventos.slice(antes.eventos.length).filter(e => e.tipo === "decision" && !e.bot);
+  assert.deepEqual(nuevasHumanas.map(e => e.accion), [{ ...orden.accion, asiento: 0 }]);
+  await assert.rejects(otraInstancia.ejecutar(mesa, jugadores[0], "acciones", { ...orden, id: randomUUID() }), { status: 409 });
+  assert.deepEqual(await replayDe(mesa), despues);
+  return primera;
 }
 
 async function probarMesa() {
@@ -78,6 +126,9 @@ async function probarMesa() {
   assert.deepEqual(siguiente.puntos, partida.puntos);
   assert.deepEqual(await servicio.ejecutar(id, jugadores[0], "siguiente", nueva), siguiente);
   assert.deepEqual(await accion(0, truco), cantado);
+  const { eventos } = await replayDe(id);
+  assert.deepEqual(eventos.filter(e => e.tipo === "reparto").map(e => e.manoNumero), [1, 2]);
+  assert.equal(eventos.filter(e => e.tipo === "decision" && e.accion.tipo === "quiero").length, 1);
 }
 
 async function probarComputadoras(modo, meta) {
@@ -87,6 +138,7 @@ async function probarComputadoras(modo, meta) {
   for (let i = 1; i < cantidad; i++) await sentar(id, i, null);
   let partida = await servicio.leer(id, jugadores[0]);
   let pasos = 0;
+  let probarReintento = modo === "1v1";
   while (partida.ganadorPartida === null) {
     assert.equal(partida.meta, meta);
     assert.ok(++pasos < 2500);
@@ -98,11 +150,32 @@ async function probarComputadoras(modo, meta) {
     assert.ok(elegida, "La mesa debe detenerse al llegar al turno humano.");
     const { asiento, ...accion } = elegida;
     assert.equal(asiento, 0);
-    partida = await servicio.ejecutar(id, jugadores[0], "acciones", comando(partida.version, accion));
+    const orden = comando(partida.version, accion);
+    if (probarReintento) {
+      partida = await probarReintentoAtomico(id, orden);
+      probarReintento = false;
+    } else {
+      partida = await servicio.ejecutar(id, jugadores[0], "acciones", orden);
+    }
   }
   assert.equal(partida.puntos[partida.ganadorPartida], meta);
   assert.deepEqual(await servicio.leer(id, jugadores[0]), partida);
   await assert.rejects(servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version)), { status: 409 });
+  const replay = await replayDe(id);
+  const manos = (await pool.query("SELECT acciones FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id])).rows;
+  assert.equal(replay.id, id);
+  assert.equal(replay.origen, "mesa");
+  assert.equal(replay.eventos.filter(e => e.tipo === "reparto").length, manos.length);
+  assert.equal(replay.eventos.filter(e => e.tipo === "cierre").length, 1);
+  const decisiones = replay.eventos.filter(e => e.tipo === "decision");
+  assert.deepEqual(decisiones.map(e => e.accion), manos.flatMap(m => m.acciones));
+  assert.ok(decisiones.some(e => e.bot));
+  assert.ok(decisiones.some(e => !e.bot));
+  const final = reproducirChico(replay, 0);
+  assert.equal(final.estado, "terminado");
+  assert.equal(final.ganador, partida.ganadorPartida);
+  assert.deepEqual(final.puntos, partida.puntos);
+  assert.deepEqual(final.vista, partida.vista);
 }
 
 try {

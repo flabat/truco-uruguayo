@@ -4,6 +4,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
 import WebSocket from "ws";
+import { reproducirChico } from "../src/motor/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
@@ -101,15 +102,44 @@ async function hastaCerrar(mesa) {
   for (let i = 0; i < 10; i++) {
     const actuales = await vistas(mesa);
     if (actuales[0].vista.resultado) return actuales[0];
-    const turno = actuales.find(p => p.vista.legales.includes("mazo") || p.vista.legales.includes("paso-flor"));
-    assert.ok(turno, "Se esperaba el retiro o la consulta de flor");
-    const tipo = turno.vista.legales.includes("paso-flor") ? "paso-flor" : "mazo";
+    const turno = actuales.find(p => p.vista.legales.length);
+    assert.ok(turno);
+    const tipo = ["mazo", "paso-flor", "flor", "no-quiero"].find(t => turno.vista.legales.includes(t));
+    assert.ok(tipo, "Se esperaba el retiro o una respuesta de flor");
     await partida(mesa, turno.vista.asiento, "acciones", comando(turno.version, tipo));
   }
   throw new Error("El retiro no cerró el reparto");
 }
 
+async function comprobarReplayHumano(personas) {
+  const mesa = await crear(personas);
+  const cierre = await hastaCerrar(mesa);
+  const { body: pico } = await partida(mesa, 0, "siguiente", comando(cierre.version));
+  assert.equal(pico.lance.duelo, 1);
+  const leerReplay = async () => (await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa.id])).rows[0].replay;
+  const antes = await leerReplay();
+  const turno = (await vistas(mesa)).find(p => p.vista.legales.length);
+  const { asiento, legales, cartas } = turno.vista;
+  const accion = legales.includes("carta") ? { tipo: "carta", carta: cartas[0] } : { tipo: "flor" };
+  const orden = { id: randomUUID(), version: turno.version, accion };
+  const enviar = () => partida(mesa, asiento, "acciones", orden);
+  const [una, repetida] = await Promise.all([enviar(), enviar()]);
+  assert.deepEqual(una.body, repetida.body);
+  const replay = await leerReplay();
+  assert.deepEqual(replay.eventos.slice(0, antes.eventos.length), antes.eventos);
+  assert.deepEqual(replay.eventos.slice(antes.eventos.length), [{
+    tipo: "decision", secuencia: antes.eventos.length + 1, duelo: 1, accion: { ...accion, asiento },
+    cobros: una.body.vista.cobros, puntos: una.body.puntos,
+  }]);
+  for (const actual of await vistas(mesa)) {
+    const lectura = reproducirChico(replay, actual.vista.asiento);
+    assert.deepEqual(lectura.puntos, actual.puntos);
+    assert.deepEqual(lectura.vista, { ...actual.vista, lance: actual.lance, historialLances: actual.historialLances });
+  }
+}
+
 async function iniciar(personas) {
+  await comprobarReplayHumano(personas);
   await pool.query("CREATE TABLE juego.prueba_reingreso_tercetos (mesa uuid PRIMARY KEY, personas int[], asiento int, orden jsonb, respuesta jsonb, huellas text[])");
   const mesa = await crear(personas);
   await colocar(mesa, 1, sinFlor);

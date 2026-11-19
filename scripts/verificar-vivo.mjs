@@ -4,6 +4,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
 import WebSocket from "ws";
+import { reproducirChico } from "../src/motor/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const origin = new URL(process.env.WEB_ORIGIN).origin;
@@ -80,6 +81,20 @@ async function vistas(sesiones, ruta) {
     }
   }
   return todas;
+}
+
+async function comprobarReplay(mesa, partidas, orden) {
+  const { rows: [{ replay }] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa]);
+  assert.deepEqual(replay.eventos.map(e => [e.secuencia, e.tipo]), [[1, "reparto"], [2, "decision"]]);
+  assert.deepEqual(replay.eventos[1].accion, { ...orden.accion, asiento: partidas[0].turnos[0].action.asiento });
+  for (const [asiento, partida] of partidas.entries()) {
+    const { vista, puntos } = reproducirChico(replay, asiento);
+    const { turnos, ...jugador } = vista;
+    assert.deepEqual(jugador, partida.vista);
+    assert.deepEqual(turnos, partida.turnos);
+    assert.deepEqual(puntos, partida.puntos);
+  }
+  return hash(JSON.stringify(replay));
 }
 
 async function verificarPartidaAnterior(sesiones) {
@@ -171,9 +186,10 @@ async function iniciar(sesiones, ajena) {
   const cierre = once(revocada, "close", { signal: AbortSignal.timeout(8000) });
   revocada.send(JSON.stringify({ ...orden, id: randomUUID(), version: despues[0].version }));
   assert.equal((await cierre)[0], 1008);
-  await pool.query("CREATE TABLE juego.prueba_vivo (mesa uuid, asiento int, orden jsonb, huellas jsonb)");
-  await pool.query("INSERT INTO juego.prueba_vivo VALUES ($1,$2,$3,$4)", [
-    id, turno, JSON.stringify(orden), JSON.stringify(despues.map(p => hash(JSON.stringify(p)))),
+  const huellaReplay = await comprobarReplay(id, despues, orden);
+  await pool.query("CREATE TABLE juego.prueba_vivo (mesa uuid, asiento int, orden jsonb, huellas jsonb, replay_sha text)");
+  await pool.query("INSERT INTO juego.prueba_vivo VALUES ($1,$2,$3,$4,$5)", [
+    id, turno, JSON.stringify(orden), JSON.stringify(despues.map(p => hash(JSON.stringify(p)))), huellaReplay,
   ]);
 }
 
@@ -186,6 +202,7 @@ async function reconectar(sesiones) {
   autor.ws.send(JSON.stringify(previo.orden));
   const confirmacion = await autor.recibir();
   assert.deepEqual(confirmacion, { tipo: "confirmacion", id: previo.orden.id, partida: vigentes[previo.asiento] });
+  assert.equal(await comprobarReplay(previo.mesa, vigentes, previo.orden), previo.replay_sha);
 }
 
 try {
