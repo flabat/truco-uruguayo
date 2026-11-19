@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { aDecidir, aplicarOnline, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
+import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
 import type { Asiento } from "../../src/motor/reparto.ts";
 import { playMatch, sample, scheduledDeal } from "../arena/index.ts";
 import { versions, type Move, type Policy, type PublicTurn, type Score, type SeatObservation } from "../contracts/index.ts";
-import { decodeMove, incumbent, observe } from "../seat/index.ts";
+import { incumbent, observe } from "../seat/index.ts";
+import { commitTurn } from "../signals/index.ts";
 import { coordinates, duelActorId, duelSchema, width, type DuelExport } from "./actor.ts";
 import { normalized, uniform, type RandomState } from "./math.ts";
 import { newReference, referenceStep, type ReferenceState } from "./reference.ts";
@@ -69,11 +70,8 @@ function strategy(state: DuelState, obs: SeatObservation) {
 }
 interface Node { state: EstadoOnline; hand: number; history: readonly PublicTurn[] }
 function play(node: Node, seat: Asiento, move: Move): Node {
-  const step = aplicarOnline(node.state, decodeMove(move, seat));
-  if (!step.ok) throw new Error("Jugada del entrenador rechazada: " + step.error);
-  const action = step.estado.acciones.at(-1)!;
-  const awards = step.estado.cobros.slice(node.state.cobros.length);
-  return { hand: node.hand, state: step.estado, history: [...node.history, { action, awards }] };
+  const { state, turn } = commitTurn(node.state, seat, "duel", move);
+  return { hand: node.hand, state, history: [...node.history, turn] };
 }
 function scoreOf(state: EstadoOnline): Score {
   const score: [number, number] = [...state.puntosInicio];

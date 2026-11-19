@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { arch, availableParallelism, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -40,6 +40,30 @@ export function trainDuel(args: string[]) {
   if (values.resume && (values.run || values.config || values.seed)) throw new Error("Al reanudar se conserva la configuración guardada.");
   if (!values.resume && (!values.run || !values.config)) throw new Error("Se requiere --run y --config, o --resume.");
   const directory = values.resume ? dirname(resolve(values.resume)) : resolve(values.run!);
+  mkdirSync(directory, { recursive: true });
+  // Publicar el PID antes de mirar los otros evita que dos procesos empiecen
+  // a escribir. Si ambos se detectan, ambos pueden reintentar sin pisar archivos.
+  const marker = ".writer-" + process.pid + "-" + randomUUID();
+  writeFileSync(join(directory, marker), "", { flag: "wx" });
+  try {
+    for (const file of readdirSync(directory)) {
+      const match = /^\.writer-(\d+)-/.exec(file);
+      if (!match || file === marker) continue;
+      try {
+        process.kill(Number(match[1]), 0);
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === "ESRCH") continue;
+        throw e;
+      }
+      throw new Error("Otro entrenador está escribiendo esta corrida.");
+    }
+    return run(directory, values);
+  } finally {
+    unlinkSync(join(directory, marker));
+  }
+}
+
+function run(directory: string, values: Record<string, string | undefined>) {
   const checkpoint = join(directory, "checkpoint");
   if (!values.resume && existsSync(checkpoint)) throw new Error("La corrida existe; reanudar con --resume.");
   const state = values.resume ? loadCheckpoint(resolve(values.resume)) : newDuel({
@@ -50,7 +74,6 @@ export function trainDuel(args: string[]) {
   if (!Number.isSafeInteger(target) || target < state.iteration || target < 1 || !Number.isSafeInteger(pairs) || pairs < 1) {
     throw new Error("El presupuesto debe ser un entero positivo y no retroceder el checkpoint.");
   }
-  mkdirSync(directory, { recursive: true });
   const startIteration = state.iteration;
   const start = performance.now();
   while (state.iteration < target) {
