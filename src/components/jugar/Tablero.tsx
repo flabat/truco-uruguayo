@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
+import type { VueltaCerrada } from "../../motor/mano";
 import type { VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
@@ -41,6 +42,7 @@ function AsientoEnMesa({
   asiento,
   mesa,
   vista,
+  cerrada,
   base,
   bloqueada,
   jugar,
@@ -48,6 +50,7 @@ function AsientoEnMesa({
   asiento: Asiento;
   mesa: Mesa;
   vista: VistaOnline;
+  cerrada?: VueltaCerrada;
   base: string;
   bloqueada: boolean;
   jugar: (a: Eleccion) => void;
@@ -62,9 +65,9 @@ function AsientoEnMesa({
       : relativo === 1
         ? "derecha"
         : "izquierda";
-  const anterior = vista.vueltas.at(-1);
-  const vuelta = vista.vueltaActual ?? (vista.resultado?.motivo === "vueltas" ? anterior : undefined);
+  const vuelta = vista.vueltaActual ?? cerrada;
   const jugada = vuelta?.jugadas.find((j) => j.asiento === asiento.asiento);
+  const ganadora = cerrada?.resultado.tipo === "ganada" && cerrada.resultado.asiento === asiento.asiento;
   const restantes =
     3 - vista.acciones.filter((a) => a.tipo === "carta" && a.asiento === asiento.asiento).length;
   const papel = propio
@@ -82,8 +85,9 @@ function AsientoEnMesa({
         </span>
       </div>
       {jugada && (
-        <div className="j-jugada">
+        <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
           <Naipe base={base} id={jugada.carta} />
+          {ganadora && <small>Ganó la vuelta</small>}
         </div>
       )}
       {propio ? (
@@ -184,12 +188,14 @@ export function EnJuego({
   mesa,
   partida,
   bloqueada,
+  mostrandoCartas = false,
   base,
   jugar,
 }: {
   mesa: Mesa;
   partida: Partida;
   bloqueada: boolean;
+  mostrandoCartas?: boolean;
   base: string;
   jugar: (a?: Eleccion) => void;
 }) {
@@ -201,13 +207,35 @@ export function EnJuego({
   const pendientes = v.pendiente;
   const resultado = v.resultado;
   const fin = partida.ganadorPartida !== null;
-  const { titulo, indicacion } = estadoDelTurno(mesa, partida, v);
+  const cerrada = !v.vueltaActual && (!resultado || resultado.motivo === "vueltas")
+    ? v.vueltas.at(-1)
+    : undefined;
+  const numeroVuelta = v.vueltas.length + (cerrada ? 0 : 1);
+  const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : undefined;
+  const ganadora = cerrada?.jugadas.find(j => j.asiento === ganador);
+  const veredicto = ganadora ? "Ganó " + nombre(ganadora.asiento) : cerrada && "Parda";
+  // La presentación mantiene la vuelta completa abierta mientras carga su último naipe.
+  const cargandoCierre = v.vueltaActual?.jugadas.length === mesa.asientos.length;
+  const ultima = cargandoCierre ? undefined : (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
+  const jugadaVisible = ultima ? nombre(ultima.asiento) + " jugó " + nombrar(ultima.carta).toLowerCase() + "." : "";
+  const detalleVuelta = cerrada && [
+    ultima?.asiento !== ganador ? jugadaVisible : "",
+    ganadora
+      ? nombre(ganadora.asiento) + " ganó la vuelta con su " + nombrar(ganadora.carta).toLowerCase() + "."
+      : "La vuelta fue parda.",
+  ].filter(Boolean).join(" ");
+  const { titulo, indicacion } = mostrandoCartas && !resultado
+    ? { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible }
+    : estadoDelTurno(mesa, partida, v);
   const encabezado = useRef<HTMLHeadingElement>(null);
   const desdeTeclado = useRef(false);
   useEffect(() => {
-    if (desdeTeclado.current && document.activeElement === document.body) encabezado.current?.focus();
-    desdeTeclado.current = false;
-  }, [partida.version]);
+    if (desdeTeclado.current && document.activeElement === document.body) {
+      encabezado.current?.focus();
+      desdeTeclado.current = false;
+    }
+    if (!mostrandoCartas) desdeTeclado.current = false;
+  }, [partida.version, mostrandoCartas, v.acciones.length]);
   const disponibles = grupos
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
@@ -225,7 +253,10 @@ export function EnJuego({
         <section className="j-tapete" aria-label="Tapete">
           <header>
             <strong>Mano {partida.manoNumero}</strong>
-            <span>{resultado ? "Terminada" : "Vuelta " + (v.vueltas.length + 1)}</span>
+            <div className="j-estado-vuelta">
+              <span>{resultado && !cerrada ? "Terminada" : "Vuelta " + numeroVuelta}</span>
+              {veredicto && <b>{veredicto}</b>}
+            </div>
           </header>
           <div className={"j-puestos " + (mesa.modo === "1v1" ? "j-duelo" : "")}>
             {mesa.asientos.map((a) => (
@@ -234,6 +265,7 @@ export function EnJuego({
                 asiento={a}
                 mesa={mesa}
                 vista={v}
+                cerrada={cerrada}
                 base={base}
                 bloqueada={bloqueada}
                 jugar={jugar}
@@ -260,7 +292,7 @@ export function EnJuego({
             <h2 ref={encabezado} tabIndex={-1}>
               {titulo}
             </h2>
-            <p>{indicacion}</p>
+            <p>{indicacion}{resultado && detalleVuelta && " " + detalleVuelta}</p>
           </div>
           {v.trucoPendiente && pendientes && v.trucoPendiente.tipo !== pendientes.tipo && (
             <p className="j-reserva">

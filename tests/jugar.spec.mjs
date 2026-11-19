@@ -198,6 +198,75 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
 });
 
+for (const entrada of ["crear la mesa", "completar la sala de espera"]) {
+  test("muestra las salidas de las computadoras en orden al " + entrada + " y al día al retomarla", async ({ page }) => {
+    const desdeSala = entrada === "completar la sala de espera";
+    const computadora = i => seat(i, "computadora", "CPU " + i);
+    const asientos = [personas[0], ...[1, 2, 3].map(i =>
+      desdeSala && i < 3 ? computadora(i) : seat(i, "vacio", null)
+    )];
+    const jugadas = ["copas-06", "bastos-04", "oros-05"].map((carta, i) => ({ carta, asiento: i + 1 }));
+    const mano = {
+      ...vista, mano: 1, dador: 0,
+      acciones: jugadas.map(j => ({ tipo: "carta", ...j })),
+      vueltaActual: { salida: 1, jugadas },
+    };
+    let recibida = { ...partida, vista: mano };
+    const sockets = await simular(page, (path, req) => {
+      if (path.endsWith("/computadoras")) {
+        const { asiento } = req.postDataJSON();
+        asientos[asiento] = computadora(asiento);
+      }
+      if (path === "/api/mesas" || path.endsWith("/" + mesaId)) return { json: mesa("2v2", asientos) };
+      if (path.endsWith("/partida")) return { json: recibida };
+    });
+    await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+    await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+    if (desdeSala) {
+      await page.goto("jugar/?mesa=" + mesaId);
+      await expect(page.getByRole("heading", { name: "Esperando jugadores" })).toBeVisible();
+      const agregar = page.getByRole("button", { name: "Agregar computadora al asiento 4" });
+      await expect(agregar).toBeEnabled();
+      await agregar.press("Enter");
+    } else {
+      await page.goto("jugar/");
+      await page.getByRole("button", { name: "Jugar con computadoras" }).press("Enter");
+    }
+    const cartas = page.getByRole("region", { name: "Tapete" }).locator(".j-jugada img");
+    const jugar = page.getByRole("button", { name: "Jugar As de espadas" });
+    for (const [i, nombre] of ["6 de copas", "4 de bastos", "5 de oros"].entries()) {
+      await expect(cartas).toHaveCount(i + 1);
+      const nueva = cartas.nth(i);
+      await expect(nueva).toHaveAttribute("alt", nombre);
+      if (i < 2) {
+        await expect(jugar).toBeDisabled();
+        await nueva.evaluate(img => img.decode());
+        await page.clock.runFor(450);
+      }
+    }
+    await expect(jugar).toBeEnabled();
+    await page.reload();
+    await expect(cartas).toHaveCount(3);
+    await expect(jugar).toBeEnabled();
+
+    // Si el aviso posterior trae otra mano sin su cierre anterior, el tanteador parte del estado recibido.
+    const siguientes = jugadas.slice(1);
+    recibida = {
+      ...partida, manoNumero: 2, version: 7, puntos: [2, 3],
+      vista: {
+        ...mano, mano: 2, dador: 1,
+        acciones: siguientes.map(j => ({ tipo: "carta", ...j })),
+        vueltaActual: { salida: 2, jugadas: siguientes },
+      },
+    };
+    sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+    await expect(page.getByText("Mano 2", { exact: true })).toBeVisible();
+    await expect(cartas).toHaveCount(2);
+    await expect(jugar).toBeEnabled();
+    await expect(page.locator(".j-tanteador strong")).toHaveText(["2", "3"]);
+  });
+}
+
 for (const modo of ["1v1", "2v2"]) {
   test(`el chico a 40 cuenta las malas y buenas por lado en ${modo}`, async ({ page, isMobile }) => {
     if (isMobile) await page.setViewportSize({ width: 320, height: 780 });

@@ -9,8 +9,8 @@ import "./senas.css";
 const filas = juego.find(seccion => seccion.id === "senas")!.blocks.find(b => b.table)!.table!.rows;
 const menu = signals.map((id, i) => ({ id, texto: filas[i][1].replace(/\.$/, "") }));
 
-export function MesaConSenas({ base, mesa, partida, bloqueada, jugar }: {
-  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean;
+export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, jugar }: {
+  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; mostrandoCartas: boolean;
   jugar: (accion?: Eleccion & { sena?: Signal }) => void;
 }) {
   const [seleccion, elegir] = useState<{version: number; sena: Signal | ""}>();
@@ -29,7 +29,7 @@ export function MesaConSenas({ base, mesa, partida, bloqueada, jugar }: {
         <small id="alcance-sena">Los cuatro asientos verán la seña cuando juegues. Podés amagar.</small>
       </div>
     )}
-    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada}
+    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas}
       jugar={accion => jugar(accion && sena ? {...accion, sena} : accion)} />
     {historial.length > 0 && (
       <section className="j-senas-vistas" aria-label="Señas de esta mano">

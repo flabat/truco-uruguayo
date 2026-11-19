@@ -56,6 +56,8 @@
 .j-tapete header { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px 10px; border-bottom: 1px solid #83988288; }
 .j-tapete header strong { font: 400 1.5rem var(--serif); }
 .j-tapete header span, .j-persona span { color: #f0dfb4; font-size: .78rem; }
+.j-estado-vuelta { display: grid; gap: 2px; text-align: right; max-width: 65%; overflow-wrap: anywhere; }
+.j-estado-vuelta b { color: #fff2c8; font-size: .9rem; }
 .j-puestos { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); grid-template-areas: "frente frente frente" "izquierda muestra derecha" "vos vos vos"; grid-template-rows: minmax(72px,auto) minmax(120px,auto) auto; justify-items: center; align-items: center; text-align: center; position: relative; isolation: isolate; gap: 5px 0; padding-top: 6px; }
 .j-puestos:before { inset: 12% 5% 20%; }
 .j-frente {grid-area:frente;} .j-derecha {grid-area:derecha;} .j-izquierda {grid-area:izquierda;} .j-vos {grid-area:vos;}
@@ -66,6 +68,8 @@
 .j-dorsos img { width: clamp(18px, 2.5vw, 28px); height: auto; border-radius: 2px; box-shadow: 0 2px 3px #173423; }
 .j-dorsos img + img { margin-left: -10px; }
 .j-jugada img { width: clamp(36px,5vw,52px); height: auto; margin: 4px auto; border-radius: 3px; }
+.j-ganadora img { outline: 2px solid #f4cf78; outline-offset: 2px; }
+.j-ganadora small { display: block; color: #ffe5a8; font-size: .75rem; font-weight: 700; }
 .j-muestra { grid-area: muestra; display: grid; justify-items: center; min-width: 0; }
 .j-muestra > div { display: grid; place-items: center; width: clamp(60px,11vw,100px); }
 .j-muestra img { grid-area: 1 / 1; width: 62%; height: auto; border-radius: 3px; }
