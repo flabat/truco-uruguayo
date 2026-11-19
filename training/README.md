@@ -1,6 +1,6 @@
 # Entrenamiento local de Truco Oriental
 
-La arena juega chicos a 40 usando el mismo reductor que el servidor. Cada asiento decide a partir de su mano y de los hechos públicos. Hay tres formatos independientes, `duel`, `pairs` y `pairs-senas`. Todos los participantes en entrenamiento y evaluación son computadoras.
+La arena juega chicos a 40 usando el mismo reductor que el servidor. Cada asiento decide a partir de su mano y de los hechos públicos y, cuando se habilitan señas, de los gestos del propio equipo. Los tres formatos activos son, `duel`, `pairs` y `pairs-private-senas`. Todos los participantes en entrenamiento y evaluación son computadoras.
 
 ## Primera corrida desde un checkout nuevo
 
@@ -10,7 +10,7 @@ Usá Node 24 y npm. Los dos entrenadores de parejas requieren uv y el entorno de
 npm ci
 uv sync --frozen --project training/partners/python
 npm run arena -- smoke --formats all --seed 42 --output runs/primer-torneo
-npm run arena -- replay --manifest runs/primer-torneo/manifest.json --match pairs-senas-0-0
+npm run arena -- replay --manifest runs/primer-torneo/manifest.json --match pairs-private-senas-0-0
 npm run arena -- verify --manifest runs/primer-torneo/manifest.json
 node --test tests/unit/training-seat.test.ts
 node training/eval/legacy.ts
@@ -19,11 +19,11 @@ npm run train -- --format duel --config training/configs/duel-local.json --run r
 npm run train -- --resume runs/primer-duelo/checkpoint --iterations 16
 npm run train -- --format pairs --config training/configs/pairs-local.json --run runs/primer-parejas --matches 8 --until 4
 npm run train -- --resume runs/primer-parejas/checkpoint
-npm run train -- --format pairs-senas --config training/configs/pairs-senas-local.json --run runs/primer-senas --matches 8 --until 4
+npm run train -- --format pairs-private-senas --config training/configs/pairs-private-senas-local.json --run runs/primer-senas --matches 8 --until 4
 npm run train -- --resume runs/primer-senas/checkpoint
 ```
 
-El checkpoint es privado y contiene el estado de entrenamiento. `actor.json` es la exportación que puede cargar el servicio. Los checkpoints de parejas también producen `mc-actor.json` con el comparador de retornos Monte Carlo. Las interrupciones se retoman desde el último checkpoint completo. Cada formato y semilla usa su propio directorio.
+El checkpoint es privado y contiene el estado de entrenamiento. `actor.json` es la exportación que puede cargar el servicio. El formato histórico `pairs-senas` conserva la semántica del campeonato archivado. Cada actor de `pairs-private-senas` lleva la versión `senas-equipo-v1` y requiere una evaluación propia. Los checkpoints de parejas también producen `mc-actor.json` con el comparador de retornos Monte Carlo. Las interrupciones se retoman desde el último checkpoint completo. Cada formato y semilla usa su propio directorio.
 
 ## Del torneo al campeonato
 

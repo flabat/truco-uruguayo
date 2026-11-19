@@ -34,8 +34,8 @@ def benchmark(paths, warmup, steps):
     if os.environ.get("PYTORCH_ENABLE_MPS_FALLBACK") not in (None, "0"):
         raise RuntimeError("Desactivá el fallback MPS para comparar los dispositivos.")
     sources = [json.load(open(path)) for path in paths]
-    if [source["format"] for source in sources] != ["pairs", "pairs-senas"]:
-        raise ValueError("El orden esperado es pairs y pairs-senas.")
+    if [source["format"] for source in sources] not in (["pairs", "pairs-private-senas"], ["pairs", "pairs-senas"]):
+        raise ValueError("Se requiere un conjunto de parejas sin señas y otro de parejas con señas.")
     devices = ["cpu", "mps"] if torch.backends.mps.is_available() else ["cpu"]
     cases, reports = {}, []
     for device in devices:
