@@ -70,6 +70,8 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(page.locator(".j-lugar small")).toHaveText(["Equipo 1","Equipo 2","Equipo 1","Equipo 2","Equipo 1","Equipo 2"]);
   for (let i = 1; i < 6; i++) await page.getByRole("button", { name: "Agregar computadora al asiento " + (i+1) }).click();
   await expect(page.getByRole("region", { name: "Tapete" })).toBeVisible();
+  const cartas = page.getByRole("group", { name: "Tus cartas" }).getByRole("button", { name: /^Jugar / });
+  await expect(cartas).toHaveText(["", "", ""], { useInnerText: true });
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {
