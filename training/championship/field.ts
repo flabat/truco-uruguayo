@@ -1,0 +1,107 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { artifactPin, openActor } from "../../api/actor-registry.ts";
+import { createServing, type ServingDecision } from "../../api/serving.ts";
+import { baseline, styles } from "../baselines/index.ts";
+import { playMatchAsync, replayMatch, sample, type MatchRecord } from "../arena/index.ts";
+import { formats, versions, type Format, type SeatObservation } from "../contracts/index.ts";
+import { incumbent, challenger } from "../seat/index.ts";
+
+export const deadlineMs = 200;
+export const fallbackLimit = 0.005;
+export const root = fileURLToPath(new URL("../../",import.meta.url));
+export const sha = (v:string|Buffer) => createHash("sha256").update(v).digest("hex");
+export interface Entry {id:string; lineage:string; file:string; sha256:string; trainedAgainstSha256?:string}
+export interface Bundle {format:Format; candidate:Entry; independent:Entry; counter:Entry; partner?:Entry}
+export interface Registered extends Entry {pin:string}
+export interface Field {
+  format:Format; candidate:Registered; independent:Registered; counter:Registered; partner?:Registered;
+  builtinHash:string; build:string; deadlineMs:number; fallbackLimit:number; versions:typeof versions;
+}
+export function buildId() {
+  const paths=execFileSync("git",["ls-files","-z","src/motor","api","training"],{cwd:root}).toString()
+    .split("\0").filter(p=>/\.(ts|sql|py)$/.test(p)).sort();
+  return sha(JSON.stringify(paths.map(p=>[p,sha(readFileSync(join(root,p)))])));
+}
+export function prepare(bundlePath:string) {
+  const b:Bundle=JSON.parse(readFileSync(bundlePath,"utf8"));
+  assert.ok(formats.includes(b.format));
+  const artifacts = new Map<string, Buffer>();
+  function register(e:Entry):Registered {
+    assert.ok(e.id && e.lineage && e.file);
+    const raw=readFileSync(resolve(dirname(bundlePath),e.file));
+    assert.equal(sha(raw),e.sha256,"Hash externo del artefacto incorrecto.");
+    const model=JSON.parse(raw.toString());
+    openActor(model,b.format,0);
+    const pin=artifactPin(model), file=pin+".json";
+    artifacts.set(file,raw);
+    return {...e,file,pin};
+  }
+  const candidate=register(b.candidate), independent=register(b.independent), counter=register(b.counter);
+  assert.ok(independent.pin !== candidate.pin && counter.pin !== candidate.pin);
+  assert.equal(counter.trainedAgainstSha256,candidate.sha256,"El contrajugador debe entrenarse contra este candidato.");
+  if(b.format !== "duel") assert.ok(b.partner,"Falta el compañero no visto.");
+  const partner=b.partner && register(b.partner);
+  if(partner) assert.ok(partner.pin!==candidate.pin && partner.pin!==independent.pin);
+  const field:Field={format:b.format,candidate,independent,counter,partner,deadlineMs,fallbackLimit,versions,
+    build:buildId(),builtinHash:sha(readFileSync(join(root,"training/baselines/index.ts")))};
+  return {field,artifacts};
+}
+export function families(field:Field) {
+  const opponents=[incumbent.id,...(field.format==="duel"?[challenger.id]:[]),...styles,"independent","counter"];
+  return opponents.flatMap(opponent=>(field.format==="duel"?["fixed"]:["fixed","unseen"]).map(lineup=>({
+    id:opponent+"/"+lineup,opponent,lineup,
+  })));
+}
+export type Family=ReturnType<typeof families>[number];
+export interface Receipt {
+  arm:"candidate"|"incumbent"; match:MatchRecord;
+  // Only actions by the designated player(s) in the tested arm, excluding frozen teammates and opponents.
+  latencyUs:number[]; fallbacks:Record<string,number>;
+}
+export function referee(field:Field, load:(file:string)=>Buffer) {
+  const entries=[field.candidate,field.independent,field.counter,...(field.partner?[field.partner]:[])];
+  const service=createServing({deadlineMs:field.deadlineMs, async loadArtifact(pin) {
+    const entry=entries.find(e=>e.pin===pin);
+    if(!entry) throw Error("missing");
+    const raw=load(entry.file);
+    assert.equal(sha(raw),entry.sha256);
+    return JSON.parse(raw.toString());
+  }});
+  async function play(f:Family,seed:number,pair:number) {
+    const results:Receipt[]=[];
+    const oppositePin=f.opponent==="independent"?field.independent.pin:f.opponent==="counter"?field.counter.pin:null;
+    const opposite=oppositePin ? undefined : baseline(f.opponent);
+    for(const arm of ["candidate","incumbent"] as const) for(const leg of [0,1] as const) {
+      const latencyUs:number[]=[];
+      const fallbacks:Record<string,number>={};
+      const tested=arm==="candidate"?field.candidate.pin:incumbent.id;
+      const match=await playMatchAsync({format:field.format,seed,pair,leg,responders(seat) {
+        const onTeam=seat%2===leg;
+        const teammate=onTeam && f.lineup==="unseen" && Math.floor(seat/2)===(pair%2);
+        return async (obs:SeatObservation,u:number) => {
+          let result:ServingDecision;
+          if(!onTeam && !oppositePin && f.opponent!==incumbent.id) {
+            const p=opposite!.decide(obs,obs.legalActions);
+            return obs.legalActions[sample(p,p.length,u)];
+          }
+          const pin=onTeam?(teammate?field.partner!.pin:tested):(oppositePin??incumbent.id);
+          result=await service.decide(pin,obs,u);
+          if(onTeam && !teammate) {
+            latencyUs.push(Math.round(result.latencyMs*1000));
+            if(result.fallback) fallbacks[result.fallback]=(fallbacks[result.fallback]??0)+1;
+          }
+          return result.action;
+        };
+      }});
+      replayMatch(match,seed);
+      results.push({arm,match,latencyUs,fallbacks});
+    }
+    return results;
+  }
+  return {play,close:service.close};
+}
