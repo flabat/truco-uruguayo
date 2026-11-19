@@ -15,7 +15,8 @@ import {
 } from "./partidas-tercetos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
-import { hasSignals, seatsFor, signalVersionFor } from "../training/contracts/index.ts";
+import { hasSignals, seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
+import { decisionReplay, guardarDecisionesReplayDB, iniciarReplayDB, type DecisionReplay } from "./replay-db.ts";
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 const rutaPartida = /^\/api\/mesas\/([^/]+)\/(partida|acciones|siguiente)$/;
@@ -63,18 +64,26 @@ function asientosHumanos(mesa: VistaMesa) {
   return mesa.asientos.filter(a => a.tipo === "humano").map(a => a.asiento);
 }
 
+function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: readonly number[], decisiones: DecisionReplay[]) {
+  return jugarComputadoras(mano, formato, humanos, false, (paso, propuesta) => decisiones.push(decisionReplay(paso, propuesta)));
+}
+
 async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, humanos: number[], numero: number,
     version: number, puntos: Tanteador, meta: number, dador?: number, diferida = false) {
   if (formato === "triples") {
     const estado = await repartirTercetosDB(db, mesa, numero, version, puntos, meta, humanos, dador);
+    await iniciarReplayDB(db, mesa, formato, humanos, estado, numero);
     return {estado, turnos: []};
   }
   const reparto = repartirOnline(seatsFor(formato), dador);
   const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
-  const mano = diferida ? inicial : jugarComputadoras(inicial, formato, humanos);
+  const decisiones: DecisionReplay[] = [];
+  const mano = diferida ? inicial : jugarBotsConReplay(inicial, formato, humanos, decisiones);
   await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [mesa, numero, version, versionReglasOnline, reparto, puntos,
     JSON.stringify(guardarAcciones(mano)), signalVersionFor(formato)]);
+  await iniciarReplayDB(db, mesa, formato, humanos, inicial.estado, numero);
+  await guardarDecisionesReplayDB(db, mesa, decisiones, meta);
   if (diferida) await programarTurno(db, mesa, mano, humanos);
   return mano;
 }
@@ -180,9 +189,11 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       if (mesa.formato === "duel" && estado.antesDeSalida !== undefined) {
         if (diferida) await programarTurno(db, id, mano, humanos);
         else {
-          const nueva = jugarComputadoras(mano, mesa.formato, humanos);
+          const decisiones: DecisionReplay[] = [];
+          const nueva = jugarBotsConReplay(mano, mesa.formato, humanos, decisiones);
           await db.query("UPDATE juego.manos SET version=version+1, acciones=$3 WHERE mesa=$1 AND numero=$2",
             [id, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
+          await guardarDecisionesReplayDB(db, id, decisiones, mesa.meta);
           return { cambio: true, partida: vista(nueva, mesa.formato, fila.numero, fila.version + 1, asiento) };
         }
       }
@@ -208,10 +219,12 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         if (!(error instanceof RangeError || error instanceof TypeError)) throw error;
         throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
       }
-      const siguiente = diferida ? prepararTurno(paso, humanos) : jugarComputadoras(paso, mesa.formato, humanos);
+      const decisiones = [decisionReplay(paso)];
+      const siguiente = diferida ? prepararTurno(paso, humanos) : jugarBotsConReplay(paso, mesa.formato, humanos, decisiones);
       if (diferida) await programarTurno(db, id, siguiente, humanos);
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
         [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
+      await guardarDecisionesReplayDB(db, id, decisiones, mesa.meta);
       partida = vista(siguiente, mesa.formato, fila.numero, version, asiento);
     }
     await db.query("INSERT INTO juego.comandos (mesa,jugador,id,peticion,respuesta) VALUES ($1,$2,$3,$4,$5)",

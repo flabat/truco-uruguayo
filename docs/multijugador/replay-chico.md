@@ -47,3 +47,17 @@ JS
 La posición 0 muestra la cabecera pública del chico antes de repartir. Omitir la posición lee hasta el último evento disponible. Un prefijo se verifica independientemente del resto. Para verificar el registro entero se lee hasta el final. Un hueco, una acción ilegal o un cobro distinto del motor identifica la secuencia que falló.
 
 Un cambio incompatible de representación exige otra versión del replay. Los cambios de reglas, de reparto o de visibilidad exigen una versión o perfil que conserve la interpretación anterior. Mantener estos cuatro ejemplos como vectores de compatibilidad y agregar los nuevos junto al lector correspondiente.
+
+## Captura de mesas en PostgreSQL
+
+Al repartir la primera mano de una mesa en línea, la API fija la cabecera privada en `juego.replays_chico`. El UUID del chico es el de la mesa. La huella SHA-256 identifica las fuentes del motor instaladas en el proceso que abrió el chico. Cada asiento de computadora conserva la política de la mesa, y cada decisión conserva la política que efectivamente jugó. Esto cubre mesas humanas, mixtas y de computadoras de duelo, parejas y tercetos.
+
+El reparto ocupa la posición 0 de la mano en `juego.eventos_chico`. Las decisiones ocupan las posiciones siguientes y el cierre sigue a la jugada ganadora. Cada posición de la mano y cada secuencia del chico son únicas en PostgreSQL. Bajo el bloqueo de la mesa, los escritores guardan el estado jugable, los eventos y el recibo del comando en la misma transacción. Un cliente que reintenta por HTTP o WebSocket con el mismo identificador recupera el recibo original. El trabajador de computadoras comprueba de nuevo la versión y el asiento antes de confirmar su decisión.
+
+La columna `build` de cada evento identifica al escritor si el chico abarca más de un despliegue. Un proceso autorizado del servidor puede obtener el documento que acepta `reproducirChico` con esta consulta.
+
+```sql
+SELECT replay FROM juego.replays_chico_v1 WHERE mesa = $1;
+```
+
+La vista contiene todas las cartas y señas. El servidor autentica al jugador y le entrega la proyección de su asiento. La vista incluye únicamente los chicos compatibles observados desde el primer reparto cuyo registro cubre todas las acciones confirmadas. Si una mesa ya tenía manos al instalar esta versión, las jugadas nuevas conservan su número de mano y posición en la tabla de eventos. Los repartos y las acciones anteriores siguen en `juego.manos`. El mismo criterio conserva como parcial un historial al que le falten jugadas escritas por una instancia antigua durante el despliegue.

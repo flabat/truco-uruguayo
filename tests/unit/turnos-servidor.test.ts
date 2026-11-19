@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
 import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
-import { iniciarOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { iniciarOnline, marcadorOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { dueloFlor } from "../fixtures/duelo-mazo.ts";
 
 const parejas: RepartoOnline = {versionReparto: "online-1", mano: 0, dador: 3, muestra: "oros-01", manos: [
   ["bastos-02","bastos-03","bastos-04"], ["copas-05","copas-06","copas-07"],
@@ -43,4 +44,19 @@ test("los comandos persistidos reconstruyen todas las señas y cobros sin volver
     assert.throws(() => restaurar({...fila, version_senas:"futura"}, formato));
     assert.ok(fila.acciones.every(a => Boolean(a.sena) === hasSignals(formato)));
   }
+});
+
+test("al reanudar el duelo se registra sólo la decisión nueva con la propuesta original y los tantos confirmados", () => {
+  const previa = restaurar(dueloFlor, "duel", 40, [0]);
+  let decisiones = 0;
+  const fin = jugarComputadoras(previa, "duel", [0], false, (paso, propuesta) => {
+    decisiones++;
+    assert.equal(propuesta, "copas-02");
+    assert.deepEqual(paso.turnos.at(-1), {
+      action: { tipo: "mazo", asiento: 1 }, awards: [{ equipo: 0, tantos: 1, motivo: "truco" }],
+    });
+    assert.deepEqual(marcadorOnline(paso.estado), [15, 0]);
+  });
+  assert.equal(decisiones, 1);
+  jugarComputadoras(fin, "duel", [0], false, () => assert.fail("La mano ya terminó."));
 });

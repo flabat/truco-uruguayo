@@ -56,6 +56,12 @@ function leerDecision(entrada: unknown, perfil: PerfilChicoOnline) {
   return { accion, sena: sena as Signal | undefined };
 }
 
+/** Al abrir otro duelo el motor traslada los cobros del anterior al historial y reinicia la lista. */
+export function cobrosDeDecision(antes: EstadoOnline, despues: EstadoOnline): readonly Cobro[] {
+  const cobros = despues.lance?.duelo === antes.lance?.duelo ? despues.cobros : despues.historialLances!.at(-1)!.cobros;
+  return cobros.slice(antes.cobros.length);
+}
+
 export function decidirChicoOnline(previo: EstadoChicoOnline, entrada: unknown, duelo?: unknown): EstadoChicoOnline {
   const { motor, perfil, humanos } = previo;
   if (duelo !== motor.lance?.duelo) throw new RangeError("La decisión no corresponde al duelo en curso.");
@@ -67,9 +73,7 @@ export function decidirChicoOnline(previo: EstadoChicoOnline, entrada: unknown, 
   if (!paso.ok) throw new RangeError(`Decisión rechazada por el árbitro: ${paso.error}.`);
   // La arena conserva el turno natural. En las mesas el servidor puede adelantar un turno de computadora tras una flor.
   const siguiente = humanos === undefined ? paso.estado : anticiparAnteFlor(paso.estado, humanos);
-  // Al abrir otro duelo el motor traslada los cobros del duelo anterior al historial y reinicia su lista actual.
-  const cobrosDelLance = siguiente.lance?.duelo === motor.lance?.duelo ? siguiente.cobros : siguiente.historialLances!.at(-1)!.cobros;
-  const cobros = cobrosDelLance.slice(motor.cobros.length);
+  const cobros = cobrosDeDecision(motor, siguiente);
   const turno: PublicTurn = sena === undefined ? { action: accion, awards: cobros } : { action: accion, awards: cobros, signal: sena };
   const turnos = perfil === "pairs-private-senas" ? [...previo.turnos, turno] : previo.turnos;
   return { perfil, motor: siguiente, humanos, turnos, puntos: marcadorOnline(siguiente), cobros, terminada: siguiente.resultado !== null };

@@ -1,7 +1,8 @@
 import type {Pool, PoolClient} from "pg";
 import { aDecidir, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
-import { hasSignals, type Move, type SeatObservation } from "../training/contracts/index.ts";
+import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
+import { hasSignals, versions, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
 import { elegirAccionTercetos } from "../src/motor/bot-tercetos.ts";
@@ -9,6 +10,7 @@ import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
 import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
+import { decisionReplay, guardarDecisionesReplayDB } from "./replay-db.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -41,10 +43,12 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     const inicio = performance.now();
     const accion = elegirAccionTercetos(vistaTercetos(estado, asiento));
     if (!accion) throw new Error("El asiento de computadora no encontró una acción legal.");
+    const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: politicaTercetos, observacion: "vista-tercetos-v1",
+      acciones: "acciones-tercetos-v1", latenciaMs: performance.now() - inicio };
     return {
-      asiento, politica: politicaTercetos, fallback: null, latencia: performance.now() - inicio,
+      asiento, bot,
       actorActual: (humanos: Asiento[]) => asientoBotTercetos(estado, humanos),
-      aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarTurnoTercetosDB(db, fila, estado, accion, humanos),
+      aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarTurnoTercetosDB(db, fila, estado, accion, humanos, bot),
     };
   }
   const formato = formatoMesa(fila.modo, fila.version_senas);
@@ -55,13 +59,16 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
   const observacion = observe(mano.estado, asiento, formato, historial, vistaParaPolitica);
   const decision = await servicio.decide(fila.politica, hasSignals(formato)
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
+  const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: decision.policy, observacion: observacion.schema, acciones: versions.actions,
+    latenciaMs: decision.latencyMs, ...(decision.fallback !== null && { fallback: decision.fallback }) };
   return {
-    asiento, politica: decision.policy, fallback: decision.fallback, latencia: decision.latencyMs,
+    asiento, bot,
     actorActual: (humanos: Asiento[]) => actor(mano, humanos),
     async aplicar(db: PoolClient, humanos: Asiento[]) {
       const nueva = prepararTurno(confirmarComputadora(mano, formato, asiento, decision.action), humanos);
       await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
         [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
+      await guardarDecisionesReplayDB(db, fila.mesa, [decisionReplay(nueva, decision.action, bot)], fila.meta);
       await programarTurno(db, fila.mesa, nueva, humanos);
     },
   };
@@ -87,8 +94,8 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
     }
     await turno.aplicar(db, actual.humanos);
     await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [fila.mesa,fila.numero,fila.version,turno.asiento,fila.politica,
-        turno.politica,turno.fallback,turno.latencia]);
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [fila.mesa,fila.numero,fila.version,turno.asiento,turno.bot.solicitada,
+        turno.bot.aplicada,turno.bot.fallback ?? null,turno.bot.latenciaMs]);
     await db.query("COMMIT");
   } catch (error) {
     await db.query("ROLLBACK");
