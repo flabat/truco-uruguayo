@@ -8,6 +8,8 @@ compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
 export TERCETOS_HABILITADOS=1
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
+export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
+unset KEYCLOAK_ADMIN_TOKEN
 
 cleanup() {
   local status=$?
@@ -31,6 +33,13 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)
 ' "$issuer"
 node scripts/verificar-identidad.mjs "$issuer"
+export GOOGLE_CLIENT_ID=google-prueba GOOGLE_CLIENT_SECRET=secreto-google-prueba
+export FACEBOOK_APP_ID=123456789 FACEBOOK_APP_SECRET=secreto-facebook-prueba
+node scripts/verificar-ingreso-social.mjs "$web"
+COMPOSE_PROJECT_NAME="$project" npm run auth:google
+node scripts/verificar-ingreso-social.mjs "$web" google
+COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
+node scripts/verificar-ingreso-social.mjs "$web" google facebook
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
