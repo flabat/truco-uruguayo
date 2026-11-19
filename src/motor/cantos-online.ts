@@ -1,5 +1,5 @@
 import { equipoDelAsiento, type Asiento, type Equipo, type RepartoOnline } from "./reparto.ts";
-import type { EstadoMano, Jugada } from "./mano.ts";
+import type { EstadoMano, Jugada, VueltaCerrada } from "./mano.ts";
 import { faltaDelGanador, restoQuerido, tantosAcreditados } from "./reglas-tercetos.ts";
 import { evaluarTantos } from "./tantos.ts";
 
@@ -24,7 +24,21 @@ export interface Cobro {
   tantoGanador?: number;
 }
 
+export type LanceTercetos =
+  | { tipo: "redondilla"; duelo: null; activos: readonly Asiento[] }
+  | { tipo: "pico-a-pico"; duelo: 1 | 2 | 3; activos: readonly Asiento[] };
+
+export type ResumenLance = LanceTercetos & {
+  resultado: NonNullable<EstadoOnline["resultado"]>;
+  acciones: readonly AccionOnline[];
+  cobros: readonly Cobro[];
+  vueltas: readonly VueltaCerrada[];
+  puntos: readonly [number, number];
+};
+
 export interface EstadoOnline {
+  lance?: LanceTercetos;
+  historialLances?: readonly ResumenLance[];
   mano: EstadoMano<RepartoOnline>;
   puntosInicio: readonly [number, number];
   meta: number;
@@ -61,7 +75,10 @@ export function aDecidir(estado: EstadoOnline): Asiento[] {
   if (estado.consultaFlor.length) return [estado.consultaFlor[0]];
   const oferta = estado.lateral ?? estado.trucoPendiente;
   if (!oferta) return estado.mano.turno === null ? [] : [estado.mano.turno];
-  const posibles = estado.flores.length && estado.lateral ? estado.flores : estado.mano.participantes;
+  let posibles = estado.mano.participantes;
+  if (estado.flores.length && estado.lateral) {
+    posibles = esTerceto(estado) ? posibles.filter(a => estado.flores.includes(a)) : estado.flores;
+  }
   return posibles.filter(a => equipoDelAsiento(a) !== equipoDelAsiento(oferta.asiento));
 }
 

@@ -131,15 +131,19 @@ export function jugarCarta<R extends Reparto>(estado: EstadoMano<R>, jugada: Jug
 }
 
 /** Los bots y la mesa guiada reciben sus cartas y una copia de los hechos públicos. */
-export function vistaPara(estado: EstadoMano<Reparto>, asiento: Asiento): VistaAsiento {
+export function vistaPublicaPara(estado: EstadoMano<Reparto>, asiento: Asiento): Omit<VistaAsiento, "cartas"> {
   if (!esAsientoOnline(asiento) || asiento >= estado.reparto.manos.length) throw new RangeError("El asiento debe estar en la mesa.");
   const { muestra, dador, mano } = estado.reparto;
   return structuredClone({
-    asiento, cartas: estado.restantes[asiento], muestra, dador, mano,
+    asiento, muestra, dador, mano,
     equipoPorAsiento: estado.reparto.manos.map((_, i) => equipoDelAsiento(i as Asiento)),
     turno: estado.turno,
     vueltaActual: estado.vueltaActual,
     vueltas: estado.vueltas,
     equipoGanador: estado.equipoGanador,
   });
+}
+
+export function vistaPara(estado: EstadoMano<Reparto>, asiento: Asiento): VistaAsiento {
+  return { ...vistaPublicaPara(estado, asiento), cartas: [...estado.restantes[asiento]] };
 }
