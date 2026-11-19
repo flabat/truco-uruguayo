@@ -72,6 +72,10 @@ export interface Receipt {
   // Only actions by the designated player(s) in the tested arm, excluding frozen teammates and opponents.
   latencyUs:number[]; roles:Record<Role,RoleDiagnostics>;
 }
+export function roleAt(seat:number, leg:number, pair:number, lineup:string):Role {
+  if(seat % 2 !== leg) return "opponent";
+  return lineup==="unseen" && Math.floor(seat/2)===pair%2 ? "teammate" : "tested";
+}
 export function referee(field:Field, load:(file:string)=>Buffer) {
   const entries=[field.candidate,field.independent,field.counter,...(field.partner?[field.partner]:[])];
   const models=new Map<string,unknown>();
@@ -91,10 +95,10 @@ export function referee(field:Field, load:(file:string)=>Buffer) {
       const roles:Record<Role,RoleDiagnostics>={tested:{decisions:0,fallbacks:{}},teammate:{decisions:0,fallbacks:{}},opponent:{decisions:0,fallbacks:{}}};
       const tested=arm==="candidate"?field.candidate.pin:incumbent.id;
       const match=await playMatchAsync({format:field.format,seed,pair,leg,responders(seat) {
-        const onTeam=seat%2===leg;
-        const teammate=onTeam && f.lineup==="unseen" && Math.floor(seat/2)===(pair%2);
+        const roleName=roleAt(seat,leg,pair,f.lineup);
+        const onTeam=roleName!=="opponent", teammate=roleName==="teammate";
         return async (obs:SeatObservation,u:number) => {
-          const role=roles[!onTeam?"opponent":teammate?"teammate":"tested"];
+          const role=roles[roleName];
           role.decisions++;
           let result:ServingDecision;
           if(!onTeam && !oppositePin && f.opponent!==incumbent.id) {

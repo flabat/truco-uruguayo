@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { summarize } from "../../training/eval/statistics.ts";
 import { decision } from "../../training/championship/event.ts";
-import { families } from "../../training/championship/field.ts";
+import { checkArtifact, families, roleAt, sha } from "../../training/championship/field.ts";
 
 test("el campeonato mantiene los umbrales directos, familiares y operativos", () => {
   const arm = (wins: [number,number],old:[number,number]) => Array.from({length:32},(_,pair)=>({pair,candidate:wins,incumbent:old}));
@@ -26,5 +26,18 @@ test("se pesa igual a los adversarios, con ambos tipos de compañero en parejas"
     for(const opponent of new Set(entries.map(f=>f.opponent))) {
       assert.deepEqual(entries.filter(f=>f.opponent===opponent).map(f=>f.lineup),format==="duel"?["fixed"]:["fixed","unseen"]);
     }
+  }
+});
+
+test("la inscripción verifica cada asiento y el compañero desconocido rota en las dos mangas", async () => {
+  const { header, monteCarloId } = await import("../../training/partners/policy.ts");
+  const bytes = Buffer.from(JSON.stringify({...header("pairs"),kind:monteCarloId,seats:[{}, {}, {}, null]}));
+  assert.throws(()=>checkArtifact(bytes,"pairs",sha(bytes)), /inválidos/);
+  for(const leg of [0,1]) {
+    assert.equal(roleAt(leg,leg,0,"unseen"),"teammate");
+    assert.equal(roleAt(leg+2,leg,0,"unseen"),"tested");
+    assert.equal(roleAt(leg+2,leg,1,"unseen"),"teammate");
+    assert.equal(roleAt(1-leg,leg,0,"unseen"),"opponent");
+    assert.equal(roleAt(leg,leg,0,"fixed"),"tested");
   }
 });

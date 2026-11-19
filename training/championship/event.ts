@@ -10,7 +10,7 @@ import { gzipSync, gunzipSync } from "node:zlib";
 import { replayMatch } from "../arena/index.ts";
 import { summarize, type FamilyResult, type PairOutcome } from "../eval/statistics.ts";
 import { incumbent } from "../seat/index.ts";
-import { buildId, families, prepare, referee, root, sha, type Field, type Receipt, type RoleDiagnostics } from "./field.ts";
+import { buildId, families, prepare, referee, roleAt, root, sha, type Field, type Receipt, type RoleDiagnostics } from "./field.ts";
 
 const json=(v:unknown)=>JSON.stringify(v);
 const bytes=(f:string)=>readFileSync(f);
@@ -108,8 +108,10 @@ export async function championship(dir:string,output:string,verifyOnly:boolean) 
         for(const r of receipts) {
           assert.equal(r.match.format,field.format);
           replayMatch(r.match,seed);
-          const actionCount = r.match.hands.reduce((n,h)=>n+h.turns.length,0);
-          assert.equal(r.roles.opponent.decisions+r.roles.tested.decisions+r.roles.teammate.decisions,actionCount);
+          const counts={tested:0,teammate:0,opponent:0};
+          for(const hand of r.match.hands) for(const t of hand.turns) counts[roleAt(t.action.asiento,r.match.leg,pair,f.lineup)]++;
+          assert.deepEqual(Object.keys(r.roles).sort(),Object.keys(counts).sort());
+          for(const [role,n] of Object.entries(counts)) assert.equal(r.roles[role as keyof typeof counts].decisions,n);
           assert.equal(r.roles.tested.decisions,r.latencyUs.length);
           for(const [role,metric] of Object.entries(r.roles)) {
             const key=[r.arm,f.id,role].join(":");
