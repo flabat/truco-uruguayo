@@ -27,7 +27,7 @@ export function field(format: CycleFormat): Fixture[] {
 }
 
 // A frozen no-signals actor gets the same legal information as in its original format.
-function silence(policy: Policy, asFormat?: Format): Policy {
+export function silence(policy: Policy, asFormat?: Format): Policy {
   return {id: policy.id, decide(obs, legal) {
     const moves = legal.filter(a => !a.includes("/"));
     const history = obs.history.map(({action, awards}) => ({action, awards}));
