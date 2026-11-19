@@ -4,7 +4,7 @@ import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
 import { sample } from "../arena/index.ts";
 import { seatsFor, type ActionId, type Policy, type SeatObservation } from "../contracts/index.ts";
 import { commitTurn } from "../signals/index.ts";
-import { drawDeal, inferWorld, posterior, seatView, type World } from "./belief.ts";
+import { drawDeal, duelDeals, inferWorld, posterior, seatView, type World } from "./belief.ts";
 import { continuation, type Continuation, type Field } from "./continuation.ts";
 
 export interface SearchOptions {
@@ -94,19 +94,34 @@ export function boundedSearch(options: SearchOptions, report?: (d: Diagnostics) 
       const seed = createHash("sha256").update("search-worlds-v1/" + JSON.stringify(obs)).digest().readUInt32BE();
       const random = crearAzar(seed);
       const compatible: World[] = [];
-      while (compatible.length < worlds && diag.proposals < proposals) {
-        check();
-        diag.proposals++;
-        const w = inferWorld(obs, drawDeal(obs, random), field);
-        if (w) compatible.push(w);
+      // Antes de la primera carta, un canto cambia los pesos de las 7.140
+      // tenencias del duelo. Con historia vacía el reparto uniforme ya es exacto.
+      const exactOpening = obs.format === "duel" && obs.history.length > 0 && obs.history.every(t => t.action.tipo !== "carta");
+      if (exactOpening) {
+        for (const deal of duelDeals(obs)) {
+          check();
+          diag.proposals++;
+          const w = inferWorld(obs, deal, field);
+          if (w) compatible.push(w);
+        }
+      } else {
+        while (compatible.length < worlds && diag.proposals < proposals) {
+          check();
+          diag.proposals++;
+          const w = inferWorld(obs, drawDeal(obs, random), field);
+          if (w) compatible.push(w);
+        }
       }
-      diag.worlds = compatible.length;
       if (!compatible.length) {
         diag.result = "no-worlds";
       } else {
-        const { probabilities, uniformFallback } = posterior(compatible);
-        diag.zeroLikelihood = uniformFallback;
-        const rows = compatible.map((w, i) => legal.map(a => {
+        const distribution = posterior(compatible);
+        diag.zeroLikelihood = distribution.uniformFallback;
+        const draws = exactOpening ? Array.from({ length: worlds }, () =>
+          compatible[sample(distribution.probabilities, compatible.length, random())]) : compatible;
+        const probabilities = exactOpening ? draws.map(() => 1 / draws.length) : distribution.probabilities;
+        diag.worlds = draws.length;
+        const rows = draws.map((w, i) => legal.map(a => {
           check();
           return afterAction(w, obs, a, options, (seed ^ Math.imul(0x85ebca6b, i + 1)) >>> 0, check);
         }));

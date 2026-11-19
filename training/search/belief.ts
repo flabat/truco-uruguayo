@@ -55,10 +55,19 @@ export function drawDeal(obs: SeatObservation, random: () => number) {
     [remaining[top], remaining[j]] = [remaining[j], remaining[top]];
     hand.push(remaining[top++]);
   }
+  for (const [seat, hand] of hands.entries()) {
+    if (seat === obs.view.asiento) continue;
+    for (let i = 0; i < hand.length - 1; i++) {
+      const j = i + Math.floor(random() * (hand.length - i));
+      [hand[i], hand[j]] = [hand[j], hand[i]];
+    }
+  }
   return deal(obs, hands);
 }
 export interface World { state: EstadoOnline; logLikelihood: number }
 export function inferWorld(obs: SeatObservation, candidate: RepartoOnline, styles: Field): World | null {
+  if (candidate.muestra !== obs.view.muestra || candidate.mano !== obs.view.mano || candidate.dador !== obs.view.dador
+      || candidate.manos.length !== obs.seats || !isDeepStrictEqual(candidate.manos[obs.view.asiento], obs.originalCards)) return null;
   let state = iniciarOnline(candidate, obs.startScore, obs.target);
   let logLikelihood = 0;
   const prefix: PublicTurn[] = [];
