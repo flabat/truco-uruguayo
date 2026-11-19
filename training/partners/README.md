@@ -1,6 +1,6 @@
 # Entrenamiento local de parejas
 
-Node 24 reparte, ejecuta todas las decisiones del chico a 40 y verifica el actor exportado. PyTorch actualiza cuatro redes independientes con retornos de equipo de +1 o −1. Cada red reconstruye seis unidades recurrentes a partir del historial público, suma las puntuaciones de jugada y gesto, y normaliza solo sobre las acciones legales del asiento. Durante el entrenamiento un crítico central accede al tanteador, la apuesta y los tantos privados de los cuatro jugadores. El archivo del actor contiene únicamente las matrices necesarias para jugar.
+Node 24 reparte, ejecuta todas las decisiones del chico a 40 y verifica el actor exportado. PyTorch actualiza cuatro redes independientes con retornos de equipo de +1 o −1. Cada red reconstruye seis unidades recurrentes a partir del historial visible para su asiento, suma las puntuaciones de jugada y gesto, y normaliza solo sobre las acciones legales del asiento. Durante el entrenamiento un crítico central accede al tanteador, la apuesta y los tantos privados de los cuatro jugadores. El archivo del actor contiene únicamente las matrices necesarias para jugar.
 
 En paralelo se estima el retorno Monte Carlo por acción en tablas independientes. El comparador usa la misma cantidad de chicos completos y el mismo calendario de repartos. Cada bloque de cuatro encuentros alterna dos de autojuego y dos contra el incumbente con cambio de equipo. El optimizador usa SGD con momento 0,7, norma máxima 1 y máscaras por asiento. El entrenamiento y el desarrollo usan dominios de semilla separados.
 
@@ -16,9 +16,9 @@ Entrená ambas variantes. Para contrastar compañeros, cambiá la semilla y el d
 
 ```sh
 node training/partners/cli.ts --format pairs --config training/configs/pairs-local.json --run runs/pairs-a
-node training/partners/cli.ts --format pairs-senas --config training/configs/pairs-senas-local.json --run runs/senas-a
+node training/partners/cli.ts --format pairs-private-senas --config training/configs/pairs-private-senas-local.json --run runs/senas-a
 node training/partners/cli.ts --format pairs --config training/configs/pairs-local.json --run runs/pairs-b --seed 420702
-node training/partners/cli.ts --format pairs-senas --config training/configs/pairs-senas-local.json --run runs/senas-b --seed 420702
+node training/partners/cli.ts --format pairs-private-senas --config training/configs/pairs-private-senas-local.json --run runs/senas-b --seed 420702
 node training/partners/cli.ts --resume runs/senas-a/checkpoint
 node training/partners/cli.ts --run runs/pairs-a --crossplay --partner runs/pairs-b/actor.json --pairs 8
 node training/partners/cli.ts --run runs/senas-a --crossplay --partner runs/senas-b/actor.json --pairs 8
@@ -32,7 +32,7 @@ Generá dos lotes legales de los mismos formatos y corré el benchmark en el hos
 
 ```sh
 node training/partners/cli.ts --format pairs --config training/configs/pairs-local.json --run runs/bench-p --benchmarkData runs/bench-p/data.json
-node training/partners/cli.ts --format pairs-senas --config training/configs/pairs-senas-local.json --run runs/bench-s --benchmarkData runs/bench-s/data.json
+node training/partners/cli.ts --format pairs-private-senas --config training/configs/pairs-private-senas-local.json --run runs/bench-s --benchmarkData runs/bench-s/data.json
 training/partners/python/.venv/bin/python -B training/partners/python/benchmark.py runs/bench-p/data.json runs/bench-s/data.json --output runs/bench-p/backend.json
 ```
 
