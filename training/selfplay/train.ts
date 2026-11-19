@@ -20,6 +20,8 @@ type Team = readonly Policy[];
 interface Snapshot { name: string; model: Artifact }
 interface Context { champion: Snapshot; previous: Snapshot; peers: Snapshot[]; archivePins: Record<string,string> }
 interface RecordWL { wins: number; games: number }
+interface PairedGap { pairs:number; mean:number }
+interface Contrast { target:string; ordinal:number; rows:Record<string,PairedGap> }
 interface LastGame { opponent: string; teammate: string; action: string; score: readonly number[]; specialist: boolean }
 interface Checkpoint {
   schema: 1; format: CycleFormat; lineage: Lineage; starterPin: string; seed: number; rng: number;
@@ -28,6 +30,7 @@ interface Checkpoint {
   counterGames: number; counterWins: number; counterUpdates: number; counterTarget: string;
   targetCounterGames: number; targetCounterWins: number;
   learner: LearnerState; specialist: LearnerState;
+  contrast?: Contrast;
   record: Record<string,RecordWL>; history: Snapshot[]; last: LastGame | null;
 }
 interface Choice { name: string; team: Team }
@@ -120,7 +123,14 @@ function freezeContext(root: string, state: Checkpoint, epoch: number, archived:
   return {champion,previous,peers,archivePins};
 }
 
-function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedModel: Starter) {
+// A positive gap means the incumbent does better on the same deals. The prior
+// shrinks small samples toward equal weight. Bound the ratio to retain coverage.
+export function regressionWeight(row?:PairedGap) {
+  const gap = row ? row.mean * row.pairs / (row.pairs + 8) : 0;
+  return Math.exp(Math.max(-2,Math.min(3,12*gap)));
+}
+
+function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedModel: Starter, paired:boolean) {
   const repeated = (policy: Policy): Team => Array(seatsFor(state.format)).fill(policy);
   const choice = (s: Snapshot): Choice => ({name:s.name,team:openTrainingTeam(s.model,state.format)});
   const champion = choice(context.champion), previous = choice(context.previous);
@@ -130,6 +140,44 @@ function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedMod
   const historical = [...guest,starter];
   const trainingPartners = [...guest,previous,...scripted.filter(s => s.name === "strong-cards" || s.name === incumbent.id)];
   const hardPool = [champion,...scripted,...historical];
+  const contrast = paired ? (state.contrast ??= {target:champion.name,ordinal:0,rows:{}}) : undefined;
+  if (contrast && contrast.target!==champion.name) {
+    contrast.target=champion.name;
+    contrast.rows={};
+  }
+  // One condition means two copies of the actor; the other substitutes a
+  // frozen teammate in exactly the same seat for both compared policies.
+  const conditions = hardPool.flatMap(opponent =>
+    (state.format==="duel" ? [false] : [false,true]).map(guestMate => ({
+      opponent, guestMate, id:opponent.name+(guestMate?"/guest":"/own")
+    }))
+  );
+  const probeSeed = dealSeed(String(state.seed),"paired-training-probe");
+  function probe(c:Contrast) {
+    const pair=c.ordinal++, item=conditions[pair%conditions.length];
+    const guest=item.guestMate ? trainingPartners[Math.floor(pair/conditions.length)%trainingPartners.length] : null;
+    const trained=openSelfplay(state.learner.actor);
+    let difference=0;
+    for (const leg of [0,1] as const) {
+      const guestHalf=Math.floor(pair/conditions.length)%2;
+      for (const isReference of [false,true]) {
+        const game=playMatch({format:state.format,seed:probeSeed,pair,leg,policies(seat) {
+          if (seat%2!==leg) return item.opponent.team[seat];
+          if (guest && Math.floor(seat/2)===guestHalf) return guest.team[seat];
+          return isReference ? champion.team[seat] : trained;
+        }});
+        difference+=(isReference?1:-1)*Number(game.winner===leg)/2;
+      }
+    }
+    const row=c.rows[item.id] ??= {pairs:0,mean:0};
+    row.pairs++;
+    row.mean+=(difference-row.mean)/Math.min(128,row.pairs);
+  }
+  function drawCondition(c:Contrast) {
+    const weights=conditions.map(item=>regressionWeight(c.rows[item.id]));
+    let ticket=nextUniform(state)*weights.reduce((sum,w)=>sum+w,0);
+    return conditions[weights.findIndex((w,i)=>(ticket-=w)<0 || i===weights.length-1)];
+  }
   function step() {
     const specialist = state.games % 5 === 4;
     const n = state.games - state.counterGames;
@@ -137,8 +185,16 @@ function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedMod
     const learner = specialist ? state.specialist : state.learner;
     const collector = collect(learner);
     let opponent: Choice;
+    let guestCondition:boolean|undefined;
+    if (contrast && !specialist && n%16===0) probe(contrast);
     if (specialist) opponent = champion;
-    else switch (n % 9) {
+    else if (contrast && (n%9===2 || n%9===7 || n%9===4)) {
+      const item=drawCondition(contrast);
+      opponent=item.opponent; guestCondition=item.guestMate;
+    } else if (contrast && state.format!=="duel" && n%9===3) {
+      opponent=scripted.find(s=>s.name==="strong-cards")!;
+      guestCondition=Math.floor(n/9)%4===3;
+    } else switch (n % 9) {
       case 0: opponent = {name:"latest-self",team:repeated(openSelfplay(state.learner.actor))}; break;
       case 1: opponent = champion; break;
       case 2: case 7: opponent = pickHard(state,hardPool); break;
@@ -151,7 +207,7 @@ function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedMod
     // Alternate seats within the candidate's team. When paired with a frozen
     // teammate, only the seat controlled by the learner contributes gradients.
     const singleSeat = team + 2 * (Math.floor(state.games / 2) % 2);
-    const useGuest = state.format !== "duel" && state.games % 3 !== 0;
+    const useGuest = guestCondition ?? (state.format !== "duel" && state.games % 3 !== 0);
     const mate = useGuest ? pick(state,trainingPartners) : null;
     const isLearner = (s: Asiento) => s % 2 === team && (!mate || s === singleSeat);
     let total = 0, trained = 0, action = "";
@@ -223,7 +279,8 @@ export function runSlice(root: string, format: CycleFormat, lineage: Lineage, sl
   mkdirSync(join(dir,"archive"),{recursive:true});
   return withWriter(dir,() => {
     const starter = read(join(input,"starter.json"));
-    const master = read(join(root,"protocol.json")).seed;
+    const protocol = read(join(root,"protocol.json"));
+    const master = protocol.seed;
     if ((typeof master !== "string" || !master.length) && !Number.isSafeInteger(master)) throw new Error("Missing run seed");
     const seed = dealSeed(String(master),"residual-selfplay-training",format,lineage);
     const file = join(dir,"checkpoint.json");
@@ -236,7 +293,7 @@ export function runSlice(root: string, format: CycleFormat, lineage: Lineage, sl
     if (state.counterTarget!==ctx.champion.name) {
       state.counterTarget=ctx.champion.name; state.targetCounterGames=0; state.targetCounterWins=0;
     }
-    const step = league(state,ctx,inputs,starter);
+    const step = league(state,ctx,inputs,starter,protocol.sampler==="paired-regression-v1");
     const contextFile = join(dir,"epochs",epoch+".json");
     if (!existsSync(contextFile)) save(contextFile,ctx);
     function persist(status: string) {
@@ -256,6 +313,7 @@ export function runSlice(root: string, format: CycleFormat, lineage: Lineage, sl
         learningDecisions:state.learningDecisions,learnerUpdates:state.learnerUpdates,counterGames:state.counterGames,
         counterWins:state.counterWins,counterUpdates:state.counterUpdates,counterTarget:state.counterTarget,
         targetCounterGames:state.targetCounterGames,targetCounterWins:state.targetCounterWins,
+        ...(state.contrast ? {probeGames:4*state.contrast.ordinal} : {}),
         ...state.last,message:"Epoch " + epoch + " · " + state.games + " completed computer chicos · " + state.learnerUpdates + " policy updates"};
       save(join(dir,"progress.json"),progress);
       appendFileSync(join(root,"events",lane+".jsonl"),JSON.stringify(progress)+"\n");

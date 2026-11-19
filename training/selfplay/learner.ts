@@ -164,6 +164,16 @@ function validate(actor: SelfplayActor) {
       || actor.updates<0 || !Array.isArray(actor.weights) || actor.weights.length!==length
       || !actor.weights.every(w=>Number.isFinite(w) && Math.abs(w)<=4)) throw Error("Invalid residual policy artifact");
 }
+/** Calibrate the card and betting parts of a frozen duel policy on training games. */
+export function scaleDuelResidual(actor:SelfplayActor, band:string, cards:number, bets:number):SelfplayActor {
+  validate(actor);
+  if(actor.format!=="duel" || [cards,bets].some(n=>!Number.isFinite(n)||n<0||n>1))
+    throw Error("Invalid duel calibration");
+  const anchor:AnchoredActor={...actor.anchor,bands:[band,band,band]};
+  openAnchored(anchor);
+  return {...actor,anchor,weights:actor.weights.map((w,i)=>w*(i<3*width?cards:bets))};
+}
+
 export function openSelfplay(actor: SelfplayActor): Policy {
   validate(actor);
   const snapshot=structuredClone(actor), anchor=openAnchored(snapshot.anchor);

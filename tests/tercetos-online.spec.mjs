@@ -70,6 +70,8 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(page.locator(".j-lugar small")).toHaveText(["Equipo 1","Equipo 2","Equipo 1","Equipo 2","Equipo 1","Equipo 2"]);
   for (let i = 1; i < 6; i++) await page.getByRole("button", { name: "Agregar computadora al asiento " + (i+1) }).click();
   await expect(page.getByRole("region", { name: "Tapete" })).toBeVisible();
+  const cartas = page.getByRole("group", { name: "Tus cartas" }).getByRole("button", { name: /^Jugar / });
+  await expect(cartas).toHaveText(["", "", ""], { useInnerText: true });
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {
@@ -228,4 +230,48 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     acuseEnvido.resolve();
     await Promise.all(contextos.map(ctx => ctx.close()));
   }
+});
+
+test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambos ganadores al final del reparto", async ({ page }) => {
+  const espectadora = 4; // No llegó a jugar su duelo.
+  let estado = iniciarOnline(ejemplo.reparto, ejemplo.puntosInicio, ejemplo.meta, ejemplo.numero);
+  let version = 1;
+  let canal;
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  await page.routeWebSocket("**/vivo", socket => { canal = socket; });
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    const json = pathname === "/api/jugador" ? jugadores[espectadora] : pathname.endsWith("/partida")
+      ? lectura(estado, espectadora, version) : crearSala(espectadora);
+    return route.fulfill({ json });
+  });
+  await page.goto("jugar/?mesa=" + id);
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  await expect(tapete).toBeVisible();
+  await expect(page.getByText("Reconectando con tu mesa…")).toHaveCount(0);
+  for (const { duelo, ...accion } of ejemplo.acciones) {
+    expect(estado.lance.duelo).toBe(duelo);
+    const paso = aplicarOnline(estado, accion);
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  canal.send(JSON.stringify({ tipo: "actualizar" }));
+  for (const [asiento, canto] of [
+    [5, "Envido"], [2, "Quiero"], [2, "37 de envido"], [5, "Me voy al mazo"],
+    [0, "Flor"], [3, "Flor"], [3, "Contraflor al resto"], [0, "Quiero"], [0, "38 de flor"],
+  ]) {
+    const puesto = tapete.getByRole("group", { name: "Asiento " + (asiento + 1) + " · " + nombres[asiento], exact: true });
+    await expect(puesto.locator(".j-voz")).toHaveText(canto);
+    await expect(tapete.locator(".j-prueba-tantos")).toHaveCount(0);
+    await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+    await page.clock.runFor(1500);
+  }
+  const flor = tapete.getByRole("figure", { name: "Flor ganadora · 38 tantos" });
+  const envido = tapete.getByRole("figure", { name: "Envido ganador · 37 tantos" });
+  await expect(flor.getByRole("img")).toHaveCount(3);
+  await expect(flor).toContainText("Duelo 2");
+  await expect(envido.getByRole("img")).toHaveCount(2);
+  await expect(envido).toContainText("Duelo 1");
 });

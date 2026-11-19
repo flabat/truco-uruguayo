@@ -47,7 +47,7 @@
   overflow-wrap: anywhere;
 }
 .j-seis-nombre strong { font-size: clamp(.84rem, 1.5vw, 1rem); }
-.j-seis-nombre span, .j-seis-nombre b, .j-seis-jugada small {
+.j-seis-nombre span:not(.j-voz), .j-seis-nombre b, .j-seis-jugada small {
   color: #f0dfb4;
   font-size: .72rem;
 }

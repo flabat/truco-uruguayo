@@ -1,9 +1,11 @@
+import { canto } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
-import { canto } from "../../lib/cantos";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
-import { Naipe, Tanteador } from "./Tablero";
+import { Naipe, PruebaEnMesa, Tanteador } from "./Tablero";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
+import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
+import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
 
 type Props = {
@@ -12,6 +14,7 @@ type Props = {
   base: string;
   bloqueada: boolean;
   jugar: (accion?: Eleccion) => void;
+  presencioReparto: boolean;
 };
 
 const nombreDelLance = (lance: LanceTercetos) =>
@@ -39,7 +42,7 @@ function palabra(mesa: Mesa, partida: PartidaTercetos) {
   return vista.turno == null ? "Esperando la jugada" : "Turno de " + nombre(vista.turno);
 }
 
-function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base">) {
+function Puestos({ mesa, partida, base, voces }: Pick<Props, "mesa" | "partida" | "base"> & { voces: Voz[] }) {
   const { vista, lance } = partida;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   const ultima = vista.vueltas.at(-1);
@@ -51,6 +54,7 @@ function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base
         const papel = asiento === mesa.miAsiento ? "Vos" : equipo === propio ? "Compañero" : "Rival";
         const jugada = vuelta?.jugadas.find(j => j.asiento === asiento);
         const ganador = !enCurso && ultima?.resultado.tipo === "ganada" && ultima.resultado.asiento === asiento;
+        const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento);
         return (
           <div key={asiento} className="j-seis-puesto" data-pos={(asiento - mesa.miAsiento + 6) % 6}
             data-activo={lance.activos.some(a => a === asiento)} role="group" aria-label={`Asiento ${asiento + 1} · ${nombre}`}>
@@ -59,6 +63,7 @@ function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base
               <span>{papel} · Equipo {equipo + 1}</span>
               {(asiento === vista.mano || asiento === vista.dador) &&
                 <b>{asiento === vista.dador ? "Dador" : "Mano"}</b>}
+              {!prueba && <GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />}
             </div>
             {asiento === vista.dador && (
               <div className="j-seis-muestra" role="img" aria-label={"Mazo y muestra · " + nombrar(vista.muestra)}>
@@ -66,7 +71,9 @@ function Puestos({ mesa, partida, base }: Pick<Props, "mesa" | "partida" | "base
                 <Naipe id={vista.muestra} base={base} />
               </div>
             )}
-            {jugada && <div className="j-seis-jugada">
+            {prueba && <PruebaEnMesa prueba={prueba} base={base} jugada={jugada?.carta} ganadora={ganador}
+              acciones={partida.historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />}
+            {jugada && !prueba?.cartas.includes(jugada.carta) && <div className="j-seis-jugada">
               <Naipe id={jugada.carta} base={base} />
               {ganador && <small>Ganó</small>}
             </div>}
@@ -108,17 +115,19 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
   </details>;
 }
 
-export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props) {
+export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, jugar, presencioReparto }: Props) {
+  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
+  const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
   const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const titulo = palabra(mesa, partida);
+  const titulo = presentando && voz ? mesa.asientos[voz.asiento].nombre : palabra(mesa, partida);
   const encabezado = useRef<HTMLHeadingElement>(null);
   const teclado = useRef(false);
   useEffect(() => {
     if (teclado.current && document.activeElement === document.body) encabezado.current?.focus();
-    teclado.current = false;
-  }, [partida.version]);
+    if (!presentando) teclado.current = false;
+  }, [partida.version, presentando]);
 
   const esPico = lance.tipo === "pico-a-pico";
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
@@ -137,11 +146,11 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
     }}>
       <section className="j-tapete" aria-label="Tapete">
         <header><strong>Reparto {partida.manoNumero}</strong><span>{esPico ? "Pico a pico" : "Redondilla"}</span></header>
-        <Puestos mesa={mesa} partida={partida} base={base} />
+        <Puestos mesa={mesa} partida={partida} base={base} voces={voz ? [voz] : vocesEnReposo(vista)} />
         {jugando && <div className="j-mano" role="group" aria-label="Tus cartas">
           {jugando.cartas.map(carta => <button key={carta} disabled={bloqueada || !jugando.legales.includes("carta")}
             aria-label={"Jugar " + nombrar(carta)} onClick={() => jugar({ tipo: "carta", carta })}>
-            <Naipe base={base} id={carta} /><span>{nombrar(carta)}</span>
+            <Naipe base={base} id={carta} />
           </button>)}
         </div>}
       </section>
@@ -150,7 +159,8 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
           <strong className="j-seis-lance">{nombreDelLance(lance)}{esPico && ` · ${rivales}`}</strong>
           <AvisoFlor pendiente={vista.pendiente} porDeclararFlor={vista.porDeclararFlor} nombre={nombre} />
           <h2 ref={encabezado} tabIndex={-1}>{titulo}</h2>
-          {vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
+          {presentando && voz && <p>{voz.texto}</p>}
+          {!presentando && vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
             ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
           {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
             <p>Cantá tu flor antes de jugar una carta.</p>}
@@ -174,7 +184,7 @@ export function MesaDeTercetos({ mesa, partida, base, bloqueada, jugar }: Props)
           nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"} />
         {jugando && <dl className="j-cuenta">
           <div><dt>Tus tantos</dt><dd>{jugando.tantosPropios.total} de {jugando.tantosPropios.modalidad}</dd></div>
-          <div><dt>Valor del truco</dt><dd>{tantos(vista.valorTruco)}</dd></div>
+          {!presentando && <div><dt>Valor del truco</dt><dd>{tantos(vista.valorTruco)}</dd></div>}
         </dl>}
         <section className="j-seis-historial" aria-label="Historial del reparto">
           {historialLances.map(l => <LanceCerrado key={l.duelo ?? "redondilla"} lance={l} nombre={nombre} esActual={esLanceActual(l)} />)}

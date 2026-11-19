@@ -1,4 +1,4 @@
-"""Check HTML links and asset references as served under a Pages URL."""
+"""Check internal links, anchors and assets in the built frontend."""
 
 from html.parser import HTMLParser
 from pathlib import Path, PurePosixPath

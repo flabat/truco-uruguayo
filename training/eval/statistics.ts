@@ -11,7 +11,8 @@ export interface FamilyResult { id: string; pairs: PairOutcome[] }
 const mean = (xs: readonly number[]) => xs.reduce((a,b) => a + b, 0) / xs.length;
 
 /** Resample whole deal sequences jointly across opponents, preserving seats and arms. */
-export function summarize(families: FamilyResult[], direct: string, resamples = 10000) {
+export function summarize(families: FamilyResult[], direct: string, resamples = 10000, familyError = 0.05) {
+  if (!Number.isFinite(familyError) || familyError<=0 || familyError>=1) throw new Error("Probabilidad de error inválida.");
   if (!families.length || !families.some(f => f.id === direct) || new Set(families.map(f => f.id)).size !== families.length)
     throw new Error("El campo requiere familias únicas y un enfrentamiento directo.");
   const n = families[0].pairs.length;
@@ -34,10 +35,10 @@ export function summarize(families: FamilyResult[], direct: string, resamples = 
     }
     sums.forEach((s,j) => samples[j].push(s/n));
   }
-  const alpha = 0.05 / (arms.length + 1);
+  const alpha = familyError / (arms.length + 1);
   const intervals = samples.map((sample, i) => {
     sample.sort((a,b) => a-b);
-    const tail = (i === 0 ? 0.05 : alpha)/2;
+    const tail = (i === 0 ? familyError : alpha)/2;
     return {estimate:mean(quantities[i]), lower:sample[Math.floor(tail * resamples)],
       upper:sample[Math.ceil((1 - tail) * resamples) - 1]};
   });

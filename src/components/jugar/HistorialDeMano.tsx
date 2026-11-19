@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { canto } from "../../lib/cantos";
 import { cartasPorId } from "../../lib/cartas";
 import type { CardId } from "../../motor/cartas";
 import type { VistaOnline } from "../../motor/mesa-online";
+import { canto } from "../../lib/cantos";
 
 export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");

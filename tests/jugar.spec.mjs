@@ -59,6 +59,22 @@ async function simular(page, handler) {
   return sockets;
 }
 
+test("desde la portada sin sesión se puede abrir la sala y seguir a la práctica", async ({ page }) => {
+  await page.route("**/api/jugador", (route) =>
+    route.fulfill({ status: 401, contentType: "application/json", body: "null" })
+  );
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Ingresar al juego" })).toBeVisible();
+
+  const navegacion = page.getByRole("navigation", { name: "Navegación principal" });
+  await navegacion.getByRole("link", { name: "Jugar", exact: true }).click();
+  await expect(page).toHaveURL("/jugar/");
+  await expect(page.getByRole("heading", { name: "Entrá con tu jugador" })).toBeVisible();
+
+  await navegacion.getByRole("link", { name: "Aprender" }).click();
+  await expect(page.getByRole("link", { name: "Empezar con un ejemplo" })).toBeVisible();
+});
+
 test("de a seis se proponen 25 malas y 25 buenas y la mesa puede pactar otra meta", async ({ page }) => {
   await page.goto("reglas/seis-jugadores/");
   const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico de a seis" });
@@ -204,6 +220,38 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await page.getByRole("button", { name: "Jugar As de espadas" }).press("Enter");
   await expect(page.getByRole("heading", { name: "Turno de CPU 1" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
+});
+
+test("la mano alinea las tres cartas y conserva sus nombres accesibles", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+  const cartas = ["oros-05", "copas-12", "bastos-11"];
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", personas) };
+    if (path.endsWith("/partida")) return { json: { ...partida, vista: {
+      ...vista, cartas, dador: 1, mano: 2, turno: 2, vueltaActual: { salida: 2, jugadas: [] }, legales: [],
+    } } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const puesto = page.getByRole("group", { name: "Vos · Ana", exact: true });
+  const mano = puesto.getByRole("group", { name: "Tus cartas" });
+  const nombres = ["5 de oros", "Rey de copas", "Caballo de bastos"];
+  for (const nombre of nombres) {
+    const boton = mano.getByRole("button", { name: "Jugar " + nombre, exact: true });
+    await expect(boton.getByAltText(nombre, { exact: true })).toBeVisible();
+  }
+  await expect(mano.getByRole("button")).toHaveText(["", "", ""], { useInnerText: true });
+  const bordes = await mano.locator("img").evaluateAll(async imagenes => {
+    await Promise.all(imagenes.map(imagen => imagen.decode()));
+    await document.fonts.ready;
+    return imagenes.map(imagen => imagen.getBoundingClientRect().toJSON());
+  });
+  for (let i = 1; i < bordes.length; i++) {
+    expect(bordes[i].top).toBe(bordes[0].top);
+    expect(bordes[i].bottom).toBe(bordes[0].bottom);
+    expect(bordes[i].left).toBeGreaterThanOrEqual(bordes[i - 1].right);
+  }
+  if (process.env.CAPTURAS_UI)
+    await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
 });
 
 for (const [caso, cantos] of [

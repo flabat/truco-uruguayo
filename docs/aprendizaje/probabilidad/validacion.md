@@ -58,7 +58,7 @@ Se registraron las solicitudes de JS y CSS y se midieron sus cuerpos con gzip. L
 
 ## Repetir la verificación
 
-Con la regresión de las once posiciones, pasaron 117 pruebas unitarias y 68 de navegador en cada base (136 ejecuciones de Chromium). Ambas compilaciones verificaron también enlaces, anclas, recursos y las imágenes Tatú.
+En la verificación original de las once posiciones pasaron 117 pruebas unitarias y 68 de navegador en cada base (136 ejecuciones de Chromium). Ambas compilaciones verificaron también enlaces, anclas, recursos y las imágenes Tatú.
 
 Desde la raíz del checkout, con Node 24, npm y Python 3:
 
@@ -72,13 +72,13 @@ npm run check
 git diff --check
 ```
 
-Para repetir el perfil estándar con dos terminales, compilar y servir la base de proyecto en la primera. La segunda ejecuta el [instrumento de medición](medir.mjs) y emite los tiempos y bytes por recurso en JSON.
+Para medir la versión actual con el mismo perfil, compilá la interfaz y servila desde la raíz en una terminal. Ejecutá el instrumento en otra terminal para obtener los tiempos y los bytes por recurso en JSON. [Instrumento de medición](medir.mjs)
 
 ```sh
-PAGES_URL=https://example.org/truco-uruguayo/ npm run build
-PAGES_URL=https://example.org/truco-uruguayo/ npm run preview -- --host 127.0.0.1 --port 49667
+npm run build
+npm run preview -- --host 127.0.0.1 --port 49667
 ```
 
 ```sh
-node docs/aprendizaje/probabilidad/medir.mjs http://127.0.0.1:49667/truco-uruguayo/
+node docs/aprendizaje/probabilidad/medir.mjs http://127.0.0.1:49667/
 ```

@@ -58,20 +58,37 @@ test("la prioridad del envido conserva la oferta de truco y la salida; si llega 
     const resuelto = cantar(estado, [0, "quiero"]);
     assert.deepEqual(resuelto.cobros, [{ equipo: 0, tantos: 2, motivo: "envido", asiento: 0, tantoGanador: 37 }]);
     const despues = vistaOnline(resuelto, 1);
+    assert.equal(despues.indiceCobroLateral, 2);
     if (inicial[0] === 38) {
       assert.deepEqual(despues.resultado, { equipo: 0, tantos: 2, motivo: "envido" });
       assert.equal(despues.pendiente, null);
       assert.equal(despues.turno, null);
       assert.deepEqual(despues.legales, []);
+      assert.deepEqual(despues.pruebasDeTantos, [{ asiento: 0, motivo: "envido", total: 37, cartas: ["oros-02", "copas-07"] }]);
+      assert.ok(!JSON.stringify(despues).includes("bastos-03"));
     } else {
       assert.equal(despues.resultado, null);
+      assert.equal(despues.pruebasDeTantos, undefined);
       assert.deepEqual(despues.pendiente, vista.trucoPendiente);
       assert.deepEqual(aDecidir(resuelto), [1]);
       const rechazado = cantar(resuelto, [1, "no-quiero"]);
       assert.deepEqual(rechazado.cobros[1], { equipo: 0, tantos: 1, motivo: "truco" });
       assert.equal(rechazado.cobros.length, 2);
+      assert.deepEqual(vistaOnline(rechazado, 1).pruebasDeTantos, [{ asiento: 0, motivo: "envido", total: 37, cartas: ["oros-02", "copas-07"] }]);
     }
   }
+});
+
+test("si dos sietes acreditan el tanto, alcanza con el que ya se jugó", () => {
+  const reparto: RepartoOnline = { ...envite, manos: [
+    ["copas-07", "espadas-07", "bastos-03"], ["oros-01", "espadas-02", "bastos-04"],
+  ] };
+  const salida = aplicar(iniciarOnline(reparto, [38, 0]), { tipo: "carta", asiento: 0, carta: "espadas-07" });
+  const final = cantar(salida, [1, "envido"], [0, "quiero"]);
+  const vista = vistaOnline(final, 1);
+  assert.deepEqual(vista.pruebasDeTantos, [{ asiento: 0, motivo: "envido", total: 7, cartas: ["espadas-07"] }]);
+  assert.doesNotMatch(JSON.stringify(vista), /copas-07|bastos-03/);
+  assert.equal(vistaOnlineV1(final, 1).pruebasDeTantos, undefined);
 });
 
 test("solo el equipo con el derecho de respuesta puede subir el truco, ahora o en un turno posterior", () => {
@@ -155,6 +172,7 @@ test("en parejas una flor tardía cancela un envido aceptado y la collera vale s
   const rechazo = cantar(iniciarOnline(sinCollera, [39, 38]), [0, "truco"], [1, "no-quiero"], [2, "paso-flor"], [3, "flor"]);
   assert.deepEqual(rechazo.resultado, { equipo: 1, tantos: 3, motivo: "flor" });
   assert.equal(rechazo.cobros.length, 1);
+  assert.equal(vistaOnline(rechazo, 0).pruebasDeTantos, undefined);
 });
 
 test("los empates de tantos se deciden por el orden desde mano también en parejas", () => {
@@ -166,6 +184,7 @@ test("los empates de tantos se deciden por el orden desde mano también en parej
   };
   const igual = cantar(iniciarOnline(base), [2, "envido"], [3, "quiero"], [0, "paso-flor"], [1, "paso-flor"]);
   assert.deepEqual(igual.cobros, [{ equipo: 0, tantos: 2, asiento: 2, motivo: "envido", tantoGanador: 7 }]);
+  assert.equal(vistaOnline(igual, 0).indiceCobroLateral, 3);
   const duelo = { ...flores, dador: 0, mano: 1, manos: [flores.manos[0], ["espadas-02", "espadas-03", "espadas-04"] as const] } as const;
   const empateFlor = cantar(iniciarOnline(duelo), [1, "flor"], [0, "flor"], [0, "quiero"]);
   assert.deepEqual(vistaOnline(empateFlor, 0).cobros, [{ equipo: 1, tantos: 3, asiento: 1, motivo: "flor", tantoGanador: 29,
@@ -202,6 +221,17 @@ test("tres flores con truco pendiente: el Quiero publica solo los totales y cons
     assert.equal(final.pendiente, null);
     for (const carta of tresFlores.manos.filter((_, i) => i !== asiento).flat()) {
       for (const vista of [pendiente, resuelta, final]) assert.ok(!JSON.stringify(vista).includes(carta));
+    }
+  }
+  const cierre = cantar(florQuerida, [0, "no-quiero"]);
+  for (const asiento of [0, 1, 2, 3] as const) {
+    const final = vistaOnline(cierre, asiento);
+    assert.deepEqual(final.pruebasDeTantos, [{ asiento: 3, motivo: "flor", total: 36, cartas: tresFlores.manos[3] }]);
+    assert.equal(vistaOnlineV1(cierre, asiento).pruebasDeTantos, undefined);
+    for (const [otro, cartas] of tresFlores.manos.entries()) {
+      if (otro !== asiento && otro !== 3) {
+        for (const carta of cartas) assert.ok(!JSON.stringify(final).includes(carta));
+      }
     }
   }
 });

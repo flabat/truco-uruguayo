@@ -3,15 +3,17 @@ import { signals, type Signal } from "../../../training/contracts/index";
 import { canto } from "../../lib/cantos";
 import { cartasPorId } from "../../lib/cartas";
 import juego from "../../data/juego.json";
+import type { Voz } from "./Voz";
 import { EnJuego } from "./Tablero";
 import type { Eleccion, Mesa, Partida } from "./cliente";
 import "./senas.css";
 
-const filas = juego.find(seccion => seccion.id === "senas")!.blocks.find(b => b.table)!.table!.rows;
+const bloques = juego.find(seccion => seccion.id === "senas")!.blocks;
+const filas = bloques.map(b => "table" in b ? b.table : undefined).find(tabla => tabla !== undefined)!.rows;
 const menu = signals.map((id, i) => ({ id, texto: filas[i][1].replace(/\.$/, "") }));
 
-export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, jugar }: {
-  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; mostrandoCartas: boolean;
+export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, voz, jugar }: {
+  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; mostrandoCartas: boolean; voz?: Voz;
   jugar: (accion?: Eleccion & { sena?: Signal }) => void;
 }) {
   const [seleccion, elegir] = useState<{version: number; sena: Signal | ""}>();
@@ -30,7 +32,7 @@ export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, 
         <small id="alcance-sena">La seña la ven vos y tu compañero al confirmar la jugada.</small>
       </div>
     )}
-    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas}
+    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz}
       jugar={accion => jugar(accion && sena ? {...accion, sena} : accion)} />
     {historial.length > 0 && (
       <section className="j-senas-vistas" aria-label="Señas de esta mano">

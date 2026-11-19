@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react";
 import { canto } from "../../lib/cantos";
+import { useEffect, useRef } from "react";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
 import type { VueltaCerrada } from "../../motor/mano";
-import type { VistaOnline } from "../../motor/mesa-online";
+import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
+import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -21,11 +22,31 @@ export function Naipe({ id, base }: { id: CardId; base: string }) {
   return <img src={base + "img/cartas/tatu/" + id + ".webp"} width={384} height={596} alt={nombrar(id)} />;
 }
 
+export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
+  prueba: PruebaDeTantos; acciones: VistaOnline["acciones"]; base: string; jugada?: CardId; ganadora?: boolean;
+}) {
+  const titulo = (prueba.motivo === "flor" ? "Flor ganadora" : "Envido ganador") + " · " + tantos(prueba.total);
+  const tipos = prueba.motivo === "flor" ? ["contraflor-al-resto", "con-flor-envido"] : ["falta-envido", "real-envido"];
+  const subida = acciones.flatMap(a => a.tipo !== "carta" && tipos.includes(a.tipo) ? [a.tipo] : []).at(-1);
+  const detalle = [subida && canto[subida], prueba.duelo && "Duelo " + prueba.duelo]
+    .filter(Boolean).join(" · ");
+  return <figure className="j-prueba-tantos" aria-label={titulo}>
+    <figcaption>{titulo}{detalle && <small>{detalle}</small>}</figcaption>
+    <div className="j-cartas-prueba">{prueba.cartas.map(carta => (
+      <div key={carta} className={carta === jugada ? (ganadora ? "j-jugada j-ganadora" : "j-jugada") : undefined}>
+        <Naipe id={carta} base={base} />
+        {ganadora && carta === jugada && <small>Ganó la vuelta</small>}
+      </div>
+    ))}</div>
+  </figure>;
+}
+
 function AsientoEnMesa({
   asiento,
   mesa,
   vista,
   cerrada,
+  voz,
   base,
   bloqueada,
   jugar,
@@ -34,6 +55,7 @@ function AsientoEnMesa({
   mesa: Mesa;
   vista: VistaOnline;
   cerrada?: VueltaCerrada;
+  voz?: Voz;
   base: string;
   bloqueada: boolean;
   jugar: (a: Eleccion) => void;
@@ -51,6 +73,8 @@ function AsientoEnMesa({
         : "izquierda";
   const vuelta = vista.vueltaActual ?? cerrada;
   const jugada = vuelta?.jugadas.find((j) => j.asiento === asiento.asiento);
+  const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento.asiento);
+  const mano = prueba ? vista.cartas.filter(carta => !prueba.cartas.includes(carta)) : vista.cartas;
   const ganadora = cerrada?.resultado.tipo === "ganada" && cerrada.resultado.asiento === asiento.asiento;
   const restantes =
     3 - vista.acciones.filter((a) => a.tipo === "carta" && a.asiento === asiento.asiento).length;
@@ -70,13 +94,15 @@ function AsientoEnMesa({
             {asiento.asiento === vista.mano && " · Mano"}
           </span>
         </div>
-        {jugada && (
+        {!prueba && <GloboDeVoz voz={voz} />}
+        {prueba && <PruebaEnMesa prueba={prueba} acciones={vista.acciones} base={base} jugada={jugada?.carta} ganadora={ganadora} />}
+        {jugada && !prueba?.cartas.includes(jugada.carta) && (
           <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
             <Naipe base={base} id={jugada.carta} />
             {ganadora && <small>Ganó la vuelta</small>}
           </div>
         )}
-        {!jugada && !propio && restantes > 0 && (
+        {!jugada && !prueba && !propio && restantes > 0 && (
           <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
             {Array.from({ length: restantes }, (_, i) => (
               <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
@@ -100,9 +126,9 @@ function AsientoEnMesa({
           <strong aria-hidden="true">{nombrar(vista.muestra)}</strong>
         </div>
       )}
-      {propio && (
+      {propio && mano.length > 0 && (
         <div className="j-mano" role="group" aria-label="Tus cartas">
-          {vista.cartas.map((c) => (
+          {mano.map((c) => (
             <button
               key={c}
               disabled={bloqueada || !vista.legales.includes("carta")}
@@ -110,7 +136,6 @@ function AsientoEnMesa({
               onClick={() => jugar({ tipo: "carta", carta: c })}
             >
               <Naipe base={base} id={c} />
-              <span>{nombrar(c)}</span>
             </button>
           ))}
         </div>
@@ -194,6 +219,7 @@ export function EnJuego({
   partida,
   bloqueada,
   mostrandoCartas = false,
+  voz,
   base,
   jugar,
 }: {
@@ -201,6 +227,7 @@ export function EnJuego({
   partida: Partida;
   bloqueada: boolean;
   mostrandoCartas?: boolean;
+  voz?: Voz;
   base: string;
   jugar: (a?: Eleccion) => void;
 }) {
@@ -209,6 +236,7 @@ export function EnJuego({
   const equipo = (e: number) =>
     mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
   const nombre = (a: number) => mesa.asientos[a].nombre!;
+  const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;
   const fin = partida.ganadorPartida !== null;
@@ -229,9 +257,10 @@ export function EnJuego({
       ? nombre(ganadora.asiento) + " ganó la vuelta con su " + nombrar(ganadora.carta).toLowerCase() + "."
       : "La vuelta fue parda.",
   ].filter(Boolean).join(" ");
-  const { titulo, indicacion } = mostrandoCartas && !resultado
-    ? { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible }
-    : estadoDelTurno(mesa, partida, v);
+  const relato = voz
+    ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
+    : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };
+  const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : estadoDelTurno(mesa, partida, v);
   const encabezado = useRef<HTMLHeadingElement>(null);
   const desdeTeclado = useRef(false);
   useEffect(() => {
@@ -271,6 +300,7 @@ export function EnJuego({
                 mesa={mesa}
                 vista={v}
                 cerrada={cerrada}
+                voz={voces.find(dicho => dicho.asiento === a.asiento)}
                 base={base}
                 bloqueada={bloqueada}
                 jugar={jugar}
@@ -321,7 +351,7 @@ export function EnJuego({
             )
           )}
           <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} />
-          {!resultado && (
+          {!resultado && !(mostrandoCartas && voz) && (
             <dl className="j-cuenta">
               <div>
                 <dt>Tus tantos</dt>
