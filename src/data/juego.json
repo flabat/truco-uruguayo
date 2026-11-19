@@ -119,11 +119,11 @@
   {
     "id": "puntaje",
     "title": "El tanteador",
-    "intro": "Antes de repartir, acuerden a cuántos tantos juegan. En una partida a 40 hay 20 malas y 20 buenas. Gana el equipo que llegue primero a 40.",
+    "intro": "En las mesas de Truco Oriental, tanto en duelo como en parejas (2 contra 2), el chico se juega a 40 tantos. Los primeros 20 se llaman malas y los siguientes 20, buenas. Gana el chico quien llega primero a 40.",
     "blocks": [
       {
         "heading": "Pasar a buenas",
-        "text": "Cada equipo lleva su propia cuenta. Si van 18 a 14 y tu equipo suma tres, pasa a 21 en total, o una buena. El rival sigue con 14 malas. Si juegan a 30, la mitad está en 15."
+        "text": "Cada lado lleva su propia cuenta. Si vas 19 a 14 y ganás un tanto, completás las 20 malas y entrás en buenas con cero. Si ganás otro, tenés una buena (21 tantos en total). Tu rival sigue con 14 malas."
       },
       {
         "heading": "Qué se anota",

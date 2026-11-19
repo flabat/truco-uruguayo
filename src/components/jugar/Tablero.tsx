@@ -20,6 +20,13 @@ const canto = {
 } satisfies Record<Exclude<Tipo, "carta">, string>;
 const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
 const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
+
+function cuentaDelChico(total: number, mitad: number) {
+  if (total < mitad) return total + (total === 1 ? " mala" : " malas");
+  const buenas = total - mitad;
+  return buenas + (buenas === 1 ? " buena" : " buenas");
+}
+
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
   { nombre: "Responder", opciones: ["quiero", "no-quiero", "paso-flor"] },
@@ -192,14 +199,16 @@ export function EnJuego({
   const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
   return (
     <>
-      <div className="j-tanteador" aria-label="Tanteador">
-        <span className="j-meta">
-          Partida a <b>{partida.meta}</b>
-        </span>
+      <div className="j-tanteador" role="group" aria-label="Tanteador">
+        <div className="j-meta">
+          <b>Chico a {partida.meta}</b>
+          <small>{partida.meta / 2} malas y {partida.meta / 2} buenas</small>
+        </div>
         {[propio, ajeno].map((e) => (
-          <div key={e}>
-            <span>{equipo(e)}</span>
+          <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
+            <span id={"j-equipo-" + e}>{equipo(e)}</span>
             <strong>{partida.puntos[e]}</strong>
+            <small>{cuentaDelChico(partida.puntos[e], partida.meta / 2)}</small>
           </div>
         ))}
       </div>

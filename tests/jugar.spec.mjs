@@ -126,6 +126,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
   await expect(page.getByRole("button", { name: "Jugar As de espadas" })).toBeEnabled();
   expect(bot).toBe(true);
+  await expect(page.getByRole("group", { name: "Tanteador" }).getByText("0 malas")).toHaveCount(2);
   if (process.env.CAPTURAS_UI)
     await page.screenshot({
       path: process.env.CAPTURAS_UI + "/duelo-" + test.info().project.name + ".jpg",
@@ -138,6 +139,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await truco.focus();
   await truco.press("Enter");
   await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeFocused();
+  await expect(page.getByText("1 mala", { exact: true })).toBeVisible();
   expect(comando.accion).toEqual({ tipo: "truco" });
   expect(comando.version).toBe(1);
   expect(comando.id).toMatch(/^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/i);
@@ -147,6 +149,34 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Turno de CPU 1" })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(2);
 });
+
+for (const modo of ["1v1", "2v2"]) {
+  test(`el chico a 40 cuenta las malas y buenas por lado en ${modo}`, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const asientos = modo === "1v1" ? personas.slice(0, 2) : personas;
+    let puntos = [19, 19];
+    const sockets = await simular(page, (path) => {
+      if (path.endsWith("/" + mesaId)) return { json: mesa(modo, asientos, 1) };
+      if (path.endsWith("/partida")) return { json: { ...partida, puntos, vista: { ...vista, asiento: 1 } } };
+    });
+    await page.goto("jugar/?mesa=" + mesaId);
+    const marcador = page.getByRole("group", { name: "Tanteador" });
+    const propio = marcador.getByRole("group", { name: modo === "1v1" ? "Vos" : "Tu equipo" });
+    const rival = marcador.getByRole("group", { name: modo === "1v1" ? "Tu rival" : "Rivales" });
+    await expect(marcador.getByText("Chico a 40")).toBeVisible();
+    await expect(marcador.getByText("20 malas y 20 buenas")).toBeVisible();
+    await expect(propio.getByText("19 malas")).toBeVisible();
+    for (const [total, cuenta] of [[20, "0 buenas"], [21, "1 buena"]]) {
+      puntos = [19, total];
+      sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+      await expect(propio.locator("strong")).toHaveText(String(total));
+      await expect(propio.getByText(cuenta)).toBeVisible();
+      await expect(rival.getByText("19 malas")).toBeVisible();
+    }
+    if (process.env.CAPTURAS_UI)
+      await marcador.screenshot({ path: `${process.env.CAPTURAS_UI}/tanteador-${modo}-${test.info().project.name}.png` });
+  });
+}
 
 test("reserva la invitación para el ingreso y recupera la pareja con un canto pendiente", async ({
   page,
@@ -318,6 +348,10 @@ test("recupera el marcador al reconectar y cierra la partida por envido", async 
   leerDeNuevo();
   await page.getByRole("button", { name: "Quiero", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Ganaste la partida" })).toBeVisible();
+  const marcador = page.getByRole("group", { name: "Tanteador" });
+  await expect(marcador.locator("strong")).toHaveText(["40", "39"]);
+  await expect(marcador.getByText("20 buenas", { exact: true })).toBeVisible();
+  await expect(marcador.getByText("19 buenas", { exact: true })).toBeVisible();
   await expect(page.getByText("Tu equipo · 2 tantos")).toBeVisible();
   await expect(page.getByText(/CPU 1 con 33/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
