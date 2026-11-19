@@ -206,7 +206,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     await paginas[0].getByRole("button", { name: "Flor", exact: true }).click();
     await paginas[3].reload();
     await expect(paginas[3].getByRole("heading", { name: "Te toca declarar" })).toBeVisible();
-    await expect(paginas[3].getByRole("status")).toContainText("Ana cantó flor.");
+    await expect(paginas[3].getByRole("status").getByText("Ana cantó flor.", { exact: true })).toBeVisible();
     await expect(historia.getByRole("listitem")).toHaveText(["Ana dijo «Flor»."]);
     await paginas[3].getByRole("button", { name: "Flor", exact: true }).click();
     await paginas[3].getByRole("button", { name: "Contraflor al resto", exact: true }).click();

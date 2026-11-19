@@ -26,7 +26,7 @@ export function HistorialDeMano({ acciones, cobros, nombre, titulo = "Historial 
   Pick<VistaOnline, "acciones" | "cobros"> & { nombre: Nombre; titulo?: string }) {
   const entradas: ReactNode[] = acciones.map(a => descripcionDeJugada(a, nombre));
   const flor = cobros.find(c => c.comparacionFlor);
-  if (flor?.comparacionFlor) {
+  if (flor?.comparacionFlor && flor.comparacionFlor.indiceAccion < acciones.length) {
     const { indiceAccion, participantes } = flor.comparacionFlor;
     entradas.splice(indiceAccion + 1, 0, <>
       <strong>Flor querida.</strong>{" "}
