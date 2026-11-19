@@ -111,7 +111,9 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
         res.writeHead(401).end("No se pudo verificar el ingreso. Volvé a ingresar desde el juego.");
         return;
       }
-      const name = String(claims.given_name || claims.preferred_username || "Jugador");
+      // Algunos proveedores usan el correo como nombre de usuario. El nombre se muestra a toda la mesa.
+      const name = [claims.given_name, claims.preferred_username]
+        .find(value => typeof value === "string" && value.trim() && !value.includes("@")) || "Jugador";
       const handle = secreto();
       // Un solo commit vincula la identidad y crea la sesión, incluso en el primer ingreso concurrente.
       await pool.query(`

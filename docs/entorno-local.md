@@ -15,6 +15,8 @@ docker compose up --build --wait
 
 ## Jugar una partida
 
+Para ofrecer Google o Facebook desde **Ingresar al juego**, seguí la [guía de configuración de los proveedores](ingreso-social.md).
+
 Abrí [Jugar al truco](http://localhost:8081/jugar/) y elegí **Ingresar al juego**. También podés entrar desde la portada y seguir **Jugar al truco**. Usá uno de estos seis usuarios de desarrollo. Todos usan la contraseña `truco-local`.
 
 | Jugador | Usuario |
