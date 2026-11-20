@@ -4,9 +4,14 @@ import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../sr
 
 const id = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
 async function abrir(page, estado, miAsiento = 0) {
+  let manoNumero = 1;
   await page.routeWebSocket("**/vivo", () => {});
   await page.route("**/api/**", route => {
     const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/siguiente")) {
+      estado = iniciarOnline(estado.mano.reparto, marcadorOnline(estado), estado.meta);
+      manoNumero++;
+    }
     const puntos = marcadorOnline(estado);
     let json = { id: "fabian", nombre: "Fabian", salonHabilitado: true };
     if (path.endsWith("/" + id)) json = {
@@ -14,7 +19,7 @@ async function abrir(page, estado, miAsiento = 0) {
       asientos: ["Fabian", "Computadora 2", "Compañero", "Rival"].slice(0, estado.mano.reparto.manos.length).map((nombre, asiento) => ({ asiento, equipo: asiento % 2, nombre, tipo: "humano" })),
     };
     if (path.endsWith("/partida")) json = {
-      version: 20, manoNumero: 1, puntos, meta: estado.meta,
+      version: 20 + manoNumero, manoNumero, puntos, meta: estado.meta,
       ganadorPartida: puntos.findIndex(p => p === estado.meta) < 0 ? null : puntos.findIndex(p => p === estado.meta),
       vista: vistaOnline(estado, miAsiento),
     };
@@ -54,7 +59,7 @@ function aplicar(estado, acciones) {
 test("separa los tantos de ambos lados del acumulado del chico", async ({ page }) => {
   const estado = aplicar(iniciarOnline(envite, [4, 5]), [
     { tipo: "envido", asiento: 0 }, { tipo: "quiero", asiento: 1 },
-    { tipo: "truco", asiento: 1 }, { tipo: "no-quiero", asiento: 0 },
+    { tipo: "carta", asiento: 0, carta: "oros-02" }, { tipo: "truco", asiento: 1 }, { tipo: "no-quiero", asiento: 0 },
   ]);
   await abrir(page, estado);
   const resumen = page.getByRole("region", { name: "Tantos de esta mano" });
@@ -80,4 +85,13 @@ test("en parejas atribuye el cobro al equipo y muestra el cero rival", async ({ 
   await expect(resumen).toContainText("Tu equipo · +1 tanto");
   await expect(resumen).toContainText("Rivales · 0 tantos");
   await expect(resumen).not.toContainText("Fabian");
+});
+
+
+test("repartir limpia el resumen anterior y conserva el acumulado", async ({ page }) => {
+  await abrir(page, manoReportada());
+  await expect(page.getByRole("region", { name: "Tantos de esta mano" })).toBeVisible();
+  await page.getByRole("button", { name: "Repartir otra mano" }).click();
+  await expect(page.getByRole("region", { name: "Tantos de esta mano" })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Tanteador", exact: true }).locator("strong")).toHaveText(["6", "0"]);
 });
