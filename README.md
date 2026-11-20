@@ -26,6 +26,10 @@ npm run build
 npm run preview
 ```
 
+## Producción
+
+La [guía del VPS](docs/produccion.md) incluye el despliegue con Docker Compose, HTTPS, cuentas, copias externas y el ensayo local de recuperación.
+
 ## Contenido y componentes
 
 Las páginas se editan en `src/pages/` y las reglas con sus fuentes en `src/data/`. Astro compila la interfaz para la raíz del sitio.
