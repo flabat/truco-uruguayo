@@ -58,11 +58,10 @@ def main(argv=None):
             # Historical leagues predate the frozen result reader.
             reader = Path(__file__).with_name("results.ts")
             manifest = run / "ops/runtime-manifest.json"
-            ready = run / "READY"
-            # Older releases used a commit ID in READY. Managed releases pin
-            # their entire runtime manifest there with SHA-256.
-            if ((ready.is_file() and len(ready.read_text().strip()) == 64)
-                    or (manifest.is_file() and json.loads(manifest.read_bytes()).get("schema") == "standalone-selfplay-v1")):
+            managed = (run / "league").exists() or (
+                manifest.is_file() and json.loads(manifest.read_bytes()).get("schema") == "standalone-selfplay-v1"
+            )
+            if managed:
                 verify_run(run, node)
                 reader = run / "runtime/training/selfplay/results.ts"
             subprocess.run([node, str(reader), str(run)], check=True)
@@ -89,7 +88,11 @@ def main(argv=None):
         if prepare_only:
             print(f"Start training with: {shortcut} resume")
         else:
-            start_services(run, node)
+            try:
+                start_services(run, node)
+            except (OSError, subprocess.CalledProcessError):
+                print(f"Run saved. Retry the background launch with: {shortcut} resume", file=sys.stderr)
+                raise
             print(f"Check progress with: {shortcut} status")
         return 0
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as exc:

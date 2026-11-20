@@ -83,21 +83,33 @@ def freeze_runtime(runtime: Path) -> str:
 def write_launcher(run: Path, node: str):
     launcher = run / "league"
     launcher.write_text(f"""#!/usr/bin/env python3
+import argparse
 import os
 import sys
 from pathlib import Path
 
 commands = sys.argv[1:] or ["status"]
-if len(commands) != 1 or commands[0] not in ("resume", "status", "results"):
-    sys.exit("Usage: league [resume|status|results]")
 run = Path(__file__).resolve().parent
+if commands[0] == "next":
+    parser = argparse.ArgumentParser(prog="league next", allow_abbrev=False)
+    parser.add_argument("new_run", type=Path)
+    parser.add_argument("--profile", choices=("pilot", "extended"), default="pilot")
+    parser.add_argument("--prepare-only", action="store_true")
+    args = parser.parse_args(commands[1:])
+    arguments = ["start", str(args.new_run.resolve()), "--from", str(run), "--profile", args.profile]
+    if args.prepare_only:
+        arguments.append("--prepare-only")
+elif len(commands) == 1 and commands[0] in ("resume", "status", "results"):
+    arguments = [commands[0], str(run)]
+else:
+    sys.exit("Usage: league [resume|status|results] or league next NEW_RUN [--profile pilot|extended] [--prepare-only]")
 saved_node = {str(Path(shutil.which(node) or node).resolve())!r}
 if not os.environ.get("TRUCO_NODE"):
     os.environ.pop("TRUCO_NODE", None)
     if os.path.isfile(saved_node) and os.access(saved_node, os.X_OK):
         os.environ["TRUCO_NODE"] = saved_node
 os.execv(sys.executable, [sys.executable, "-B", str(run / "runtime/training/selfplay/local.py"),
-                          commands[0], str(run)])
+                          *arguments])
 """)
     launcher.chmod(0o755)
 
@@ -140,7 +152,16 @@ def prepare_run(run: Path, parent: Path, profile: str, node: str) -> dict:
     with tempfile.TemporaryDirectory(prefix=".preparando-liga-", dir=run.parent) as scratch:
         staging = Path(scratch).resolve() / "league"
         runtime = staging / "runtime"
-        revision = freeze_runtime(runtime)
+        if CHECKOUT == parent / "runtime":
+            # Running the previous league's shortcut must also work on a Mac
+            # with only the run directory and no Git checkout.
+            verify_run(parent, node)
+            inherited = json.loads((parent / MANIFEST).read_bytes())
+            shutil.copytree(CHECKOUT, runtime, symlinks=True, ignore=shutil.ignore_patterns(".DS_Store"))
+            check_files(inherited["files"], tree_hashes(runtime, runtime), "el código copiado")
+            revision = inherited["source"]
+        else:
+            revision = freeze_runtime(runtime)
         # The frozen preparer validates the parent's completion receipts, models and
         # paired outcomes, then creates a new protocol with a fresh random seed.
         subprocess.run([

@@ -39,7 +39,8 @@ for name in ("input/duel/archive/champion.json", "evaluation-input/duel/opponent
     files[name] = hashlib.sha256(model.read_bytes()).hexdigest()
 if (Path(source) / "incomplete").exists():
     sys.exit(1)
-(run / "protocol.json").write_text(json.dumps({"files": files, "profile": profile}))
+(run / "protocol.json").write_text(json.dumps({"files": files, "profile": profile,
+    "epochs": 3 if profile == "local-pilot" else 18, "maxWallHours": 8, "parent": source}))
 """)
         self.node.chmod(0o700)
         repo = root / "checkout"
@@ -123,6 +124,51 @@ print(json.dumps([*sys.argv[1:], shutil.which(os.environ.get("TRUCO_NODE", "node
         with self.assertRaisesRegex(ValueError, "fuera"):
             local_run.prepare_run(alias / "input" / "new", self.parent, "local-pilot", str(self.node))
         self.assertFalse((self.parent / "input").exists())
+
+    def test_shortcut_prepares_the_next_run_offline_from_verified_frozen_files(self):
+        checkout_dir = local_run.CHECKOUT / "training/selfplay"
+        source_dir = Path(local_run.__file__).resolve().parent
+        modules = ("local.py", "local_run.py", "local_status.py", "monitor.py")
+        for filename in modules:
+            shutil.copyfile(source_dir / filename, checkout_dir / filename)
+        subprocess.run([*self.git, "add", *(str(checkout_dir / name) for name in modules)], check=True)
+        subprocess.run([*self.git, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                        "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "commands"], check=True)
+        with patch.object(local_run, "RUNTIME_PATHS", ("training/selfplay", "package.json")):
+            self.prepare()
+        inherited = json.loads((self.run / local_run.MANIFEST).read_bytes())
+        shutil.rmtree(local_run.CHECKOUT)
+        root = self.run.parent
+        bin_dir = root / "bin"
+        bin_dir.mkdir()
+        (bin_dir / "python3").symlink_to(sys.executable)
+        # No git, npm or node on PATH. Only the executable recorded at preparation works.
+        def next_run(*args):
+            return subprocess.run([str(self.run / "league"), "next", *args],
+                                  cwd=root, env={"PATH": str(bin_dir)}, capture_output=True, text=True)
+
+        new_run = root / "otra 'liga'"
+        completed = next_run(new_run.name, "--profile", "extended", "--prepare-only")
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        child = json.loads((new_run / local_run.MANIFEST).read_bytes())
+        self.assertEqual(child["source"], inherited["source"])
+        self.assertEqual(child["files"], inherited["files"])
+        protocol = local_run.verify_run(new_run, str(self.node))
+        self.assertEqual(protocol["profile"], "extended")
+        self.assertEqual(protocol["parent"], str(self.run))
+        refused = next_run(new_run.name, "--profile", "pilot", "--prepare-only")
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertEqual(local_run.verify_run(new_run, str(self.node)), protocol)
+
+        other = root / "not created"
+        refused = next_run(str(other), "--from", str(self.parent), "--prepare-only")
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertFalse(other.exists())
+        (self.run / "runtime/package.json").write_text("changed")
+        refused = next_run(str(other), "--prepare-only")
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("package.json", refused.stderr)
+        self.assertFalse(other.exists())
 
     def test_resume_rejects_drift_in_frozen_artifacts(self):
         self.prepare()
