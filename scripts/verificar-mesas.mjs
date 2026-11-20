@@ -28,8 +28,9 @@ async function llamar(persona, metodo, ruta, datos, origen = process.env.WEB_ORI
 const invitacion = mesa => "/api/invitaciones/" + new URL(mesa.invitacion).searchParams.get("invitacion") + "/unirse";
 const bot = (p, mesa, asiento) => llamar(p, "POST", "/api/mesas/" + mesa.id + "/computadoras", { asiento });
 const entrar = (p, mesa) => llamar(p, "POST", invitacion(mesa));
-async function crear(p, modo, meta) {
-  const r = await llamar(p, "POST", "/api/mesas", {modo, meta});
+async function crear(p, modo, meta, publica) {
+  const r = await llamar(p, "POST", "/api/mesas", {modo, meta, publica});
+  assert.equal(r.datos.publica, publica ?? false);
   assert.equal(r.estado, 201);
   assert.equal(r.datos.miAsiento, 0);
   assert.equal(r.datos.creadorId, p.id);
@@ -61,6 +62,9 @@ try {
     for (const meta of [0, 25, 1.5, "50", null, 2147483648]) {
       assert.equal((await llamar(ana, "POST", "/api/mesas", {modo: "2v2", meta})).estado, 400);
     }
+    for (const datos of [{ modo: "3v3", publica: true }, { modo: "2v2", publica: "false" }, { modo: "1v1", publica: null }]) {
+      assert.equal((await llamar(ana, "POST", "/api/mesas", datos)).estado, 400);
+    }
     const seis = await crear(ana, "3v3");
     assert.equal(seis.formato, "triples");
     assert.deepEqual(seis.asientos.map(a => a.equipo), [0,1,0,1,0,1]);
@@ -87,7 +91,7 @@ try {
     assert.deepEqual(vistaAna.datos.asientos, ultimo.asientos);
     assert.equal((await entrar(bruno, dupla)).datos.miAsiento, 1);
 
-    const manoAMano = await crear(bruno, "1v1");
+    const manoAMano = await crear(bruno, "1v1", 40, false);
     assert.equal(manoAMano.asientos.length, 2);
     assert.equal((await bot(ana, manoAMano, 1)).estado, 404);
     assert.equal((await bot(bruno, manoAMano, 0)).estado, 409);
@@ -100,12 +104,18 @@ try {
     }
     assert.equal((await entrar(ana, manoAMano)).estado, 409);
 
-    const mixta = await crear(ana, "2v2");
+    const mixta = await crear(ana, "2v2", 40, true);
     assert.equal((await bot(ana, mixta, 2)).datos.asientos[2].equipo, 0);
     assert.equal((await entrar(diego, mixta)).datos.miAsiento, 1);
     const final = await bot(ana, mixta, 3);
     assert.deepEqual(final.datos.asientos.map(a=>a.tipo), ["humano","humano","computadora","computadora"]);
     assert.equal(final.datos.lista, true);
+    assert.equal(final.datos.publica, true);
+    const listada = () => pool.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [mixta.id]).then(r => r.rowCount);
+    assert.equal(await listada(), 0);
+    const partida = await llamar(ana, "GET", "/api/mesas/" + mixta.id + "/partida");
+    assert.equal(partida.datos.manoNumero, 1);
+    assert.equal(await listada(), 1);
     console.log("Mesas de 2 y 4: invitación, carreras, reingreso y computadoras verificados.");
   }
 } finally {
