@@ -1,0 +1,85 @@
+.gestion {
+  --tblr-font-sans-serif: "DM Sans", system-ui, sans-serif;
+  --tblr-primary: #28533e;
+  --tblr-primary-rgb: 40, 83, 62;
+  --tblr-link-color: #28533e;
+  --tblr-body-bg: #f6f5ef;
+  --tblr-body-color: #24372b;
+  --tblr-secondary-color: #59675f;
+  --tblr-border-color: #d7ddd4;
+  min-height: 100vh;
+  margin: 0;
+  color: var(--tblr-body-color);
+  background: var(--tblr-body-bg);
+  font-family: var(--tblr-font-sans-serif);
+}
+.gestion .container-xl { width: min(100%, 1150px); margin-inline: auto; padding-inline: clamp(1rem, 4vw, 3.5rem); }
+.gestion main { padding-bottom: 3rem; }
+.gestion-cabecera { background: #1e3c2c; color: #faf8ed; }
+.gestion-cabecera .container-xl { display: flex; align-items: center; gap: 1.2rem; min-height: 66px; }
+.gestion .brand { display: inline-flex; align-items: center; gap: .55rem; font: 1.45rem "DM Serif Text", Georgia, serif; color: inherit; text-decoration: none; --brand-paper: #1e3c2c; }
+.gestion .brand svg { width: 26px; height: 31px; }
+.gestion-nombre { border-inline-start: 1px solid #6e8475; padding-inline-start: 1.2rem; color: #e0e8db; }
+.gestion-nav { display: flex; align-items: center; justify-content: space-between; gap: .4rem; border-bottom: 1px solid var(--tblr-border-color); }
+.gestion-nav nav { display: flex; gap: 1.3rem; }
+.gestion-nav nav button { background: none; border: 0; border-bottom: 3px solid transparent; padding: .88rem .12rem .7rem; color: var(--tblr-secondary-color); font-weight: 500; }
+.gestion-nav nav button[aria-current="page"] { color: var(--tblr-primary); border-color: var(--tblr-primary); }
+.gestion .btn-primary { --tblr-btn-bg: #28533e; --tblr-btn-border-color: #28533e; --tblr-btn-hover-bg: #1e402e; }
+.gestion-encabezado { display: flex; justify-content: space-between; align-items: end; flex-wrap: wrap; gap: .65rem 1rem; margin: 1.8rem 0 1.2rem; }
+.gestion h1 { margin: 0; font: 400 clamp(2rem, 4vw, 2.8rem)/1.1 "DM Serif Text", Georgia, serif; letter-spacing: -.025em; }
+.gestion h2 { margin: 1.55rem 0 .7rem; font-size: 1.2rem; }
+.gestion .card { --tblr-card-border-color: var(--tblr-border-color); box-shadow: none; }
+.gestion-acceso { max-width: 37rem; margin-block: 3rem; }
+.gestion-acceso h1 { font-size: 2rem; }
+.gestion-acceso p { margin: .8rem 0 1.2rem; color: var(--tblr-secondary-color); }
+.gestion-contadores { display: grid; gap: .9rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.gestion-contadores .card-body { padding: 1rem 1.2rem; }
+.gestion-cifra { display: block; font: 2.35rem/1.15 "DM Serif Text", Georgia, serif; margin-bottom: .25rem; }
+.gestion .btn-link { color: var(--tblr-primary); text-decoration: underline; text-underline-offset: .18em; }
+.gestion-texto { color: var(--tblr-secondary-color); font-size: .85rem; }
+.gestion-filtros { display: flex; align-items: end; flex-wrap: wrap; gap: .65rem 1rem; margin: 1.25rem 0; }
+.gestion-filtros .form-label { margin-bottom: .25rem; }
+.gestion-filtros .form-check { align-self: center; margin: 0; }
+.gestion-filtros .form-control, .gestion-filtros .form-select { min-width: 0; }
+.gestion-celdas { margin: 0; padding: 0; list-style: none; }
+.gestion-partida + .gestion-partida { border-top: 1px solid var(--tblr-border-color); }
+.gestion-partida summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: .5rem 1fr auto; align-items: center; gap: 1rem; padding: 1rem 1.2rem; }
+.gestion-partida summary::-webkit-details-marker { display: none; }
+.gestion-partida summary::before { content: ""; width: .45rem; height: .45rem; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: rotate(-45deg); }
+.gestion-partida[open] summary::before { transform: rotate(45deg); }
+.gestion-partida summary small, .gestion-partida summary b { display: block; }
+.gestion-partida b { font-size: 1rem; }
+.gestion-puntos { font-variant-numeric: tabular-nums; text-align: end; }
+.gestion-puntos strong { font-size: 1.15rem; }
+.gestion-equipos { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .9rem; padding: 0 1.2rem 1.1rem 2.7rem; }
+.gestion-equipos h3 { font-size: .9rem; margin: 0 0 .35rem; }
+.gestion-asiento { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 .45rem; overflow-wrap: anywhere; }
+.gestion-presente { color: #27603d; }
+.gestion .badge { vertical-align: baseline; letter-spacing: 0; white-space: normal; }
+.gestion-tabla { width: 100%; }
+.gestion-tabla td { vertical-align: middle; }
+.gestion-tabla .btn-link { text-align: start; padding: 0; font-size: inherit; white-space: normal; overflow-wrap: anywhere; }
+.gestion-paginacion { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: 1rem; }
+.gestion-volver { margin-top: 1rem; }
+.gestion-aviso { margin-block: 1rem; }
+.gestion-fecha { overflow-wrap: anywhere; }
+.gestion summary:focus-visible, .gestion a:focus-visible, .gestion button:focus-visible { outline: 3px solid #a65130; outline-offset: 2px; }
+@media (max-width: 620px) {
+  .gestion-cabecera .container-xl { min-height: 54px; gap: .7rem; }
+  .gestion-nombre { padding-inline-start: .7rem; font-size: .8rem; }
+  .gestion-nav nav { gap: .7rem; }
+  .gestion-encabezado { margin-top: 1.2rem; }
+  .gestion-contadores { gap: .35rem; }
+  .gestion-contadores .card-body { padding: .7rem .5rem; }
+  .gestion-contadores .card-body > span, .gestion-contadores .btn-link { font-size: .8rem; }
+  .gestion-cifra { font-size: 1.9rem; }
+  .gestion-filtros label { flex: 1 1 8rem; min-width: 0; }
+  .gestion-filtros-historial { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .65rem; }
+  .gestion-filtros-historial label:has(input[type="search"]) { grid-column: 1 / -1; }
+  .gestion-filtros-historial button { justify-self: start; }
+  .gestion-partida summary { gap: .6rem; padding: .85rem .7rem; }
+  .gestion-equipos { padding: 0 .7rem .8rem; }
+  .gestion-tabla.table th, .gestion-tabla.table td { padding: .65rem .4rem; }
+  .gestion-tabla .gestion-col-sesion { display: none; }
+}
+@media (min-width: 621px) { .gestion-sesion-movil { display: none; } }

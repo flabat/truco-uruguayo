@@ -3,6 +3,7 @@ import pg from "pg";
 import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
+import { crearGestion } from "./gestion.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
@@ -26,7 +27,8 @@ const server = createServer(async (request, response) => {
   if (request.url?.startsWith("/api/")) {
     try {
       const ruta = request.url.split("?")[0];
-      if (esRutaPartida(ruta)) await partidas.atender(request, response);
+      if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
+      else if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
       else await auth(request, response);
     } catch {
@@ -60,6 +62,7 @@ const vivo = crearVivo(server, web, {
   ejecutar: partidas.ejecutar,
 });
 
+const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
