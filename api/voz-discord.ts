@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import { FalloDiscord, type Discord } from "./discord.ts";
 import { ErrorPeticion } from "./http.ts";
+import { disponibleParaVoz } from "./publicacion-mesa.ts";
 
 type Vinculo = { mesa: string; servidor: string; categoria: string; intento: string; canal: string | null; retirando: boolean; regreso_publicado: boolean; intento_regreso: Date | null };
 const fin = `(SELECT (evento->>'fecha')::timestamptz + interval '30 minutes'
@@ -69,14 +70,17 @@ export function crearVoz(pool: Pool, discord: Discord, web: URL) {
     await db.query("UPDATE juego.voz_discord SET regreso_publicado=true, intento_regreso=NULL WHERE mesa=$1", [vinculo.mesa]);
   }
 
-  async function abrir(id: string, modo: "1v1" | "2v2" | "3v3") {
+  async function abrir(id: string, modo: "1v1" | "2v2" | "3v3", espectador = false) {
     return conMesa(id, async db => {
       // Los escritores del juego bloquean la mesa. Soltarla antes de llamar al proveedor.
       await db.query("BEGIN");
       let vinculo: Vinculo;
       let nuevo: boolean;
       try {
-        await db.query("SELECT id FROM juego.mesas WHERE id=$1 FOR SHARE", [id]);
+        // La mesa pudo salir del salón mientras otro usuario preparaba el canal.
+        const elegible = espectador ? " AND " + disponibleParaVoz : "";
+        const mesa = await db.query(`SELECT m.id FROM juego.mesas m WHERE m.id=$1${elegible} FOR SHARE OF m`, [id]);
+        if (!mesa.rowCount) throw new ErrorPeticion(404, "No se encontró la mesa.");
         const { rows: [plazo] } = await db.query(`SELECT ${fin} AS sobremesa, ${fin} <= now() AS cerrada`, [id]);
         if (plazo.cerrada) throw new ErrorPeticion(410, "Terminó la sobremesa de voz de esta partida.");
         const alta = await db.query<Vinculo>(`INSERT INTO juego.voz_discord(mesa,servidor,categoria,vence)

@@ -46,7 +46,7 @@ function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
 
 function Visibilidad({ publica }: { publica: boolean }) {
   return <p className="j-ayuda">{publica
-    ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas."
+    ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas y, si la voz está habilitada, entrar al Discord de esta mesa."
     : "Mesa privada por invitación."}</p>;
 }
 

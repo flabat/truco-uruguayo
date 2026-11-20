@@ -3,12 +3,15 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import { tableroEspectador } from "./tablero-espectador.ts";
 import { jugadorDeSesion } from "./auth.ts";
-import { responderJson } from "./http.ts";
+import { ErrorPeticion, responderJson } from "./http.ts";
+import { FalloDiscord } from "./discord.ts";
+import type { crearVoz } from "./voz-discord.ts";
+import { disponibleParaVoz } from "./publicacion-mesa.ts";
 import { formatoMesa } from "./mesas.ts";
 import { restaurar, type Registro } from "./turnos.ts";
 
 const directorio = "/api/salon/mesas";
-const detalle = /^\/api\/salon\/mesas\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i;
+const detalle = /^\/api\/salon\/mesas\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})(\/voz)?$/i;
 
 interface Fila {
   id: string;
@@ -64,33 +67,48 @@ function responderVista(req: IncomingMessage, res: ServerResponse, vista: object
   res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ...vista, versionPublica }));
 }
 
-export function crearSalon(pool: Pool, habilitado: boolean) {
+export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: ReturnType<typeof crearVoz>) {
   // Compartir solo el tablero neutral. Autorización, visibilidad, frescura y cierre
   // se leen de nuevo aun cuando el cliente tenga un ETag o la versión siga en memoria.
   const tableros = new Map<string, { version: number; numero: number; tablero: ReturnType<typeof tableroEspectador> }>();
   return async function atender(req: IncomingMessage, res: ServerResponse) {
-    if (req.method !== "GET") {
-      res.setHeader("Allow", "GET");
+    const ruta = (req.url ?? "").split("?")[0];
+    const destino = detalle.exec(ruta);
+    const pideVoz = Boolean(destino?.[2]);
+    const metodo = pideVoz ? "POST" : "GET";
+    if (req.method !== metodo) {
+      res.setHeader("Allow", metodo);
       return responderJson(res, 405, { error: "Método no permitido." });
     }
     if (!await jugadorDeSesion(pool, req)) return responderJson(res, 401, { error: "Ingresá para mirar una mesa." });
     const ausente = () => responderJson(res, 404, { error: "No se encontró la mesa en el salón." });
     if (!habilitado) return ausente();
-    const ruta = (req.url ?? "").split("?")[0];
     if (ruta === directorio) {
       const { rows } = await pool.query<Fila>(`SELECT ${columnas}
         FROM juego.mesas_en_juego v JOIN juego.mesas m ON m.id=v.id ${manoActual(false)}
         ORDER BY (m.origen='exhibicion'), m.id`);
       return responderVista(req, res, { mesas: rows.map(resumen) });
     }
-    const id = detalle.exec(ruta)?.[1];
+    const id = destino?.[1];
     if (!id) return ausente();
+    if (pideVoz) {
+      if (req.headers.origin !== web.origin) return responderJson(res, 403, { error: "El origen no corresponde al juego." });
+      const { rows: [mesa] } = await pool.query<Pick<Fila, "modo">>(
+        `SELECT m.modo FROM juego.mesas m WHERE m.id=$1 AND ${disponibleParaVoz}`, [id]);
+      if (!mesa) return ausente();
+      if (!voz) return responderJson(res, 503, { error: "La voz con Discord está desactivada." });
+      try {
+        return responderJson(res, 200, await voz.abrir(id, mesa.modo, true));
+      } catch (error) {
+        if (!(error instanceof ErrorPeticion)) throw error;
+        if (error instanceof FalloDiscord && error.espera) res.setHeader("Retry-After", String(error.espera));
+        return responderJson(res, error.status, { error: error.message });
+      }
+    }
     const { rows: [fila] } = await pool.query<Fila & { registro: Registro; version: number }>(`
       SELECT ${columnas}, h.registro, h.version FROM juego.mesas m ${manoActual(true)}
-      WHERE m.id=$1 AND m.publica AND m.modo IN ('1v1','2v2') AND m.ultimo_hecho_publico IS NOT NULL
-        AND (EXISTS (SELECT 1 FROM juego.mesas_en_juego v WHERE v.id=m.id)
-          OR m.fin_publico >= statement_timestamp() - interval '30 minutes'
-          OR (m.exhibicion_retirada AND m.fin_publico IS NULL))`, [id]);
+      WHERE m.id=$1 AND (${disponibleParaVoz}
+        OR (m.publica AND m.exhibicion_retirada AND m.ultimo_hecho_publico IS NOT NULL AND m.fin_publico IS NULL))`, [id]);
     if (!fila) return ausente();
     const mesa = resumen(fila);
     let actual = tableros.get(fila.id);
@@ -105,6 +123,6 @@ export function crearSalon(pool: Pool, habilitado: boolean) {
       nombre: (cpu ? "Computadora " : "Jugador ") + (asiento + 1),
     }));
     const estado = fila.fin_publico ? "terminada" : fila.exhibicion_retirada ? "interrumpida" : "en-juego";
-    responderVista(req, res, { ...mesa, asientos, estado, tablero: actual.tablero });
+    responderVista(req, res, { ...mesa, asientos, estado, vozDisponible: Boolean(voz) && estado !== "interrumpida", tablero: actual.tablero });
   };
 }
