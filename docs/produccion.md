@@ -90,7 +90,26 @@ Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el 
 
 ## Publicación automática desde main
 
-El VPS consulta el repositorio público cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. Las descargas de GitHub sólo necesitan acceso público de lectura.
+El VPS consulta el repositorio privado cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents** y **Actions** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa el segundo para comprobar el resultado del workflow.
+
+Antes de activar el temporizador, creá el token en GitHub y guardalo desde una shell Bash de administrador en el VPS. Para rotarlo, repetí estos pasos antes del vencimiento. systemd carga el archivo en cada ejecución. La credencial se usa sólo para las solicitudes a GitHub.
+
+```bash
+install -d -m 700 /etc/truco-oriental
+(
+  set -eu
+  umask 077
+  archivo=$(mktemp /etc/truco-oriental/github-read-token.XXXXXX)
+  trap 'rm -f "$archivo"' EXIT
+  read -rsp 'Token de lectura de GitHub: ' token
+  echo
+  test -n "$token"
+  printf '%s\n' "$token" > "$archivo"
+  mv "$archivo" /etc/truco-oriental/github-read-token
+)
+```
+
+Para recuperar una instalación que aún consulta el repositorio de forma anónima, instalá el ejecutor y la unidad desde la revisión verificada siguiendo los comandos de instalación de abajo. Iniciá `truco-deploy.service` y comprobá que el SHA en `current` coincida con el push aprobado de `main`.
 
 En el VPS de Truco Oriental, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
 

@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -111,6 +112,38 @@ class DeployTest(unittest.TestCase):
 
 
 class ChecksTest(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        self.credential = Path(directory.name) / "github-read-token"
+        self.credential.write_text("solo-lectura\n")
+        env = patch.dict(os.environ, CREDENTIALS_DIRECTORY=directory.name)
+        env.start()
+        self.addCleanup(env.stop)
+
+    def test_git_auth_for_private_reads(self):
+        with patch.object(d, "run") as run:
+            d.github_git("ls-remote", d.REMOTE)
+        args = run.call_args.args
+        env = run.call_args.kwargs["env"]
+        self.assertIn(f"--config-env=http.{d.REMOTE}.extraHeader=TRUCO_GIT_AUTH", args)
+        self.assertIn("http.followRedirects=false", args)
+        self.assertEqual(env["GIT_TERMINAL_PROMPT"], "0")
+        basic = env["TRUCO_GIT_AUTH"].removeprefix("Authorization: Basic ")
+        self.assertEqual(d.base64.b64decode(basic), b"x-access-token:solo-lectura")
+        self.assertFalse(any(basic in arg or "solo-lectura" in arg for arg in args))
+        self.assertNotIn("TRUCO_GIT_AUTH", os.environ)
+
+    def test_missing_or_empty_credential_stops_before_git(self):
+        self.credential.unlink()
+        with patch.object(d, "run") as run:
+            with self.assertRaises(FileNotFoundError):
+                d.main_head()
+            self.credential.write_text("\n")
+            with self.assertRaises(ValueError):
+                d.main_head()
+            run.assert_not_called()
+
     def test_exact_successful_push_only(self):
         sha = "a" * 40
         run = dict(head_sha=sha, event="push", head_branch="main", status="completed", conclusion="success")
@@ -118,8 +151,11 @@ class ChecksTest(unittest.TestCase):
                                  ({"head_branch":"test"}, False), ({"status":"in_progress"}, False),
                                  ({"conclusion":"failure"}, False)]:
             data = json.dumps({"workflow_runs":[dict(run, **change)]}).encode()
-            with self.subTest(change=change), patch.object(d.urllib.request, "urlopen", return_value=io.BytesIO(data)):
+            with self.subTest(change=change), patch.object(d.urllib.request, "urlopen", return_value=io.BytesIO(data)) as get:
                 self.assertEqual(d.verified(sha), expected)
+                request = get.call_args.args[0]
+                self.assertEqual(request.get_header("Authorization"), "Bearer solo-lectura")
+                self.assertNotIn("Authorization", request.headers)  # No reenviar en redirecciones.
 
     def test_data_checks_for_new_and_existing_volumes(self):
         for volume, contents in [("", ""), ("truco-produccion_postgres", ""), ("truco-produccion_postgres", "/datos/PG_VERSION")]:

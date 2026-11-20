@@ -7,5 +7,6 @@ Requires=docker.service
 [Service]
 Type=oneshot
 StateDirectory=truco-deploy
+LoadCredential=github-read-token:/etc/truco-oriental/github-read-token
 ExecStart=/usr/bin/flock -n /var/lib/truco-deploy/lock /usr/local/lib/truco-oriental/desplegar.py
 TimeoutStartSec=40min

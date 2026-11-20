@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Publicación desde main. systemd serializa ejecuciones y conserva su registro."""
+import base64
 import json
 import os
 from pathlib import Path
@@ -23,8 +24,23 @@ def run(*args, **kwargs):
     return subprocess.run(args, check=True, text=True, **kwargs)
 
 
+def github_token():
+    path = Path(os.environ["CREDENTIALS_DIRECTORY"]) / "github-read-token"
+    token = path.read_text(encoding="ascii").strip()
+    if not token or any(char.isspace() for char in token):
+        raise ValueError("Credencial de GitHub vacía o inválida")
+    return token
+
+
+def github_git(*args, **kwargs):
+    basic = base64.b64encode(f"x-access-token:{github_token()}".encode()).decode("ascii")
+    env = dict(os.environ, TRUCO_GIT_AUTH=f"Authorization: Basic {basic}", GIT_TERMINAL_PROMPT="0")
+    return run("git", f"--config-env=http.{REMOTE}.extraHeader=TRUCO_GIT_AUTH",
+               "-c", "http.followRedirects=false", "-c", "credential.helper=", *args, env=env, **kwargs)
+
+
 def main_head():
-    value = run("git", "ls-remote", "--exit-code", REMOTE, "refs/heads/main",
+    value = github_git("ls-remote", "--exit-code", REMOTE, "refs/heads/main",
                 capture_output=True).stdout.split()
     if len(value) != 2 or value[1] != "refs/heads/main" or not SHA.fullmatch(value[0]):
         raise ValueError("Respuesta inesperada para main")
@@ -35,6 +51,7 @@ def verified(sha):
     url = (f"https://api.github.com/repos/{REPO}/actions/workflows/check.yml/runs"
            f"?branch=main&event=push&head_sha={sha}&per_page=1")
     req = urllib.request.Request(url, headers={"User-Agent": "truco-deploy"})
+    req.add_unredirected_header("Authorization", f"Bearer {github_token()}")
     with urllib.request.urlopen(req, timeout=20) as response:
         runs = json.load(response)["workflow_runs"]
     if not runs:
@@ -71,7 +88,7 @@ def stage(sha):
         cache = STATE / "repo.git"
         run("git", "init", "--bare", "-q", cache)
         git = ["git", "--git-dir", cache]
-        run(*git, "fetch", "--quiet", "--no-tags", "--depth=1", REMOTE, "refs/heads/main")
+        github_git("--git-dir", cache, "fetch", "--quiet", "--no-tags", "--depth=1", REMOTE, "refs/heads/main")
         if run(*git, "rev-parse", "FETCH_HEAD", capture_output=True).stdout.strip() != sha:
             return False
         with tempfile.TemporaryDirectory(dir=RELEASES) as tmp:
