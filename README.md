@@ -28,7 +28,7 @@ npm run preview
 
 ## Producción
 
-La [guía del VPS](docs/produccion.md) incluye el despliegue con Docker Compose, HTTPS, cuentas, copias externas y el ensayo local de recuperación.
+La [guía del VPS](docs/produccion.md) incluye el despliegue con Docker Compose, HTTPS, cuentas, copias externas y el ensayo local de recuperación. Para cambiar la cantidad de mesas en vivo, pausar las exhibiciones o recuperar el servicio, seguí el [procedimiento de operación del salón](docs/multijugador/salon-en-vivo/operacion.md).
 
 ## Contenido y componentes
 

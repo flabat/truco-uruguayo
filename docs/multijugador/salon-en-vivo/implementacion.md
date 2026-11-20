@@ -1,5 +1,7 @@
 # Implementación del salón en vivo
 
+**Vigencia.** Este plan conserva la propuesta original de seis etapas. La decisión de publicar directamente sustituye el piloto comparativo de la etapa 6 y sus condiciones de salida. Para desplegar la versión vigente, comprobar los conteos y revertir un ajuste, usá el procedimiento operativo. [Decisión de lanzamiento](https://github.com/flabat/truco-uruguayo/issues/244) · [Operación del salón](operacion.md)
+
 Cada etapa admite un PR verificable. El primer recorrido demostrable es entrar con una cuenta nueva, encontrar un duelo y una mesa de parejas identificados como exhibiciones, mirar dos jugadas en una y volver al salón sin adquirir asiento. Se incorpora la voz antes de abrir el piloto a usuarios. [Diseño](README.md)
 
 | Orden | Entrega y dependencias | Criterio para cerrar el PR |

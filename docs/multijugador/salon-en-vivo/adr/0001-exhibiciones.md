@@ -31,8 +31,10 @@ Propuesta de frescura inicial: último hecho público en los últimos cinco minu
 
 ## Activación y recuperación
 
-Con `EXHIBICIONES_HABILITADAS=1` en el servicio API de Compose, el servidor repone los cupos al arrancar y revisa el faltante cada 15 segundos. El valor inicial es `0` para preparar el piloto. Al volver a `0` y recrear la API, los chicos ya reservados terminan y se suspenden las altas. La primera mano se escalona por cupo. Después de cada acción se esperan cuatro segundos hasta el próximo turno u ocho si toca repartir otra mano.
+La entrega directa conserva la serialización y permite elegir una meta de cero a diez mesas, además de pausar y retomar los chicos abiertos. La siguiente configuración describe la entrega inicial del trabajador. Los valores vigentes de producción y los comandos para aplicarlos están en el [procedimiento de operación](../operacion.md).
+
+Con `EXHIBICIONES_HABILITADAS=1` en el servicio API de Compose, el servidor repone los cupos al arrancar y revisa el faltante cada 15 segundos. La primera entrega usó `0` para preparar el piloto. Al volver a `0` y recrear la API, los chicos ya reservados terminan y se suspenden las altas. La primera mano se escalona por cupo. Después de cada acción se esperan cuatro segundos hasta el próximo turno u ocho si toca repartir otra mano.
 
 PostgreSQL concede un solo paso de exhibición a la vez entre instancias. El trabajador cede si hay una decisión de computadora pendiente en una mesa humana. La acción, el replay y la nueva fecha se confirman juntos. Al perder la conexión antes de confirmar, el siguiente proceso retoma el turno. El primer fallo oculta la mesa del directorio y permite reintentar a los ocho segundos. El segundo espera dieciséis segundos. El tercero retira el chico, elimina su turno pendiente y deja enfriar ese cupo durante cinco minutos.
 
-En la prueba de integración, dos procesos reponen seis cupos sobre una base descartable y el reloj simulado permite recorrer los seis chicos hasta el cierre. El piloto de capacidad y retención se sigue en [#234](https://github.com/flabat/truco-uruguayo/issues/234).
+En la prueba de integración, dos procesos reponen seis cupos sobre una base descartable y el reloj simulado permite recorrer los seis chicos hasta el cierre. La propuesta histórica de medir capacidad y retención en un piloto quedó registrada en [#234](https://github.com/flabat/truco-uruguayo/issues/234).
