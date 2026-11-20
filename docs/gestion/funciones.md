@@ -24,3 +24,5 @@ Los asientos existentes conservan acceso por invitación, enlace directo y recon
 3. Usar la política en la oferta de modalidades y en las dos escrituras de admisión. Verificar los tres estados, usuarios con y sin acceso, invitación reenviada, asientos previos y modalidades estables.
 4. Incorporar el editor, selector de jugadores, vista previa e historial en gestión. Probar guardado, conflicto y navegación en móvil y escritorio.
 5. Ejecutar la suite local y la integración con PostgreSQL y Keycloak. Revisar el PR después del panel base. El despliegue y la selección de cuentas corresponden al operador.
+
+[Editor en escritorio](capturas/funciones-desktop.png) · [Editor en móvil](capturas/funciones-mobile.png)
