@@ -24,6 +24,8 @@ python3 training/selfplay/duel_dashboard.py runs/duel-trio-01 --open
 
 El tablero muestra el modelo activo, el tiempo de entrenamiento que le queda a cada modelo y al conjunto, las últimas jugadas públicas y los resultados de los cruces cuando termina la evaluación. La página se actualiza aunque cierres esa terminal. Podés volver a abrir `monitor.html` en el directorio de la comparación. Si reiniciás la Mac, repetí la orden del tablero después de reanudar.
 
+[Ver una captura del tablero con una corrida de ejemplo](../../docs/interfaz/capturas/duel-training-dashboard.jpg).
+
 Para consultar el último evento de cada modelo directamente en la terminal:
 
 ```sh
