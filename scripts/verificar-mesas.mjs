@@ -69,6 +69,11 @@ try {
     assert.equal(seis.formato, "triples");
     assert.deepEqual(seis.asientos.map(a => a.equipo), [0,1,0,1,0,1]);
     const dupla = await crear(ana, "2v2", 50);
+    const previa = invitacion(dupla).replace(/\/unirse$/, "");
+    assert.equal((await llamar(null, "GET", previa)).estado, 401);
+    assert.deepEqual((await llamar(eva, "GET", previa)).datos, { publica: false, sentada: false });
+    assert.deepEqual((await llamar(ana, "GET", previa)).datos, { publica: false, sentada: true, id: dupla.id });
+    assert.equal((await llamar(eva, "POST", previa)).estado, 405);
     assert.equal(dupla.formato, "pairs");
     assert.equal(dupla.asientos.length, 4);
     assert.deepEqual(dupla.asientos.map(a=>a.equipo), [0,1,0,1]);
@@ -105,6 +110,8 @@ try {
     assert.equal((await entrar(ana, manoAMano)).estado, 409);
 
     const mixta = await crear(ana, "2v2", 40, true);
+    assert.deepEqual((await llamar(diego, "GET", invitacion(mixta).replace(/\/unirse$/, ""))).datos,
+      { publica: true, sentada: false });
     assert.equal((await bot(ana, mixta, 2)).datos.asientos[2].equipo, 0);
     assert.equal((await entrar(diego, mixta)).datos.miAsiento, 1);
     const final = await bot(ana, mixta, 3);

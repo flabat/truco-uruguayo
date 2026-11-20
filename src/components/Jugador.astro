@@ -3,6 +3,7 @@ import { url } from "../lib/guide";
 ---
 <div class="jugador" id="jugador">
   <form action="/api/auth/login" method="get" hidden data-ingreso>
+    <input type="hidden" name="volver" value="/jugar/" />
     <button class="button" type="submit">Ingresar al juego</button>
   </form>
   <div hidden data-cuenta>

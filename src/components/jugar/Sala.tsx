@@ -10,6 +10,8 @@ import {
   type Mesa,
   type Modo,
 } from "./cliente";
+import SalonEnVivo from "./SalonEnVivo";
+import VisorEspectador from "./VisorEspectador";
 import { VozDiscord } from "./VozDiscord";
 import { EnJuego } from "./Tablero";
 import { signalVersionFor } from "../../../training/contracts/index";
@@ -25,13 +27,14 @@ const modalidades = {
 } as const;
 
 function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
+  const mirando = volver.startsWith("/jugar/?mirar=");
   return (
     <div className="j-panel">
-      <h2>{invitada ? "Te invitaron a una mesa" : "Entrá con tu jugador"}</h2>
+      <h2>{invitada ? "Te invitaron a una mesa" : mirando ? "Ingresá para mirar la mesa" : "Entrá con tu jugador"}</h2>
       <p>
         {invitada
           ? "Ingresá para ocupar tu asiento con los demás jugadores."
-          : "Ingresá para crear una mesa y guardar tu asiento."}
+          : mirando ? "Al volver del ingreso vas a ver las jugadas públicas." : "Ingresá para mirar partidas en vivo o crear tu mesa."}
       </p>
       <form action="/api/auth/login" method="get">
         <input type="hidden" name="volver" value={volver} />
@@ -39,6 +42,12 @@ function Ingreso({ volver, invitada }: { volver: string; invitada?: boolean }) {
       </form>
     </div>
   );
+}
+
+function Visibilidad({ publica }: { publica: boolean }) {
+  return <p className="j-ayuda">{publica
+    ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas."
+    : "Mesa privada por invitación."}</p>;
 }
 
 function AbrirMesa({
@@ -62,6 +71,7 @@ function AbrirMesa({
   const [puntaje, cambiarPuntaje] = useState(String(metaPorModalidad[modo]));
   const meta = Number(puntaje);
   const metaValida = esMetaDeChico(meta);
+  const [publica, publicar] = useState(true);
   const [senas, habilitarSenas] = useState(false);
   const [ocupado, ocupar] = useState(false);
   const [error, avisar] = useState("");
@@ -71,7 +81,7 @@ function AbrirMesa({
     avisar("");
     try {
       const mesa = await pedir<Mesa>("/api/mesas", {
-        modo, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
+        modo, publica: modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
       });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
@@ -101,6 +111,7 @@ function AbrirMesa({
           </a>
         )}
         <h2>Crear una mesa</h2>
+        <a className="j-link" href={base + "jugar/"}>Volver al salón</a>
         <fieldset disabled={ocupado}>
           <legend>Modalidad</legend>
           <div className="j-modos">
@@ -123,6 +134,11 @@ function AbrirMesa({
               Permitir señas entre compañeros
             </label>
           )}
+          {modo !== "3v3" && <label className="j-habilitar-senas">
+            <input type="checkbox" checked={publica} onChange={e => publicar(e.target.checked)} />
+            Mostrar en el salón
+          </label>}
+          <Visibilidad publica={modo !== "3v3" && publica} />
         </fieldset>
         <div className="j-elegir-meta">
           <label htmlFor="meta-chico">Tantos para ganar el chico</label>
@@ -311,6 +327,7 @@ function MesaAbierta({
         <div className="j-espera">
           <div className="j-panel">
             <h2>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
+            <Visibilidad publica={mesa.publica} />
             <p>Chico a {mesa.meta} tantos.</p>
             <p>
               {faltan === 1
@@ -364,17 +381,27 @@ export default function Sala({ base }: { base: string }) {
   const [jugador, identificar] = useState<Jugador | null>();
   const [mesa, abrir] = useState<{ id: string; avisoInicial?: string; recienCreada?: boolean }>();
   const [invitacion, invitar] = useState("");
+  const [vista, elegirVista] = useState<"salon" | "crear" | "mirar">("salon");
+  const [observada, mirar] = useState("");
+  const [previa, verPrevia] = useState<{ publica: boolean }>();
+  const [aceptando, aceptar] = useState(false);
   const [volver, regresar] = useState("/jugar/");
   const [error, avisar] = useState<Error | null>(null);
   const [anterior, recordar] = useState<string | null>(null);
   useEffect(() => {
     let vigente = true;
     const params = new URLSearchParams(location.search);
-    const token = params.get("invitacion");
-    const id = params.get("mesa");
+    // Un enlace de espectador jamás se interpreta como una invitación a jugar.
+    const espectador = params.has("mirar");
+    const observada = params.get("mirar") ?? "";
+    const crear = params.get("crear") === "1";
+    const token = espectador ? null : params.get("invitacion");
+    const id = espectador ? null : params.get("mesa");
     const ruta =
       "/jugar/" +
-      (token ? "?invitacion=" + encodeURIComponent(token) : id ? "?mesa=" + encodeURIComponent(id) : "");
+      (espectador ? "?mirar=" + encodeURIComponent(observada) : token ? "?invitacion=" + encodeURIComponent(token) : id ? "?mesa=" + encodeURIComponent(id) : crear ? "?crear=1" : "");
+    mirar(observada);
+    elegirVista(espectador ? "mirar" : crear ? "crear" : "salon");
     regresar(ruta);
     invitar(token ?? "");
     async function entrar() {
@@ -387,10 +414,13 @@ export default function Sala({ base }: { base: string }) {
           /* El enlace de invitación también permite volver a la mesa. */
         }
         if (token) {
-          const mesa = await pedir<Mesa>("/api/invitaciones/" + encodeURIComponent(token) + "/unirse", {});
+          const previa = await pedir<{ publica: boolean; sentada: boolean; id?: string }>(
+            "/api/invitaciones/" + encodeURIComponent(token));
           if (!vigente) return;
-          history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(mesa.id));
-          abrir({ id: mesa.id });
+          if (previa.sentada && previa.id) {
+            history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(previa.id));
+            abrir({ id: previa.id });
+          } else verPrevia(previa);
         } else if (id) abrir({ id });
         identificar(yo);
       } catch (e) {
@@ -405,6 +435,27 @@ export default function Sala({ base }: { base: string }) {
     };
   }, [base]);
 
+  async function ocuparAsiento() {
+    if (aceptando) return;
+    aceptar(true);
+    try {
+      const mesa = await pedir<Mesa>("/api/invitaciones/" + encodeURIComponent(invitacion) + "/unirse", {});
+      history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(mesa.id));
+      abrir({ id: mesa.id });
+    } catch (e) {
+      if (e instanceof ErrorMesa && e.status === 401) identificar(null);
+      else avisar(e instanceof Error ? e : new Error(mensajeDe(e)));
+    } finally {
+      aceptar(false);
+    }
+  }
+
+  const juego = base + "jugar/";
+  const navegacion = {
+    crear: () => location.assign(juego + "?crear=1"),
+    volverAMiMesa: anterior ? () => location.assign(juego + "?mesa=" + encodeURIComponent(anterior)) : undefined,
+    alPerderSesion: () => identificar(null),
+  };
   return (
     <>
       <header className="j-titulo">
@@ -440,13 +491,27 @@ export default function Sala({ base }: { base: string }) {
         <Ingreso volver={volver} invitada={Boolean(invitacion)} />
       ) : mesa ? (
         <MesaAbierta key={mesa.id} {...mesa} jugador={jugador} base={base} />
-      ) : (
+      ) : previa ? (
+        <section className="j-panel">
+          <h2>Te invitaron a una mesa</h2>
+          <Visibilidad publica={previa.publica} />
+          <div className="j-acciones">
+            <button className="button" disabled={aceptando} onClick={ocuparAsiento}>Ocupar mi asiento</button>
+            <a className="j-link" href={juego}>Volver al salón</a>
+          </div>
+        </section>
+      ) : vista === "mirar" ? (
+        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observada)
+          ? <VisorEspectador id={observada} volver={() => location.assign(juego)} {...navegacion} />
+          : <div className="j-panel"><p role="status">Esta mesa no está disponible para mirar.</p>
+              <a className="j-link" href={juego}>Volver al salón</a></div>
+      ) : vista === "crear" ? (
         <AbrirMesa
           base={base}
           anterior={anterior}
           abrir={(id, avisoInicial) => abrir({ id, avisoInicial, recienCreada: true })}
         />
-      )}
+      ) : <SalonEnVivo mirar={id => location.assign(juego + "?mirar=" + encodeURIComponent(id))} {...navegacion} />}
     </>
   );
 }

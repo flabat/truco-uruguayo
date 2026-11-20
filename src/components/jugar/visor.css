@@ -1,0 +1,43 @@
+.visor-cabecera, .visor-reconexion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.visor-cabecera p { margin-top: .25rem; }
+.visor-puestos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-areas: ". norte ." "oeste muestra este" ". sur .";
+  gap: .5rem;
+  align-items: center;
+  position: relative;
+  isolation: isolate;
+  padding: 1rem .3rem;
+  min-height: 20rem;
+}
+.visor-puestos::before {
+  content: "";
+  position: absolute;
+  inset: 12% 7%;
+  border: 1px solid #dbcc8f55;
+  border-radius: 50%;
+  z-index: -1;
+}
+.visor-1v1 { grid-template-areas: ". norte ." ". muestra ." ". sur ."; }
+.visor-asiento-0 { grid-area: sur; }
+.visor-asiento-1 { grid-area: este; }
+.visor-1v1 .visor-asiento-1, .visor-asiento-2 { grid-area: norte; }
+.visor-asiento-3 { grid-area: oeste; }
+.visor-puesto, .visor-muestra { text-align: center; justify-self: center; }
+.visor-muestra { grid-area: muestra; margin: 0; color: #f0dfb4; font-size: .8rem; }
+.visor-muestra img { width: clamp(36px, 5vw, 52px); height: auto; border-radius: 3px; margin: 0 auto; }
+.visor-parda { text-align: center; }
+.visor-tapete .visor-parda { color: #ffe5a8; }
+.visor-partida .j-jugada-panel > h3 { font: 400 1.6rem/1.15 var(--serif); margin-bottom: .45rem; }
+@media (max-width: 760px) {
+  .visor-partida .j-jugada-panel { order: initial; }
+  .visor-puestos { min-height: 15rem; }
+}

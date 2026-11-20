@@ -16,6 +16,7 @@ export interface Asiento {
   nombre: string | null;
 }
 export interface Mesa {
+  publica: boolean;
   id: string;
   modo: Modo;
   meta: number;

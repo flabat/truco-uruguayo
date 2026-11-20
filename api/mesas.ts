@@ -43,7 +43,7 @@ export interface VistaMesa {
 const capacidad: Record<Modo, number> = { "1v1": 2, "2v2": 4, "3v3": 6 };
 const esId = (id: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
 const rutaMesa = /^\/api\/mesas\/([^/]+)(\/computadoras|\/voz)?$/;
-const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)\/unirse$/;
+const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)(\/unirse)?$/;
 
 export function esRutaMesas(pathname: string) {
   return pathname === "/api/modalidades" || pathname === "/api/mesas" || rutaMesa.test(pathname) || rutaInvitacion.test(pathname);
@@ -169,6 +169,16 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
       const jugador = await jugadorDeSesion(pool, req);
       if (!jugador) throw new ErrorPeticion(401, "Ingresá al juego para usar una mesa.");
 
+      if (invitacion && !invitacion[2]) {
+        if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
+        const { rows: [info] } = await pool.query(`
+          SELECT m.publica, a.mesa AS id FROM juego.mesas m
+          LEFT JOIN juego.asientos a ON a.mesa=m.id AND a.jugador=$2
+          WHERE m.invitacion=$1`, [invitacion[1], jugador.id]);
+        if (!info) throw new ErrorPeticion(404, "La invitación no es válida.");
+        responderJson(res, 200, { publica: info.publica, sentada: Boolean(info.id), ...(info.id && { id: info.id }) });
+        return;
+      }
       if (req.method === "GET" && mesa && !mesa[2]) {
         const vista = await leerMesa(pool, mesa[1], jugador.id, web);
         if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");
