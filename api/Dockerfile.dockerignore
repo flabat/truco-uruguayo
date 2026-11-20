@@ -24,6 +24,7 @@
 !training/partners/
 !training/partners/policy.ts
 !training/selfplay/
+!training/selfplay/duel-card-odds.ts
 !training/selfplay/learner.ts
 !training/selfplay/team-mixture.ts
 !training/selfplay/team-transfer.ts
