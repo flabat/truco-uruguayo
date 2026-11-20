@@ -28,6 +28,8 @@ export interface RepartoV1 extends Distribucion {
 }
 
 export interface RepartoOnline extends Distribucion {
+  /** Los registros anteriores a la flor inmediata conservan la ronda pública de consultas. */
+  readonly reglaFlor?: "inmediata" | "inmediata-v2";
   readonly versionReparto: "online-1" | "online-2";
 }
 
@@ -70,7 +72,8 @@ export function esRepartoV1(valor: unknown): valor is RepartoV1 {
 }
 
 export function esRepartoOnline(valor: unknown): valor is RepartoOnline {
-  return esDistribucion(valor) && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
+  return esDistribucion(valor) && (!("reglaFlor" in valor) || valor.reglaFlor === "inmediata" || valor.reglaFlor === "inmediata-v2")
+    && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
 }
 
 /**

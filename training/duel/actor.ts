@@ -28,7 +28,7 @@ export function coordinates(observation: SeatObservation, legal: readonly Action
   const { view } = observation;
   const cards = [...view.cartas].sort((a, b) => compararCartas(a, b, view.muestra) || mazo.indexOf(a) - mazo.indexOf(b));
   const slots = legal.map(id => {
-    const idx = esCardId(id) ? bids.length + cards.indexOf(id) : bids.indexOf(id);
+    const idx = esCardId(id) ? bids.length + cards.indexOf(id) : bids.indexOf(id === "con-flor-quiero" ? "quiero" : id);
     if (idx < 0 || (esCardId(id) && !cards.includes(id))) throw new TypeError("Acción ajena al actor de duelo.");
     return idx;
   });
