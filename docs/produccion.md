@@ -99,6 +99,8 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
+La imagen de identidad se construye desde `infra/keycloak/`. Incluye un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google o Facebook ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak.
+
 ## Publicación automática desde main
 
 El VPS consulta el repositorio privado cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents** y **Actions** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa el segundo para comprobar el resultado del workflow.

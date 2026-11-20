@@ -68,7 +68,7 @@ services:
 
   identidad:
     <<: *servicio
-    image: quay.io/keycloak/keycloak:26.8.2
+    build: ./infra/keycloak
     command: ["start", "--import-realm"]
     mem_limit: 1200m
     environment:

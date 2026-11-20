@@ -87,4 +87,5 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 [[ $(sql "$consulta_jugadores") == "$jugadores" ]]
 [[ $(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'") == "$migration" ]]
 curl -fsS "$(url api 3001)/health"
+node scripts/verificar-correo-social.mjs "http://$TRUCO_HOST:$WEB_PORT" "http://$TRUCO_HOST:$OIDC_PORT" "$project"
 echo ' · Arranque, identidad, migraciones y persistencia verificados.'
