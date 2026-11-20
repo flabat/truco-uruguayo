@@ -81,3 +81,35 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 ## Actualizar la aplicación
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
+
+## Publicación automática desde main
+
+El VPS consulta el repositorio público cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. Las descargas de GitHub sólo necesitan acceso público de lectura.
+
+En el VPS de Truco Oriental, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
+
+```sh
+systemctl stop truco-deploy.timer
+cd /opt/truco-oriental/staged
+export TRUCO_RELEASE=$(basename "$(pwd -P)")
+dc() { docker compose -p truco-produccion --env-file /etc/truco-oriental/production.env -f compose.production.yaml -f infra/despliegue/imagenes.yaml "$@"; }
+# Para un repositorio de copias nuevo, ejecutar una sola vez: dc run --rm --no-deps backup iniciar
+dc run --rm --no-deps backup listar
+systemctl start truco-deploy.timer
+systemctl start truco-deploy.service
+```
+
+Antes de actualizar una base existente, la tarea guarda una copia. Comprueba otra vez el SHA de `main` antes del cambio. Compose espera la salud de los servicios y la API comprueba por HTTPS la web y el emisor de identidad. Sólo entonces se actualiza `/opt/truco-oriental/current`. `previous` conserva la versión anterior. Si falla el arranque después de una migración, el servicio reintenta el mismo commit conservando la copia previa. Durante la intervención, algunos contenedores pueden estar ya en la nueva versión. Para recuperar datos, seguí el procedimiento de restauración en volúmenes nuevos.
+
+Consultá el próximo intento con `systemctl list-timers truco-deploy.timer` y su registro con `journalctl -u truco-deploy.service -n 80`. Para mantenimiento, pará el temporizador y esperá que termine cualquier ejecución en curso antes de actualizar manualmente. Para corregir una publicación, integrá la corrección o reversión mediante PR a `main`.
+
+En una máquina nueva, además de Docker con Compose, se usan Git, Python 3, GNU tar, flock y systemd. Partiendo del checkout verificado, instalá el ejecutor y activá el temporizador como administrador:
+
+```sh
+install -Dm755 infra/despliegue/desplegar.py /usr/local/lib/truco-oriental/desplegar.py
+install -m644 infra/despliegue/truco-deploy.{service,timer} /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now truco-deploy.timer
+```
+
+Repetí la instalación si cambia el ejecutor o sus unidades de systemd. El proyecto Compose mantiene el mismo nombre y conserva sus volúmenes entre versiones.
