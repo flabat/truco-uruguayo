@@ -16,7 +16,15 @@ Los tres aprenden uno después del otro, durante dos horas activas cada uno, des
 
 Para medir el aporte de los pesos adicionales, mirá el enfrentamiento de `interactions` contra `odds`. La terminal lo muestra al terminar y se guarda en `comparison.json` bajo `matchups.interactionsVsOdds`. Si el extremo inferior de su intervalo del 95 % supera el 50 %, el modelo ampliado tuvo ventaja en esos repartos para ese entrenamiento. Cada intervalo describe un único cruce. Una réplica con otra semilla permite comprobar si la mejora se repite.
 
-Si interrumpís la comparación, repetí la misma orden agregando `--resume`. Para ver el avance desde otra terminal, leé el último evento de cada modelo que ya haya empezado.
+Si interrumpís la comparación, repetí la misma orden agregando `--resume`. Para abrir el **tablero en el navegador** desde otra terminal en macOS:
+
+```sh
+python3 training/selfplay/duel_dashboard.py runs/duel-trio-01 --open
+```
+
+El tablero muestra el modelo activo, el tiempo de entrenamiento que le queda a cada modelo y al conjunto, las últimas jugadas públicas y los resultados de los cruces cuando termina la evaluación. La página se actualiza aunque cierres esa terminal. Podés volver a abrir `monitor.html` en el directorio de la comparación. Si reiniciás la Mac, repetí la orden del tablero después de reanudar.
+
+Para consultar el último evento de cada modelo directamente en la terminal:
 
 ```sh
 find runs/duel-trio-01 -path '*/events/duel-a.jsonl' -exec tail -n 1 {} \;
