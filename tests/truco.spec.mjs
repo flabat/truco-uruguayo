@@ -1,20 +1,22 @@
 import { expect, test } from "@playwright/test";
-import { comprobarMuestra, posicionEnTapete } from "./helpers/muestra.mjs";
+import { capturarTapete, comprobarMuestraDelDador, posicionEnTapete } from "./helpers/muestra.mjs";
 
 const boton = (page, name) => page.getByRole("button", { name, exact: true });
 const titulo = (page, name) => page.getByRole("heading", { name, exact: true });
 
-test("el quiero del rival conserva las cartas y la reproducción explica el turno y el tanteo", async ({ page }) => {
+test("el quiero del rival conserva las cartas y la reproducción explica el turno y el tanteo", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("aprender/");
   await page.getByRole("link", { name: /Cantar y responder al truco/ }).click();
   await expect(page).toHaveURL("aprender/truco/");
   await expect(page.getByText(/Nadie tiene flor/)).toBeVisible();
-  const vos = page.locator(".tapete").getByRole("group", { name: "Vos", exact: true });
+  const vos = page.getByRole("region", { name: "Tapete" }).getByRole("group", { name: "Vos", exact: true });
   const misCartas = vos.getByRole("group", { name: "Tus cartas" });
   const antes = await misCartas.textContent();
-  await comprobarMuestra(page, "bastos-10");
+  await comprobarMuestraDelDador(page, "bastos-10");
+  await capturarTapete(page, "truco");
   const posicion = await posicionEnTapete(page);
-  const muestra = await page.locator("#muestra").textContent();
+  const muestra = await page.getByRole("img", { name: /^Muestra / }).textContent();
   await boton(page, "Cantar truco").press("Enter");
   await expect(titulo(page, "¿Qué carta jugás?")).toBeFocused();
   await expect(page.locator("#guia-turno")).toContainText("El rival quiso. Conservás el turno.");
@@ -26,27 +28,27 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await boton(page, "Reproducir la mano").click();
   await expect(boton(page, "Anterior")).toBeDisabled();
   await boton(page, "Siguiente acción").press("Space");
-  await expect(page.locator("#turno-mesa")).toHaveText("Falta responder al truco");
+  await expect(page.locator(".j-estado-vuelta")).toContainText("Falta responder al truco");
   await page.reload();
   await expect(titulo(page, "Acción 1 de 10")).toBeVisible();
   await boton(page, "Siguiente acción").click();
-  await expect(page.locator("#turno-mesa")).toHaveText("Tu turno");
+  await expect(page.locator(".j-estado-vuelta")).toContainText("Tu turno");
   await expect(page.locator("#guia-turno")).toContainText("Conserva el turno");
   await boton(page, "Siguiente acción").click();
-  await comprobarMuestra(page, "bastos-10");
+  await comprobarMuestraDelDador(page, "bastos-10");
   expect(await posicionEnTapete(page)).toEqual(posicion);
-  await expect(vos.locator(".mesa-jugada")).toHaveText("JugadaRey de bastos");
+  await expect(vos.locator(".j-jugada").getByRole("img", { name: "Rey de bastos" })).toBeVisible();
   await expect(misCartas.locator("img")).toHaveCount(2);
   await expect(misCartas).not.toContainText("Rey de bastos");
   await expect(misCartas.getByRole("button")).toHaveCount(0);
   await boton(page, "Anterior").click();
-  await expect(vos.locator(".mesa-jugada")).toBeHidden();
+  await expect(vos.locator(".j-jugada")).toBeHidden();
   await expect(misCartas).toHaveText(antes);
   await boton(page, "Volver al resultado").click();
   await boton(page, "Repartir de nuevo").click();
   await expect(misCartas).not.toHaveText(antes);
-  await expect(page.locator("#muestra")).not.toHaveText(muestra);
-  await comprobarMuestra(page);
+  await expect(page.getByRole("img", { name: /^Muestra / })).not.toHaveText(muestra);
+  await comprobarMuestraDelDador(page);
   await boton(page, "Practicar la respuesta").click();
   await boton(page, "No quiero").click();
   await boton(page, "Repetir el ejemplo").click();
@@ -60,7 +62,7 @@ test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida r
   await boton(page, "Practicar la respuesta").click();
   await page.reload();
   await expect(titulo(page, "Te cantaron truco. ¿Querés?")).toBeVisible();
-  const vos = page.locator(".tapete").getByRole("group", { name: "Vos", exact: true });
+  const vos = page.getByRole("region", { name: "Tapete" }).getByRole("group", { name: "Vos", exact: true });
   const mano = vos.getByRole("group", { name: "Tus cartas" });
   const imagenes = mano.locator("img");
   await expect(imagenes).toHaveCount(3);

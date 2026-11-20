@@ -63,7 +63,7 @@ function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
         dador={tablero.dador}
         mano={tablero.mano}
         muestra={tablero.muestra}
-        manoNumero={mesa.manoNumero}
+        titulo={"Mano " + mesa.manoNumero}
         numeroVuelta={numeroVuelta}
         vuelta={cerrada ?? actual}
         terminada={Boolean(resultado && !cerrada)}

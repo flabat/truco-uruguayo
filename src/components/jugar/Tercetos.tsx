@@ -3,9 +3,9 @@ import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import { PruebaEnMesa, Tanteador } from "./Tablero";
-import { Naipe } from "./Tapete";
+import { Naipe, Tapete } from "./Tapete";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
-import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
+import { GloboDeVoz, vocesEnReposo } from "./Voz";
 import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
 
@@ -41,53 +41,6 @@ function palabra(mesa: Mesa, partida: PartidaTercetos) {
   }
   if (vista.turno === mesa.miAsiento) return "Tu turno";
   return vista.turno == null ? "Esperando la jugada" : "Turno de " + nombre(vista.turno);
-}
-
-function Puestos({ mesa, partida, base, voces }: Pick<Props, "mesa" | "partida" | "base"> & { voces: Voz[] }) {
-  const { vista, lance } = partida;
-  const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const ultima = vista.vueltas.at(-1);
-  const enCurso = Boolean(vista.vueltaActual?.jugadas.length);
-  const vuelta = enCurso ? vista.vueltaActual : ultima;
-  return (
-    <div className="j-seis-puestos" role="group" aria-label="Los seis asientos">
-      {mesa.asientos.map(({ asiento, equipo, nombre }) => {
-        const papel = asiento === mesa.miAsiento ? "Vos" : equipo === propio ? "Compañero" : "Rival";
-        const jugada = vuelta?.jugadas.find(j => j.asiento === asiento);
-        const ganador = !enCurso && ultima?.resultado.tipo === "ganada" && ultima.resultado.asiento === asiento;
-        const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento);
-        return (
-          <div key={asiento} className="j-seis-puesto" data-pos={(asiento - mesa.miAsiento + 6) % 6}
-            data-activo={lance.activos.some(a => a === asiento)} role="group" aria-label={`Asiento ${asiento + 1} · ${nombre}`}>
-            <div className="j-seis-nombre">
-              <strong>{nombre}</strong>
-              <span>{papel} · Equipo {equipo + 1}</span>
-              {(asiento === vista.mano || asiento === vista.dador) &&
-                <b>{asiento === vista.dador ? "Dador" : "Mano"}</b>}
-              {!prueba && <GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />}
-            </div>
-            {asiento === vista.dador && (
-              <div className="j-seis-muestra" role="img" aria-label={"Mazo y muestra · " + nombrar(vista.muestra)}>
-                <img className="j-seis-mazo" alt="" src={base + "img/cartas/tatu/reverso.webp"} />
-                <Naipe id={vista.muestra} base={base} />
-              </div>
-            )}
-            {prueba && <PruebaEnMesa prueba={prueba} base={base} jugada={jugada?.carta} ganadora={ganador}
-              acciones={partida.historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />}
-            {jugada && !prueba?.cartas.includes(jugada.carta) && <div className="j-seis-jugada">
-              <Naipe id={jugada.carta} base={base} />
-              {ganador && <small>Ganó</small>}
-            </div>}
-          </div>
-        );
-      })}
-      <div className="j-seis-centro">
-        <strong>{enCurso || !ultima ? `Vuelta ${vista.vueltas.length + 1}` : `Vuelta ${vista.vueltas.length} terminada`}</strong>
-        {!enCurso && ultima && <span>{ultima.resultado.tipo === "parda" ? "Parda" : `Ganó ${mesa.asientos[ultima.resultado.asiento].nombre}`}</span>}
-        <span>Muestra · {nombrar(vista.muestra)}</span>
-      </div>
-    </div>
-  );
 }
 
 function DetallesDelLance({ acciones = [], cobros, vueltas, nombre }: Pick<VistaTercetos, "cobros" | "vueltas"> & {
@@ -130,6 +83,9 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
     if (!presentando) teclado.current = false;
   }, [partida.version, presentando]);
 
+  const ultimaVuelta = vista.vueltas.at(-1);
+  const vuelta = vista.vueltaActual?.jugadas.length ? vista.vueltaActual : ultimaVuelta;
+  const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
   const rivales = esPico && lance.activos.map(a => `${mesa.asientos[a].nombre} (equipo ${mesa.asientos[a].equipo + 1})`).join(" y ");
@@ -145,16 +101,38 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
     <div className="j-partida j-seis" onClickCapture={e => {
       if (e.target instanceof Element && e.target.closest("button")) teclado.current = e.detail === 0;
     }}>
-      <section className="j-tapete" aria-label="Tapete">
-        <header><strong>Reparto {partida.manoNumero}</strong><span>{esPico ? "Pico a pico" : "Redondilla"}</span></header>
-        <Puestos mesa={mesa} partida={partida} base={base} voces={voz ? [voz] : vocesEnReposo(vista)} />
-        {jugando && <div className="j-mano" role="group" aria-label="Tus cartas">
-          {jugando.cartas.map(carta => <button key={carta} disabled={bloqueada || !jugando.legales.includes("carta")}
-            aria-label={"Jugar " + nombrar(carta)} onClick={() => jugar({ tipo: "carta", carta })}>
-            <Naipe base={base} id={carta} />
-          </button>)}
-        </div>}
-      </section>
+      <Tapete
+        base={base}
+        asientos={mesa.asientos.map(a => {
+          const papel = a.asiento === mesa.miAsiento ? "Vos" : a.equipo === propio ? "Compañero" : "Rival";
+          return { ...a, papel: papel + " · Equipo " + (a.equipo + 1), etiqueta: `Asiento ${a.asiento + 1} · ${a.nombre}` };
+        })}
+        asientoInferior={mesa.miAsiento}
+        dador={vista.dador}
+        mano={vista.mano}
+        muestra={vista.muestra}
+        titulo={"Reparto " + partida.manoNumero}
+        estado={esPico ? "Pico a pico" : "Redondilla"}
+        numeroVuelta={vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1)}
+        vuelta={vuelta}
+        participantes={lance.activos}
+        detalle={(asiento, carta, ganadora) => {
+          const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento);
+          return {
+            contenido: prueba
+              ? <PruebaEnMesa prueba={prueba} base={base} jugada={carta} ganadora={ganadora}
+                  acciones={historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />
+              : <GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />,
+            reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
+            mano: asiento === mesa.miAsiento && jugando && <div className="j-mano" role="group" aria-label="Tus cartas">
+              {jugando.cartas.map(carta => <button key={carta} disabled={bloqueada || !jugando.legales.includes("carta")}
+                aria-label={"Jugar " + nombrar(carta)} onClick={() => jugar({ tipo: "carta", carta })}>
+                <Naipe base={base} id={carta} />
+              </button>)}
+            </div>,
+          };
+        }}
+      />
       <section className="j-jugada-panel">
         <div role="status" aria-atomic="true">
           <strong className="j-seis-lance">{nombreDelLance(lance)}{esPico && ` · ${rivales}`}</strong>

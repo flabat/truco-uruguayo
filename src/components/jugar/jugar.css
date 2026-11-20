@@ -76,9 +76,6 @@
   border-top: 0;
   border-bottom-color: #ffedbe;
 }
-.j-dorsos { display: flex; align-items: center; justify-content: center; padding-top: 7px; }
-.j-dorsos img { width: clamp(18px, 2.5vw, 28px); height: auto; border-radius: 2px; box-shadow: 0 2px 3px #173423; }
-.j-dorsos img + img { margin-left: -10px; }
 .j-prueba-tantos {
   grid-column: 1 / -1; max-width: 100%; min-width: 0; width: fit-content;
   margin: .45rem auto 0; text-align: center;

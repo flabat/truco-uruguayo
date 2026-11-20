@@ -39,57 +39,12 @@
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-.prob-interactiva .tapete :focus-visible { outline: 3px solid white; }
+.prob-interactiva .j-tapete :focus-visible { outline: 3px solid white; }
 .prob-turno {
   color: var(--accent);
   font-size: 14px;
   font-weight: 700;
 }
-.prob-interactiva .tapete-asientos {
-  grid-template-rows: auto auto auto;
-  align-content: start;
-  row-gap: clamp(8px, 1.2vw, 16px);
-}
-.prob-interactiva .mesa-jugada .ap-carta img {
-  width: clamp(49px, 6.4vw, 82px);
-}
-.prob-muestra {
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  text-align: center;
-  gap: 2px;
-}
-.prob-muestra small {
-  color: #ecdfb4;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-.prob-muestra strong { font-size: 14px; }
-.prob-mazo {
-  width: var(--ancho-mazo, 124px);
-  max-width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  margin-bottom: 3px;
-  filter: drop-shadow(0 2px 2px rgb(28 35 26 / 25%));
-}
-.prob-frente, .prob-dorso img { width: calc(100% * 384 / 596); height: auto; }
-.prob-frente { grid-row: 1; }
-.prob-dorso {
-  position: relative;
-  grid-row: 2;
-  width: 100%;
-  aspect-ratio: 596 / 384;
-  margin-top: -50%;
-  display: grid;
-  place-items: center;
-}
-.prob-dorso img { position: absolute; transform: rotate(90deg); }
-.prob-interactiva .abanico-mesa img { width: clamp(24px, 3vw, 40px); height: auto; align-self: start; }
 .prob-interactiva .mesa-panel h2 { font-size: clamp(24px, 3.2vw, 39px); }
 .prob-interactiva .mesa-panel { align-self: start; }
 .prob-interactiva .mesa-panel p { line-height: 1.5; }
@@ -141,7 +96,7 @@
     border: 0;
     background: transparent;
   }
-  .prob-interactiva .tapete { border-radius: 14px; }
+  .prob-interactiva .j-tapete { border-radius: 14px; }
   .prob-interactiva .mesa-panel {
     border: 1px solid var(--line);
     border-radius: 14px;

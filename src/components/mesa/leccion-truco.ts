@@ -1,8 +1,9 @@
 import { crearLeccionTruco } from "../../aprendizaje/leccion-truco";
 import type { AccionTruco } from "../../motor/truco";
-import { mostrarCarta } from "../aprendizaje/cartas";
+import { createElement } from "react";
+import { CartaEnLeccion } from "./TapeteLeccion";
 import { asientos, nombre, pareja, resultadoMano, situacionDeJuego } from "./relato";
-import { boton, pintarTapete } from "./tapete";
+import { boton, montarTapete } from "./tapete";
 
 function relatar(accion: AccionTruco) {
   const quien = asientos[accion.asiento];
@@ -18,7 +19,7 @@ export function montarLeccionTruco() {
   const pregunta = el("pregunta");
   const guia = el("guia-turno");
   const controles = el("decisiones");
-  const cartas = el("mis-cartas");
+  const mostrarTapete = montarTapete(el("mesa-tapete"));
 
   function actuar(accion: AccionTruco) {
     if (juego.actuar(accion)) pintar(true);
@@ -38,12 +39,10 @@ export function montarLeccionTruco() {
     const pendiente = apuesta === "pendiente";
     const enJuego = cursor === null && !resultado && !pendiente;
     const aviso = resultado ? "Mano cerrada" : pendiente ? "Falta responder al truco" : undefined;
-    pintarTapete(base, mesa, { finDeVuelta: cursor !== null && ultima?.tipo === "carta", anuncio: aviso });
     const cobrar = resultado && pareja(resultado.equipo) + (resultado.tantos === 1 ? " cobra 1 tanto" : " cobra 2 tantos");
     const motivo = resultado?.motivo === "rechazo" ? "El no quiero cierra la mano. Cobra la pareja que cantó."
       : resultado ? resultadoMano(mesa) + (apuesta === "querido" ? " El truco estaba querido." : " La mano se jugó sin cantar.") : "";
     controles.replaceChildren();
-    cartas.replaceChildren();
     el("envido-cobrado").textContent = "Antes de la salida, " + pareja(envido.equipo).toLowerCase() + " cobró el envido con " + envido.total + ".";
     const lista = el("acciones-truco");
     lista.replaceChildren(...acciones.map((accion) => {
@@ -51,11 +50,13 @@ export function montarLeccionTruco() {
       item.textContent = relatar(accion);
       return item;
     }));
-    for (const carta of mesa.cartas) {
-      const naipe = mostrarCarta(base, carta, enJuego ? () => actuar({ tipo: "carta", asiento: 0, carta }) : undefined);
-      if (enJuego) naipe.setAttribute("aria-label", "Jugar " + nombre(carta));
-      cartas.append(naipe);
-    }
+    mostrarTapete({
+      base, mesa, finDeVuelta: cursor !== null && ultima?.tipo === "carta", anuncio: aviso, etiquetaCartas: "Tus cartas",
+      cartas: mesa.cartas.map(carta => createElement(CartaEnLeccion, {
+        key: carta, base, carta, jugar: enJuego,
+        elegir: enJuego ? () => actuar({ tipo: "carta", asiento: 0, carta }) : undefined,
+      })),
+    });
 
     const momento = el("momento");
     if (cursor !== null) {
