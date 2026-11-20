@@ -99,6 +99,8 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
+La imagen de identidad se construye desde `infra/keycloak/`. Incluye un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google o Facebook ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak.
+
 ## Salón y exhibiciones
 
 La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)

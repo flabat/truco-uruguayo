@@ -183,7 +183,8 @@ class ChecksTest(unittest.TestCase):
                 self.assertTrue(d.stage(sha))
                 self.assertEqual((root/"staged"/"version").read_text(), "prueba")
                 self.assertEqual((root/"staged").resolve(), releases/sha)
-                self.assertEqual(compose.call_args_list[0].args, (sha,"build"))
+                self.assertEqual([call.args for call in compose.call_args_list],
+                                 [(sha, "build"), (sha, "pull", "--ignore-buildable", "db", "identidad")])
                 compose.reset_mock()
                 self.assertTrue(d.stage(sha))
                 compose.assert_not_called()

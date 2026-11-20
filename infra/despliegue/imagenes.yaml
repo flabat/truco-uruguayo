@@ -3,5 +3,7 @@ services:
     image: truco-oriental/web:${TRUCO_RELEASE:?Falta el commit}
   api:
     image: truco-oriental/api:${TRUCO_RELEASE:?Falta el commit}
+  identidad:
+    image: truco-oriental/identidad:${TRUCO_RELEASE:?Falta el commit}
   backup:
     image: truco-oriental/backup:${TRUCO_RELEASE:?Falta el commit}
