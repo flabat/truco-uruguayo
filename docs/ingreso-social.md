@@ -1,8 +1,10 @@
 # Habilitar el ingreso con Google y Facebook
 
-Al elegir **Ingresar al juego**, el jugador llega a Keycloak. Allí puede usar su cuenta local o cualquiera de los proveedores que hayas habilitado. La API sigue recibiendo la identidad de Keycloak y emite su propia cookie de sesión. Podés habilitar un solo proveedor y agregar el otro más adelante.
+Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. El registro por correo está desactivado.
 
 ![Pantalla de ingreso de Truco Oriental con las opciones Facebook y Google](ingreso-social.png)
+
+Podés habilitar uno de los proveedores y agregar el otro más adelante. Si todavía no habilitaste ninguno, Keycloak muestra el formulario de contraseña. La API recibe la identidad de Keycloak y emite su propia cookie de sesión.
 
 ## URLs que tenés que registrar
 
@@ -67,8 +69,24 @@ node scripts/configurar-ingreso-social.mjs google
 node scripts/configurar-ingreso-social.mjs facebook
 ```
 
+## Activar la pantalla de Truco Oriental
+
+Con un volumen nuevo, Compose ya selecciona el tema `truco-oriental` para el realm `mesa-local`, con español e inglés y español como idioma predeterminado. Si el realm existe, Keycloak conserva su configuración al arrancar. Para actualizar la instalación local y elegir el tema sobre ese mismo volumen, ejecutá estos comandos. Reemplazá `admin-social-local` por tu administrador de `master` y escribí su contraseña cuando Keycloak la pida. [Importación al arrancar Keycloak](https://www.keycloak.org/server/importExport#_importing_a_realm_during_startup)
+
+```sh
+docker compose up -d --build --wait identidad
+docker compose exec identidad /opt/keycloak/bin/kcadm.sh update realms/mesa-local -n \
+  --no-config --server http://localhost:8080 --realm master --user admin-social-local \
+  -s loginTheme=truco-oriental -s internationalizationEnabled=true \
+  -s 'supportedLocales=["es","en"]' -s defaultLocale=es
+```
+
+En una instalación propia de Keycloak, incluí la carpeta `infra/keycloak/truco-oriental` en el directorio `themes` de cada servidor. En la consola administrativa, seleccioná el realm del juego, abrí **Realm settings → Themes**, elegí **truco-oriental** en **Login theme** y guardá. En **Realm settings → Localization**, activá **Internationalization**, agregá español e inglés a los idiomas disponibles y guardá español como predeterminado. El selector de idioma permite pasar de **Entrá a jugar** a **Sign in to play**. [Temas de Keycloak](https://www.keycloak.org/ui-customization/themes)
+
 ## Comprobar el ingreso y la vinculación
 
 Abrí **Ingresar al juego** desde una ventana privada. Elegí el proveedor, completá el ingreso y anotá el ID de jugador. Cerrá sesión y volvé a entrar con la misma cuenta en otra ventana privada. Deberías recuperar el mismo ID y poder volver a tu mesa. Probá también cancelar en la pantalla del proveedor y volver a iniciar el ingreso.
 
-El comando conserva el flujo de primer ingreso y los permisos de un proveedor que ya existía. Revisá los permisos y quitá los adicionales si solo usás el ingreso. Si el correo coincide con una cuenta existente, comprobá que el flujo exige demostrar el control de esa cuenta antes de vincularla. Conservá **Trust email** desactivado. Si el correo de confirmación resulta insuficiente, configurá la verificación con el método de ingreso original. Si Facebook omite el correo y el realm lo exige, el jugador puede completarlo al revisar su perfil. La identidad del jugador se guarda por emisor y sujeto de Keycloak. [Vinculación de identidades en Keycloak](https://www.keycloak.org/docs/latest/server_admin/#_identity_broker)
+Si el jugador entró primero con Google y después elige Facebook con el mismo correo, Keycloak puede pedirle que vuelva a ingresar con Google para verificar la cuenta existente. Al completar la vinculación, ambos botones deben llevar al mismo ID de jugador y a la misma mesa.
+
+El comando que activa un proveedor conserva su flujo de primer ingreso y sus permisos si ya existía. Revisá los permisos y quitá los adicionales si solo usás el ingreso. Comprobá que el flujo exige demostrar el control de la cuenta antes de vincularla. Conservá **Trust email** desactivado. Si el correo de confirmación resulta insuficiente, configurá la verificación con el método de ingreso original. Si Facebook omite el correo y el realm lo exige, el jugador puede completarlo al revisar su perfil. La identidad del jugador se guarda por emisor y sujeto de Keycloak. [Vinculación de identidades en Keycloak](https://www.keycloak.org/docs/latest/server_admin/#_identity_broker)
