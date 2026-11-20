@@ -24,6 +24,7 @@ class DeployTest(unittest.TestCase):
         for name, path in {"ROOT": root, "STATE": root / "state", "RELEASES": root / "automaticas"}.items():
             self.mock(d, name, new=path)
             path.mkdir(exist_ok=True)
+        self.mock(d, "CONFIG", new=root / "production.env")
         (d.RELEASES / self.old).mkdir()
         (d.RELEASES / self.sha).mkdir()
         self.head = self.mock(d, "main_head", return_value=self.sha)
@@ -66,6 +67,31 @@ class DeployTest(unittest.TestCase):
             d.deploy()
         self.compose.assert_not_called()
         self.assertEqual((d.ROOT / "current").resolve(), d.RELEASES / self.old)
+
+    def test_pause_and_resume_on_same_commit(self):
+        pause = d.CONFIG.with_name("copias-pausadas")
+        pause.touch()
+        for sha in (self.old, self.sha):
+            self.head.return_value = sha
+            d.deploy()
+            self.backup.assert_not_called()
+            self.compose.assert_any_call(sha, "rm", "--stop", "--force", "backup", without_backup=True)
+            self.compose.assert_any_call(sha, "up", "-d", "--no-build", "--wait", "--wait-timeout",
+                                         "600", "db", "identidad", "api", "web", without_backup=True)
+            self.assertEqual((d.ROOT / "current").resolve(), d.RELEASES / sha)
+        self.compose.reset_mock()
+        d.deploy()
+        self.compose.assert_not_called()
+        pause.unlink()
+        self.config.return_value = False
+        d.deploy()
+        self.compose.assert_not_called()
+        self.config.return_value = True
+        d.deploy()
+        self.backup.assert_called_once_with(self.sha)
+        self.compose.assert_any_call(self.sha, "up", "-d", "--no-build", "--wait", "--wait-timeout",
+                                     "600", without_backup=False)
+        self.assertFalse((d.STATE / "copias-pausadas").exists())
 
     def test_retry_after_health_failure_preserves_pre_migration_backup(self):
         d.point("current", d.RELEASES / self.old)
