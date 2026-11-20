@@ -25,3 +25,14 @@ La vista de tercetos sigue encargándose de las pausas de los cantos, las prueba
 La mano guiada, la lección de truco y la de probabilidad usan el tapete de parejas con «Vos» abajo y la muestra junto al dador. El adaptador compartido decide qué vuelta mostrar durante el repaso y aporta los dorsos, las cartas seleccionables y los rótulos que ayudan a reconocer las jugadas. Cada lección conserva sus pasos, pistas, cálculos, controles y foco. Las demostraciones que ilustran una carta suelta en la guía pueden seguir centrando la muestra.
 
 La mano guiada comprueba selección y foco con teclado, estabilidad de la muestra en el repaso y traslado al cambiar el dador. La lección de truco comprueba el canto, la respuesta y el repaso hacia atrás. Probabilidad comprueba selección, foco y privacidad de las otras manos al recorrer un reparto. Las pruebas reutilizan la comprobación de superposición y posición a la derecha del dador. Playwright ejecuta estos recorridos en escritorio y móvil.
+
+## Capturas de verificación
+
+Las capturas se generan con `CAPTURAS_TAPETE` durante las pruebas de navegador.
+
+| Vista | Escritorio | 320 px |
+| --- | --- | --- |
+| Tercetos, tercer duelo | [1280 px](../capturas/tercetos-1280.jpg) | [320 px](../capturas/tercetos-320.jpg) |
+| Mano guiada | [1280 px](../capturas/mano-guiada-1280.jpg) | [320 px](../capturas/mano-guiada-320.jpg) |
+| Lección de truco | [1280 px](../capturas/truco-1280.jpg) | [320 px](../capturas/truco-320.jpg) |
+| Lección de probabilidad | [1280 px](../capturas/probabilidad-1280.jpg) | [320 px](../capturas/probabilidad-320.jpg) |
