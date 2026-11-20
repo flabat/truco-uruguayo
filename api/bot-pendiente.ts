@@ -24,15 +24,15 @@ export async function programarTurno(db: PoolClient, mesa: string, mano: ManoPub
 
 type Snapshot = {mesa: string; politica: string; meta: number; humanos: Asiento[]};
 type Fila = Snapshot & ((Registro & {modo: "1v1" | "2v2"}) | (RegistroTercetos & {modo: "3v3"}));
-async function snapshot(db: Pool | PoolClient, id?: string) {
+async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) {
   return (await db.query<Fila>(`SELECT h.*, m.politica, m.modo, m.meta,
     ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
-    WHERE m.cupo_exhibicion IS NULL AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null])).rows[0];
+    WHERE (m.cupo_exhibicion IS NOT NULL) = $2 AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null, exhibicion])).rows[0];
 }
 
-interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }
+export interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }
 
 async function decidirTurno(fila: Fila, servicio: Inferencia) {
   if (fila.modo === "3v3") {
@@ -74,6 +74,22 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
   };
 }
 
+async function aplicarInferencia(db: PoolClient, fila: Fila, turno: NonNullable<Awaited<ReturnType<typeof decidirTurno>>>) {
+  await turno.aplicar(db, fila.humanos);
+  await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [fila.mesa,fila.numero,fila.version,turno.asiento,turno.bot.solicitada,
+      turno.bot.aplicada,turno.bot.fallback ?? null,turno.bot.latenciaMs]);
+}
+
+/** El trabajador de exhibiciones ya bloqueó esta mesa sin asientos humanos. */
+export async function jugarTurnoExhibicion(db: PoolClient, servicio: Inferencia, id: string) {
+  const fila = await snapshot(db, id, true);
+  if (!fila || fila.humanos.length) throw new Error("Se esperaba un turno pendiente entre computadoras.");
+  const turno = await decidirTurno(fila, servicio);
+  if (!turno) throw new Error("La exhibición perdió el turno pendiente.");
+  await aplicarInferencia(db, fila, turno);
+}
+
 /** Inferencia desde una sola lectura sin bloqueo. El único escritor revalida el turno después. */
 export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar: (id: string) => void, id?: string) {
   const fila = await snapshot(pool, id);
@@ -92,10 +108,7 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
       await db.query("ROLLBACK");
       return false;
     }
-    await turno.aplicar(db, actual.humanos);
-    await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [fila.mesa,fila.numero,fila.version,turno.asiento,turno.bot.solicitada,
-        turno.bot.aplicada,turno.bot.fallback ?? null,turno.bot.latenciaMs]);
+    await aplicarInferencia(db, actual, turno);
     await db.query("COMMIT");
   } catch (error) {
     await db.query("ROLLBACK");

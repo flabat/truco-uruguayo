@@ -1,6 +1,6 @@
 # ADR 0001 · Completar el salón con chicos de exhibición
 
-**Estado.** Objetivo de producto acordado. Mecanismo propuesto.
+**Estado.** Objetivo de producto acordado. Reposición y ritmo implementados en #231.
 
 ## Opciones
 
@@ -28,3 +28,11 @@ Reutilizar el árbitro, el reparto, la política fijada al crear la mesa y la co
 El bucle actual de ensayos busca trabajo al terminar cada turno y procesa mesas con `solo_computadoras`. Separar por origen tanto la selección de la próxima mano como la de turnos pendientes, para que ese bucle no adelante una exhibición. Dar prioridad a mesas humanas y limitar el trabajo simultáneo de exhibición. Después de un reinicio, recuperar desde el último turno confirmado y la versión guardada, sin reproducir una ráfaga de turnos vencidos. Ante un fallo repetido, quitar la mesa de la lista, reintentar con espera creciente y liberar su cupo al retirarla. Los espectadores ven que se interrumpió.
 
 Propuesta de frescura inicial: último hecho público en los últimos cinco minutos para mesas humanas y 60 segundos para exhibiciones. La lectura de un espectador, la voz y los gestos privados no renuevan esa marca. Separar la retención y medir el almacenamiento de exhibiciones antes de dejarlas en marcha permanente. Clasificación, perfiles y métricas de jugadores excluyen los asientos técnicos. Entrenamiento y evaluación permanecen entre computadoras, fuera del tráfico de espectadores y de las partidas humanas. [Ensayos actuales](../../../../api/ensayos.ts) · [Confirmación de turnos](../../../../api/bot-pendiente.ts)
+
+## Activación y recuperación
+
+Con `EXHIBICIONES_HABILITADAS=1` en el servicio API de Compose, el servidor repone los cupos al arrancar y revisa el faltante cada 15 segundos. El valor inicial es `0` para preparar el piloto. Al volver a `0` y recrear la API, los chicos ya reservados terminan y se suspenden las altas. La primera mano se escalona por cupo. Después de cada acción se esperan cuatro segundos hasta el próximo turno u ocho si toca repartir otra mano.
+
+PostgreSQL concede un solo paso de exhibición a la vez entre instancias. El trabajador cede si hay una decisión de computadora pendiente en una mesa humana. La acción, el replay y la nueva fecha se confirman juntos. Al perder la conexión antes de confirmar, el siguiente proceso retoma el turno. El primer fallo oculta la mesa del directorio y permite reintentar a los ocho segundos. El segundo espera dieciséis segundos. El tercero retira el chico, elimina su turno pendiente y deja enfriar ese cupo durante cinco minutos.
+
+En la prueba de integración, dos procesos reponen seis cupos sobre una base descartable y el reloj simulado permite recorrer los seis chicos hasta el cierre. El piloto de capacidad y retención se sigue en [#234](https://github.com/flabat/truco-uruguayo/issues/234).
