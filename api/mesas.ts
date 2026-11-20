@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
+import type { EdicionModelo } from "../src/lib/modelos.ts";
 import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
 import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
@@ -34,6 +35,7 @@ export interface VistaMesa {
   formato: FormatoMesa;
   versionReglas: number;
   politica: string;
+  edicionModelo?: EdicionModelo;
   miAsiento: number;
   invitacion: string;
   lista: boolean;
@@ -53,11 +55,13 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   if (!esId(id)) return null;
   const { rows } = await db.query(`
     SELECT m.id, m.modo, m.meta, m.publica, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
+           p.nombre AS nombre_modelo, to_char(p.publicada_el, 'YYYY-MM-DD') AS fecha_modelo,
            a.asiento, a.computadora, j.nombre
       FROM juego.mesas m
       JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
       JOIN juego.asientos a ON a.mesa = m.id
       LEFT JOIN juego.jugadores j ON j.id = a.jugador
+      LEFT JOIN juego.publicaciones_modelo p ON p.pin = m.politica
      WHERE m.id = $1
      ORDER BY a.asiento
   `, [id, jugadorId]);
@@ -77,6 +81,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   return {
     id: mesa.id, modo: mesa.modo, meta: mesa.meta, formato: formatoMesa(mesa.modo, mesa.version_senas),
     versionReglas: mesa.modo === "3v3" ? versionReglasTercetos : versionReglasOnline, politica: mesa.politica,
+    edicionModelo: mesa.nombre_modelo == null ? undefined : { nombre: mesa.nombre_modelo, publicado: mesa.fecha_modelo },
     publica: mesa.publica, creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
   };
 }

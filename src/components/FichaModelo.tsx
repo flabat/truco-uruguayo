@@ -1,7 +1,13 @@
-import { edicionModelo, fechaModelo } from "../lib/modelos";
+import { edicionModelo, fechaModelo, type EdicionModelo } from "../lib/modelos";
 
-export default function FichaModelo({ id, formato }: { id: string; formato?: string }) {
-  const { nombre, publicado } = edicionModelo(id, formato);
+interface Props {
+  id: string;
+  formato?: string;
+  edicion?: EdicionModelo;
+}
+
+export default function FichaModelo({ id, formato, edicion }: Props) {
+  const { nombre, publicado } = edicion ?? edicionModelo(id, formato);
   return (
     <details className="ficha-modelo">
       <summary>
