@@ -17,7 +17,7 @@ if (!config) throw Error("Falta la configuración del ensayo de Discord.");
 const sim = real ? null : discordSimulado(config.servidor, config.categoria);
 const transporte = sim?.transporte ?? fetch;
 const discord = crearDiscord(config, transporte);
-const voz = crearVoz(pool, discord);
+const voz = crearVoz(pool, discord, origen);
 let rutas = crearRutasMesas(pool, origen, () => {}, true, voz);
 const server = real ? null : createServer((req,res) => rutas(req,res).catch(() => res.writeHead(503).end()));
 if (server) await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
@@ -91,10 +91,23 @@ try {
   const vecino = await abrir(otra,c);
   assert.ok(primero !== vecino);
   if (sim) {
+    assert.equal(sim.mensajes.get(primero).length, 1);
+    const boton = sim.mensajes.get(primero)[0].components[0].components[0];
+    assert.deepEqual(boton, { type: 2, style: 5, label: "Volver a la mesa", url: new URL("/volver/?mesa=" + una.id, origen).href });
     sim.destinos.clear();
     assert.ok(await abrir(una,a) === primero);
+    assert.equal(sim.mensajes.get(primero).length, 1);
     sim.canales.delete(primero);
-    assert.ok(await abrir(una,b) !== primero);
+    sim.fallos.perderMensaje = true;
+    const reemplazo = await abrir(una,b);
+    assert.notEqual(reemplazo, primero);
+    assert.equal(sim.mensajes.get(reemplazo).length, 1);
+    assert.equal((await vinculo(una.id)).regreso_publicado, false);
+    sim.fallos.perderMensaje = false;
+    await pool.query("UPDATE juego.voz_discord SET intento_regreso=now()-interval '1 hour' WHERE mesa=$1", [una.id]);
+    assert.equal(await abrir(una,a), reemplazo);
+    assert.equal((await vinculo(una.id)).regreso_publicado, true);
+    assert.equal(sim.mensajes.get(reemplazo).length, 1);
     const tercera = await crear(a,"3v3");
     const pedir = () => post("/api/mesas/" + tercera.id + "/voz",a);
     sim.fallos.crear = 403;
@@ -115,7 +128,7 @@ try {
     assert.equal((await pedir()).status,503);
     assert.equal(sim.canales.size,creados);
     sim.fallos.auditoria = false;
-    rutas = crearRutasMesas(pool, origen, () => {}, true, crearVoz(pool, crearDiscord(config, transporte)));
+    rutas = crearRutasMesas(pool, origen, () => {}, true, crearVoz(pool, crearDiscord(config, transporte), origen));
     const recuperado = await abrir(tercera,a);
     assert.equal(sim.canales.size,creados);
     assert.equal((await vinculo(tercera.id)).canal,recuperado);
@@ -196,8 +209,9 @@ function discordSimulado(servidor, categoria) {
   const canales = new Map([[manual, { id: manual, name: "Mesa 1", type: 2, guild_id: servidor, parent_id: categoria }]]);
   const auditoria = [];
   const destinos = new Map();
+  const mensajes = new Map();
   let secuencia = BigInt(manual);
-  const fallos = { crear: 0, perderAlta: false, auditoria: false, borrar: false };
+  const fallos = { crear: 0, perderAlta: false, perderMensaje: false, auditoria: false, borrar: false };
   function json(body, status = 200) { return Response.json(body, { status }); }
   const desconocido = () => json({ code: 10003 }, 404);
   async function transporte(url, opciones) {
@@ -217,6 +231,17 @@ function discordSimulado(servidor, categoria) {
     const [, recurso, id, operacion] = ruta.split("/");
     if (recurso === "invites") return json({ channel: canales.get(destinos.get(id)) });
     if (!canales.has(id)) return desconocido();
+    if (operacion === "messages") {
+      const anteriores = mensajes.get(id) ?? [];
+      if (opciones.method === "GET") return json(anteriores);
+      const datos = JSON.parse(opciones.body);
+      assert.equal(datos.enforce_nonce, true);
+      assert.equal(datos.nonce, id);
+      const m = { ...datos, id: String(++secuencia), channel_id: id, author: { id: bot } };
+      mensajes.set(id, [...anteriores, m]);
+      if (fallos.perderMensaje) throw Error("Respuesta del mensaje perdida");
+      return json(m);
+    }
     if (operacion === "invites") {
       const code = "simulado" + (++secuencia);
       destinos.set(code, id);
@@ -228,5 +253,5 @@ function discordSimulado(servidor, categoria) {
     }
     return json(canales.get(id) ?? {});
   }
-  return { transporte, canales, destinos, auditoria, manual, fallos };
+  return { transporte, canales, destinos, mensajes, auditoria, manual, fallos };
 }
