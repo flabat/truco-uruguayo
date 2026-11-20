@@ -4,11 +4,13 @@ import type { tableroEspectador } from "../../../api/tablero-espectador";
 import { descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
+import type { VersionesMesa } from "./cliente";
+import PieMesa from "./PieMesa";
 import { participantesMesa, type ResumenMesa } from "./resumen-salon";
 import { useConsultaSalon } from "./useConsultaSalon";
 import "./visor.css";
 
-interface MesaEspectadora extends ResumenMesa {
+interface MesaEspectadora extends ResumenMesa, VersionesMesa {
   asientos: { asiento: number; equipo: number; tipo: "humano" | "computadora"; nombre: string }[];
   estado: "en-juego" | "terminada" | "interrumpida";
   vozDisponible?: boolean;
@@ -54,6 +56,7 @@ function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
   const turno = tablero.turnoDeCartas;
   const resultado = tablero.resultado;
   return <>
+    <PieMesa mesa={mesa} />
     <Tanteador meta={mesa.meta} puntos={mesa.puntos} propio={0} equipo={equipo} />
     <div className="j-partida visor-partida">
       <Tapete

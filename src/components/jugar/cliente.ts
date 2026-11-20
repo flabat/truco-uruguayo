@@ -17,15 +17,17 @@ export interface Asiento {
   tipo: "vacio" | "humano" | "computadora";
   nombre: string | null;
 }
-export interface Mesa {
+export interface VersionesMesa {
+  versionReglas?: number;
+  politica?: string;
+  edicionModelo?: EdicionModelo;
+}
+export interface Mesa extends VersionesMesa {
   publica: boolean;
   id: string;
   modo: Modo;
   meta: number;
   formato?: Format | "triples";
-  versionReglas?: number;
-  politica?: string;
-  edicionModelo?: EdicionModelo;
   creadorId: string;
   miAsiento: number;
   invitacion: string;

@@ -33,11 +33,11 @@ async function ok(id, lector) {
   assert.equal(tag, '"' + datos.versionPublica + '"');
   return { datos, tag };
 }
-async function altas(exhibicion) {
+async function altas(exhibicion, politica = "incumbent-online-v1") {
   const invitacion = randomUUID();
-  const { rows: [mesa] } = await pool.query(`INSERT INTO juego.mesas(modo, meta, creador, invitacion, publica, version_senas, solo_computadoras, cupo_exhibicion)
-    VALUES ('2v2',2,$1,$2,true,'senas-equipo-v1',$3,$4) RETURNING id`,
-    [jugadores[0].id, invitacion, exhibicion, exhibicion ? 1 : null]);
+  const { rows: [mesa] } = await pool.query(`INSERT INTO juego.mesas(modo, meta, creador, invitacion, publica, version_senas, solo_computadoras, cupo_exhibicion, politica)
+    VALUES ('2v2',2,$1,$2,true,'senas-equipo-v1',$3,$4,$5) RETURNING id`,
+    [jugadores[0].id, invitacion, exhibicion, exhibicion ? 1 : null, politica]);
   for (let i = 0; i < 4; i++) await pool.query("INSERT INTO juego.asientos(mesa,asiento,jugador,computadora) VALUES ($1,$2,$3,$4)",
     [mesa.id, i, exhibicion ? null : jugadores[i].id, exhibicion]);
   return { ...mesa, invitacion };
@@ -66,15 +66,32 @@ try {
   for (let i = 0; i < 6; i++) jugadores.push(await cuenta());
   const [ana, rival, , , lector, otro] = jugadores;
   const { id, invitacion } = await altas(false);
-  const expo = await altas(true);
+  const pin = createHash("sha256").update(randomUUID()).digest("hex");
+  const expo = await altas(true, pin);
   assert.equal((await leer(id, lector)).status, 404);
   assert.equal((await leer("", null)).status, 401);
+  assert.equal((await leer(expo.id, null)).status, 401);
   assert.equal((await fetch(base + "/" + id, { method: "POST", headers: { Cookie: lector.cookie } })).status, 405);
   await repartir(id, [0,1,2,3]);
   await repartir(expo.id, []);
   const lista = await ok("", lector);
   const filas = lista.datos.mesas.filter(m => m.id === id || m.id === expo.id);
   assert.deepEqual(filas.map(m => [m.id,m.humanos,m.computadoras]), [[id,4,0],[expo.id,0,4]]);
+  for (const campo of ["versionReglas", "politica", "edicionModelo"])
+    assert.ok(filas.every(m => !(campo in m)));
+  const sinEdicion = await ok(expo.id, lector);
+  assert.equal(sinEdicion.datos.versionReglas, 1);
+  assert.equal(sinEdicion.datos.politica, pin);
+  assert.ok(!("edicionModelo" in sinEdicion.datos));
+  const edicion = { nombre: "Parejas con señas 7", publicado: "2026-11-24" };
+  await pool.query(`INSERT INTO juego.publicaciones_modelo (pin, formato, edicion, nombre, publicada_el)
+    VALUES ($1,$2,7,$3,$4)`, [pin, formato, edicion.nombre, edicion.publicado]);
+  const conEdicion = await leer(expo.id, lector, sinEdicion.tag);
+  assert.equal(conEdicion.status, 200);
+  const nuevaVista = await conEdicion.json();
+  assert.equal(nuevaVista.politica, pin);
+  assert.deepEqual(nuevaVista.edicionModelo, edicion);
+  assert.equal((await leer(expo.id, otro, conEdicion.headers.get("etag"))).status, 304);
   assert.equal((await leer("", otro, lista.tag)).status, 304);
   let version = 1;
   async function actuar(asiento, accion) {
@@ -85,6 +102,9 @@ try {
   const listaConJugadas = await ok("", otro);
   const antes = await huella(id);
   const vista = await ok(id, lector);
+  assert.equal(vista.datos.versionReglas, 1);
+  assert.equal(vista.datos.politica, "incumbent-online-v1");
+  assert.ok(!("edicionModelo" in vista.datos));
   assert.deepEqual(await ok(id, otro), vista);
   assert.deepEqual(await ok(id, ana), vista);
   assert.equal((await leer(id, otro, "W/" + vista.tag)).status, 304);
@@ -136,7 +156,10 @@ try {
   await pool.query("UPDATE juego.mesas SET fin_publico=now()-interval '31 minutes' WHERE id=$1", [id]);
   assert.equal((await leer(id, lector, fin.tag)).status, 404);
   await pool.query("UPDATE juego.mesas SET exhibicion_retirada=true WHERE id=$1", [expo.id]);
-  assert.equal((await ok(expo.id, lector)).datos.estado, "interrumpida");
+  const retirada = (await ok(expo.id, lector)).datos;
+  assert.equal(retirada.estado, "interrumpida");
+  assert.deepEqual(retirada.edicionModelo, edicion);
+  await pool.query("DELETE FROM juego.publicaciones_modelo WHERE pin=$1", [pin]);
   assert.ok(!(await ok("", lector)).datos.mesas.some(m => m.id === expo.id));
   const otra = await altas(false);
   await repartir(otra.id, [0,1,2,3]);

@@ -33,6 +33,8 @@ Ambas lecturas requieren la cookie de sesión y devuelven JSON con una `versionP
 | Lectura | Respuesta 200 |
 | --- | --- |
 | `GET /api/salon/mesas` | `mesas` en orden estable, primero las humanas. Cada fila incluye `id`, `modo`, `formato`, `origen`, cantidades `humanos` y `computadoras`, `manoNumero`, `puntos` por equipo, `meta` y `ultimaActividad` en UTC. |
-| `GET /api/salon/mesas/:id` | Los campos de la fila, `asientos` con posición, equipo, tipo y etiqueta neutral, `estado` y `tablero`. El tablero reúne muestra, mano, dador, vueltas, acciones visibles de la mano actual, valor del truco, cobros y resultado. `turnoDeCartas` expresa el orden del tapete. Un canto puede requerir respuesta entre cartas. |
+| `GET /api/salon/mesas/:id` | Los campos de la fila, `asientos` con posición, equipo, tipo y etiqueta neutral, `estado`, las versiones de la mesa y `tablero`. El tablero reúne muestra, mano, dador, vueltas, acciones visibles de la mano actual, valor del truco, cobros y resultado. `turnoDeCartas` expresa el orden del tapete. Un canto puede requerir respuesta entre cartas. |
+
+El pie muestra la versión del motor guardada en la mano (`versionReglas`) y el identificador del modelo asignado a la mesa (`politica`). Cuando hay una publicación registrada para ese identificador, `edicionModelo` aporta el nombre y la fecha que ve el espectador. Al abrir el nombre se puede consultar la huella completa.
 
 El detalle de una mesa fresca indica `en-juego`. Un chico cerrado indica `terminada` durante los 30 minutos siguientes. Una exhibición retirada después de repartir indica `interrumpida`. Los tres estados requieren una mesa pública. Una mesa en espera, una mesa activa que perdió frescura y una partida cuya sobremesa venció devuelven 404.

@@ -1,6 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import FichaModelo from "../FichaModelo";
 import {
   ErrorMesa,
   idComando,
@@ -12,6 +10,7 @@ import {
   type Mesa,
   type Modo,
 } from "./cliente";
+import PieMesa from "./PieMesa";
 import SalonEnVivo from "./SalonEnVivo";
 import VisorEspectador from "./VisorEspectador";
 import { VozDiscord } from "./VozDiscord";
@@ -231,17 +230,6 @@ function MesaAbierta({
   const partida = esTerceto ? recibida : presentada;
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
-  const enMesa = Boolean(mesa && !error);
-  useEffect(() => {
-    if (!enMesa) return;
-    const motor = document.getElementById("version-motor-mesa");
-    if (!motor) return;
-    const sinMotor = motor.textContent;
-    motor.textContent = mesa?.versionReglas == null ? "Sin informar" : `v${mesa.versionReglas}`;
-    return () => {
-      motor.textContent = sinMotor;
-    };
-  }, [enMesa, mesa?.versionReglas]);
   useEffect(() => {
     const clave = "truco.ultima-mesa." + jugador.id;
     try {
@@ -290,18 +278,13 @@ function MesaAbierta({
       </div>
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
-  const pieModelo = document.getElementById("version-modelo-mesa");
-  const formatoModelo = mesa.formato ?? { "1v1": "duel", "2v2": "pairs", "3v3": "triples" }[mesa.modo];
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
   const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
   const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
   return (
     <div ref={tablero}>
-      {pieModelo && createPortal(
-        mesa.politica ? <FichaModelo id={mesa.politica} formato={formatoModelo} edicion={mesa.edicionModelo} /> : "Sin informar",
-        pieModelo,
-      )}
+      <PieMesa mesa={mesa} />
       <div className="j-barra">
         <span>
           {versionSenas ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
