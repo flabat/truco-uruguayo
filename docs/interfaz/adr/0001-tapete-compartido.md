@@ -10,7 +10,7 @@ La vista espectadora de parejas dibujaba una muestra suelta en el centro. La API
 
 El tapete compartido recibe asientos con identificadores físicos, el asiento situado abajo, el dador, el mano, la muestra y la vuelta visible con su resultado cuando corresponde. La disposición de dos, cuatro o seis asientos depende de la orientación. Para jugar, el asiento de quien mira queda abajo. Para mirar, queda abajo el asiento cero. El tapete ubica mazo y muestra, conserva el índice y el palo visibles y dibuja cartas jugadas, ganadores y pardas.
 
-Las vistas deciden qué momento mostrar. El jugador conserva sus pausas de presentación, el espectador actualiza su instantánea pública y una lección puede retroceder. Las vistas también preparan sus etiquetas y controles. El jugador puede aportar sus cartas, dorsos, avisos y pruebas de tantos desde su vista autorizada. Si una prueba contiene la carta jugada, la muestra en la propia prueba con su indicador de vuelta.
+Las vistas deciden qué momento mostrar. El jugador conserva sus pausas de presentación, el espectador actualiza su instantánea pública y una lección puede retroceder. Las vistas también preparan sus etiquetas y controles. El jugador puede aportar sus cartas, avisos y pruebas de tantos desde su vista autorizada. Cuando un puesto no muestra una jugada ni una prueba, el tapete calcula sus dorsos como tres cartas menos las jugadas públicas de ese asiento. El jugador y la lección reservan ese espacio para sus propias cartas. En el visor se aplica a todos los asientos. Si una prueba contiene la carta jugada, la muestra en la propia prueba con su indicador de vuelta.
 
 La API espectadora [proyecta los hechos públicos antes de enviarlos](../../multijugador/salon-en-vivo/adr/0002-vista-espectadora.md). Una seña y la misma jugada en silencio producen la misma respuesta para el espectador.
 
@@ -22,7 +22,7 @@ La vista de tercetos sigue encargándose de las pausas de los cantos, las prueba
 
 ## Aprendizaje
 
-La mano guiada, la lección de truco y la de probabilidad usan el tapete de parejas con «Vos» abajo y la muestra junto al dador. El adaptador compartido decide qué vuelta mostrar durante el repaso y aporta los dorsos, las cartas seleccionables y los rótulos que ayudan a reconocer las jugadas. Cada lección conserva sus pasos, pistas, cálculos, controles y foco. Las demostraciones que ilustran una carta suelta en la guía pueden seguir centrando la muestra.
+La mano guiada, la lección de truco y la de probabilidad usan el tapete de parejas con «Vos» abajo y la muestra junto al dador. El adaptador compartido decide qué vuelta mostrar durante el repaso y aporta las cartas seleccionables y los rótulos que ayudan a reconocer las jugadas. Cada lección conserva sus pasos, pistas, cálculos, controles y foco. Las demostraciones que ilustran una carta suelta en la guía pueden seguir centrando la muestra.
 
 La mano guiada comprueba selección y foco con teclado, estabilidad de la muestra en el repaso y traslado al cambiar el dador. La lección de truco comprueba el canto, la respuesta y el repaso hacia atrás. Probabilidad comprueba selección, foco y privacidad de las otras manos al recorrer un reparto. Las pruebas reutilizan la comprobación de superposición y posición a la derecha del dador. Playwright ejecuta estos recorridos en escritorio y móvil.
 

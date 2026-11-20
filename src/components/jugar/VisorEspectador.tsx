@@ -66,6 +66,7 @@ function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
         titulo={"Mano " + mesa.manoNumero}
         numeroVuelta={numeroVuelta}
         vuelta={cerrada ?? actual}
+        manosOcultas={{ jugadas: tablero.acciones.filter(a => a.tipo === "carta") }}
         terminada={Boolean(resultado && !cerrada)}
       />
       <section className="j-jugada-panel" aria-label="Desarrollo de la mano">

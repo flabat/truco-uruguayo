@@ -14,6 +14,7 @@ interface Puesto {
 interface DetallePuesto {
   contenido?: ReactNode;
   reemplazaJugada?: boolean;
+  ocultaDorsos?: boolean;
   mano?: ReactNode;
 }
 
@@ -32,6 +33,7 @@ interface Props {
   vuelta?: (Vuelta & { resultado?: ResultadoVuelta }) | null;
   terminada?: boolean;
   nombrarJugadas?: boolean;
+  manosOcultas?: { jugadas: readonly { asiento: number }[]; asientoVisible?: number };
   detalle?: (asiento: number, carta: CardId | undefined, ganadora: boolean) => DetallePuesto;
 }
 
@@ -45,7 +47,7 @@ export function Naipe({ id, base, alt = nombrar(id) }: { id: CardId; base: strin
   return <img src={base + "img/cartas/tatu/" + id + ".webp"} width={384} height={596} alt={alt} />;
 }
 
-export function Dorsos({ base, cantidad }: { base: string; cantidad: number }) {
+function Dorsos({ base, cantidad }: { base: string; cantidad: number }) {
   return <div className="j-dorsos" role="img" aria-label={cantidad === 1 ? "Una carta en mano" : cantidad + " cartas en mano"}>
     {Array.from({ length: cantidad }, (_, i) => (
       <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
@@ -67,7 +69,7 @@ function MuestraConMazo({ carta, base }: { carta: CardId; base: string }) {
 
 export function Tapete({
   base, asientos, asientoInferior, dador, mano, muestra, titulo, numeroVuelta, estado,
-  participantes, turno, vuelta, terminada, nombrarJugadas, detalle,
+  participantes, turno, vuelta, terminada, nombrarJugadas, manosOcultas, detalle,
 }: Props) {
   const lugares = posiciones[asientos.length];
   const seis = lugares.length === 6;
@@ -92,6 +94,9 @@ export function Tapete({
         const carta = vuelta?.jugadas.find(j => j.asiento === a.asiento)?.carta;
         const ganadora = ganador === a.asiento;
         const extra = detalle?.(a.asiento, carta, ganadora);
+        const restantes = manosOcultas && !carta && !extra?.ocultaDorsos && a.asiento !== manosOcultas.asientoVisible
+          ? 3 - manosOcultas.jugadas.filter(jugada => jugada.asiento === a.asiento).length
+          : 0;
         return <div key={a.asiento} className={"j-puesto j-" + posicion} role="group"
           aria-label={a.etiqueta ?? a.nombre ?? undefined} data-activo={participantes?.includes(a.asiento)}
           data-turno={a.asiento === turno || undefined}>
@@ -101,6 +106,7 @@ export function Tapete({
               <span>{[a.papel, a.asiento === dador && "Dador", a.asiento === mano && "Mano"].filter(Boolean).join(" · ")}</span>
             </div>
             {extra?.contenido}
+            {restantes > 0 && <Dorsos base={base} cantidad={restantes} />}
             {carta && !extra?.reemplazaJugada && <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
               <Naipe base={base} id={carta} />
               {nombrarJugadas && <span className="j-nombre-jugada" aria-hidden="true">{nombrar(carta)}</span>}
