@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { VozDiscord } from "./VozDiscord";
 import type { tableroEspectador } from "../../../api/tablero-espectador";
 import { descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Naipe, Tanteador } from "./Tablero";
@@ -9,6 +10,7 @@ import "./visor.css";
 interface MesaEspectadora extends ResumenMesa {
   asientos: { asiento: number; equipo: number; tipo: "humano" | "computadora"; nombre: string }[];
   estado: "en-juego" | "terminada" | "interrumpida";
+  vozDisponible?: boolean;
   tablero: ReturnType<typeof tableroEspectador>;
 }
 
@@ -129,6 +131,12 @@ export default function VisorEspectador({ id, volver, crear, volverAMiMesa, alPe
       <p role="alert">{datos ? "Reconectando… Estás viendo la última jugada recibida." : "No se pudo cargar la mesa."}</p>
       <button className="j-sec" onClick={reintentar}>Reintentar</button>
     </div>}
-    {datos && <Tapete mesa={datos} />}
+    {datos && <>
+      {datos.vozDisponible
+        ? <VozDiscord key={datos.id} espectador exhibicion={datos.origen === "exhibicion"}
+            ruta={"/api/salon/mesas/" + encodeURIComponent(datos.id)} />
+        : <p className="j-ayuda">La voz de esta mesa en Discord está desactivada.</p>}
+      <Tapete mesa={datos} />
+    </>}
   </section>;
 }
