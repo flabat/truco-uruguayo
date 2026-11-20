@@ -1,6 +1,6 @@
 # Habilitar el ingreso con Google y Facebook
 
-Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. El registro por correo está desactivado.
+Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
 
 ![Pantalla de ingreso de Truco Oriental con las opciones Facebook y Google](ingreso-social.png)
 

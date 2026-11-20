@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { chromium, expect } from "@playwright/test";
 
 const [web, ...habilitados] = process.argv.slice(2);
@@ -13,7 +14,7 @@ async function verificarOrdenYClaveLocal(viewport, locale) {
   const cuentaLocal = page.locator("#truco-existing-account");
   const usuario = page.locator("#username");
   await expect(proveedores).toHaveCount(habilitados.length);
-  await expect(page.locator("#kc-registration")).toHaveCount(0);
+  await expect(page.locator("#kc-registration a")).toBeVisible();
   if (habilitados.length === 0) {
     await expect(introduccion).toHaveCount(0);
     await expect(cuentaLocal).toHaveCount(0);
@@ -86,6 +87,37 @@ try {
     assert.equal(destino.searchParams.get("redirect_uri"), new URL("broker/" + proveedor + "/endpoint", issuer).href);
     assert.ok(destino.searchParams.get("state"));
     await page.goto(ingreso);
+  }
+  if (habilitados.length === 2) {
+    const correo = "registro-" + randomUUID() + "@example.test";
+    const clave = "Clave-descartable-407!";
+    await page.goto(new URL("/perfil/", web).href);
+    assert.equal((await page.request.get(new URL("/api/perfil", web).href)).status(), 401);
+    await page.getByRole("button", { name: "Ingresar al juego", exact: true }).click();
+    await page.locator("#kc-registration a").click();
+    await expect(page.locator("#username")).toHaveCount(0);
+    await page.locator("#firstName").fill("Alicia");
+    await page.locator("#lastName").fill("Prueba");
+    await page.locator("#email").fill(correo);
+    await page.locator("#password").fill(clave);
+    await page.locator("#password-confirm").fill(clave);
+    await page.locator("#kc-register-form input[type=submit], #kc-register-form button[type=submit]").click();
+    await expect(page).toHaveURL(url => url.pathname === "/perfil/");
+    await expect(page.getByText("Alicia", { exact: true })).toBeVisible();
+    await expect(page.getByText("Todavía no jugaste ninguna partida.")).toBeVisible();
+    const perfil = new URL("/api/perfil", page.url()).href;
+    const primero = await (await page.request.get(perfil)).json();
+    await page.getByRole("button", { name: "Cerrar sesión" }).click();
+
+    const otraPagina = await browser.newPage();
+    await otraPagina.goto(ingreso);
+    await otraPagina.locator("#truco-existing-account summary").click();
+    await otraPagina.locator("#username").fill(correo);
+    await otraPagina.locator("#password").fill(clave);
+    await otraPagina.locator("#kc-login").click();
+    await expect(otraPagina.getByRole("link", { name: "Mi perfil" })).toBeVisible();
+    assert.deepEqual((await (await otraPagina.request.get(perfil)).json()).jugador, primero.jugador);
+    await otraPagina.close();
   }
   console.log("Proveedores de la pantalla de ingreso verificados:", habilitados.join(", ") || "solo cuenta local");
 } finally {

@@ -37,7 +37,7 @@ Para preparar las imágenes antes de ocupar el VPS, también podés ejecutar `dc
 
 ## Dar acceso a los jugadores
 
-El realm `mesa` arranca vacío y admite cuentas creadas por el operador. El cliente `truco-web` sólo acepta la dirección HTTPS exacta de retorno del sitio y usa PKCE. La URL del emisor forma parte de la identidad del jugador: conservá el nombre DNS al migrar o restaurar. El administrador y el realm maestro sólo se alcanzan desde el servidor.
+El realm `mesa` arranca vacío y admite cuentas creadas por el operador. El registro por correo se habilita después de configurar y probar el envío de correo. El cliente `truco-web` sólo acepta la dirección HTTPS exacta de retorno del sitio y usa PKCE. La URL del emisor forma parte de la identidad del jugador: conservá el nombre DNS al migrar o restaurar. El administrador y el realm maestro sólo se alcanzan desde el servidor.
 
 Para dar el primer acceso, entrá por SSH, ejecutá `dc exec identidad bash` y abrí una sesión de administración desde el contenedor. El primer comando de autenticación pide la contraseña de `operador`. El archivo de sesión se elimina al salir de esa shell.
 
@@ -56,6 +56,23 @@ exit
 ```
 
 Sustituí los datos del ejemplo por los del jugador. Entregale la contraseña temporal por un canal privado. Al ingresar por primera vez deberá elegir la suya. Para operar de forma permanente, creá un administrador nominal en el realm maestro, asignale el rol de realm `admin`, verificá su ingreso por la consola local y retirale el acceso al administrador de arranque. Cambiar `KC_ADMIN_PASSWORD` en el archivo de entorno no cambia la contraseña de una cuenta existente.
+
+### Registro con correo y contraseña
+
+Configurá el remitente y el servidor SMTP del realm `mesa` desde **Realm settings → Email** de Keycloak. Probá el envío desde esa pantalla con un buzón al que tengas acceso. La configuración de correo queda en Keycloak. Usá la consola desde el acceso administrativo privado o configurá el campo `smtpServer` con `kcadm.sh` y un archivo protegido. [Configurar el correo de un realm](https://www.keycloak.org/docs/latest/server_admin/#_email)
+
+Con la sesión administrativa del paso anterior, ejecutá este comando sobre el realm existente.
+
+```bash
+kc update realms/mesa \
+  -s registrationAllowed=true -s registrationEmailAsUsername=true \
+  -s loginWithEmailAllowed=true -s duplicateEmailsAllowed=false \
+  -s verifyEmail=true -s resetPasswordAllowed=true
+```
+
+En una ventana privada, abrí el sitio, elegí **Ingresar al juego** y registrá una cuenta de prueba. Comprobá que llega el mensaje, confirmá el correo y elegí la contraseña. Volvé a entrar con ese correo y probá **Olvidé mi contraseña**. Las cuentas existentes con un correo pendiente de verificación pueden recibir el mismo pedido al ingresar, incluso si usan un proveedor social. Probá un reingreso por usuario y uno por cada proveedor habilitado.
+
+En la portada o el salón, **Mi perfil** muestra el ID de jugador y los chicos empezados con esa cuenta. Incluye modalidad, tanteador, resultado y fecha cuando el registro la conserva. El correo y la contraseña quedan bajo la gestión de Keycloak.
 
 ## Copias y recuperación
 
