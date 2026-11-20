@@ -1,0 +1,31 @@
+---
+import Brand from "../components/Brand.astro";
+import Panel from "../components/gestion/Panel";
+import "@tabler/core/dist/css/tabler.min.css";
+import "@fontsource/dm-sans/latin-400.css";
+import "@fontsource/dm-sans/latin-500.css";
+import "@fontsource/dm-sans/latin-700.css";
+import "@fontsource/dm-serif-text/latin-400.css";
+import "../components/gestion/gestion.css";
+---
+<!doctype html>
+<html lang="es-UY">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>Administración · Truco Oriental</title>
+  </head>
+  <body class="gestion">
+    <a class="visually-hidden-focusable" href="#contenido">Saltar al contenido</a>
+    <header class="gestion-cabecera">
+      <div class="container-xl"><Brand /><span class="gestion-nombre">Administración</span></div>
+    </header>
+    <main id="contenido" class="container-xl">
+      <Panel client:load />
+      <noscript>Activá JavaScript para consultar el panel.</noscript>
+    </main>
+  </body>
+</html>

@@ -148,5 +148,17 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     for (const grupo of mesas.values()) for (const { ws } of grupo) ws.terminate();
     wss.close();
   }
-  return { alCambiar, cerrar };
+
+  function jugadoresConectados() {
+    const porMesa = new Map<string, Set<string>>();
+    for (const [mesa, grupo] of mesas) {
+      const jugadores = new Set<string>();
+      for (const { jugador, ws } of grupo) {
+        if (ws.readyState === WebSocket.OPEN) jugadores.add(jugador);
+      }
+      if (jugadores.size) porMesa.set(mesa, jugadores);
+    }
+    return porMesa;
+  }
+  return { alCambiar, cerrar, jugadoresConectados };
 }

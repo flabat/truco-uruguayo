@@ -30,6 +30,7 @@ services:
       PGHOST: db
       PGDATABASE: truco
       PGUSER: mesa_app
+      GESTION_SUJETO: ${GESTION_SUJETO:-}
       PGPASSWORD: ${GAME_DB_PASSWORD:?Falta la contraseña del juego}
       WEB_ORIGIN: https://${SITE_HOST}
       OIDC_CALLBACK: https://${SITE_HOST}/api/auth/callback

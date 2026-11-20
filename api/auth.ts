@@ -16,17 +16,23 @@ function cookieDe(req: IncomingMessage, name: string) {
     .find(part => part.startsWith(name + "="))?.slice(name.length + 1) ?? "";
 }
 
-export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
+export async function identidadDeSesion(pool: Pool, req: IncomingMessage) {
   const handle = cookieDe(req, sesion);
   if (!handle) return null;
-  const { rows: [player] } = await pool.query(`
-    SELECT j.id, j.nombre FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
+  const { rows: [player] } = await pool.query<{ id: string; nombre: string; emisor: string; sujeto: string }>(`
+    SELECT j.id, j.nombre, j.emisor, j.sujeto FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
     WHERE s.clave = $1 AND s.vence > now()
   `, [hash(handle)]);
   return player ?? null;
 }
 
+export async function jugadorDeSesion(pool: Pool, req: IncomingMessage) {
+  const jugador = await identidadDeSesion(pool, req);
+  return jugador && { id: jugador.id, nombre: jugador.nombre };
+}
+
 function regresoPermitido(valor: string | null) {
+  if (valor === "/gestion/") return valor;
   // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
   if (valor === "/perfil/" || valor === "/jugar/?crear=1") return valor;
   if (valor && /^(?:\/volver\/\?mesa=|\/jugar\/\?mirar=)[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor)) return valor;
