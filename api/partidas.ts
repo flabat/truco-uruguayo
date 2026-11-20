@@ -110,7 +110,7 @@ export async function avanzarEnsayo(pool: Pool) {
     const {rows: [mesa]} = await db.query<Pick<VistaMesa, "id" | "modo" | "meta"> & {
       version_senas: string | null; perfil_tercetos: string | null;
     }>(`SELECT id, modo, meta, version_senas, perfil_tercetos FROM juego.mesas
-      WHERE solo_computadoras AND NOT ensayo_terminado
+      WHERE solo_computadoras AND cupo_exhibicion IS NULL AND NOT ensayo_terminado
       AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t WHERE t.mesa=juego.mesas.id) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
     if (mesa) {
       verificarPerfil(mesa.modo, mesa.perfil_tercetos);

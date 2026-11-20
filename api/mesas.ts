@@ -29,6 +29,7 @@ export interface VistaMesa {
   id: string;
   modo: Modo;
   meta: number;
+  publica: boolean;
   creadorId: string;
   formato: FormatoMesa;
   versionReglas: number;
@@ -51,7 +52,7 @@ export function esRutaMesas(pathname: string) {
 export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: string, web: URL): Promise<VistaMesa | null> {
   if (!esId(id)) return null;
   const { rows } = await db.query(`
-    SELECT m.id, m.modo, m.meta, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
+    SELECT m.id, m.modo, m.meta, m.publica, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
            a.asiento, a.computadora, j.nombre
       FROM juego.mesas m
       JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
@@ -76,7 +77,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   return {
     id: mesa.id, modo: mesa.modo, meta: mesa.meta, formato: formatoMesa(mesa.modo, mesa.version_senas),
     versionReglas: mesa.modo === "3v3" ? versionReglasTercetos : versionReglasOnline, politica: mesa.politica,
-    creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
+    publica: mesa.publica, creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
   };
 }
 
@@ -100,7 +101,11 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
   throw new Error("Versión de señas desconocida.");
 }
 
-async function crear(db: PoolClient, jugador: string, modo: unknown, formato: unknown, metaElegida: unknown, tercetos: boolean): Promise<Cambio> {
+async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean): Promise<Cambio> {
+  const { modo, formato, meta: metaElegida, publica = false } = datos;
+  if (typeof publica !== "boolean" || (publica && modo === "3v3")) {
+    throw new ErrorPeticion(400, "Solo duelo y parejas admiten una mesa pública. Indicá la visibilidad con verdadero o falso.");
+  }
   if (modo !== "1v1" && modo !== "2v2" && modo !== "3v3") throw new ErrorPeticion(400, "Modalidad de mesa desconocida.");
   if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
@@ -112,10 +117,10 @@ async function crear(db: PoolClient, jugador: string, modo: unknown, formato: un
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
   const token = randomBytes(24).toString("base64url");
-  const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos) VALUES ($1,$2,$3,$4,$5,
-    COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8) RETURNING id`,
+  const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos, publica) VALUES ($1,$2,$3,$4,$5,
+    COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8, $9) RETURNING id`,
     [modo, jugador, token, nueva === "triples" ? null : signalVersionFor(nueva), meta, nueva,
-      modo === "3v3" ? politicaTercetos : null, modo === "3v3" ? perfilTercetos : null]);
+      modo === "3v3" ? politicaTercetos : null, modo === "3v3" ? perfilTercetos : null, publica]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };
 }
@@ -187,7 +192,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         await db.query("BEGIN");
         if (invitacion) cambio = await unir(db, jugador.id, invitacion[1]);
         else if (mesa) cambio = await agregarComputadora(db, mesa[1], jugador.id, datos.asiento);
-        else cambio = await crear(db, jugador.id, datos.modo, datos.formato, datos.meta, tercetos);
+        else cambio = await crear(db, jugador.id, datos, tercetos);
         vista = await leerMesa(db, cambio.id, jugador.id, web);
         await db.query("COMMIT");
       } catch (error) {

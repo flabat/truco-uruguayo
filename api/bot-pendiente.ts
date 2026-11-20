@@ -29,7 +29,7 @@ async function snapshot(db: Pool | PoolClient, id?: string) {
     ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
-    WHERE ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null])).rows[0];
+    WHERE m.cupo_exhibicion IS NULL AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null])).rows[0];
 }
 
 interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }

@@ -43,6 +43,7 @@ COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-migracion-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
