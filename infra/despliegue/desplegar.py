@@ -101,7 +101,16 @@ def prepare_data(sha):
     compose(sha, "run", "--rm", "--no-deps", "-T", "backup", "listar")
     volumes = run("docker", "volume", "ls", "-q", "--filter", f"label=com.docker.compose.project={PROJECT}",
                   "--filter", "label=com.docker.compose.volume=postgres", capture_output=True).stdout.strip()
-    if volumes:
+    if not volumes:
+        return
+    # Incluso "run --no-deps backup iniciar" puede crear el volumen vacío.
+    # Una base existente o parcialmente inicializada siempre requiere la copia.
+    volume, = volumes.splitlines()
+    contents = run("docker", "run", "--rm", "--network", "none", "--mount",
+                   f"type=volume,source={volume},target=/datos,readonly,volume-nocopy",
+                   "--entrypoint", "find", f"truco-oriental/backup:{sha}",
+                   "/datos", "-mindepth", "1", "-maxdepth", "1", "-print", "-quit", capture_output=True)
+    if contents.stdout.strip():
         compose(sha, "run", "--rm", "--no-deps", "-T", "backup", "guardar")
 
 

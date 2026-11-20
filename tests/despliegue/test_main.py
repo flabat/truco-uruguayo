@@ -96,12 +96,12 @@ class ChecksTest(unittest.TestCase):
                 self.assertEqual(d.verified(sha), expected)
 
     def test_data_checks_for_new_and_existing_volumes(self):
-        for volumes in ("", "truco-produccion_postgres"):
-            with self.subTest(volumes=volumes), patch.object(d, "compose") as compose, patch.object(d, "run") as run:
-                run.return_value.stdout = volumes
+        for volume, contents in [("", ""), ("truco-produccion_postgres", ""), ("truco-produccion_postgres", "/datos/PG_VERSION")]:
+            with self.subTest(volume=volume, contents=contents), patch.object(d, "compose") as compose, patch.object(d, "run") as run:
+                run.side_effect = [subprocess.CompletedProcess([], 0, value) for value in (volume, contents)]
                 d.prepare_data("a" * 40)
                 self.assertEqual([call.args[-1] for call in compose.call_args_list],
-                                 ["listar", "guardar"] if volumes else ["listar"])
+                                 ["listar", "guardar"] if contents else ["listar"])
 
     def test_build_exports_exact_commit_and_uses_separate_image_tags(self):
         with tempfile.TemporaryDirectory() as tmp:
