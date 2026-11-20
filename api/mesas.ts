@@ -43,7 +43,7 @@ export interface VistaMesa {
 const capacidad: Record<Modo, number> = { "1v1": 2, "2v2": 4, "3v3": 6 };
 const esId = (id: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
 const rutaMesa = /^\/api\/mesas\/([^/]+)(\/computadoras|\/voz)?$/;
-const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)\/unirse$/;
+const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)(\/unirse)?$/;
 
 export function esRutaMesas(pathname: string) {
   return pathname === "/api/modalidades" || pathname === "/api/mesas" || rutaMesa.test(pathname) || rutaInvitacion.test(pathname);
@@ -101,11 +101,12 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
   throw new Error("Versión de señas desconocida.");
 }
 
-async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean): Promise<Cambio> {
+async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean, salonHabilitado: boolean): Promise<Cambio> {
   const { modo, formato, meta: metaElegida, publica = false } = datos;
   if (typeof publica !== "boolean" || (publica && modo === "3v3")) {
     throw new ErrorPeticion(400, "Solo duelo y parejas admiten una mesa pública. Indicá la visibilidad con verdadero o falso.");
   }
+  if (publica && !salonHabilitado) throw new ErrorPeticion(409, "El salón está cerrado. Podés crear una mesa privada.");
   if (modo !== "1v1" && modo !== "2v2" && modo !== "3v3") throw new ErrorPeticion(400, "Modalidad de mesa desconocida.");
   if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
@@ -155,7 +156,7 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   return { id, cambiado: true };
 }
 
-export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>) {
+export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>, salonHabilitado = false) {
   return async function mesas(req: IncomingMessage, res: ServerResponse) {
     try {
       const path = (req.url ?? "").split("?")[0];
@@ -169,6 +170,16 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
       const jugador = await jugadorDeSesion(pool, req);
       if (!jugador) throw new ErrorPeticion(401, "Ingresá al juego para usar una mesa.");
 
+      if (invitacion && !invitacion[2]) {
+        if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
+        const { rows: [info] } = await pool.query(`
+          SELECT m.publica, a.mesa AS id FROM juego.mesas m
+          LEFT JOIN juego.asientos a ON a.mesa=m.id AND a.jugador=$2
+          WHERE m.invitacion=$1`, [invitacion[1], jugador.id]);
+        if (!info) throw new ErrorPeticion(404, "La invitación no es válida.");
+        responderJson(res, 200, { publica: info.publica, sentada: Boolean(info.id), ...(info.id && { id: info.id }) });
+        return;
+      }
       if (req.method === "GET" && mesa && !mesa[2]) {
         const vista = await leerMesa(pool, mesa[1], jugador.id, web);
         if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");
@@ -192,7 +203,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         await db.query("BEGIN");
         if (invitacion) cambio = await unir(db, jugador.id, invitacion[1]);
         else if (mesa) cambio = await agregarComputadora(db, mesa[1], jugador.id, datos.asiento);
-        else cambio = await crear(db, jugador.id, datos, tercetos);
+        else cambio = await crear(db, jugador.id, datos, tercetos, salonHabilitado);
         vista = await leerMesa(db, cambio.id, jugador.id, web);
         await db.query("COMMIT");
       } catch (error) {

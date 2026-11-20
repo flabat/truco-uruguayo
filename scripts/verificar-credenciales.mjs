@@ -82,6 +82,16 @@ try {
     assert.equal(result.status, 303);
     assert.equal(result.headers.get("location"), new URL(i === 2 ? "/#jugador" : destinos[i], app.url).href);
   }
+  const id = "00000000-0000-4000-8000-000000000232";
+  for (const [volver, esperado] of [
+    ["/jugar/?mirar=" + id, "/jugar/?mirar=" + id],
+    ["/jugar/?mirar=" + id + "&mesa=otra", "/#jugador"],
+    ["/jugar/?mirar=invalida", "/#jugador"],
+  ]) {
+    const { params, cookie } = await iniciar(volver);
+    const respuesta = await completar(params, cookie);
+    assert.equal(respuesta.headers.get("location"), new URL(esperado, app.url).href);
+  }
   console.log("Dos ingresos en pestañas independientes recuperaron su destino y el regreso externo se descartó.");
 } finally {
   await pool.end();

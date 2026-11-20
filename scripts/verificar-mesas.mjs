@@ -52,7 +52,18 @@ try {
       assert.equal(r.datos.lista, true);
       assert.equal((await entrar(ana, r.datos)).datos.miAsiento, 0);
     }
-    console.log("Las mesas, invitaciones y asientos se conservaron tras el reinicio.");
+    const { rows: [publica] } = await pool.query(`UPDATE juego.mesas SET ultimo_hecho_publico=now()
+      WHERE creador=$1 AND publica AND modo='2v2' RETURNING id`, [ana.id]);
+    assert.ok((await pool.query("SELECT 1 FROM juego.mesas_en_juego WHERE id=$1", [publica.id])).rowCount);
+    for (const ruta of ["/api/salon/mesas", "/api/salon/mesas/" + publica.id]) {
+      const r = await fetch(base + ruta, { headers: { Cookie: ana.cookie, "If-None-Match": "*" } });
+      assert.equal(r.status, 404);
+      assert.equal(r.headers.get("etag"), null);
+      assert.deepEqual(await r.json(), { error: "No se encontró la mesa en el salón." });
+    }
+    assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"1v1", publica:true})).estado, 409);
+    await crear(ana, "1v1");
+    console.log("Salón cerrado aun con ETag. Se conservaron las mesas, las invitaciones y la creación privada.");
   } else {
     assert.equal((await llamar(null, "POST", "/api/mesas", {modo:"2v2"})).estado, 401);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"2v2"}, "https://example.org")).estado, 403);
@@ -69,6 +80,11 @@ try {
     assert.equal(seis.formato, "triples");
     assert.deepEqual(seis.asientos.map(a => a.equipo), [0,1,0,1,0,1]);
     const dupla = await crear(ana, "2v2", 50);
+    const previa = invitacion(dupla).replace(/\/unirse$/, "");
+    assert.equal((await llamar(null, "GET", previa)).estado, 401);
+    assert.deepEqual((await llamar(eva, "GET", previa)).datos, { publica: false, sentada: false });
+    assert.deepEqual((await llamar(ana, "GET", previa)).datos, { publica: false, sentada: true, id: dupla.id });
+    assert.equal((await llamar(eva, "POST", previa)).estado, 405);
     assert.equal(dupla.formato, "pairs");
     assert.equal(dupla.asientos.length, 4);
     assert.deepEqual(dupla.asientos.map(a=>a.equipo), [0,1,0,1]);
@@ -105,6 +121,8 @@ try {
     assert.equal((await entrar(ana, manoAMano)).estado, 409);
 
     const mixta = await crear(ana, "2v2", 40, true);
+    assert.deepEqual((await llamar(diego, "GET", invitacion(mixta).replace(/\/unirse$/, ""))).datos,
+      { publica: true, sentada: false });
     assert.equal((await bot(ana, mixta, 2)).datos.asientos[2].equipo, 0);
     assert.equal((await entrar(diego, mixta)).datos.miAsiento, 1);
     const final = await bot(ana, mixta, 3);

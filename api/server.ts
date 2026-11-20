@@ -20,8 +20,9 @@ const pool = new pg.Pool({
 pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", error.message));
 await migrate(pool);
 const web = new URL(process.env.WEB_ORIGIN!);
+const salonHabilitado = process.env.SALON_HABILITADO === "1";
 const auth = crearAuth(pool, {
-  web,
+  web, salonHabilitado,
   callback: new URL(process.env.OIDC_CALLBACK ?? "/api/auth/callback", web),
   issuer: new URL(process.env.OIDC_ISSUER!),
   backend: new URL(process.env.OIDC_BACKEND!),
@@ -60,7 +61,7 @@ const server = createServer(async (request, response) => {
 });
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
-const salon = crearSalon(pool);
+const salon = crearSalon(pool, salonHabilitado);
 const partidas = crearPartidas(pool, web, alCambiar);
 const configVoz = configDiscord();
 const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,
@@ -68,7 +69,7 @@ const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABAS
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
 const detenerLimpieza = voz?.iniciarLimpieza();
-const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz);
+const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz, salonHabilitado);
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
