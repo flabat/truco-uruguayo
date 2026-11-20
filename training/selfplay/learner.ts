@@ -2,8 +2,13 @@ import {esCardId, pieza, rangoDe, type CardId} from "../../src/motor/cartas.ts";
 import {compararCartas} from "../../src/motor/jerarquia.ts";
 import {openAnchored, type AnchoredActor, type CycleFormat} from "../anchored/actor.ts";
 import {signals, type ActionId, type Move, type Policy, type SeatObservation, type Signal} from "../contracts/index.ts";
+import {duelCardOdds} from "./duel-card-odds.ts";
 
 export const selfplayKind = "truco-residual-selfplay-v1";
+export const duelOddsKind = "truco-residual-duel-card-odds-v1";
+export function isSelfplayKind(value: unknown): value is typeof selfplayKind | typeof duelOddsKind {
+  return value === selfplayKind || value === duelOddsKind;
+}
 const bids = ["flor","paso-flor","con-flor-envido","contraflor-al-resto","falta-envido","envido",
   "real-envido","truco","retruco","vale-cuatro","quiero","no-quiero"] as const;
 const slots = 8, width = 32 * slots, gestureOffset = 3 + bids.length;
@@ -12,7 +17,7 @@ const bounded = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
 const slot = (row: number, bin: number) => slots * row + bounded(Math.floor(bin), 0, slots - 1);
 
 export interface SelfplayActor {
-  kind: typeof selfplayKind;
+  kind: typeof selfplayKind | typeof duelOddsKind;
   format: CycleFormat;
   anchor: AnchoredActor;
   weights: number[];
@@ -29,6 +34,25 @@ export function createLearner(anchor: AnchoredActor): LearnerState {
     weights:Array(length).fill(0), updates:0}, squaredGradient:Array(length).fill(0), critic:Array(width).fill(0)};
 }
 export function exportSelfplay(learner: LearnerState): SelfplayActor { return structuredClone(learner.actor); }
+
+const oddsStart = 29;
+function oddsSlot(row: number, probability: number) {
+  // Reserve separate bins for impossible and certain events.
+  const bin = probability === 0 ? 0 : probability === 1 ? slots - 1 : Math.ceil(probability * (slots - 2));
+  return slot(row, bin);
+}
+
+/** Preserve the starter's policy while activating the three formerly unused feature rows. */
+export function withDuelCardOdds(actor: SelfplayActor): SelfplayActor {
+  validate(actor);
+  if (actor.format !== "duel") throw new Error("Card counting requires a duel");
+  const upgraded = structuredClone(actor);
+  if (upgraded.kind === selfplayKind) {
+    upgraded.kind = duelOddsKind;
+    upgraded.weights = upgraded.weights.map((w, i) => i % width >= oddsStart * slots ? 0 : w);
+  }
+  return upgraded;
+}
 
 function cardPower(card: CardId, muestra: CardId) {
   return compararCartas(card, muestra.startsWith("copas") ? "bastos-04" : "copas-04", muestra);
@@ -129,6 +153,9 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
   const anchored = anchor.decide(view,legal), preferred=legal[anchored.indexOf(1)];
   const [prefix,body]=preferred.split("/"), preferredMove=(body??prefix) as Move;
   const c=context(obs), moves:MoveOption[]=[];
+  const odds = actor.kind === duelOddsKind ? duelCardOdds(obs) : undefined;
+  const best = c.cards.at(-1);
+  if (odds && best) c.features.push(oddsSlot(oddsStart + 2, odds.get(best)!.higher));
   const byId=new Map(legal.map((id,i)=>[id,i]));
   for (const action of legal) {
     if (action.includes("/")) continue;
@@ -141,6 +168,10 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
       const power=c.powers[position];
       f=[...c.features,slot(25,power/3),slot(26,Math.sign(power-c.enemyHigh)+1),slot(27,Math.sign(power-c.allyHigh)+1),
         slot(28,pieza(id,obs.view.muestra)!==null?1:0)];
+      if (odds) {
+        const {higher, tiedBest} = odds.get(id)!;
+        f.push(oddsSlot(oddsStart, higher), oddsSlot(oddsStart + 1, tiedBest));
+      }
     }
     const gestures=[{id:action,choice:alternative(gestureOffset,c.features)}];
     for (const cue of truthful(obs,c,id)) {
@@ -160,7 +191,8 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
   return {moves,features:c.features,distribution};
 }
 function validate(actor: SelfplayActor) {
-  if (actor.kind!==selfplayKind || actor.anchor?.format!==actor.format || !Number.isSafeInteger(actor.updates)
+  if (!isSelfplayKind(actor.kind) || (actor.kind===duelOddsKind && actor.format!=="duel")
+      || actor.anchor?.format!==actor.format || !Number.isSafeInteger(actor.updates)
       || actor.updates<0 || !Array.isArray(actor.weights) || actor.weights.length!==length
       || !actor.weights.every(w=>Number.isFinite(w) && Math.abs(w)<=4)) throw Error("Invalid residual policy artifact");
 }
@@ -178,7 +210,7 @@ export function openSelfplay(actor: SelfplayActor): Policy {
   validate(actor);
   const snapshot=structuredClone(actor), anchor=openAnchored(snapshot.anchor);
   const unchanged=snapshot.updates===0 || snapshot.weights.every(w=>w===0);
-  return {id:selfplayKind+"-"+actor.format,decide(obs,legal) {
+  return {id:actor.kind+"-"+actor.format,decide(obs,legal) {
     if (unchanged) return anchor.decide(obs,legal);
     return calculate(snapshot,anchor,obs,legal,false).distribution;
   }};

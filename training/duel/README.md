@@ -1,5 +1,7 @@
 # Entrenamiento local del duelo
 
+Para medir cuánto aporta recordar las cartas jugadas al modelo de la liga, seguí la [comparación de duelo con conteo de cartas](../selfplay/duel-card-odds.md).
+
 Desde la raíz con Node 24, un solo proceso por directorio de corrida. La semilla controla repartos, elección de los nodos de entrenamiento y dos flujos de muestreo de jugadas. La evaluación de desarrollo deriva otra semilla con dominio propio. Todos los asientos los ocupan computadoras.
 
 ```sh
