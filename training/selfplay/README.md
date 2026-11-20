@@ -2,6 +2,40 @@
 
 Cada chico a 40 se juega íntegramente entre políticas de computadora. El duelo cuenta con dos trabajadores. Las parejas cuentan con dos, uno sin señas y otro con señas visibles únicamente para el compañero. El motor proyecta la mesa desde el asiento que decide. La modalidad histórica con señas públicas queda excluida.
 
+## Entrenar desde Terminal en la Mac
+
+Desde la raíz del repositorio, con Git, Node 24 y Python 3.9 o posterior, podés preparar otra generación a partir de una liga completa. Usá la carpeta de la liga con su protocolo, sus modelos y sus evaluaciones. En esta Mac, la última liga del ciclo de noviembre se guardó en `runs/league-extended-02`. Si cambiás de checkout o de equipo, pasá la ruta absoluta a esa carpeta o copiá la carpeta completa. Los pesos y las partidas se guardan fuera de Git.
+
+```sh
+npm run league -- start runs/piloto-03 --from runs/league-extended-02
+runs/piloto-03/league status
+runs/piloto-03/league results
+```
+
+La primera orden verifica los resultados del padre, congela el código del commit actual y los insumos, elige una semilla nueva y arranca la liga en segundo plano. Podés cerrar Terminal. Todo el trabajo se ejecuta en la Mac y funciona sin conexión, cuenta de Codex ni clave de API. Dejá la Mac enchufada y con la tapa abierta durante la corrida. El supervisor evita la suspensión por inactividad mientras tiene tiempo disponible.
+
+El piloto autónomo entrena tres épocas de veinte minutos por trabajador, con un plazo total de dos horas para entrenamiento y evaluaciones. El cribado incluye los aspirantes de la propia liga y el finalista anterior. El perfil queda identificado como `local-pilot` en el protocolo.
+
+Usá `status` durante la corrida para ver la época, los chicos jugados por cada trabajador, el plazo y la dirección del tablero local. Al terminar queda el archivo `monitor.html`. La orden `results` verifica los resultados por reparto y muestra para cada modalidad el campeón conservado o clasificado, la ruta del modelo, el intervalo de victoria directa y la familia de rivales con el peor límite inferior. La clasificación exige que el límite inferior simultáneo del 95 % supere el 50 % contra el campeón y que el cambio supere −2 puntos porcentuales en cada familia. La activación en el juego es una decisión posterior.
+
+Si el piloto cumple su criterio de extensión, podés usar su carpeta como padre de seis horas de aprendizaje por trabajador, con ocho horas de plazo total. La orden `results` informa la decisión. Ambas variantes de parejas deben superar al campeón en el límite inferior directo. Frente al rival de cartas fuertes, el cambio respecto del finalista previo debe ser de al menos −2 puntos porcentuales en ambas y de al menos +1 punto en alguna.
+
+```sh
+npm run league -- start runs/extendida-03 --from runs/piloto-03 --profile extended
+```
+
+Si cerraste sesión o reiniciaste la Mac, usá el mismo directorio y la misma versión exacta de Node. La reanudación verifica el código y los insumos guardados antes de recuperar checkpoints y el plazo original. Un plazo vencido queda registrado como corrida incompleta. Podés iniciar otro piloto desde la última liga completa.
+
+```sh
+runs/piloto-03/league resume
+```
+
+Para comprobar la preparación y elegir cuándo gastar el presupuesto, agregá `--prepare-only` a `start` y luego usá `resume`. El directorio de salida debe ser nuevo. Los archivos de una corrida preparada permiten reanudarla sin el padre. Si un trabajador agota sus reintentos, `status` indica el registro y la orden para reintentar tras resolver la causa.
+
+También podés sustituir `npm run league --` por `python3 -B training/selfplay/local.py` en todas las órdenes. Esta liga solo usa las bibliotecas incluidas con Node y Python. Si Node 24 está instalado fuera del PATH, asigná su ruta absoluta a `TRUCO_NODE`.
+
+## Preparación y trabajadores individuales
+
 Con Node 24, la preparación congela las entradas de un ciclo anterior, los rivales y compañeros de evaluación, la semilla y los umbrales de promoción en un directorio nuevo.
 
 ```sh

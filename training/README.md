@@ -2,6 +2,8 @@
 
 La arena juega chicos a 40 usando el mismo reductor que el servidor. Cada asiento decide a partir de su mano y de los hechos públicos y, cuando se habilitan señas, de los gestos del propio equipo. Los tres formatos activos son, `duel`, `pairs` y `pairs-private-senas`. Todos los participantes en entrenamiento y evaluación son computadoras.
 
+Para continuar desde los modelos verificados del último ciclo, usá la [liga autónoma desde Terminal en macOS](selfplay/README.md#entrenar-desde-terminal-en-la-mac). Incluye preparación, ejecución en segundo plano, reanudación y resultados por modalidad.
+
 ## Primera corrida desde un checkout nuevo
 
 Usá Node 24 y npm. Los dos entrenadores de parejas requieren uv y el entorno del proyecto con Python 3.12.14 y PyTorch 2.14.1. Estos comandos fijan las dependencias y crean corridas cortas:
