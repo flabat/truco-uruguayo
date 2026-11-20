@@ -21,9 +21,16 @@
   border: 1px solid var(--line);
 }
 #mesa-tapete { display: grid; min-width: 0; }
-.guiada .j-tapete .j-ocupante { min-height: clamp(9.75rem, 14vw, 10.5rem); align-content: start; display: grid; place-items: start center; }
-.guiada .j-tapete .j-frente .j-ocupante { padding-top: .25rem; }
+/* La muestra conserva su anclaje cuando aparece el nombre de una jugada o el ganador. */
+.guiada .j-tapete .j-puestos { grid-template-rows: repeat(2, minmax(9rem, auto)) auto; }
+.guiada .j-tapete .j-ocupante { align-content: start; display: grid; place-items: start center; }
+.guiada .j-tapete .j-jugada img { width: clamp(34px, 4.5vw, 42px); }
+.guiada .j-tapete :is(.j-frente, .j-vos) .j-muestra { align-self: start; }
+.guiada .j-tapete .j-vos .j-ocupante { align-self: start; }
+.guiada .j-tapete :is(.j-izquierda, .j-derecha):has(.j-muestra) .j-ocupante { min-height: 9rem; }
+.guiada .j-tapete .j-izquierda:has(.j-muestra) .j-ocupante { align-content: end; }
 .guiada .j-tapete header { gap: .5rem; min-height: 4.25rem; }
+.guiada .j-tapete .j-estado-vuelta { line-height: 1.2; }
 .guiada .j-tapete header strong { font-size: clamp(1rem, 2.1vw, 1.5rem); }
 .mesa-panel {
   min-width: 0;
