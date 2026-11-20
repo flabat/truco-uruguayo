@@ -113,3 +113,23 @@ systemctl enable --now truco-deploy.timer
 ```
 
 Repetí la instalación si cambia el ejecutor o sus unidades de systemd. El proyecto Compose mantiene el mismo nombre y conserva sus volúmenes entre versiones.
+
+### Pausa temporal de las copias
+
+Para publicar sin copias externas, creá el archivo de decisión del operador y ejecutá el servicio como administrador:
+
+```sh
+touch /etc/truco-oriental/copias-pausadas
+systemctl start truco-deploy.service
+```
+
+Durante la pausa se publican la web, la API, PostgreSQL y Keycloak. Se omiten las copias diarias y las previas a migraciones. La pérdida del disco puede causar la pérdida de cuentas y partidas.
+
+Para reactivar, configurá el destino real y la clave en `production.env`, inicializá el repositorio si es nuevo y verificá que `backup listar` tenga acceso según las instrucciones anteriores. Luego ejecutá como administrador:
+
+```sh
+rm /etc/truco-oriental/copias-pausadas
+systemctl start truco-deploy.service
+```
+
+El siguiente despliegue guarda una copia de la base existente y arranca la programación diaria aunque el commit siga siendo el mismo.
