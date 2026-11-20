@@ -62,7 +62,7 @@ const configVoz = configDiscord();
 const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,
   connectionTimeoutMillis: 5000, statement_timeout: 15000 });
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
-const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz)) : undefined;
+const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
 const detenerLimpieza = voz?.iniciarLimpieza();
 const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz);
 const vivo = crearVivo(server, web, {

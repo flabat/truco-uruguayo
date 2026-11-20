@@ -2,11 +2,11 @@ import type { Pool, PoolClient } from "pg";
 import { FalloDiscord, type Discord } from "./discord.ts";
 import { ErrorPeticion } from "./http.ts";
 
-type Vinculo = { mesa: string; servidor: string; categoria: string; intento: string; canal: string | null; retirando: boolean };
+type Vinculo = { mesa: string; servidor: string; categoria: string; intento: string; canal: string | null; retirando: boolean; regreso_publicado: boolean; intento_regreso: Date | null };
 const fin = `(SELECT (evento->>'fecha')::timestamptz + interval '30 minutes'
   FROM juego.eventos_chico WHERE mesa=$1 AND evento->>'tipo'='cierre')`;
 
-export function crearVoz(pool: Pool, discord: Discord) {
+export function crearVoz(pool: Pool, discord: Discord, web: URL) {
   const { servidor, categoria } = discord;
   // Bloqueo de sesión para que el intento ya esté confirmado antes del POST no idempotente.
   // Las conexiones de voz pertenecen a un pool separado del arbitraje de las cartas.
@@ -47,6 +47,28 @@ export function crearVoz(pool: Pool, discord: Discord) {
     return canal;
   }
 
+  async function publicarRegreso(db: PoolClient, vinculo: Vinculo, canal: string) {
+    const destino = new URL("/volver/", web);
+    destino.searchParams.set("mesa", vinculo.mesa);
+    if (vinculo.intento_regreso && Date.now() - vinculo.intento_regreso.getTime() >= 60_000) {
+      // Un canal concurrido o un mensaje borrado podrían ocultar el envío anterior.
+      // Sin evidencia del bot conservamos el intento, para no duplicarlo.
+      if (!await discord.encontrarRegreso(canal, destino.href)) throw new FalloDiscord();
+    } else {
+      if (!vinculo.intento_regreso) {
+        await db.query("UPDATE juego.voz_discord SET intento_regreso=now() WHERE mesa=$1", [vinculo.mesa]);
+      }
+      try { await discord.publicarRegreso(canal, destino.href); }
+      catch (error) {
+        if (!vinculo.intento_regreso && error instanceof FalloDiscord && error.definitivo) {
+          await db.query("UPDATE juego.voz_discord SET intento_regreso=NULL WHERE mesa=$1", [vinculo.mesa]);
+        }
+        throw error;
+      }
+    }
+    await db.query("UPDATE juego.voz_discord SET regreso_publicado=true, intento_regreso=NULL WHERE mesa=$1", [vinculo.mesa]);
+  }
+
   async function abrir(id: string, modo: "1v1" | "2v2" | "3v3") {
     return conMesa(id, async db => {
       // Los escritores del juego bloquean la mesa. Soltarla antes de llamar al proveedor.
@@ -78,7 +100,7 @@ export function crearVoz(pool: Pool, discord: Discord) {
         if (!nuevo) {
           // Discord confirmó Unknown Channel para el ID guardado o acreditado por auditoría.
           const { rows: [v] } = await db.query<Vinculo>(`UPDATE juego.voz_discord
-            SET canal=null,intento=gen_random_uuid(),retirando=false,reintentar='-infinity',
+            SET canal=null,intento=gen_random_uuid(),regreso_publicado=false,intento_regreso=NULL,retirando=false,reintentar='-infinity',
                 vence=coalesce(${fin},now()+interval '24 hours') WHERE mesa=$1 RETURNING *`, [id]);
           vinculo = v;
         }
@@ -89,7 +111,16 @@ export function crearVoz(pool: Pool, discord: Discord) {
         }
         await db.query("UPDATE juego.voz_discord SET canal=$2 WHERE mesa=$1", [id,canal]);
       }
-      return discord.invitar(canal);
+      const invitacion = await discord.invitar(canal);
+      if (!vinculo.regreso_publicado) {
+        try { await publicarRegreso(db, vinculo, canal); }
+        catch (error) {
+          // La invitación ya es utilizable. La próxima apertura reintenta el mensaje.
+          if (!(error instanceof FalloDiscord)) throw error;
+          console.warn("Mensaje de regreso pendiente para la mesa", id);
+        }
+      }
+      return invitacion;
     }, true);
   }
 

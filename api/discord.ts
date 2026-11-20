@@ -91,6 +91,23 @@ export function crearDiscord(config: ConfigDiscord, transporte = fetch) {
       if (entradas.length !== 1) throw new FalloDiscord();
       return entradas[0].target_id;
     },
+    async publicarRegreso(canal: string, destino: string) {
+      // Un snowflake de canal es único y cabe en los 25 caracteres del nonce de Discord.
+      const mensaje = await llamar(`/channels/${canal}/messages`, "POST", {
+        nonce: canal, enforce_nonce: true, allowed_mentions: { parse: [] },
+        components: [{ type: 1, components: [{ type: 2, style: 5, label: "Volver a la mesa", url: destino }] }],
+      });
+      if (mensaje.channel_id !== canal || !esId(mensaje.id)) throw new FalloDiscord();
+    },
+    async encontrarRegreso(canal: string, destino: string) {
+      // La respuesta pudo perderse hace días, fuera de la ventana de deduplicación del nonce.
+      const bot = await llamar("/users/@me");
+      const mensajes = await llamar(`/channels/${canal}/messages?after=${canal}&limit=100`);
+      return esId(bot.id) && mensajes.some((m: { author?: { id: string }; components?: {
+        components?: { type: number; style: number; url?: string }[] }[] }) =>
+        m.author?.id === bot.id && m.components?.some(fila =>
+          fila.components?.some(b => b.type === 2 && b.style === 5 && b.url === destino)));
+    },
     async invitar(id: string) {
       const i = await llamar(`/channels/${id}/invites`, "POST", { max_age: 600, max_uses: 0, unique: false });
       if (i?.channel?.id !== id || !/^[A-Za-z0-9_-]{1,100}$/.test(i.code ?? "") ||
