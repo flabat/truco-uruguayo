@@ -3,10 +3,67 @@ import { chromium, expect } from "@playwright/test";
 
 const [web, ...habilitados] = process.argv.slice(2);
 const browser = await chromium.launch();
+const ingreso = new URL("/api/auth/login", web).href;
+
+async function verificarOrdenYClaveLocal(viewport, locale) {
+  const page = await browser.newPage({ viewport, locale });
+  await page.goto(ingreso);
+  const proveedores = page.locator("#kc-social-providers a[id^='social-']");
+  const introduccion = page.locator("#truco-social-intro");
+  const cuentaLocal = page.locator("#truco-existing-account");
+  const usuario = page.locator("#username");
+  await expect(proveedores).toHaveCount(habilitados.length);
+  await expect(page.locator("#kc-registration")).toHaveCount(0);
+  if (habilitados.length === 0) {
+    await expect(introduccion).toHaveCount(0);
+    await expect(cuentaLocal).toHaveCount(0);
+    await expect(usuario).toBeVisible();
+    await expect(page.locator("#kc-login")).toBeVisible();
+  } else {
+    await expect(introduccion).toContainText(locale === "es" ? "crear tu jugador" : "join the game");
+    for (const nombre of ["Google", "Facebook"].filter(nombre => habilitados.includes(nombre.toLowerCase()))) {
+      const boton = page.locator("#social-" + nombre.toLowerCase());
+      const etiqueta = (locale === "es" ? "Continuar con " : "Sign in with ") + nombre;
+      await expect(boton).toHaveText(etiqueta);
+      await expect(boton).toHaveAccessibleName(etiqueta);
+    }
+    const resumen = cuentaLocal.locator("summary");
+    await expect(resumen).toBeVisible();
+    await expect(usuario).toBeHidden();
+    const posicionResumen = await resumen.boundingBox();
+    for (const proveedor of await proveedores.all()) {
+      await expect(proveedor).toBeInViewport();
+      const posicion = await proveedor.boundingBox();
+      assert.ok(posicion.y + posicion.height <= posicionResumen.y, "El ingreso social debe preceder al ingreso con clave.");
+    }
+    // El único control anterior a los proveedores es el selector de idioma.
+    await page.keyboard.press("Tab");
+    await expect(page.locator("#login-select-toggle")).toBeFocused();
+    await page.keyboard.press("Tab");
+    for (const proveedor of await proveedores.all()) {
+      await expect(proveedor).toBeFocused();
+      await page.keyboard.press("Tab");
+    }
+    await expect(resumen).toBeFocused();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await expect(usuario).toBeFocused();
+
+    await usuario.fill("jugador-inexistente-de-prueba");
+    await page.locator("#password").fill("clave-incorrecta");
+    await page.locator("#kc-login").click();
+    await expect(page.locator("#input-error-username")).toBeVisible();
+    await expect(cuentaLocal).toHaveJSProperty("open", true);
+    await expect(usuario).toBeVisible();
+  }
+  await page.close();
+}
+
 try {
+  await verificarOrdenYClaveLocal({ width: 1280, height: 800 }, "es");
+  await verificarOrdenYClaveLocal({ width: 375, height: 760 }, "en");
   const page = await browser.newPage();
-  await page.goto(new URL("/api/auth/login", web).href);
-  await expect(page.locator("#kc-login")).toBeVisible();
+  await page.goto(ingreso);
   const issuer = new URL("/realms/mesa-local/", page.url());
   for (const [proveedor, dominio, clientId] of [
     ["google", "accounts.google.com", process.env.GOOGLE_CLIENT_ID],
@@ -28,7 +85,7 @@ try {
     if (proveedor === "google") assert.equal(destino.searchParams.get("prompt"), "select_account");
     assert.equal(destino.searchParams.get("redirect_uri"), new URL("broker/" + proveedor + "/endpoint", issuer).href);
     assert.ok(destino.searchParams.get("state"));
-    await page.goto(new URL("/api/auth/login", web).href);
+    await page.goto(ingreso);
   }
   console.log("Proveedores de la pantalla de ingreso verificados:", habilitados.join(", ") || "solo cuenta local");
 } finally {

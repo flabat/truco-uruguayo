@@ -1,0 +1,10 @@
+[Unit]
+Description=Comprobar despliegues de main de Truco Oriental
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=3min
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

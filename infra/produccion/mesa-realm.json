@@ -1,0 +1,18 @@
+{
+  "realm": "mesa",
+  "displayName": "Truco Oriental",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "bruteForceProtected": true,
+  "clients": [{
+    "clientId": "truco-web",
+    "enabled": true,
+    "protocol": "openid-connect",
+    "publicClient": true,
+    "standardFlowEnabled": true,
+    "directAccessGrantsEnabled": false,
+    "redirectUris": ["${PUBLIC_ORIGIN}/api/auth/callback"],
+    "attributes": {"pkce.code.challenge.method": "S256"}
+  }]
+}

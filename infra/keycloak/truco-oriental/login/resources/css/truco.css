@@ -1,0 +1,38 @@
+main:has(.truco-social) {
+    --keycloak-card-top-color: #a34b34;
+}
+
+.truco-social > .kc-login-divider {
+    display: none;
+}
+
+#truco-social-intro {
+    margin-block-end: 1.25rem;
+}
+
+.truco-social #kc-social-providers ul {
+    padding-block-start: 0;
+}
+
+.truco-social #kc-social-providers a {
+    min-height: 2.75rem;
+}
+
+#truco-existing-account {
+    margin-block-start: 1.5rem;
+    border-block-start: 1px solid var(--pf-v5-global--BorderColor--100);
+}
+
+#truco-existing-account summary {
+    cursor: pointer;
+    padding-block: 0.75rem;
+}
+
+#truco-existing-account summary:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+#truco-existing-account[open] summary {
+    margin-block-end: 0.5rem;
+}
