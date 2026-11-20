@@ -766,3 +766,58 @@ test("recupera el marcador al reconectar y cierra la partida por envido", async 
   await expect(page.getByRole("button", { name: "Repartir otra mano" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Crear otra mesa" })).toBeVisible();
 });
+
+test("voz opcional abierta, reintento y enlace de teclado sin interrumpir el juego", async ({ page }) => {
+  let habilitada = false;
+  let espera = true;
+  let pedidos = 0;
+  let jugadas = 0;
+  let terminar;
+  const pendiente = new Promise(resolve => { terminar = resolve; });
+  const sockets = await simular(page, async path => {
+    if (path.endsWith("/" + mesaId)) return { json: { ...mesa("2v2", espera ? [...personas.slice(0,2),seat(2,"vacio",null),seat(3,"vacio",null)] : personas), vozDisponible: habilitada } };
+    if (path.endsWith("/partida")) return { json: partida };
+    if (path.endsWith("/acciones")) { jugadas++; return { json: partida }; }
+    if (path.endsWith("/voz")) {
+      if (++pedidos === 1) {
+        await pendiente;
+        return { status: 503, json: { error: "Discord no pudo abrir la voz de la mesa. Podés seguir jugando y reintentar." } };
+      }
+      return { json: { enlace: "https://discord.invalid/prueba", vence: new Date(Date.now()+600000).toISOString() } };
+    }
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await expect(page.getByRole("heading", { name: "Esperando jugadores" })).toBeVisible();
+  const voz = page.getByRole("region", { name: "Voz de la mesa" });
+  await expect(voz).toHaveCount(0);
+  habilitada = true;
+  sockets.at(-1).send(JSON.stringify({tipo:"actualizar"}));
+  const abrir = voz.getByRole("button", { name: "Abrir voz de la mesa" });
+  await expect(abrir).toHaveAccessibleDescription(/Cualquier persona.*puede entrar y escuchar/);
+  if (process.env.CAPTURAS_DISCORD && test.info().project.name === "mobile") {
+    await voz.evaluate(el => el.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: process.env.CAPTURAS_DISCORD + "/voz-mobile.png", scale: "css",
+      maskColor: "#e2e0d6", mask: [page.getByLabel("Enlace de invitación")] });
+  }
+  await abrir.press("Enter");
+  await expect(voz.getByRole("status")).toHaveText("Preparando el enlace…");
+  await abrir.press("Enter");
+  expect(pedidos).toBe(1);
+  espera = false;
+  sockets.at(-1).send(JSON.stringify({tipo:"actualizar"}));
+  const carta = page.getByRole("button", { name: "Jugar As de espadas" });
+  await expect(carta).toBeEnabled();
+  terminar();
+  await expect(voz.getByRole("status")).toContainText("Podés seguir jugando");
+  if (process.env.CAPTURAS_DISCORD && test.info().project.name === "desktop") {
+    await voz.evaluate(el => el.scrollIntoView({ block: "start" }));
+    await page.screenshot({ path: process.env.CAPTURAS_DISCORD + "/voz-desktop.png", scale: "css" });
+  }
+  await carta.click();
+  await expect.poll(() => jugadas).toBe(1);
+  await abrir.press("Enter");
+  const enlace = voz.getByRole("link", { name: "Entrar a Discord" });
+  await expect(enlace).toBeFocused();
+  await expect(enlace).toHaveAttribute("target", "_blank");
+  await expect(enlace).toHaveAttribute("rel", /noreferrer/);
+});

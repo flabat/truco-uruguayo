@@ -10,6 +10,7 @@ export TERCETOS_HABILITADOS=1
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
 unset KEYCLOAK_ADMIN_TOKEN
+export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
 
 cleanup() {
   local status=$?
@@ -43,6 +44,7 @@ node scripts/verificar-ingreso-social.mjs "$web" google facebook
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-cierres-tercetos.mjs
