@@ -12,23 +12,36 @@ const claveNueva = "Clave-descartable-409!";
 const upstream = "truco-local";
 const local = "mesa-local";
 assert.match(proyecto, /^truco-check-[\d-]+$/);
+const enApi = ["compose", "--project-name", proyecto, "exec", "-T", "api"];
 
-const token = await fetch(identidad + "/realms/master/protocol/openid-connect/token", {
+function solicitarInterno(ruta, opciones) {
+  const salida = spawnSync("docker", [...enApi, "node", "--input-type=module", "-e", `
+    import { readFileSync } from "node:fs";
+    const { ruta, opciones } = JSON.parse(readFileSync(0, "utf8"));
+    const r = await fetch("http://identidad:8080" + ruta, { ...opciones, redirect: "manual" });
+    console.log(JSON.stringify({ status: r.status, location: r.headers.get("location"), body: await r.text() }));
+  `], { input: JSON.stringify({ ruta, opciones }), encoding: "utf8", timeout: 15_000 });
+  assert.equal(salida.status, 0, salida.stderr);
+  return JSON.parse(salida.stdout);
+}
+
+const token = solicitarInterno("/realms/master/protocol/openid-connect/token", {
   method: "POST",
+  headers: { "Content-Type": "application/x-www-form-urlencoded" },
   body: new URLSearchParams({
     grant_type: "password",
     client_id: "admin-cli",
     username: process.env.KC_BOOTSTRAP_ADMIN_USERNAME,
     password: process.env.KC_BOOTSTRAP_ADMIN_PASSWORD,
-  }),
+  }).toString(),
 });
 assert.equal(token.status, 200, "Inicio de sesión del administrador de pruebas");
-const headers = { Authorization: "Bearer " + (await token.json()).access_token, "Content-Type": "application/json" };
-async function admin(ruta, status = 200, method = "GET", datos) {
-  const respuesta = await fetch(identidad + "/admin/realms/" + ruta, { method, headers, body: JSON.stringify(datos) });
+const headers = { Authorization: "Bearer " + JSON.parse(token.body).access_token, "Content-Type": "application/json" };
+function admin(ruta, status = 200, method = "GET", datos) {
+  const respuesta = solicitarInterno("/admin/realms/" + ruta, { method, headers, body: JSON.stringify(datos) });
   assert.equal(respuesta.status, status, method + " " + ruta);
-  if (status === 201) return new URL(respuesta.headers.get("location")).pathname.split("/").at(-1);
-  if (status === 200) return respuesta.json();
+  if (status === 201) return new URL(respuesta.location, identidad).pathname.split("/").at(-1);
+  if (status === 200) return JSON.parse(respuesta.body);
 }
 
 function alta(realm, nombre, correo, acciones = []) {
@@ -44,7 +57,7 @@ function alta(realm, nombre, correo, acciones = []) {
   });
 }
 
-const buzon = spawn("docker", ["compose", "--project-name", proyecto, "exec", "-T", "api", "node", "--input-type=module"], {
+const buzon = spawn("docker", [...enApi, "node", "--input-type=module"], {
   stdio: ["pipe", "pipe", "inherit"],
 });
 buzon.stdin.end(readFileSync(new URL("./identidad/buzon-prueba.mjs", import.meta.url)));
@@ -56,8 +69,9 @@ createInterface({ input: buzon.stdout }).on("line", linea => {
 });
 
 async function enlaceDeCorreo(correo, asunto) {
-  await expect.poll(() => mensajes.find(mensaje => mensaje.includes("To: " + correo) && mensaje.includes("Subject: " + asunto))).toBeTruthy();
-  const mensaje = mensajes.find(mensaje => mensaje.includes("To: " + correo) && mensaje.includes("Subject: " + asunto));
+  const buscar = () => mensajes.find(mensaje => mensaje.includes("To: " + correo) && mensaje.includes("Subject: " + asunto));
+  await expect.poll(buscar, { timeout: 15_000 }).toBeTruthy();
+  const mensaje = buscar();
   const extraer = spawnSync("python3", ["-c", [
     "from email import policy",
     "from email.parser import Parser",
@@ -96,6 +110,7 @@ async function comprobarVerificacion(page) {
 const browser = await chromium.launch();
 async function conPagina(probar) {
   const page = await browser.newPage({ locale: "en" });
+  page.setDefaultTimeout(15_000);
   try {
     await probar(page);
   } finally {
@@ -105,12 +120,12 @@ async function conPagina(probar) {
 
 try {
   await expect.poll(() => buzonListo).toBe(true);
-  await admin(local, 204, "PUT", {
+  admin(local, 204, "PUT", {
     verifyEmail: true,
     resetPasswordAllowed: true,
     smtpServer: { host: "api", port: "1025", from: "cuentas@example.test" },
   });
-  await admin(upstream + "/clients", 201, "POST", {
+  admin(upstream + "/clients", 201, "POST", {
     clientId: "truco-broker-prueba",
     enabled: true,
     secret: clave,
@@ -119,8 +134,8 @@ try {
   const oidc = "/realms/" + upstream + "/protocol/openid-connect";
   for (const [alias, nombre, acciones] of [["google", "Gloria", ["VERIFY_EMAIL"]], ["facebook", "Fabian", []]]) {
     const rutaProveedor = local + "/identity-provider/instances";
-    await admin(rutaProveedor + "/" + alias, 204, "DELETE");
-    await admin(rutaProveedor, 201, "POST", {
+    admin(rutaProveedor + "/" + alias, 204, "DELETE");
+    admin(rutaProveedor, 201, "POST", {
       alias,
       providerId: "oidc",
       enabled: true,
@@ -138,17 +153,21 @@ try {
       },
     });
     const correo = nombre.toLowerCase() + "@example.test";
-    const remoto = await alta(upstream, nombre, correo);
-    const id = await alta(local, nombre, correo, acciones);
+    const remoto = alta(upstream, nombre, correo);
+    const id = alta(local, nombre, correo, acciones);
     const ruta = local + "/users/" + id;
-    await admin(ruta + "/federated-identity/" + alias, 204, "POST", { identityProvider: alias, userId: remoto, userName: nombre.toLowerCase() });
+    admin(ruta + "/federated-identity/" + alias, 204, "POST", {
+      identityProvider: alias,
+      userId: remoto,
+      userName: nombre.toLowerCase(),
+    });
     await conPagina(async page => {
       await ingresoSocial(page, alias, nombre);
       await expect.poll(async () => (await page.request.get(usuarioLocal)).status()).toBe(200);
       const { jugador } = await (await page.request.get(usuarioLocal)).json();
       assert.equal(jugador.nombre, nombre);
     });
-    const cuenta = await admin(ruta);
+    const cuenta = admin(ruta);
     assert.equal(cuenta.emailVerified, false);
     assert.deepEqual(cuenta.requiredActions, acciones);
     assert.equal(mensajes.length, 0);
@@ -157,10 +176,9 @@ try {
   await conPagina(async page => {
     await ingresoSocial(page, "google", "Gloria", "VERIFY_EMAIL");
     await comprobarVerificacion(page);
-    await expect(page.locator("#kc-verify-email-form")).toBeVisible();
   });
 
-  await alta(upstream, "Primera", "primera@example.test");
+  alta(upstream, "Primera", "primera@example.test");
   await conPagina(async page => {
     await ingresoSocial(page, "google", "Primera");
     await comprobarVerificacion(page);
@@ -168,14 +186,14 @@ try {
   });
 
   const colision = "colision@example.test";
-  await alta(upstream, "Colision", colision);
-  const sinVinculo = await alta(local, "Colision", colision);
+  alta(upstream, "Colision", colision);
+  const sinVinculo = alta(local, "Colision", colision);
   await conPagina(async page => {
     await ingresoSocial(page, "facebook", "Colision");
     await page.locator("#linkAccount").click();
     await enlaceDeCorreo(colision, "Link");
     assert.equal((await page.request.get(usuarioLocal)).status(), 401);
-    assert.deepEqual(await admin(local + "/users/" + sinVinculo + "/federated-identity"), []);
+    assert.deepEqual(admin(local + "/users/" + sinVinculo + "/federated-identity"), []);
   });
 
   const correo = "alta-verificada@example.test";

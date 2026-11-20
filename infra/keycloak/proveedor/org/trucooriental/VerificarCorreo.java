@@ -35,7 +35,8 @@ public final class VerificarCorreo extends VerifyEmail {
     private boolean esRegresoSocial(RequiredActionContext context) {
         AuthenticationSessionModel session = context.getAuthenticationSession();
         String realm = context.getRealm().getName();
-        if ((!"mesa".equals(realm) && !"mesa-local".equals(realm))
+        if (!context.getRealm().isVerifyEmail()
+                || (!"mesa".equals(realm) && !"mesa-local".equals(realm))
                 || !"truco-web".equals(session.getClient().getClientId())
                 || context.getUser().isEmailVerified()) {
             return false;
