@@ -3,6 +3,20 @@ import { jugarTurnoExhibicion, type Inferencia } from "./bot-pendiente.ts";
 import { insertarMesaComputadoras, servicioComputadoras } from "./ensayos.ts";
 import { avanzarManoComputadoras, type MesaComputadoras } from "./partidas.ts";
 
+const objetivoNormal = 6;
+const objetivoMaximo = 10;
+
+export function configuracionExhibiciones(env: NodeJS.ProcessEnv) {
+  const texto = env.EXHIBICIONES_OBJETIVO || String(objetivoNormal);
+  const pausa = env.EXHIBICIONES_PAUSADAS || "0";
+  const objetivo = Number(texto);
+  if (!/^\d+$/.test(texto) || objetivo > objetivoMaximo || !["0", "1"].includes(pausa)) {
+    console.error("Exhibiciones en pausa: EXHIBICIONES_OBJETIVO admite enteros de 0 a 10 y EXHIBICIONES_PAUSADAS admite 0 o 1.");
+    return { objetivo: 0, pausadas: true };
+  }
+  return { objetivo: env.EXHIBICIONES_HABILITADAS === "1" ? objetivo : 0, pausadas: pausa === "1" };
+}
+
 // Una sola tarea de exhibición entre todas las instancias. Los turnos humanos
 // usan otro trabajador y nunca esperan este bloqueo. La caída del proceso lo libera.
 async function conTurnoDeSalon<T>(pool: Pool, ejecutar: (db: PoolClient) => Promise<T>) {
@@ -19,7 +33,9 @@ async function conTurnoDeSalon<T>(pool: Pool, ejecutar: (db: PoolClient) => Prom
   } finally { db.release(); }
 }
 
-export async function reponerExhibiciones(pool: Pool, reloj?: Date) {
+export async function reponerExhibiciones(pool: Pool, reloj?: Date, objetivo = objetivoNormal) {
+  if (objetivo === 0) return 0;
+  if (!Number.isInteger(objetivo) || objetivo < 0 || objetivo > objetivoMaximo) throw new RangeError("Objetivo de exhibiciones fuera de rango.");
   return conTurnoDeSalon(pool, async db => {
     const { rows: [cuenta] } = await db.query(`SELECT
       count(*) FILTER (WHERE modo='1v1')::int AS duelos,
@@ -27,7 +43,7 @@ export async function reponerExhibiciones(pool: Pool, reloj?: Date) {
       FROM (SELECT modo FROM juego.mesas_en_juego WHERE origen='humana'
         UNION ALL SELECT modo FROM juego.mesas WHERE cupo_exhibicion IS NOT NULL
           AND fin_publico IS NULL AND NOT exhibicion_retirada) mesas`);
-    const faltan = 6 - cuenta.duelos - cuenta.parejas;
+    const faltan = objetivo - cuenta.duelos - cuenta.parejas;
     if (faltan <= 0) return 0;
     const { rows: cupos } = await db.query(`SELECT numero FROM juego.cupos_exhibicion c
       WHERE disponible_desde <= coalesce($1, clock_timestamp()) AND NOT EXISTS
@@ -84,20 +100,24 @@ export async function avanzarExhibicion(pool: Pool, servicio: Inferencia, reloj?
   });
 }
 
-export function procesarExhibiciones(pool: Pool, crear: boolean, alCambiar: (id: string) => void) {
+export function procesarExhibiciones(pool: Pool, { objetivo, pausadas }: ReturnType<typeof configuracionExhibiciones>,
+    alCambiar: (id: string) => void) {
+  // Una pausa conserva las manos, su próximo paso y el turno pendiente en PostgreSQL.
+  if (pausadas) return () => {};
   const servicio = servicioComputadoras(pool);
   let siguienteRevision = 0;
   let cerrado = false;
   let timer: ReturnType<typeof setTimeout>;
   async function ronda() {
     try {
-      if (crear && Date.now() >= siguienteRevision) {
+      if (objetivo > 0 && Date.now() >= siguienteRevision) {
         siguienteRevision = Date.now() + 15_000;
-        await reponerExhibiciones(pool);
+        await reponerExhibiciones(pool, undefined, objetivo);
       }
+      if (cerrado) return;
       const id = await avanzarExhibicion(pool, servicio);
       if (id) alCambiar(id);
-      else if (!crear && !(await pool.query(`SELECT 1 FROM juego.mesas WHERE cupo_exhibicion IS NOT NULL
+      else if (objetivo === 0 && !(await pool.query(`SELECT 1 FROM juego.mesas WHERE cupo_exhibicion IS NOT NULL
         AND fin_publico IS NULL AND NOT exhibicion_retirada LIMIT 1`)).rowCount) {
         await servicio.close();
         return;

@@ -4,6 +4,8 @@ Al entrar a **Jugar**, una persona puede mirar una mano de truco antes de decidi
 
 **Acuerdos de producto.** En duelo y parejas, las mesas humanas nuevas se listan de forma predeterminada y el anfitrión puede elegir una mesa privada. En horas tranquilas buscamos seis partidas en total, con ambos formatos disponibles. A medida que llegan personas, las exhibiciones en curso terminan su chico. Las cifras de ritmo, disponibilidad y medición que siguen son propuestas para el piloto. [Issue de diseño](https://github.com/flabat/truco-uruguayo/issues/227)
 
+**Publicación.** El salón se entrega directamente a las cuentas autenticadas. La decisión posterior al diseño reemplaza el piloto de cohortes. El operador puede cambiar la meta de seis partidas, pausar las exhibiciones y reanudar las manos en curso. [Decisión de lanzamiento](https://github.com/flabat/truco-uruguayo/issues/244) · [Operación del salón](operacion.md)
+
 ## El primer minuto
 
 1. Después del ingreso, **Mesas en juego** aparece en el salón junto a **Crear una mesa**. Si la persona viene por una invitación o intenta volver a su asiento, aterriza en el destino que eligió. Mirar tiene su propio enlace y conserva el acceso a **Volver a mi mesa**.

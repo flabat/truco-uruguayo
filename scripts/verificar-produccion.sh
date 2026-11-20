@@ -5,6 +5,9 @@ tmp=$(mktemp -d)
 project="truco-dr-$(date +%s)-$$"
 network="$project-copias"
 export SITE_HOST=mesa.internal HTTP_BIND=127.0.0.1: HTTPS_BIND=127.0.0.1:
+# Este proyecto verifica los valores de la versión y nunca contacta un Discord real.
+unset SALON_HABILITADO VOZ_ESPECTADORA_HABILITADA EXHIBICIONES_HABILITADAS EXHIBICIONES_OBJETIVO EXHIBICIONES_PAUSADAS
+unset DISCORD_GUILD_ID DISCORD_CATEGORY_ID DISCORD_BOT_TOKEN DISCORD_BOT_TOKEN_FILE
 export RESTIC_REPOSITORY=rest:http://almacen:8000/mesa
 export POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD
 for variable in POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD; do
@@ -29,6 +32,19 @@ networks:
     name: $network
 YAML
 dc=(docker compose --project-name "$project" --env-file /dev/null -f compose.production.yaml -f "$tmp/ensayo.yaml")
+verificar_config_salon() {
+  "${dc[@]}" config --format json | node -e '
+    const { deepStrictEqual } = require("node:assert");
+    const { services } = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+    const claves = ["SALON_HABILITADO", "VOZ_ESPECTADORA_HABILITADA", "EXHIBICIONES_HABILITADAS",
+      "EXHIBICIONES_OBJETIVO", "EXHIBICIONES_PAUSADAS"];
+    deepStrictEqual(claves.map(k => services.api.environment[k]), process.argv.slice(1));' "$@"
+}
+verificar_config_salon 1 1 1 6 0
+SALON_HABILITADO=0 VOZ_ESPECTADORA_HABILITADA=0 EXHIBICIONES_HABILITADAS=0 \
+  EXHIBICIONES_OBJETIVO=0 EXHIBICIONES_PAUSADAS=1 verificar_config_salon 0 0 0 0 1
+EXHIBICIONES_OBJETIVO=10 verificar_config_salon 1 1 1 10 0
+
 cleanup() {
   local status=$?
   if ((status)); then "${dc[@]}" logs --tail=15 api identidad backup >&2 || true; fi

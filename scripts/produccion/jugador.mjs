@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { randomUUID } from "node:crypto";
+import { setTimeout as esperar } from "node:timers/promises";
 import WebSocket from "ws";
 
 const origin = process.env.WEB_ORIGIN;
@@ -50,6 +51,34 @@ const session = callback.headers.getSetCookie().find(s => s.startsWith("truco_se
 for (const attr of ["Secure", "HttpOnly", "SameSite=Lax"]) assert.ok(session?.includes(attr));
 const player = await api("/api/jugador");
 const saved = process.env.TEST_SAVED ? JSON.parse(process.env.TEST_SAVED) : null;
+assert.equal(player.salonHabilitado, true);
+if (!saved) {
+  // El primer ingreso público al stack de producción encuentra el objetivo sin jugadores sentados.
+  let exhibiciones = [];
+  const limite = Date.now() + 120_000;
+  while (Date.now() < limite) {
+    const { mesas } = await api("/api/salon/mesas");
+    exhibiciones = mesas.filter(m => m.origen === "exhibicion");
+    if (exhibiciones.length === 6) break;
+    await esperar(1_000);
+  }
+  assert.equal(exhibiciones.length, 6, "El directorio debe llegar a seis exhibiciones en dos minutos.");
+  assert.equal(exhibiciones.filter(m => m.modo === "1v1").length, 3);
+  assert.equal(exhibiciones.filter(m => m.modo === "2v2").length, 3);
+  for (const mesa of exhibiciones) {
+    assert.equal(mesa.humanos, 0);
+    assert.equal(mesa.computadoras, mesa.modo === "1v1" ? 2 : 4);
+  }
+  const ruta = "/api/salon/mesas/" + exhibiciones[0].id;
+  const detalle = await api(ruta);
+  assert.equal(detalle.estado, "en-juego");
+  assert.ok(detalle.tablero.muestra);
+  assert.equal(detalle.vozDisponible, false);
+  const voz = await visitar(ruta + "/voz", {
+    method: "POST", headers: { "content-type": "application/json" }, body: "{}",
+  });
+  assert.equal(voz.status, 503);
+}
 let id;
 if (saved) {
   assert.equal(player.id, saved.player);

@@ -101,9 +101,7 @@ Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el 
 
 ## Salón y exhibiciones
 
-Los tres interruptores de la API están apagados por defecto. En un proyecto de ensayo, configurá `SALON_HABILITADO=1` para habilitar el directorio y la vista espectadora a las cuentas que ingresen. Un duelo o una mesa de parejas que se cree desde esa interfaz se ofrece como pública, con opción privada. Para el ensayo con reposición de partidas de computadora, configurá también `EXHIBICIONES_HABILITADAS=1`. Para abrir la voz a espectadores, configurá Discord y `VOZ_ESPECTADORA_HABILITADA=1`.
-
-Después de cambiar el entorno, recreá la API con `dc up -d --wait api` usando el proyecto y los archivos Compose de ese despliegue. Con `EXHIBICIONES_HABILITADAS=0` se suspende la reposición y las exhibiciones sanas terminan el chico. Con `VOZ_ESPECTADORA_HABILITADA=0` se cierra solo la entrada de espectadores a Discord. La voz de jugadores y la limpieza de canales continúan. Con `SALON_HABILITADO=0` la API cierra las lecturas y la entrada espectadora a voz incluso a través de enlaces directos y vuelve a aceptar únicamente altas privadas. Los jugadores conservan sus asientos e invitaciones. Los cambios de configuración requieren recrear la API en cada instancia. El [plan del piloto](multijugador/salon-en-vivo/implementacion.md) define el ensayo de carga y las mediciones previas a ampliar el salón.
+La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)
 
 ## Publicación automática desde main
 
