@@ -7,6 +7,9 @@ import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
 
+import { configDiscord, crearDiscord } from "./discord.ts";
+import { crearVoz } from "./voz-discord.ts";
+
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   connectionTimeoutMillis: 5000,
@@ -53,7 +56,13 @@ const server = createServer(async (request, response) => {
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
 const partidas = crearPartidas(pool, web, alCambiar);
-const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1");
+const configVoz = configDiscord();
+const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,
+  connectionTimeoutMillis: 5000, statement_timeout: 15000 });
+poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
+const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz)) : undefined;
+const detenerLimpieza = voz?.iniciarLimpieza();
+const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz);
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
@@ -63,7 +72,8 @@ const vivo = crearVivo(server, web, {
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
+  detenerLimpieza?.();
   detenerEnsayos();
   vivo.cerrar();
-  server.close(() => pool.end());
+  server.close(() => Promise.all([pool.end(), poolVoz?.end()]));
 });

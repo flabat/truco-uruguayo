@@ -4,6 +4,8 @@ import type { Pool, PoolClient } from "pg";
 import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
 import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
+import { FalloDiscord } from "./discord.ts";
+import type { crearVoz } from "./voz-discord.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
@@ -39,7 +41,7 @@ export interface VistaMesa {
 
 const capacidad: Record<Modo, number> = { "1v1": 2, "2v2": 4, "3v3": 6 };
 const esId = (id: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(id);
-const rutaMesa = /^\/api\/mesas\/([^/]+)(\/computadoras)?$/;
+const rutaMesa = /^\/api\/mesas\/([^/]+)(\/computadoras|\/voz)?$/;
 const rutaInvitacion = /^\/api\/invitaciones\/([^/]+)\/unirse$/;
 
 export function esRutaMesas(pathname: string) {
@@ -148,7 +150,7 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   return { id, cambiado: true };
 }
 
-export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false) {
+export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>) {
   return async function mesas(req: IncomingMessage, res: ServerResponse) {
     try {
       const path = (req.url ?? "").split("?")[0];
@@ -165,11 +167,18 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
       if (req.method === "GET" && mesa && !mesa[2]) {
         const vista = await leerMesa(pool, mesa[1], jugador.id, web);
         if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");
-        responderJson(res, 200, vista);
+        responderJson(res, 200, { ...vista, vozDisponible: Boolean(voz) });
         return;
       }
       if (req.method !== "POST" || (mesa && !mesa[2])) throw new ErrorPeticion(405, "Método no permitido.");
       if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (mesa?.[2] === "/voz") {
+        const vista = await leerMesa(pool, mesa[1], jugador.id, web);
+        if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");
+        if (!voz) throw new ErrorPeticion(503, "La voz con Discord está desactivada.");
+        responderJson(res, 200, await voz.abrir(vista.id, vista.modo));
+        return;
+      }
       const datos = invitacion ? {} : await leerJson(req);
       const db = await pool.connect();
       let cambio: Cambio;
@@ -191,6 +200,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
       responderJson(res, path === "/api/mesas" ? 201 : 200, vista);
     } catch (error) {
       if (!(error instanceof ErrorPeticion)) throw error;
+      if (error instanceof FalloDiscord && error.espera) res.setHeader("Retry-After", String(error.espera));
       responderJson(res, error.status, { error: error.message });
     }
   };

@@ -10,6 +10,7 @@ import {
   type Mesa,
   type Modo,
 } from "./cliente";
+import { VozDiscord } from "./VozDiscord";
 import { EnJuego } from "./Tablero";
 import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
@@ -287,6 +288,7 @@ function MesaAbierta({
           Volver al salón
         </a>
       </div>
+      {mesa.vozDisponible && <VozDiscord key={mesa.id} ruta={ruta} />}
       {!conectada && (
         <p role="status" className="j-aviso">
           Reconectando con tu mesa…

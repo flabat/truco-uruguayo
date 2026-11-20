@@ -25,6 +25,7 @@ export interface Mesa {
   creadorId: string;
   miAsiento: number;
   invitacion: string;
+  vozDisponible?: boolean;
   lista: boolean;
   asientos: Asiento[];
 }

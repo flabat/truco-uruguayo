@@ -35,6 +35,10 @@ services:
       OIDC_CALLBACK: https://${SITE_HOST}/api/auth/callback
       OIDC_ISSUER: https://${SITE_HOST}/realms/mesa
       OIDC_BACKEND: https://${SITE_HOST}/realms/mesa
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_CATEGORY_ID: ${DISCORD_CATEGORY_ID:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
       TERCETOS_HABILITADOS: "${TERCETOS_HABILITADOS:-1}"
     depends_on:
       db: {condition: service_healthy}
