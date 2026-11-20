@@ -61,13 +61,13 @@ const server = createServer(async (request, response) => {
 });
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
-const salon = crearSalon(pool, salonHabilitado);
 const partidas = crearPartidas(pool, web, alCambiar);
 const configVoz = configDiscord();
 const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,
   connectionTimeoutMillis: 5000, statement_timeout: 15000 });
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
+const salon = crearSalon(pool, salonHabilitado, web, process.env.VOZ_ESPECTADORA_HABILITADA === "1" ? voz : undefined);
 const detenerLimpieza = voz?.iniciarLimpieza();
 const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz, salonHabilitado);
 const vivo = crearVivo(server, web, {

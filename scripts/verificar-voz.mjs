@@ -5,6 +5,10 @@ import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { createServer } from "node:http";
 import pg from "pg";
 import { crearRutasMesas } from "./mesas.ts";
+import { crearSalon } from "./salon.ts";
+import { avanzarManoComputadoras, crearPartidas, esRutaPartida } from "./partidas.ts";
+import { insertarMesaComputadoras, servicioComputadoras } from "./ensayos.ts";
+import { avanzarExhibicion } from "./exhibiciones.ts";
 import { crearDiscord, configDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
 
@@ -18,8 +22,13 @@ const sim = real ? null : discordSimulado(config.servidor, config.categoria);
 const transporte = sim?.transporte ?? fetch;
 const discord = crearDiscord(config, transporte);
 const voz = crearVoz(pool, discord, origen);
-let rutas = crearRutasMesas(pool, origen, () => {}, true, voz);
-const server = real ? null : createServer((req,res) => rutas(req,res).catch(() => res.writeHead(503).end()));
+let rutas = crearRutasMesas(pool, origen, () => {}, true, voz, true);
+let salon = crearSalon(pool, true, origen, voz);
+const partidas = crearPartidas(pool, origen);
+const server = real ? null : createServer((req,res) => {
+  const atender = req.url.startsWith("/api/salon/") ? salon : esRutaPartida(req.url) ? partidas.atender : rutas;
+  atender(req,res).catch(() => res.writeHead(503).end());
+});
 if (server) await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = "http://127.0.0.1:" + (server?.address().port ?? process.env.PORT);
 const mesas = [];
@@ -38,8 +47,8 @@ async function post(ruta, cookie, datos = {}, origin = origen.origin) {
     body: JSON.stringify(datos), signal: AbortSignal.timeout(30000) });
   return { status: r.status, retry: r.headers.get("retry-after"), body: await r.json().catch(() => ({})) };
 }
-async function crear(cookie, modo) {
-  const r = await post("/api/mesas", cookie, { modo });
+async function crear(cookie, modo, publica = false) {
+  const r = await post("/api/mesas", cookie, { modo, publica });
   assert.equal(r.status, 201);
   mesas.push(r.body.id);
   return r.body;
@@ -50,8 +59,9 @@ async function consultar(ruta) {
   if (!r.ok) throw Error("Discord respondió HTTP " + r.status + " al verificar el ensayo.");
   return r.json();
 }
-async function abrir(mesa, cookie) {
-  const r = await post("/api/mesas/" + mesa.id + "/voz", cookie);
+async function abrir(mesa, cookie, espectador = false) {
+  const prefijo = espectador ? "/api/salon/mesas/" : "/api/mesas/";
+  const r = await post(prefijo + mesa.id + "/voz", cookie);
   assert.equal(r.status, 200, "La solicitud de voz debe tener éxito (HTTP " + r.status + ").");
   const url = new URL(r.body.enlace);
   assert.ok(url.origin === "https://discord.gg" && /^\/[\w-]+$/.test(url.pathname), "Destino de invitación inesperado.");
@@ -64,6 +74,129 @@ async function abrir(mesa, cookie) {
 const caducar = id => pool.query("UPDATE juego.voz_discord SET vence=now()-interval '1 minute', reintentar='-infinity' WHERE mesa=$1",[id]);
 async function vinculo(id) { return (await pool.query("SELECT * FROM juego.voz_discord WHERE mesa=$1",[id])).rows[0]; }
 const categoria = async () => (await consultar("/guilds/" + config.servidor + "/channels")).filter(c => c.parent_id === config.categoria);
+async function probarEspectadores(a, b, espectador, privada) {
+  const segundaCuenta = await persona();
+  const humana = await crear(a, "1v1", true);
+  const publica = "/api/salon/mesas/" + humana.id;
+  const vozPublica = publica + "/voz";
+  const juego = "/api/mesas/" + humana.id;
+  const leer = async (ruta, cookie) => {
+    const r = await fetch(base + ruta, { headers: { cookie } });
+    assert.equal(r.status, 200, ruta);
+    return r.json();
+  };
+  assert.equal((await post(vozPublica, espectador)).status, 404); // Todavía no se repartió.
+  const token = new URL(humana.invitacion).searchParams.get("invitacion");
+  assert.equal((await post("/api/invitaciones/" + token + "/unirse", b)).status, 200);
+  await leer(juego + "/partida", a);
+  const vista = await leer(publica, espectador);
+  assert.equal(vista.vozDisponible, true);
+  const lista = await leer("/api/salon/mesas", espectador);
+  assert.ok(lista.mesas.some(m => m.id === humana.id));
+  assert.ok(!JSON.stringify([lista, vista]).includes("discord.gg/"));
+  assert.equal((await fetch(base + vozPublica, { headers: { cookie: espectador } })).status, 405);
+  assert.equal((await post(vozPublica, null)).status, 401);
+  assert.equal((await post(vozPublica, espectador, {}, "https://example.invalid")).status, 403);
+  const secreta = await post("/api/salon/mesas/" + privada.id + "/voz", espectador);
+  const desconocida = await post("/api/salon/mesas/" + randomUUID() + "/voz", espectador);
+  assert.equal(secreta.status, 404);
+  assert.deepEqual(secreta, desconocida);
+  assert.ok(!await vinculo(humana.id));
+
+  const [primero, segundo] = await Promise.all([
+    abrir(humana, espectador, true), abrir(humana, segundaCuenta, true),
+  ]);
+  assert.equal(primero, segundo);
+  assert.equal(await abrir(humana, a), primero);
+  assert.equal(sim.mensajes.get(primero).length, 1);
+  assert.equal((await post(juego + "/voz", espectador)).status, 404);
+  sim.destinos.clear(); // Vencen las invitaciones ya emitidas en el proveedor simulado.
+  assert.equal(await abrir(humana, espectador, true), primero);
+
+  sim.fallos.invitar = true;
+  assert.equal((await post(vozPublica, espectador)).status, 503);
+  // Un corte del proveedor no afecta al árbitro. La voz tampoco modifica la versión pública.
+  assert.equal((await leer(publica, espectador)).versionPublica, vista.versionPublica);
+  const jugadores = [a, b];
+  for (let paso = 0; paso < 6; paso++) {
+    const manos = await Promise.all(jugadores.map(c => leer(juego + "/partida", c)));
+    const i = manos.findIndex(m => m.vista.legales.length > 0);
+    assert.notEqual(i, -1);
+    const { vista: mano, version } = manos[i];
+    const tipo = ["carta", "flor", "quiero", "paso-flor"].find(tipo => mano.legales.includes(tipo));
+    assert.ok(tipo, "Falta una jugada aplicable a la mano del ensayo");
+    const accion = tipo === "carta" ? { tipo, carta: mano.cartas[0] } : { tipo };
+    assert.equal((await post(juego + "/acciones", jugadores[i], { id: randomUUID(), version, accion })).status, 200);
+    if (tipo !== "paso-flor") break;
+  }
+  assert.notEqual((await leer(publica, espectador)).versionPublica, vista.versionPublica);
+  sim.fallos.invitar = false;
+
+  const clave = createHash("sha256").update(segundaCuenta.split("=")[1]).digest("hex");
+  await pool.query("UPDATE juego.sesiones SET vence=now() WHERE clave=$1", [clave]);
+  assert.equal((await post(vozPublica, segundaCuenta)).status, 401);
+  salon = crearSalon(pool, false, origen, voz);
+  assert.equal((await post(vozPublica, espectador)).status, 404);
+  assert.equal(await abrir(humana, a), primero);
+  salon = crearSalon(pool, true, origen);
+  assert.equal((await leer(publica, espectador)).vozDisponible, false);
+  assert.equal((await post(vozPublica, espectador)).status, 503);
+  salon = crearSalon(pool, true, origen, voz);
+
+  async function nuevaExhibicion() {
+    const db = await pool.connect();
+    try {
+      await db.query("BEGIN");
+      const { rows: [fila] } = await db.query("SELECT creador FROM juego.mesas WHERE id=$1", [humana.id]);
+      const id = await insertarMesaComputadoras(db, "duel", fila.creador, undefined, 6);
+      const { rows: [expo] } = await db.query(`UPDATE juego.mesas SET meta=2 WHERE id=$1
+        RETURNING id, modo, meta, version_senas, perfil_tercetos`, [id]);
+      await avanzarManoComputadoras(db, expo);
+      await db.query("COMMIT");
+      mesas.push(id);
+      return expo;
+    } catch (error) { await db.query("ROLLBACK"); throw error; }
+    finally { db.release(); }
+  }
+  const expo = await nuevaExhibicion();
+  const rutaExpo = "/api/salon/mesas/" + expo.id;
+  const detalleExpo = await leer(rutaExpo, espectador);
+  assert.equal(detalleExpo.humanos, 0);
+  assert.equal(detalleExpo.computadoras, 2);
+  assert.equal(detalleExpo.vozDisponible, true);
+  assert.notEqual(await abrir(expo, espectador, true), primero);
+  await pool.query("UPDATE juego.mesas SET exhibicion_retirada=true WHERE id=$1", [expo.id]);
+  assert.equal((await leer(rutaExpo, espectador)).vozDisponible, false);
+  assert.equal((await post(rutaExpo + "/voz", espectador)).status, 404);
+
+  await pool.query("UPDATE juego.mesas SET ultimo_hecho_publico=now()-interval '6 minutes' WHERE id=$1", [humana.id]);
+  assert.equal((await post(vozPublica, espectador)).status, 404);
+
+  const finalista = await nuevaExhibicion();
+  const canal = await abrir(finalista, espectador, true);
+  const servicio = servicioComputadoras(pool);
+  try {
+    // El reloj adelanta los intervalos entre turnos. El motor confirma las jugadas y el cierre.
+    for (let n = 0; n < 120; n++) {
+      const paso = await avanzarExhibicion(pool, servicio, new Date(Date.now() + n * 9_000));
+      if (paso === null) break;
+      assert.equal(paso, finalista.id);
+    }
+  } finally { await servicio.close(); }
+  const resultado = await leer("/api/salon/mesas/" + finalista.id, espectador);
+  assert.equal(resultado.estado, "terminada");
+  assert.equal(resultado.vozDisponible, true);
+  assert.equal(await abrir(finalista, espectador, true), canal);
+  const sobremesa = (await vinculo(finalista.id)).vence - Date.now();
+  assert.ok(sobremesa > 29*60000 && sobremesa <= 30*60000 + 1000);
+  await pool.query("UPDATE juego.mesas SET fin_publico=now()-interval '31 minutes' WHERE id=$1", [finalista.id]);
+  assert.equal((await post("/api/salon/mesas/" + finalista.id + "/voz", espectador)).status, 404);
+  await caducar(finalista.id);
+  await voz.limpiarMesa(finalista.id);
+  assert.ok(!await vinculo(finalista.id));
+  assert.ok(!sim.canales.has(canal));
+}
+
 let preservados;
 let fallo = false;
 try {
@@ -91,6 +224,7 @@ try {
   const vecino = await abrir(otra,c);
   assert.ok(primero !== vecino);
   if (sim) {
+    await probarEspectadores(a, b, c, una);
     assert.equal(sim.mensajes.get(primero).length, 1);
     const boton = sim.mensajes.get(primero)[0].components[0].components[0];
     assert.deepEqual(boton, { type: 2, style: 5, label: "Volver a la mesa", url: new URL("/volver/?mesa=" + una.id, origen).href });
@@ -211,7 +345,7 @@ function discordSimulado(servidor, categoria) {
   const destinos = new Map();
   const mensajes = new Map();
   let secuencia = BigInt(manual);
-  const fallos = { crear: 0, perderAlta: false, perderMensaje: false, auditoria: false, borrar: false };
+  const fallos = { crear: 0, invitar: false, perderAlta: false, perderMensaje: false, auditoria: false, borrar: false };
   function json(body, status = 200) { return Response.json(body, { status }); }
   const desconocido = () => json({ code: 10003 }, 404);
   async function transporte(url, opciones) {
@@ -243,6 +377,7 @@ function discordSimulado(servidor, categoria) {
       return json(m);
     }
     if (operacion === "invites") {
+      if (fallos.invitar) return json({}, 500);
       const code = "simulado" + (++secuencia);
       destinos.set(code, id);
       return json({ code, channel: { id }, expires_at: new Date(Date.now() + 600000).toISOString() });

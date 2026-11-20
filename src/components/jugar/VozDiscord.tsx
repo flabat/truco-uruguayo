@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { mensajeDe, pedir } from "./cliente";
 
-export function VozDiscord({ ruta }: { ruta: string }) {
+export function VozDiscord({ ruta, espectador, exhibicion }: {
+  ruta: string;
+  espectador?: boolean;
+  exhibicion?: boolean;
+}) {
   const [pendiente, ocupar] = useState(false);
   const [destino, guardar] = useState<{ enlace: string; vence: string }>();
   const [aviso, avisar] = useState("");
@@ -37,8 +41,10 @@ export function VozDiscord({ ruta }: { ruta: string }) {
     }
   }
   return <section className="j-discord" aria-label="Voz de la mesa">
-    <p id="alcance-voz"><strong>Voz en Discord</strong><br />
-      Sala abierta. Cualquier persona con acceso a la categoría Mesas puede entrar y escuchar.</p>
+    <p id="alcance-voz"><strong>{espectador ? "Voz de esta mesa en Discord" : "Voz en Discord"}</strong><br />
+      Sala abierta. Cualquier persona con acceso a la categoría Mesas puede entrar y escuchar.
+      {espectador && " Jugadores y espectadores pueden conversar."}
+      {exhibicion && " Las computadoras juegan sin audio."}</p>
     <div>
       <button type="button" className="j-sec" aria-describedby="alcance-voz" aria-disabled={pendiente}
         ref={boton} onClick={preparar}>{destino ? "Renovar enlace" : "Abrir voz de la mesa"}</button>
