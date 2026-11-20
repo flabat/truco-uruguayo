@@ -40,6 +40,26 @@ Para comprobar la preparación y elegir cuándo gastar el presupuesto, agregá `
 
 También podés sustituir `npm run league --` por `python3 -B training/selfplay/local.py` en todas las órdenes. Esta liga solo usa las bibliotecas incluidas con Node y Python. Si Node 24 está instalado fuera del PATH, asigná su ruta absoluta a `TRUCO_NODE`.
 
+## Encadenar pilotos automáticamente en macOS
+
+Podés activar la continuación mientras un piloto está en curso o después de que termine. Desde el checkout, instalá una vez el comando en la carpeta de ese piloto. La instalación también sirve para ligas autónomas preparadas con una versión anterior que tenga `league next`.
+
+```sh
+python3 -B training/selfplay/continuous install runs/piloto-03
+runs/piloto-03/continuous start
+```
+
+La Mac comprueba el estado aproximadamente una vez por minuto. Cuando el piloto termina y sus resultados pasan la verificación, prepara y arranca otro piloto corto con los repartos y campeones que selecciona `league next`. Con la carpeta `piloto-03`, las siguientes generaciones se guardan en `piloto-04`, `piloto-05` y así sucesivamente. El ciclo sigue aunque ningún aspirante supere al campeón. Cada generación conserva sus archivos y ocupa espacio adicional en disco.
+
+Usá siempre la carpeta inicial para consultar o detener la cadena. El estado identifica la generación actual y muestra su progreso y tablero.
+
+```sh
+runs/piloto-03/continuous status
+runs/piloto-03/continuous stop
+```
+
+Podés cerrar Terminal. El servicio vuelve a estar disponible al iniciar sesión en macOS. Mantené las carpetas de la serie en su ubicación durante la continuación. Cada piloto conserva su plazo original. Si una liga termina incompleta, falla la verificación o la siguiente carpeta ya estaba ocupada, `continuous status` muestra el motivo de la pausa. `stop` desactiva los próximos arranques y deja terminar el piloto que ya esté corriendo. Para habilitar la continuación otra vez, repetí `continuous start`.
+
 ## Preparación y trabajadores individuales
 
 Con Node 24, la preparación congela las entradas de un ciclo anterior, los rivales y compañeros de evaluación, la semilla y los umbrales de promoción en un directorio nuevo.
