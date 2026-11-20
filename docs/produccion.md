@@ -25,7 +25,7 @@ Se puede elegir un contexto Docker de dos CPU y 4 GiB con `DOCKER_CONTEXT`. El e
 4. Usá el siguiente atajo desde la raíz para todos los comandos de esta guía. Inicializá el repositorio restic una sola vez. La inicialización no necesita la base. Para un repositorio ya inicializado usá `listar` para probar las credenciales.
 
    ```sh
-   dc() { docker compose -f compose.production.yaml "$@"; }
+   dc() { TRUCO_RELEASE=$(git rev-parse HEAD) docker compose -f compose.production.yaml "$@"; }
    dc build
    dc run --rm --no-deps backup iniciar
    dc up -d --wait

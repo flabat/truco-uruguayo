@@ -9,7 +9,12 @@ x-servicio: &servicio
 services:
   web:
     <<: *servicio
-    build: {context: ., dockerfile: infra/web.Dockerfile, target: produccion}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+      target: produccion
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
     environment:
       SITE_HOST: ${SITE_HOST:?Falta el dominio público}
     ports:
