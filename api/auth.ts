@@ -28,6 +28,7 @@ export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise
 
 function regresoPermitido(valor: string | null) {
   // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
+  if (valor === "/perfil/") return valor;
   if (valor && /^\/jugar\/(?:\?(?:invitacion|mesa)=[a-zA-Z0-9_-]{1,80})?$/.test(valor)) return valor;
   return "/#jugador";
 }

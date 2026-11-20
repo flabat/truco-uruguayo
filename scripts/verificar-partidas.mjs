@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import pg from "pg";
 import { crearPartidas } from "./partidas.ts";
 import { elegirAccionOnline } from "../src/motor/mesa-online.ts";
@@ -10,6 +10,18 @@ const web = new URL(process.env.WEB_ORIGIN);
 const servicio = crearPartidas(pool, web);
 const jugadores = [];
 const mesas = [];
+const sesiones = [];
+async function perfilDe(indice, query = "") {
+  let cookie = sesiones[indice];
+  if (!cookie) {
+    const valor = randomUUID();
+    const clave = createHash("sha256").update(valor).digest("hex");
+    await pool.query("INSERT INTO juego.sesiones (clave, jugador) VALUES ($1,$2)", [clave, jugadores[indice]]);
+    cookie = sesiones[indice] = "truco_sesion=" + valor;
+  }
+  return fetch("http://localhost:3001/api/perfil" + query, { headers: { cookie } });
+}
+
 const comando = (version, accion) => ({ id: randomUUID(), version, ...(accion && { accion }) });
 
 async function preparar(modo, meta = 40) {
@@ -176,6 +188,30 @@ async function probarComputadoras(modo, meta) {
   assert.equal(final.ganador, partida.ganadorPartida);
   assert.deepEqual(final.puntos, partida.puntos);
   assert.deepEqual(final.vista, partida.vista);
+
+  const respuesta = await perfilDe(0);
+  assert.equal(respuesta.status, 200);
+  assert.equal(respuesta.headers.get("cache-control"), "no-store");
+  const perfil = await respuesta.json();
+  assert.equal(perfil.jugador.id, jugadores[0]);
+  const resumen = perfil.partidas.find(p => p.id === id);
+  assert.deepEqual(resumen, {
+    id, modo, meta, mano: partida.manoNumero, fecha: replay.eventos.at(-1).fecha,
+    resultado: partida.ganadorPartida === 0 ? "ganada" : "perdida",
+    puntos: { propios: partida.puntos[0], rivales: partida.puntos[1] },
+  });
+
+  const rival = await (await perfilDe(1, "?jugador=" + jugadores[0])).json();
+  assert.equal(rival.jugador.id, jugadores[1]);
+  assert.ok(rival.partidas.every(p => p.id !== id));
+  assert.equal((await perfilDe(0, "?pagina=0")).status, 400);
+
+  // Compatibilidad con chicos guardados antes de la captura de eventos.
+  await pool.query("DELETE FROM juego.eventos_chico WHERE mesa=$1", [id]);
+  await pool.query("DELETE FROM juego.replays_chico WHERE mesa=$1", [id]);
+  const historica = await (await perfilDe(0)).json();
+  assert.deepEqual(historica.partidas.find(p => p.id === id), { ...resumen, fecha: null });
+
 }
 
 try {
@@ -190,6 +226,7 @@ try {
 } finally {
   for (const tabla of ["comandos", "manos", "asientos"]) await pool.query("DELETE FROM juego." + tabla + " WHERE mesa = ANY($1::uuid[])", [mesas]);
   await pool.query("DELETE FROM juego.mesas WHERE id = ANY($1::uuid[])", [mesas]);
+  await pool.query("DELETE FROM juego.sesiones WHERE jugador = ANY($1::uuid[])", [jugadores]);
   await pool.query("DELETE FROM juego.jugadores WHERE id = ANY($1::uuid[])", [jugadores]);
   await pool.end();
 }

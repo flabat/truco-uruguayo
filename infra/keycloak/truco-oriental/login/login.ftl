@@ -5,7 +5,7 @@
 <#import "passkeys.ftl" as passkeys>
 <#assign hasProviders = realm.password && (social.providers)?has_content>
 <#-- La verificación de una cuenta existente usa este mismo formulario y marca registrationDisabled. -->
-<#assign socialFirst = hasProviders && !registrationDisabled?? && !usernameHidden?? && !realm.registrationAllowed && !enableWebAuthnConditionalUI?has_content>
+<#assign socialFirst = hasProviders && !registrationDisabled?? && !usernameHidden?? && !enableWebAuthnConditionalUI?has_content>
 <#assign invalidCredentials = messagesPerField.existsError('username', 'password')>
 <@layout.registrationLayout displayMessage=!invalidCredentials displayInfo=realm.password && realm.registrationAllowed && !registrationDisabled??; section>
     <#if section = "header">
@@ -25,7 +25,7 @@
                     <form id="kc-form-login" class="${properties.kcFormClass!}" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post" novalidate="novalidate">
                         <#if !usernameHidden??>
                             <#assign label>
-                                <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
+                                <#if !realm.loginWithEmailAllowed>${msg("username")}<#else>${msg("usernameOrEmail")}</#if>
                             </#assign>
                             <@field.input name="username" label=label error=messagesPerField.getFirstError('username','password')
                                 autofocus=(!socialFirst || invalidCredentials) autocomplete="${(enableWebAuthnConditionalUI?has_content)?then('username webauthn', 'username')}" value=login.username!'' />

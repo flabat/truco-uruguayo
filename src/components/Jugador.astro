@@ -9,6 +9,7 @@ import { url } from "../lib/guide";
     <strong data-nombre></strong>
     <p>ID de jugador <code data-id></code></p>
     <a class="button" href={url("jugar/")}>Jugar al truco</a>
+    <a class="quiet-link" href={url("perfil/")}>Mi perfil</a>
     <form action="/api/auth/logout" method="post"><button class="quiet-link" type="submit">Cerrar sesión</button></form>
   </div>
   <span role="status" data-estado>Consultando la sesión…</span>

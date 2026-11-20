@@ -411,6 +411,7 @@ export default function Sala({ base }: { base: string }) {
         <a className="j-link" href={base}>
           ← Volver al inicio
         </a>
+        {jugador && <a className="j-link" href={base + "perfil/"}>Mi perfil</a>}
         <h1>
           {mesa ? "Mesa de " : "Jugar al "}
           <em>truco</em>

@@ -6,6 +6,7 @@ import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
+import { atenderPerfil } from "./perfil.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
@@ -31,6 +32,7 @@ const server = createServer(async (request, response) => {
       const ruta = request.url.split("?")[0];
       if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
+      else if (ruta === "/api/perfil") await atenderPerfil(pool, request, response);
       else await auth(request, response);
     } catch {
       response.writeHead(503).end("El servicio de jugadores no está disponible.");
