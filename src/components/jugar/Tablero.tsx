@@ -6,7 +6,7 @@ import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
-import { Dorsos, Naipe, Tapete } from "./Tapete";
+import { Naipe, Tapete } from "./Tapete";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -191,18 +191,16 @@ export function EnJuego({
           numeroVuelta={numeroVuelta}
           vuelta={v.vueltaActual ?? cerrada}
           terminada={Boolean(resultado && !cerrada)}
+          manosOcultas={{ jugadas: v.acciones.filter(a => a.tipo === "carta"), asientoVisible: mesa.miAsiento }}
           detalle={(asiento, carta, ganadora) => {
             const esPropio = asiento === mesa.miAsiento;
             const prueba = resultado && v.pruebasDeTantos?.find(p => p.asiento === asiento);
-            const restantes = 3 - v.acciones.filter(a => a.tipo === "carta" && a.asiento === asiento).length;
             const mano = esPropio ? v.cartas.filter(c => !prueba || !prueba.cartas.includes(c)) : [];
             return {
               contenido: prueba
                 ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
-                : <>
-                  <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />
-                  {!carta && !esPropio && restantes > 0 && <Dorsos base={base} cantidad={restantes} />}
-                </>,
+                : <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />,
+              ocultaDorsos: Boolean(prueba),
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
               mano: mano.length > 0 && <div className="j-mano" role="group" aria-label="Tus cartas">
                 {mano.map(c => <button

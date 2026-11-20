@@ -2,7 +2,7 @@ import type { ReactNode, Ref } from "react";
 import type { CardId } from "../../motor/cartas";
 import type { VistaAsiento } from "../../motor/mano";
 import { nombrar } from "../jugar/HistorialDeMano";
-import { Dorsos, Naipe, Tapete } from "../jugar/Tapete";
+import { Naipe, Tapete } from "../jugar/Tapete";
 import { asientos, nombre } from "./relato";
 
 const puestos = asientos.map((nombre, asiento) => ({ nombre, asiento }));
@@ -31,13 +31,10 @@ export function TapeteLeccion({ base, mesa, cartas, etiquetaCartas, enReparto, f
   return <Tapete base={base} asientos={puestos} asientoInferior={mesa.asiento}
     dador={mesa.dador} mano={mesa.mano} muestra={mesa.muestra} titulo={enReparto ? "El reparto" : "Mesa de parejas"}
     numeroVuelta={enReparto ? undefined : numero} estado={estado} vuelta={vuelta} turno={turno} nombrarJugadas
-    detalle={(asiento, carta) => {
-      const cantidad = 3 - jugadas.filter(j => j.asiento === asiento).length;
-      return {
-        contenido: asiento !== mesa.asiento && !carta && cantidad > 0 && <Dorsos base={base} cantidad={cantidad} />,
-        mano: asiento === mesa.asiento && <div className="mesa-naipes" role="group" aria-label={etiquetaCartas}>{cartas}</div>,
-      };
-    }}
+    manosOcultas={{ jugadas, asientoVisible: mesa.asiento }}
+    detalle={asiento => ({
+      mano: asiento === mesa.asiento && <div className="mesa-naipes" role="group" aria-label={etiquetaCartas}>{cartas}</div>,
+    })}
   />;
 }
 

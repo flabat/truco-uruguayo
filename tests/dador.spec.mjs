@@ -173,3 +173,63 @@ test("el jugador y el espectador ven el mismo tapete desde el asiento inferior",
   await comprobarDador(page, estado, nombres, "abajo");
   await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
 });
+
+for (const [modo, cantidad] of [["1v1", 2], ["2v2", 4]]) {
+  test(`el espectador de ${modo} ve los dorsos que corresponden a la vuelta visible`, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const asientos = manos.slice(0, cantidad).map((_, asiento) => ({
+      nombre: "Computadora " + (asiento + 1), asiento, equipo: asiento % 2, tipo: "computadora",
+    }));
+    let estado = repartir(cantidad, cantidad - 1, "oros-07");
+    let numero = 1;
+    await page.route("**/api/jugador", r => r.fulfill({ json: { id: "yo", nombre: "Ana", salonHabilitado: true } }));
+    await page.route("**/api/salon/mesas/" + id, r => r.fulfill({ json: {
+      id, modo, origen: "exhibicion", humanos: 0, computadoras: cantidad, estado: "en-juego",
+      manoNumero: numero, meta: 40, puntos: [0, 0], asientos, tablero: tableroEspectador(estado),
+    } }));
+
+    function jugar(vuelta) {
+      const asiento = estado.mano.turno;
+      const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta: manos[asiento][vuelta] });
+      expect(paso.ok).toBe(true);
+      estado = paso.estado;
+      return asiento;
+    }
+
+    const tapete = page.getByRole("region", { name: "Tapete" });
+    const puesto = asiento => tapete.getByRole("group", { name: asientos[asiento].nombre, exact: true });
+    const dorsos = (asiento, numero) => puesto(asiento).getByRole("img", { name: numero + " cartas en mano", exact: true });
+    await page.goto("jugar/?mirar=" + id);
+    for (const { asiento } of asientos) {
+      await expect(dorsos(asiento, 3).locator('img[src$="/reverso.webp"]')).toHaveCount(3);
+    }
+    await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+    await expect(tapete.locator(".j-jugada")).toHaveCount(0);
+    if (process.env.CAPTURAS_TAPETE) await tapete.screenshot({
+      path: `${process.env.CAPTURAS_TAPETE}/dorsos-espectador-${modo}-${test.info().project.name}.jpg`,
+      type: "jpeg", quality: 86, scale: "css",
+    });
+
+    const primero = jugar(0);
+    await expect(puesto(primero).locator(".j-jugada")).toHaveCount(1);
+    await expect(dorsos(primero, 3)).toHaveCount(0);
+    await expect(dorsos((primero + 1) % cantidad, 3)).toHaveCount(1);
+
+    for (let i = 1; i < cantidad; i++) jugar(0);
+    await expect(tapete.locator(".j-jugada")).toHaveCount(cantidad);
+    await expect(tapete.locator(".j-dorsos")).toHaveCount(0);
+
+    const salida = jugar(1);
+    await expect(tapete.locator("header")).toContainText("Vuelta 2");
+    await expect(tapete.locator(".j-jugada")).toHaveCount(1);
+    await expect(puesto(salida).locator(".j-jugada")).toHaveCount(1);
+    for (const { asiento } of asientos.filter(a => a.asiento !== salida)) {
+      await expect(dorsos(asiento, 2).locator('img[src$="/reverso.webp"]')).toHaveCount(2);
+    }
+
+    estado = repartir(cantidad, 0, "bastos-07");
+    numero++;
+    await expect(tapete.locator("header")).toContainText("Mano 2");
+    for (const { asiento } of asientos) await expect(dorsos(asiento, 3)).toHaveCount(1);
+  });
+}
