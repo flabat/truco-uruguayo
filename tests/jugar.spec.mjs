@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, confirmarComputadora, jugarComputadoras, restaurar } from "../api/turnos.ts";
 import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { reparto as tresFlores } from "./fixtures/flor-querida.ts";
+import { mesaFabian } from "./fixtures/mesa-flor-fabian.ts";
 import { dueloFlor, dueloMazo } from "./fixtures/duelo-mazo.ts";
 
 const mesaId = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
@@ -278,6 +280,80 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
   }
   if (process.env.CAPTURAS_UI)
     await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+});
+
+test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno sin pases", async ({ page }) => {
+  const asientos = ["Fabián", "Computadora 2", "Computadora 3", "Computadora 4"]
+    .map((nombre, i) => seat(i, i === 0 ? "humano" : "computadora", nombre));
+  let mano = confirmar({ estado: iniciarOnline(mesaFabian), turnos: [] }, "pairs",
+    { tipo: "carta", asiento: 3, carta: "bastos-12" });
+  await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", asientos) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "envido" });
+      mano = jugarComputadoras(confirmar(mano, "pairs", { tipo: "envido", asiento: 0 }), "pairs", [0]);
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones")) {
+      return { json: { ...partida, version: mano.turnos.length, puntos: marcadorOnline(mano.estado), vista: vistaOnline(mano.estado, 0) } };
+    }
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await page.getByRole("button", { name: "Envido", exact: true }).click();
+  const historial = page.getByRole("region", { name: "Historial de la mano" });
+  await expect(historial.getByRole("listitem")).toHaveText([
+    "Computadora 4 jugó rey de bastos.", "Fabián dijo «Envido».", "Computadora 3 dijo «Flor».",
+  ]);
+  await expect(page.getByRole("button", { name: "Yo no canto", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Jugar 6 de bastos" })).toBeEnabled();
+  await expect(page.getByText("Tu equipo · 3 tantos por flor")).toBeVisible();
+});
+
+test("el segundo jugador puede declarar y subir con un botón antes de la tercera flor", async ({ page }) => {
+  let mano = { estado: iniciarOnline({ ...tresFlores, reglaFlor: "inmediata-v2" }), turnos: [] };
+  mano = confirmar(mano, "pairs", { tipo: "envido", asiento: 1 });
+  mano = confirmar(mano, "pairs", { tipo: "flor", asiento: 2 });
+  await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", personas, 3) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "con-flor-envido" });
+      mano = confirmar(mano, "pairs", { tipo: "con-flor-envido", asiento: 3 });
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones"))
+      return { json: { ...partida, version: mano.turnos.length, vista: vistaOnline(mano.estado, 3) } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  for (const name of ["Flor", "Con flor envido", "Contraflor al resto"]) {
+    await expect(page.getByRole("button", { name, exact: true })).toBeEnabled();
+  }
+  await page.getByRole("button", { name: "Con flor envido", exact: true }).click();
+  const historial = page.getByRole("region", { name: "Historial de la mano" });
+  await expect(historial.getByRole("listitem")).toHaveText([
+    "Bruno dijo «Envido».", "CPU 1 dijo «Flor».", "Diego dijo «Con flor envido».",
+  ]);
+  expect(vistaOnline(mano.estado, 0).legales).toEqual(["flor", "contraflor-al-resto", "con-flor-quiero"]);
+});
+
+test("Con flor quiero acepta la subida de salida en una sola jugada", async ({ page }) => {
+  let mano = { estado: iniciarOnline({ ...tresFlores, reglaFlor: "inmediata-v2" }), turnos: [] };
+  mano = confirmar(mano, "pairs", { tipo: "envido", asiento: 1 });
+  mano = confirmar(mano, "pairs", { tipo: "con-flor-envido", asiento: 2 });
+  await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("2v2", personas, 3) };
+    if (path.endsWith("/acciones")) {
+      expect(req.postDataJSON().accion).toEqual({ tipo: "con-flor-quiero" });
+      mano = confirmar(mano, "pairs", { tipo: "con-flor-quiero", asiento: 3 });
+    }
+    if (path.endsWith("/partida") || path.endsWith("/acciones"))
+      return { json: { ...partida, version: mano.turnos.length, vista: vistaOnline(mano.estado, 3) } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await expect(page.getByText(/«Flor» rechaza la apuesta por vos/)).toBeVisible();
+  await page.getByRole("button", { name: "Con flor quiero", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Historial de la mano" }).getByRole("listitem")).toHaveText([
+    "Bruno dijo «Envido».", "CPU 1 dijo «Con flor envido».", "Diego dijo «Con flor quiero».",
+  ]);
+  expect(mano.estado.cobros).toEqual([]);
+  expect(vistaOnline(mano.estado, 0).legales).toEqual(["flor", "contraflor-al-resto"]);
 });
 
 for (const [caso, cantos] of [

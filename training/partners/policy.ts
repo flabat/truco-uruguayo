@@ -13,7 +13,7 @@ const bids = ["truco", "retruco", "vale-cuatro", "envido", "real-envido", "falta
 
 function bidCategory(bid: Exclude<Move, CardId>) {
   if (bid === "mazo") throw new RangeError("La política de parejas no admite una entrega de duelo.");
-  return 19 + bids.indexOf(bid);
+  return 19 + bids.indexOf(bid === "con-flor-quiero" ? "quiero" : bid);
 }
 
 function power(card: CardId, sample: CardId) {
