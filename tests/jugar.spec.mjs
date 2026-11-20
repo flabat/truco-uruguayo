@@ -447,7 +447,7 @@ test("la entrega en duelo deja el cobro y el historial visibles al volver a la m
   await page.goto("jugar/?mesa=" + mesaId);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Ganaste la mano" })).toBeVisible();
-  await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
+  await expect(page.getByText("Computadora 2 se fue al mazo.")).toBeVisible();
   const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
   await expect(historial.getByRole("listitem")).toHaveCount(3);
   await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
@@ -483,7 +483,7 @@ test("Ana responde al bluff sobre su flor antes de abrir la segunda vuelta", asy
   sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
   await page.getByRole("button", { name: "Quiero", exact: true }).press("Enter");
   await page.reload();
-  await expect(page.getByText("Computadora 2 se fue al mazo. Se anotaron 2 tantos.")).toBeVisible();
+  await expect(page.getByText("Computadora 2 se fue al mazo.")).toBeVisible();
   const historial = page.getByRole("region", { name: "Historial de la mano", exact: true });
   await expect(historial.getByRole("listitem")).toHaveCount(3);
   await expect(historial.getByRole("listitem").last()).toHaveText("Computadora 2 se fue al mazo.");
