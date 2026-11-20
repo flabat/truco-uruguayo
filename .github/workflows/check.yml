@@ -1,6 +1,9 @@
 name: Verificar el sitio
 
-on: pull_request
+on:
+  pull_request:
+  push:
+    branches: [main]
 
 permissions:
   contents: read
@@ -19,3 +22,4 @@ jobs:
       - run: npm run check
         env:
           CHECK_STACK: 1
+      - run: npm run check:production

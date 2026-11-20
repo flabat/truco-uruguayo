@@ -3,6 +3,7 @@ set -euo pipefail
 
 npm run cartas:verificar
 npm run test:unit
+python3 -B -m unittest discover -s tests/despliegue
 
 npm run build
 python3 .github/scripts/check_links.py dist https://example.org/

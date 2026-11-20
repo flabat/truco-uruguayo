@@ -1,0 +1,11 @@
+[Unit]
+Description=Publicar main verificado de Truco Oriental
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+StateDirectory=truco-deploy
+ExecStart=/usr/bin/flock -n /var/lib/truco-deploy/lock /usr/local/lib/truco-oriental/desplegar.py
+TimeoutStartSec=40min
