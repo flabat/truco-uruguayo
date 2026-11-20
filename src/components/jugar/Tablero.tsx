@@ -6,7 +6,7 @@ import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
-import { Naipe, Tapete } from "./Tapete";
+import { Dorsos, Naipe, Tapete } from "./Tapete";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -187,7 +187,7 @@ export function EnJuego({
           dador={v.dador}
           mano={v.mano}
           muestra={v.muestra}
-          manoNumero={partida.manoNumero}
+          titulo={"Mano " + partida.manoNumero}
           numeroVuelta={numeroVuelta}
           vuelta={v.vueltaActual ?? cerrada}
           terminada={Boolean(resultado && !cerrada)}
@@ -201,11 +201,7 @@ export function EnJuego({
                 ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
                 : <>
                   <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />
-                  {!carta && !esPropio && restantes > 0 && <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
-                    {Array.from({ length: restantes }, (_, i) => (
-                      <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
-                    ))}
-                  </div>}
+                  {!carta && !esPropio && restantes > 0 && <Dorsos base={base} cantidad={restantes} />}
                 </>,
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
               mano: mano.length > 0 && <div className="j-mano" role="group" aria-label="Tus cartas">

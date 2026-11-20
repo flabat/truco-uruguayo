@@ -20,128 +20,11 @@
   background: #fffdf6;
   border: 1px solid var(--line);
 }
-.tapete {
-  --oro: #f4dda3;
-  color: #fffaf0;
-  background: radial-gradient(ellipse at 50% 55%, #396046, #244837 65%, #203e30);
-  display: flex;
-  flex-direction: column;
-  padding: 10px;
-  min-width: 0;
-}
-.tapete-cabecera {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 3px 6px 9px;
-  border-bottom: 1px solid #68816b;
-}
-.tapete-cabecera h2 { font: 400 clamp(17px, 2.1vw, 24px)/1.15 var(--serif); }
-#turno-mesa {
-  font-size: 12px;
-  text-align: right;
-  color: var(--oro);
-  font-weight: 650;
-}
-.tapete-asientos {
-  flex: 1;
-  display: grid;
-  position: relative;
-  isolation: isolate;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-areas: "frente frente frente" "izq muestra der" "vos vos vos";
-  /* Reservar la carta del compañero mantiene fija la muestra al pasar del abanico a la jugada. */
-  grid-template-rows: minmax(clamp(92px, 14vw, 138px), auto) auto auto;
-  gap: 4px 0;
-  align-content: start;
-  align-items: center;
-  justify-items: center;
-  padding: 8px 0 0;
-  text-align: center;
-}
-.tapete-asientos::before {
-  content: "";
-  z-index: -1;
-  position: absolute;
-  inset: 20% 8% 16%;
-  border: 1px solid #a9ba9844;
-  border-radius: 48%;
-  box-shadow: inset 0 0 0 4px #ffffff05;
-}
-.asiento-0 { grid-area: vos; }
-.asiento-1 { grid-area: der; }
-.asiento-2 { grid-area: frente; }
-.asiento-3 { grid-area: izq; }
-.tapete-muestra {
-  grid-area: muestra;
-  align-self: start;
-  --ancho-mazo: clamp(90px, 21vw, 128px);
-  width: 100%;
-}
-.asiento {
-  max-width: 100%;
-  padding: 4px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-}
-.asiento h3 {
-  font: 650 clamp(12px, 1.7vw, 16px)/1.14 var(--sans);
-  text-wrap: balance;
-}
-.asiento-papel {
-  color: #e7d6ab;
-  font-size: 11px;
-  line-height: 1.3;
-  display: block;
-}
-.asiento-papel:empty { display: none; }
-.asiento-0, .asiento-2 {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.asiento-activo, .asiento-ganador {
-  border-color: #d6bd82;
-  background: #244433;
-}
-.asiento-activo h3::before {
-  content: "";
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  background: var(--oro);
-  border-radius: 50%;
-  margin-right: 5px;
-}
-.asiento-cartas { display: grid; justify-items: center; }
-.asiento-cartas:empty { display: none; }
-.tapete .ap-carta {
-  font-size: clamp(11px, 1.25vw, 13px);
-  padding: 0;
-  border: 0;
-  margin-top: 3px;
-  max-width: 95px;
-}
-.tapete :is(.asiento-0, .asiento-2) .ap-carta { max-width: none; }
-.tapete .ap-carta span { margin-top: 3px; }
-.tapete .ap-carta img {
-  width: clamp(36px, 5.5vw, 59px);
-  box-shadow: 1px 2px 3px #11241966;
-}
-.abanico-mesa {
-  display: flex;
-  justify-content: center;
-  padding: 4px 6px 2px;
-}
-.abanico-mesa img {
-  width: clamp(18px, 2.2vw, 28px);
-  border-radius: 2px;
-  box-shadow: 0 1px 2px #152c20;
-  transform: rotate(-8deg);
-}
-.abanico-mesa img + img { margin-left: -11px; transform: rotate(4deg); }
-.abanico-mesa img:nth-child(3) { transform: rotate(15deg); }
+#mesa-tapete { display: grid; min-width: 0; }
+.guiada .j-tapete .j-ocupante { min-height: clamp(9.75rem, 14vw, 10.5rem); align-content: start; display: grid; place-items: start center; }
+.guiada .j-tapete .j-frente .j-ocupante { padding-top: .25rem; }
+.guiada .j-tapete header { gap: .5rem; min-height: 4.25rem; }
+.guiada .j-tapete header strong { font-size: clamp(1rem, 2.1vw, 1.5rem); }
 .mesa-panel {
   min-width: 0;
   align-self: center;
@@ -156,43 +39,30 @@
 }
 #pregunta:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 #guia-turno, #aviso-mesa { font-size: clamp(14px, 1.4vw, 16px); }
-.tapete .asiento-0 {
-  width: 100%;
-  flex-direction: column;
-  border-top: 1px solid #9cb49d;
-  padding: 8px 2px;
-}
-.tapete .asiento-0 .asiento-nombre,
-.tapete .asiento-0 .asiento-cartas, .mesa-naipes {
+.mesa-naipes {
+  grid-column: 1 / -1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: clamp(5px, 1vw, 12px);
+  gap: clamp(4px, 1vw, 12px);
+  width: 100%;
+  padding-block: 4px;
 }
-.tapete .asiento-0 .asiento-cartas { align-items: end; }
-.mesa-naipes { align-items: start; }
-.tapete .mesa-naipes .ap-carta {
-  flex: none;
+.mesa-naipes:empty { display: none; }
+.j-tapete .mesa-naipes .ap-carta {
+  flex: 0 1 105px;
+  min-width: 0;
   margin: 0;
   padding: 3px;
   border: 2px solid transparent;
-  width: clamp(84px, 9.8vw, 124px);
+  font-size: clamp(11px, 1.25vw, 13px);
 }
-.tapete .mesa-naipes .ap-carta img { width: 100%; }
-.tapete .mesa-naipes :is(button:hover, [aria-pressed="true"], .ap-elegida) {
-  border-color: var(--oro);
+.j-tapete .mesa-naipes .ap-carta img { width: 100%; }
+.j-tapete .mesa-naipes :is(button:hover, [aria-pressed="true"], .ap-elegida) {
+  border-color: #f4dda3;
   background: #173d2b;
 }
-.mesa-jugada small {
-  display: block;
-  color: var(--oro);
-  font-weight: 700;
-}
-.mesa-naipes:not(:empty) + .mesa-jugada {
-  border-left: 1px solid #9cb49d;
-  padding-left: clamp(8px, 1.2vw, 16px);
-}
-.mesa-naipes:empty { display: none; }
+.j-tapete .mesa-naipes button:focus-visible { outline: 2px solid #fffaf0; outline-offset: 2px; }
 #decisiones, #cuenta-mesa > div {
   display: flex;
   align-items: stretch;
@@ -226,12 +96,9 @@
     grid-template-rows: 1fr auto auto 1fr;
     grid-template-areas: "tapete ." "tapete consigna" "tapete controles" "tapete .";
   }
-  .mesa-ejercicio > .tapete { grid-area: tapete; }
+  .mesa-ejercicio > #mesa-tapete { grid-area: tapete; }
   .mesa-consigna { grid-area: consigna; padding-bottom: 0; }
   .mesa-controles { grid-area: controles; padding-top: 0; }
-  .tapete { min-height: 415px; padding: 16px; }
-  .tapete-asientos { gap: 8px 0; }
-  .asiento { padding: 6px 8px; }
 }
 @media (max-width: 480px) {
   .guiada { width: calc(100% - 24px); padding-top: 6px; }

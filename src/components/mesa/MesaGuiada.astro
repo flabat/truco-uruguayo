@@ -1,13 +1,10 @@
----
-import Tapete from "./Tapete.astro";
----
 <section class="mesa-columnas mesa-ejercicio" aria-labelledby="pregunta">
   <header class="mesa-panel mesa-consigna">
     <p class="eyebrow" id="momento"></p>
     <h2 id="pregunta" tabindex="-1" aria-describedby="guia-turno"></h2>
     <p id="guia-turno"></p>
   </header>
-  <Tapete />
+  <div id="mesa-tapete"></div>
   <div class="mesa-panel mesa-controles">
     <div id="decisiones"></div>
     <slot />
