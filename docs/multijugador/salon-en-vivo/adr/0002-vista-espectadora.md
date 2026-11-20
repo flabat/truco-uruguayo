@@ -1,6 +1,6 @@
 # ADR 0002 · Una vista sin asiento para mirar en vivo
 
-**Estado.** Visibilidad por defecto acordada. Contrato de lectura y transporte propuestos.
+**Estado.** Visibilidad por defecto acordada. Lecturas HTTP implementadas en #230. La interfaz y el ritmo de consulta corresponden a #232.
 
 ## Contexto
 
@@ -25,3 +25,14 @@ Proponer dos rutas de lectura separadas de las rutas de jugador. El salón consu
 Sesión vencida devuelve 401. Una mesa privada, desconocida o de formato no habilitado da la misma respuesta 404. Una mesa pública recién terminada conserva el resultado en el detalle durante una breve sobremesa propuesta de 30 minutos y sale del directorio de inmediato. Un chico interrumpido se distingue de un resultado deportivo. Las lecturas usan caché privada con revalidación de sesión y visibilidad en cada solicitud, también antes de responder que nada cambió. La pestaña de espectador jamás invoca el WebSocket de comandos ni modifica la última mesa jugada.
 
 Un WebSocket exclusivo para espectadores reduciría consultas repetidas, pero exige administrar suscripciones, reconexión y revocación. Empezar con las lecturas HTTP permite probarlas independientemente del canal de jugadores. Medir solicitudes por segundo, retraso y coste de construir cada instantánea. Compartir el cálculo por mesa y versión. Revisar el transporte si la carga del piloto afecta los turnos humanos. [WebSocket de jugadores](../../../../api/vivo.ts) · [Privacidad de las señas](https://github.com/flabat/truco-uruguayo/issues/152)
+
+## Contrato para el cliente del salón
+
+Ambas lecturas requieren la cookie de sesión y devuelven JSON con una `versionPublica` opaca y un `ETag`. En la siguiente consulta se puede enviar el ETag en `If-None-Match`. Un 304 permite conservar la última respuesta. Un 401 requiere volver a ingresar. Al recibir un 404 se deja de mostrar la mesa. El cliente descarta la respuesta de una consulta anterior si ya recibió otra posterior.
+
+| Lectura | Respuesta 200 |
+| --- | --- |
+| `GET /api/salon/mesas` | `mesas` en orden estable, primero las humanas. Cada fila incluye `id`, `modo`, `formato`, `origen`, cantidades `humanos` y `computadoras`, `manoNumero`, `puntos` por equipo, `meta` y `ultimaActividad` en UTC. |
+| `GET /api/salon/mesas/:id` | Los campos de la fila, `asientos` con posición, equipo, tipo y etiqueta neutral, `estado` y `tablero`. El tablero reúne muestra, mano, dador, vueltas, acciones visibles de la mano actual, valor del truco, cobros y resultado. `turnoDeCartas` expresa el orden del tapete. Un canto puede requerir respuesta entre cartas. |
+
+El detalle de una mesa fresca indica `en-juego`. Un chico cerrado indica `terminada` durante los 30 minutos siguientes. Una exhibición retirada después de repartir indica `interrumpida`. Los tres estados requieren una mesa pública. Una mesa en espera, una mesa activa que perdió frescura y una partida cuya sobremesa venció devuelven 404.

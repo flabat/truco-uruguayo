@@ -6,6 +6,7 @@ import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
+import { crearSalon } from "./salon.ts";
 import { atenderPerfil } from "./perfil.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
@@ -32,6 +33,7 @@ const server = createServer(async (request, response) => {
       const ruta = request.url.split("?")[0];
       if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
+      else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);
       else if (ruta === "/api/perfil") await atenderPerfil(pool, request, response);
       else await auth(request, response);
     } catch {
@@ -57,6 +59,7 @@ const server = createServer(async (request, response) => {
 });
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
+const salon = crearSalon(pool);
 const partidas = crearPartidas(pool, web, alCambiar);
 const configVoz = configDiscord();
 const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,

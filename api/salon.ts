@@ -1,0 +1,109 @@
+import { createHash } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import type { Pool } from "pg";
+import { tableroEspectador } from "./tablero-espectador.ts";
+import { jugadorDeSesion } from "./auth.ts";
+import { responderJson } from "./http.ts";
+import { formatoMesa } from "./mesas.ts";
+import { restaurar, type Registro } from "./turnos.ts";
+
+const directorio = "/api/salon/mesas";
+const detalle = /^\/api\/salon\/mesas\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i;
+
+interface Fila {
+  id: string;
+  modo: "1v1" | "2v2";
+  meta: number;
+  origen: "humana" | "exhibicion";
+  version_senas: string | null;
+  ultimo_hecho_publico: Date;
+  fin_publico: Date | null;
+  exhibicion_retirada: boolean;
+  numero: number;
+  puntos: [number, number];
+  computadoras: boolean[];
+}
+
+// El evento en la posición exacta certifica el tanteador de esta versión de la mano.
+// El directorio nunca selecciona el reparto. Cada consulta ve un solo snapshot de PostgreSQL.
+const columnas = `m.id, m.modo, m.meta, m.origen, m.version_senas, m.ultimo_hecho_publico,
+  m.fin_publico, m.exhibicion_retirada, h.numero,
+  CASE WHEN h.cantidad=0 THEN h.puntos_inicio ELSE
+    ARRAY[(e.evento->'puntos'->>0)::int, (e.evento->'puntos'->>1)::int] END AS puntos,
+  ARRAY(SELECT a.computadora FROM juego.asientos a WHERE a.mesa=m.id ORDER BY asiento) AS computadoras`;
+
+function manoActual(conRegistro: boolean) {
+  return `JOIN LATERAL (
+    SELECT numero, puntos_inicio, jsonb_array_length(acciones) AS cantidad
+      ${conRegistro ? ", version, to_jsonb(mano) AS registro" : ""}
+    FROM juego.manos mano WHERE mesa=m.id ORDER BY numero DESC LIMIT 1
+  ) h ON true
+  JOIN juego.eventos_chico e ON e.mesa=m.id AND e.mano=h.numero AND e.posicion=h.cantidad`;
+}
+
+function resumen(fila: Fila) {
+  const computadoras = fila.computadoras.filter(Boolean).length;
+  return {
+    id: fila.id, modo: fila.modo, formato: formatoMesa(fila.modo, fila.version_senas), origen: fila.origen,
+    humanos: fila.computadoras.length - computadoras, computadoras, manoNumero: fila.numero,
+    puntos: fila.puntos, meta: fila.meta, ultimaActividad: fila.ultimo_hecho_publico.toISOString(),
+  };
+}
+
+function responderVista(req: IncomingMessage, res: ServerResponse, vista: object) {
+  const versionPublica = createHash("sha256").update(JSON.stringify(vista)).digest("hex");
+  const tag = '"' + versionPublica + '"';
+  res.setHeader("ETag", tag);
+  res.setHeader("Cache-Control", "private, no-cache");
+  res.setHeader("Vary", "Cookie");
+  const previos = req.headers["if-none-match"]?.split(",").map(t => t.trim().replace(/^W\//, ""));
+  if (previos?.includes(tag) || previos?.includes("*")) {
+    res.writeHead(304).end();
+    return;
+  }
+  res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ...vista, versionPublica }));
+}
+
+export function crearSalon(pool: Pool) {
+  // Compartir solo el tablero neutral. Autorización, visibilidad, frescura y cierre
+  // se leen de nuevo aun cuando el cliente tenga un ETag o la versión siga en memoria.
+  const tableros = new Map<string, { version: number; numero: number; tablero: ReturnType<typeof tableroEspectador> }>();
+  return async function atender(req: IncomingMessage, res: ServerResponse) {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return responderJson(res, 405, { error: "Método no permitido." });
+    }
+    if (!await jugadorDeSesion(pool, req)) return responderJson(res, 401, { error: "Ingresá para mirar una mesa." });
+    const ruta = (req.url ?? "").split("?")[0];
+    if (ruta === directorio) {
+      const { rows } = await pool.query<Fila>(`SELECT ${columnas}
+        FROM juego.mesas_en_juego v JOIN juego.mesas m ON m.id=v.id ${manoActual(false)}
+        ORDER BY (m.origen='exhibicion'), m.id`);
+      return responderVista(req, res, { mesas: rows.map(resumen) });
+    }
+    const id = detalle.exec(ruta)?.[1];
+    const ausente = () => responderJson(res, 404, { error: "No se encontró la mesa en el salón." });
+    if (!id) return ausente();
+    const { rows: [fila] } = await pool.query<Fila & { registro: Registro; version: number }>(`
+      SELECT ${columnas}, h.registro, h.version FROM juego.mesas m ${manoActual(true)}
+      WHERE m.id=$1 AND m.publica AND m.modo IN ('1v1','2v2') AND m.ultimo_hecho_publico IS NOT NULL
+        AND (EXISTS (SELECT 1 FROM juego.mesas_en_juego v WHERE v.id=m.id)
+          OR m.fin_publico >= statement_timestamp() - interval '30 minutes'
+          OR (m.exhibicion_retirada AND m.fin_publico IS NULL))`, [id]);
+    if (!fila) return ausente();
+    const mesa = resumen(fila);
+    let actual = tableros.get(fila.id);
+    if (!actual || actual.version !== fila.version || actual.numero !== fila.numero) {
+      const { estado } = restaurar(fila.registro, mesa.formato, fila.meta);
+      actual = { version: fila.version, numero: fila.numero, tablero: tableroEspectador(estado) };
+      if (!tableros.has(fila.id) && tableros.size >= 128) tableros.delete(tableros.keys().next().value!);
+      tableros.set(fila.id, actual);
+    }
+    const asientos = fila.computadoras.map((cpu, asiento) => ({
+      asiento, equipo: asiento % 2, tipo: cpu ? "computadora" : "humano",
+      nombre: (cpu ? "Computadora " : "Jugador ") + (asiento + 1),
+    }));
+    const estado = fila.fin_publico ? "terminada" : fila.exhibicion_retirada ? "interrumpida" : "en-juego";
+    responderVista(req, res, { ...mesa, asientos, estado, tablero: actual.tablero });
+  };
+}
