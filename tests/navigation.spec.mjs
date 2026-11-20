@@ -51,14 +51,17 @@ test.describe("sin JavaScript", () => {
       await expect(enlace).toBeVisible();
       await expect(enlace).toHaveText(commit.slice(0, 8));
       await expect(enlace).toHaveAttribute("href", `https://github.com/flabat/truco-uruguayo/commit/${commit}`);
-      for (const [etiqueta, valor] of [
-        ["Motor local", versionMotorPractica],
-        ["Modelo local", versionModeloPractica],
-      ]) {
-        const dato = pie.getByText(etiqueta, { exact: true }).locator("+ dd");
-        await expect(dato).toBeVisible();
-        await expect(dato).toHaveText(valor);
-      }
+      const motor = pie.getByText("Motor local", { exact: true }).locator("+ dd");
+      await expect(motor).toBeVisible();
+      await expect(motor).toHaveText(versionMotorPractica);
+      const modelo = pie.getByText("Modelo local", { exact: true }).locator("+ dd");
+      const resumen = modelo.locator("summary");
+      await expect(resumen).toHaveText("Práctica v1 · Publicado el 18 nov 2026");
+      await expect(resumen.locator("time")).toHaveAttribute("datetime", "2026-11-18");
+      await expect(modelo.locator("code")).toBeHidden();
+      await resumen.press("Enter");
+      await expect(modelo.locator("code")).toBeVisible();
+      await expect(modelo.locator("code")).toHaveText(versionModeloPractica);
     }
   });
 

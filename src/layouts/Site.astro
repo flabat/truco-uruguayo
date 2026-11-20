@@ -1,5 +1,6 @@
 ---
 import Brand from "../components/Brand.astro";
+import FichaModelo from "../components/FichaModelo";
 import Search from "../components/Search.astro";
 import { url } from "../lib/guide";
 import { versionModeloPractica, versionMotorPractica } from "../probabilidad/perfil";
@@ -81,7 +82,14 @@ const pages = [
         </div>
         <div>
           <dt>{enSalon ? "Modelo de la mesa" : "Modelo local"}</dt>
-          <dd id={enSalon ? "version-modelo-mesa" : undefined}>{enSalon ? "Sin mesa" : versionModeloPractica}</dd>
+          <dd>
+            {enSalon ? (
+              <>
+                <div id="version-modelo-mesa"></div>
+                <span>Sin mesa</span>
+              </>
+            ) : <FichaModelo id={versionModeloPractica} />}
+          </dd>
         </div>
       </dl>
     </footer>

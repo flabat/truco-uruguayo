@@ -77,7 +77,12 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(cartas).toHaveText(["", "", ""], { useInnerText: true });
   const pie = page.getByRole("contentinfo");
   await expect(pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd")).toHaveText("v2");
-  await expect(pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd")).toHaveText("tercetos-basica-v1");
+  const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  const resumen = modelo.locator("summary");
+  await expect(resumen).toHaveText("Clásico de tercetos v1 · Publicado el 19 nov 2026");
+  await expect(resumen.locator("time")).toHaveAttribute("datetime", "2026-11-19");
+  await resumen.press("Enter");
+  await expect(modelo.locator("code")).toHaveText("tercetos-basica-v1");
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {

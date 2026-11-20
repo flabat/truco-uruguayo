@@ -21,3 +21,9 @@ node scripts/medir-inferencia.ts pairs-private-senas /ruta/al/run/actor.json 24 
 ```
 
 El campeonato puede usar `playMatchAsync` de `training/arena/index.ts` con un respondedor por asiento. Este recibe la observación y el número uniforme generado por el árbitro para ese asiento. Una llamada a `servicio.decide(pin, observacion, uniforme)` usa el mismo lector de pesos, la misma selección y el mismo plazo que la API. El entrenamiento y los contadores del árbitro quedan fuera del servicio.
+
+## Nombre y fecha que ve el jugador
+
+El catálogo usa la huella completa del actor o el identificador del bot integrado. La fecha corresponde a la primera publicación comprobada, expresada en el calendario de Uruguay. Práctica v1 se publicó el 18 de noviembre de 2026. La publicación de Clásico v1 y Clásico de tercetos v1 en el VPS consta el 19 de noviembre. [Publicación de la práctica](https://github.com/flabat/truco-uruguayo/actions/runs/44367361710) · [Despliegue de los bots integrados](https://github.com/flabat/truco-uruguayo/issues/214#issuecomment-7027835056)
+
+Las tres ediciones Ceibo se activaron en producción el 20 de noviembre de 2026. Al publicar una edición nueva, agregá al catálogo su PIN completo, el nombre que verá el jugador y la fecha documentada de su primera publicación. Guardá el comprobante de activación en el issue y enlazalo aquí. Un modelo sin publicación documentada conserva su referencia y figura sin fecha. [Activación de Ceibo](https://github.com/flabat/truco-uruguayo/issues/251#issuecomment-7043360261) · [Catálogo de ediciones](../src/lib/modelos.ts)
