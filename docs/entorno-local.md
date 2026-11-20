@@ -3,7 +3,7 @@
 Desde la raíz del repositorio, con Docker y Compose disponibles, levantá el sitio, la API, PostgreSQL y Keycloak con un solo comando. La primera ejecución descarga las imágenes, compila el sitio e importa el entorno de identidad de prueba. El comando termina cuando los cuatro servicios están disponibles.
 
 ```sh
-docker compose up --build --wait
+TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
 ```
 
 | Servicio | Cómo probarlo |

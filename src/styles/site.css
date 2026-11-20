@@ -497,6 +497,9 @@ footer {
   column-gap: 4px;
   max-width: 100%;
 }
+.footer-versiones a {
+  text-decoration: underline;
+}
 .footer-versiones dd {
   margin: 0;
   font-weight: 600;

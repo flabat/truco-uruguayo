@@ -8,6 +8,7 @@ COPY training/contracts/index.ts ./training/contracts/index.ts
 COPY public ./public
 COPY arte ./arte
 COPY scripts/tatu ./scripts/tatu
+ARG TRUCO_RELEASE
 RUN npm run build
 
 FROM caddy:2-alpine AS produccion

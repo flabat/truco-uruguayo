@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import paquete from "../package.json" with { type: "json" };
+import { execFileSync } from "node:child_process";
 import { versionModeloPractica, versionMotorPractica } from "../src/probabilidad/perfil.ts";
 
 test("del tema de la portada al último capítulo y sus fuentes", async ({ page }) => {
@@ -43,11 +43,15 @@ test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("el pie de la guía y la práctica identifica las versiones locales", async ({ page }) => {
+    const commit = process.env.TRUCO_RELEASE || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     const pie = page.getByRole("contentinfo");
     for (const ruta of ["./", "aprender/mano/"]) {
       await page.goto(ruta);
+      const enlace = pie.getByText("Interfaz", { exact: true }).locator("+ dd").getByRole("link");
+      await expect(enlace).toBeVisible();
+      await expect(enlace).toHaveText(commit.slice(0, 8));
+      await expect(enlace).toHaveAttribute("href", `https://github.com/flabat/truco-uruguayo/commit/${commit}`);
       for (const [etiqueta, valor] of [
-        ["Interfaz", "v" + paquete.version],
         ["Motor local", versionMotorPractica],
         ["Modelo local", versionModeloPractica],
       ]) {
