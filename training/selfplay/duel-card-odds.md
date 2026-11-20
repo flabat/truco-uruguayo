@@ -1,4 +1,28 @@
-# Comparar el duelo con y sin conteo de cartas
+# Comparar los tres modelos de duelo
+
+Desde la raíz del checkout, con Node 24 y Python 3, esta orden reparte seis horas de entrenamiento entre tres modelos de duelo. La evaluación se ejecuta al final y lleva tiempo adicional.
+
+```sh
+caffeinate -i node training/selfplay/compare-duel.ts --interactions --from runs/local-pilot-03 --run runs/duel-trio-01 --seconds-per-arm 7200 --pairs 256
+```
+
+| Modelo | Pesos de la política | Qué aprende |
+| --- | ---: | --- |
+| `baseline` | 7.424 | La política del piloto original. |
+| `odds` | 7.424 | Usa además la probabilidad de que el rival supere o empate cada carta propia. |
+| `interactions` | 11.264 | Aprende cuánto vale una jugada al combinar esas probabilidades con el resultado de la primera baza y los puntos de truco en juego. |
+
+Los tres aprenden uno después del otro, durante dos horas activas cada uno, desde el mismo campeón congelado, con la misma semilla de repartos y el mismo conjunto inicial de rivales. Los pesos adicionales comienzan en cero. Cada modelo juega contra los otros dos y contra el campeón original. Con 256 pares son 512 chicos por cruce, con asientos invertidos, y 3.072 chicos de evaluación en total.
+
+Para medir el aporte de los pesos adicionales, mirá el enfrentamiento de `interactions` contra `odds`. La terminal lo muestra al terminar y se guarda en `comparison.json` bajo `matchups.interactionsVsOdds`. Si el extremo inferior de su intervalo del 95 % supera el 50 %, el modelo ampliado tuvo ventaja en esos repartos para ese entrenamiento. Cada intervalo describe un único cruce. Una réplica con otra semilla permite comprobar si la mejora se repite.
+
+Si interrumpís la comparación, repetí la misma orden agregando `--resume`. Para ver el avance desde otra terminal, leé el último evento de cada modelo que ya haya empezado.
+
+```sh
+find runs/duel-trio-01 -path '*/events/duel-a.jsonl' -exec tail -n 1 {} \;
+```
+
+## Comparar solo el modelo original y el modelo con conteo
 
 Desde la raíz del checkout, con Node 24 y Python 3, esta orden dedica tres horas de entrenamiento al modelo actual y tres al que cuenta cartas. Ambos parten del campeón congelado al inicio del piloto indicado en `--from`. Se puede usar un piloto en curso. El entrenamiento y la evaluación se juegan íntegramente entre computadoras.
 
@@ -30,4 +54,6 @@ Para cada carta propia, el modelo calcula la probabilidad de que la mejor carta 
 
 Con muestra 6 de oros y una mano de 4 de oros, 7 de copas y 4 de bastos, solo el 2 de oros supera al 4 de oros. De entrada la probabilidad de que el rival lo tenga es 3/36. Si el rival gasta el 2 en la primera baza, baja a cero. Si en cambio juega el as de espadas, es 2/35.
 
-Ambos actores guardan **7.424 pesos**. El nuevo usa tres grupos antes libres, con ocho intervalos de probabilidad por grupo y valores propios para los extremos 0 y 1. El tamaño del JSON puede variar al aprender valores distintos. Una segunda comparación podría asignar pesos adicionales al cruce entre el riesgo de una carta, el resultado de la primera baza y el valor del truco. Eso permitiría aprender cuándo conviene reservar la misma carta ganadora. Para medir el aporte de esos pesos conviene mantener fijos el conteo, los rivales y el tiempo de entrenamiento.
+El modelo con conteo usa tres grupos antes libres, con ocho intervalos de probabilidad por grupo y valores propios para los extremos 0 y 1. El archivo JSON puede variar de tamaño cuando aprende valores distintos.
+
+El tercer modelo agrega **3.840 pesos**. Para jugar una carta usa las probabilidades de esa carta. Para los cantos usa las de su mejor carta restante. Distingue si la primera baza sigue abierta, terminó parda, la ganó o la perdió. También distingue de uno a cuatro puntos de truco. Al proponer o responder a una subida tiene en cuenta el valor en disputa. Así puede aprender, por ejemplo, a jugar antes la misma carta cuando perdió la primera baza y hay tres puntos en juego.

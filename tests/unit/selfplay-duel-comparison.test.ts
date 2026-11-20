@@ -10,7 +10,7 @@ import {artifactPin} from "../../api/actor-registry.ts";
 import {initial} from "../../training/anchored/actor.ts";
 import {read, save} from "../../training/anchored/io.ts";
 import {teamSignalsVersion} from "../../training/contracts/index.ts";
-import {createLearner, duelOddsKind, selfplayKind} from "../../training/selfplay/learner.ts";
+import {createLearner, duelInteractionsKind, duelOddsKind, selfplayKind} from "../../training/selfplay/learner.ts";
 import {openTrainingTeam} from "../../training/selfplay/train.ts";
 import {interval, pairOutcomes} from "../../training/league/development.ts";
 
@@ -47,51 +47,86 @@ function pilotFixture(t: TestContext) {
   return {pilot, run, champion, runCli};
 }
 
-test("el comparador entrena desde el mismo campeón y reproduce los resultados invirtiendo los asientos", t => {
+const comparisons = [["baseline", "odds"], ["baseline", "odds", "interactions"]] as const;
+for (const arms of comparisons) test(`el comparador de ${arms.length} modelos iguala el presupuesto y reproduce cada cruce con los asientos invertidos`, t => {
   const {pilot, run, champion, runCli} = pilotFixture(t);
-  const result = runCli();
+  const options = arms.length === 3 ? ["--interactions"] : [];
+  const result = runCli(...options);
   assert.equal(result.status, 0, result.stderr);
   const report = read(join(run, "comparison.json"));
+  assert.deepEqual(Object.keys(report.arms).sort(), [...arms].sort());
   assert.equal(report.secondsPerArm, 0.001);
   assert.equal(report.pairs, 3);
   assert.equal(report.sourceChampionPin, artifactPin(champion));
   assert.notEqual(report.trainingSeed, report.evaluationSeed);
 
-  const trained = ["baseline", "odds"].map(arm => {
+  const reference = openTrainingTeam(champion, "duel");
+  type Team = typeof reference;
+  const compare = (left: Team, right: Team) =>
+    pairOutcomes("duel", seat => left[seat], seat => right[seat], report.pairs, report.evaluationSeed).results;
+  const frozenContext = read(join(run, "baseline", "duel", "a", "epochs", "1.json"));
+  const expectedKinds = {baseline:selfplayKind, odds:duelOddsKind, interactions:duelInteractionsKind};
+  const trained = arms.map(arm => {
     const actor = read(join(run, arm, "duel", "a", "candidate.json"));
     const frozen = read(join(run, arm, "duel", "a", "epochs", "1.json"));
     const state = read(join(run, arm, "duel", "a", "checkpoint.json"));
     assert.deepEqual(frozen.champion.model, champion);
+    assert.deepEqual(frozen, frozenContext);
     assert.equal(state.starterPin, artifactPin(champion));
     assert.equal(state.seed, report.trainingSeed);
     assert.ok(report.arms[arm].trainingSeconds >= report.secondsPerArm);
     assert.ok(report.arms[arm].games > 0);
     assert.equal(actor.weights.length, report.arms[arm].weights);
     assert.equal(artifactPin(actor), report.arms[arm].pin);
-    assert.equal(actor.kind, arm === "baseline" ? selfplayKind : duelOddsKind);
-    assert.equal(actor.weights.length, champion.weights.length);
+    assert.equal(actor.kind, expectedKinds[arm]);
+    assert.equal(actor.weights.length, arm === "interactions" ? 11_264 : champion.weights.length);
+    for (const learner of [state.learner, state.specialist]) {
+      assert.equal(learner.actor.kind, actor.kind);
+      assert.equal(learner.squaredGradient.length, actor.weights.length);
+    }
+    if (arm === "interactions") assert.ok(actor.weights.slice(champion.weights.length).some((w: number) => w !== 0));
     return openTrainingTeam(actor, "duel");
   });
-  assert.deepEqual(read(join(run, "baseline", "duel", "a", "epochs", "1.json")),
-    read(join(run, "odds", "duel", "a", "epochs", "1.json")));
-  const [baseline, odds] = trained;
-  const replay = pairOutcomes("duel", seat => odds[seat], seat => baseline[seat], report.pairs, report.evaluationSeed);
-  assert.deepEqual(report.headToHead, interval(replay.results));
-  assert.deepEqual(report.dealPairWinRates.oddsVsBaseline, replay.results);
-  const reference = openTrainingTeam(champion, "duel");
-  const versusChampion = trained.map(team =>
-    pairOutcomes("duel", seat => team[seat], seat => reference[seat], report.pairs, report.evaluationSeed).results);
-  const [controlResults, oddsResults] = versusChampion;
+  const [baseline, odds, interactions] = trained;
+  const direct = compare(odds, baseline);
+  assert.deepEqual(report.headToHead, interval(direct));
+  assert.deepEqual(report.dealPairWinRates.oddsVsBaseline, direct);
+  const [controlResults, oddsResults, interactionResults] = trained.map((team, i) => {
+    const results = compare(team, reference);
+    assert.deepEqual(report.againstChampion[arms[i]], interval(results));
+    assert.deepEqual(report.dealPairWinRates[arms[i] + "VsChampion"], results);
+    return results;
+  });
   assert.deepEqual(report.againstChampion.delta, interval(oddsResults.map((wins, i) => wins - controlResults[i])));
+  if (interactions) {
+    const interactionsVsBaseline = compare(interactions, baseline), interactionsVsOdds = compare(interactions, odds);
+    assert.deepEqual(report.matchups, {oddsVsBaseline:interval(direct),
+      interactionsVsBaseline:interval(interactionsVsBaseline), interactionsVsOdds:interval(interactionsVsOdds)});
+    assert.deepEqual(report.dealPairWinRates.interactionsVsBaseline, interactionsVsBaseline);
+    assert.deepEqual(report.dealPairWinRates.interactionsVsOdds, interactionsVsOdds);
+    assert.deepEqual(report.againstChampion.interactionsMinusOdds,
+      interval(interactionResults.map((wins, i) => wins - oddsResults[i])));
+  }
   assert.deepEqual(read(join(pilot, "input/duel/champion-at-start.json")), champion);
 
   const previous = readFileSync(join(run, "comparison.json"), "utf8");
-  assert.notEqual(runCli().status, 0);
+  assert.notEqual(runCli(...options).status, 0);
+  const wrongMode = interactions ? runCli("--resume") : runCli("--interactions", "--resume");
+  assert.notEqual(wrongMode.status, 0);
   assert.equal(readFileSync(join(run, "comparison.json"), "utf8"), previous);
   rmSync(join(run, "comparison.json"));
-  const resumed = runCli("--resume");
+  const resumed = runCli(...options, "--resume");
   assert.equal(resumed.status, 0, resumed.stderr);
   assert.deepEqual(read(join(run, "comparison.json")), report);
+  if (interactions) {
+    const reopened = runCli("--interactions", "--resume");
+    assert.equal(reopened.status, 0, reopened.stderr);
+    const candidatePath = join(run, report.arms.interactions.model);
+    const candidate = read(candidatePath);
+    candidate.updates++;
+    save(candidatePath, candidate);
+    assert.notEqual(runCli("--interactions", "--resume").status, 0);
+  }
 });
 
 test("rechaza un campeón del piloto modificado después de registrar sus entradas", t => {

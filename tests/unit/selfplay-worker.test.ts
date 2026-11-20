@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initial, type CycleFormat } from "../../training/anchored/actor.ts";
 import { read, save } from "../../training/anchored/io.ts";
+import { createLearner, withDuelInteractions } from "../../training/selfplay/learner.ts";
 import { openTrainingTeam, regressionWeight, runSlice } from "../../training/selfplay/train.ts";
 
 function fixture(format: CycleFormat) {
@@ -48,6 +49,30 @@ test("dos trozos reanudados producen los mismos pesos, optimizador, rivales, dec
     assert.deepEqual(resumed,duplicate);
     assert.deepEqual(read(join(dir,"candidate.json")),resumed.learner.actor);
   } finally { for (const root of [one,two]) rmSync(root,{recursive:true,force:true}); }
+});
+
+test("un piloto que parte de un actor con interacciones conserva sus pesos y reanuda ambos optimizadores", t => {
+  const starter = withDuelInteractions(createLearner(initial("duel")).actor);
+  starter.weights[starter.weights.length - 1] = 0.125;
+  starter.updates = 1;
+  const wholeRun = fixture("duel"), splitRun = fixture("duel");
+  for (const root of [wholeRun, splitRun]) {
+    t.after(() => rmSync(root, {recursive:true, force:true}));
+    save(join(root, "input", "duel", "starter.json"), starter);
+  }
+  const cold = runSlice(splitRun, "duel", "a", {epoch:1, seconds:0, games:0});
+  for (const learner of [cold.learner, cold.specialist]) {
+    assert.deepEqual(learner.actor, starter);
+    assert.equal(learner.squaredGradient.length, starter.weights.length);
+  }
+  const whole = runSlice(wholeRun, "duel", "a", {epoch:1, seconds:0, games:12});
+  runSlice(splitRun, "duel", "a", {epoch:1, seconds:0, games:6});
+  const resumed = runSlice(splitRun, "duel", "a", {epoch:1, seconds:0, games:12});
+  assert.deepEqual(learned(resumed), learned(whole));
+  for (const learner of [resumed.learner, resumed.specialist]) {
+    assert.ok(learner.actor.updates > starter.updates);
+    assert.ok(learner.squaredGradient.slice(7_424).some(w => w > 0));
+  }
 });
 
 test("en parejas rota el compañero independiente, cambia de campeón por época y omite gestos privados del log",() => {
