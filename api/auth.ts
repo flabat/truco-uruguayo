@@ -40,9 +40,10 @@ interface OpcionesOIDC {
   issuer: URL;
   backend: URL;
   local: boolean;
+  salonHabilitado?: boolean;
 }
 
-export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }: OpcionesOIDC) {
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false }: OpcionesOIDC) {
   const protocol = "/protocol/openid-connect";
   const config = new oidc.Configuration({
     issuer: issuer.href,
@@ -133,7 +134,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
 
     if (req.method === "GET" && url.pathname === "/api/jugador") {
       const player = await jugadorDeSesion(pool, req);
-      res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ?? null));
+      res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ? { ...player, salonHabilitado } : null));
       return;
     }
 

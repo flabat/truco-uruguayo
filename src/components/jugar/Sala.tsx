@@ -51,12 +51,14 @@ function Visibilidad({ publica }: { publica: boolean }) {
 }
 
 function AbrirMesa({
+  salonHabilitado,
   base,
   anterior,
   abrir,
 }: {
   base: string;
   anterior: string | null;
+  salonHabilitado: boolean;
   abrir: (id: string, aviso: string) => void;
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
@@ -81,7 +83,7 @@ function AbrirMesa({
     avisar("");
     try {
       const mesa = await pedir<Mesa>("/api/mesas", {
-        modo, publica: modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
+        modo, publica: salonHabilitado && modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
       });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
@@ -111,7 +113,7 @@ function AbrirMesa({
           </a>
         )}
         <h2>Crear una mesa</h2>
-        <a className="j-link" href={base + "jugar/"}>Volver al salón</a>
+        {salonHabilitado && <a className="j-link" href={base + "jugar/"}>Volver al salón</a>}
         <fieldset disabled={ocupado}>
           <legend>Modalidad</legend>
           <div className="j-modos">
@@ -134,11 +136,11 @@ function AbrirMesa({
               Permitir señas entre compañeros
             </label>
           )}
-          {modo !== "3v3" && <label className="j-habilitar-senas">
+          {salonHabilitado && modo !== "3v3" && <label className="j-habilitar-senas">
             <input type="checkbox" checked={publica} onChange={e => publicar(e.target.checked)} />
             Mostrar en el salón
           </label>}
-          <Visibilidad publica={modo !== "3v3" && publica} />
+          <Visibilidad publica={salonHabilitado && modo !== "3v3" && publica} />
         </fieldset>
         <div className="j-elegir-meta">
           <label htmlFor="meta-chico">Tantos para ganar el chico</label>
@@ -501,12 +503,13 @@ export default function Sala({ base }: { base: string }) {
           </div>
         </section>
       ) : vista === "mirar" ? (
-        /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observada)
+        jugador.salonHabilitado && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observada)
           ? <VisorEspectador id={observada} volver={() => location.assign(juego)} {...navegacion} />
           : <div className="j-panel"><p role="status">Esta mesa no está disponible para mirar.</p>
               <a className="j-link" href={juego}>Volver al salón</a></div>
-      ) : vista === "crear" ? (
+      ) : vista === "crear" || !jugador.salonHabilitado ? (
         <AbrirMesa
+          salonHabilitado={Boolean(jugador.salonHabilitado)}
           base={base}
           anterior={anterior}
           abrir={(id, avisoInicial) => abrir({ id, avisoInicial, recienCreada: true })}

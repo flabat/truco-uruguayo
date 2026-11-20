@@ -101,11 +101,12 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
   throw new Error("Versión de señas desconocida.");
 }
 
-async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean): Promise<Cambio> {
+async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean, salonHabilitado: boolean): Promise<Cambio> {
   const { modo, formato, meta: metaElegida, publica = false } = datos;
   if (typeof publica !== "boolean" || (publica && modo === "3v3")) {
     throw new ErrorPeticion(400, "Solo duelo y parejas admiten una mesa pública. Indicá la visibilidad con verdadero o falso.");
   }
+  if (publica && !salonHabilitado) throw new ErrorPeticion(409, "El salón está cerrado. Podés crear una mesa privada.");
   if (modo !== "1v1" && modo !== "2v2" && modo !== "3v3") throw new ErrorPeticion(400, "Modalidad de mesa desconocida.");
   if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
@@ -155,7 +156,7 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   return { id, cambiado: true };
 }
 
-export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>) {
+export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>, salonHabilitado = false) {
   return async function mesas(req: IncomingMessage, res: ServerResponse) {
     try {
       const path = (req.url ?? "").split("?")[0];
@@ -202,7 +203,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         await db.query("BEGIN");
         if (invitacion) cambio = await unir(db, jugador.id, invitacion[1]);
         else if (mesa) cambio = await agregarComputadora(db, mesa[1], jugador.id, datos.asiento);
-        else cambio = await crear(db, jugador.id, datos, tercetos);
+        else cambio = await crear(db, jugador.id, datos, tercetos, salonHabilitado);
         vista = await leerMesa(db, cambio.id, jugador.id, web);
         await db.query("COMMIT");
       } catch (error) {

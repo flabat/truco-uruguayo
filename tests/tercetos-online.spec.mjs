@@ -7,7 +7,7 @@ const ejemplo = JSON.parse(readFileSync(new URL("./fixtures/pico-tercetos-v2.jso
 
 const id = "449e7634-5062-4dec-9063-357975dac55f";
 const nombres = ["Ana", "Bruno", "Clara", "Diego", "Elena", "Félix"];
-const jugadores = nombres.map((nombre, asiento) => ({ nombre, id: "jugador-" + asiento }));
+const jugadores = nombres.map((nombre, asiento) => ({ nombre, id: "jugador-" + asiento, salonHabilitado: true }));
 const asientos = nombres.map((nombre, asiento) => ({ nombre, asiento, equipo: asiento % 2, tipo: "humano" }));
 const crearSala = (miAsiento, plazas = asientos) => ({
   id, modo: "3v3", formato: "triples", meta: 26, creadorId: jugadores[0].id,
@@ -30,9 +30,10 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
     const { pathname } = new URL(route.request().url());
     let json;
     if (pathname === "/api/jugador") json = jugadores[0];
+    if (pathname === "/api/salon/mesas") json = { mesas: [] };
     if (pathname === "/api/modalidades") json = { modos: habilitado ? ["1v1", "2v2", "3v3"] : ["1v1", "2v2"] };
     if (pathname === "/api/mesas") {
-      expect(route.request().postDataJSON()).toEqual({ modo: "3v3", meta: 26 });
+      expect(route.request().postDataJSON()).toEqual({ modo: "3v3", meta: 26, publica: false });
       json = crearSala(0, plazas);
     }
     if (pathname.endsWith("/computadoras")) {
@@ -46,6 +47,7 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
     await route.fulfill({ json });
   });
   await page.goto("jugar/");
+  await page.getByRole("button", { name: "Crear mi mesa" }).click();
   await expect(page.getByRole("radio", { name: /En parejas/ })).toBeVisible();
   const modo = page.getByRole("radio", { name: /3 contra 3/ });
   await expect(modo).toHaveCount(0);
@@ -98,6 +100,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
         const { pathname } = new URL(route.request().url());
         let json;
         if (pathname === "/api/jugador") json = jugadores[asiento];
+        if (pathname.endsWith("/invitaciones/seis-personas")) json = { publica: false, sentada: true, id };
         if (pathname.endsWith("/unirse") || pathname.endsWith("/" + id)) json = crearSala(asiento);
         if (pathname.endsWith("/acciones")) {
           const datos = route.request().postDataJSON();

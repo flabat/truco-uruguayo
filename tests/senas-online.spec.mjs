@@ -21,9 +21,10 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   await page.routeWebSocket("**/vivo", () => {});
   await page.route("**/api/**", async route => {
     const req=route.request(), path=new URL(req.url()).pathname;
-    let data={id:"s0",nombre:"A"};
-    if (path === "/api/mesas") {
-      expect(req.postDataJSON()).toEqual({modo:"2v2",formato:"pairs-private-senas"});
+    let data={id:"s0",nombre:"A",salonHabilitado:true};
+    if (path === "/api/salon/mesas") data={mesas:[]};
+    else if (path === "/api/mesas") {
+      expect(req.postDataJSON()).toEqual({modo:"2v2",publica:true,formato:"pairs-private-senas"});
       data=mesa;
     } else if(path.endsWith(id)) data=mesa;
     else if(path.endsWith("/acciones")) {
@@ -35,6 +36,7 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
     await route.fulfill({json:data});
   });
   await page.goto("jugar/");
+  await page.getByRole("button", { name: "Crear mi mesa" }).click();
   const check=page.getByRole("checkbox",{name:"Permitir señas entre compañeros"});
   await check.focus(); await check.press("Space");
   await page.getByRole("button",{name:"Crear mesa",exact:true}).click();

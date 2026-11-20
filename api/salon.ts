@@ -64,7 +64,7 @@ function responderVista(req: IncomingMessage, res: ServerResponse, vista: object
   res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ ...vista, versionPublica }));
 }
 
-export function crearSalon(pool: Pool) {
+export function crearSalon(pool: Pool, habilitado: boolean) {
   // Compartir solo el tablero neutral. Autorización, visibilidad, frescura y cierre
   // se leen de nuevo aun cuando el cliente tenga un ETag o la versión siga en memoria.
   const tableros = new Map<string, { version: number; numero: number; tablero: ReturnType<typeof tableroEspectador> }>();
@@ -74,6 +74,8 @@ export function crearSalon(pool: Pool) {
       return responderJson(res, 405, { error: "Método no permitido." });
     }
     if (!await jugadorDeSesion(pool, req)) return responderJson(res, 401, { error: "Ingresá para mirar una mesa." });
+    const ausente = () => responderJson(res, 404, { error: "No se encontró la mesa en el salón." });
+    if (!habilitado) return ausente();
     const ruta = (req.url ?? "").split("?")[0];
     if (ruta === directorio) {
       const { rows } = await pool.query<Fila>(`SELECT ${columnas}
@@ -82,7 +84,6 @@ export function crearSalon(pool: Pool) {
       return responderVista(req, res, { mesas: rows.map(resumen) });
     }
     const id = detalle.exec(ruta)?.[1];
-    const ausente = () => responderJson(res, 404, { error: "No se encontró la mesa en el salón." });
     if (!id) return ausente();
     const { rows: [fila] } = await pool.query<Fila & { registro: Registro; version: number }>(`
       SELECT ${columnas}, h.registro, h.version FROM juego.mesas m ${manoActual(true)}
