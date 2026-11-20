@@ -66,7 +66,7 @@ async function simular(page, handler) {
 
 test("el pie muestra el motor y el modelo asignados a la mesa y los quita al volver al salón", async ({ page, isMobile }) => {
   if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
-  const pin = "0123456789abcdef".repeat(4);
+  const pin = "6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2";
   await simular(page, (path) => {
     if (path.endsWith("/" + mesaId))
       return { json: { ...mesa("2v2", personas), versionReglas: 1, politica: pin } };
@@ -76,16 +76,70 @@ test("el pie muestra el motor y el modelo asignados a la mesa y los quita al vol
   const pie = page.getByRole("contentinfo");
   const motor = pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd");
   const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  const resumen = modelo.locator("summary");
+  const identificador = modelo.locator("code");
   await expect(motor).toHaveText("v1");
-  await expect(modelo).toHaveText(pin);
-  await expect(modelo).toBeVisible();
-  expect(await pie.evaluate(el => el.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+  await expect(resumen).toHaveText("Ceibo Parejas · Publicado el 20 nov 2026");
+  await expect(resumen.locator("time")).toHaveAttribute("datetime", "2026-11-20");
+  await expect(identificador).toBeHidden();
   if (process.env.CAPTURAS_VERSIONES)
     await pie.screenshot({ path: `${process.env.CAPTURAS_VERSIONES}/versiones-${test.info().project.name}.png`, scale: "css" });
+  await resumen.press("Enter");
+  await expect(resumen).toBeFocused();
+  await expect(modelo.getByText("Identificador", { exact: true })).toBeVisible();
+  await expect(identificador).toBeVisible();
+  await expect(identificador).toHaveText(pin);
+  await expect(identificador).not.toHaveCSS("user-select", "none");
+  expect(await pie.evaluate(el => el.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
 
   await page.getByRole("link", { name: "Volver al salón" }).click();
   await expect(motor).toHaveText("Sin mesa");
   await expect(modelo).toHaveText("Sin mesa");
+  await expect(modelo.locator("details")).toHaveCount(0);
+});
+
+for (const { modo, formato, pin, nombre, fecha } of [
+  {
+    modo: "1v1", formato: "duel", nombre: "Ceibo Duelo", fecha: "20 nov 2026",
+    pin: "d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3",
+  },
+  {
+    modo: "2v2", formato: "pairs-private-senas", nombre: "Ceibo Parejas con señas", fecha: "20 nov 2026",
+    pin: "d2b2293d4d8c9ee4f067ee74c1d6d5983eb5c8ad3a4ebce57bbdb561f946b78b",
+  },
+  { modo: "1v1", formato: "duel", nombre: "Clásico v1", fecha: "19 nov 2026", pin: "incumbent-online-v1" },
+]) {
+  test("el pie identifica el modelo asignado " + nombre, async ({ page }) => {
+    const asientos = [personas[0], seat(1, "vacio", null)];
+    if (modo === "2v2") asientos.push(personas[2], personas[3]);
+    await simular(page, (path) => {
+      if (path.endsWith("/" + mesaId)) return { json: { ...mesa(modo, asientos), formato, politica: pin, versionReglas: 1 } };
+    });
+    await page.goto("jugar/?mesa=" + mesaId);
+    const modelo = page.getByRole("contentinfo").getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+    const resumen = modelo.locator("summary");
+    await expect(resumen).toHaveText(nombre + " · Publicado el " + fecha);
+    await resumen.press("Enter");
+    await expect(modelo.locator("code")).toHaveText(pin);
+  });
+}
+
+test("el pie conserva la huella de un modelo sin registrar", async ({ page }) => {
+  const pin = "0123456789abcdef".repeat(4);
+  await simular(page, (path) => {
+    if (path.endsWith("/" + mesaId)) return { json: { ...mesa("2v2", personas), formato: "pairs", politica: pin } };
+    if (path.endsWith("/partida")) return { json: partida };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const modelo = page.getByRole("contentinfo").getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  const resumen = modelo.locator("summary");
+  await expect(resumen).toContainText("Modelo de parejas");
+  await expect(resumen).toContainText(pin.slice(0, 12));
+  await expect(resumen).not.toContainText(pin);
+  await expect(resumen.locator("time")).toHaveCount(0);
+  await resumen.press("Enter");
+  await expect(modelo).toContainText("Fecha sin registrar");
+  await expect(modelo.locator("code")).toHaveText(pin);
 });
 
 test("desde la portada sin sesión se puede abrir la sala y seguir a la práctica", async ({ page }) => {
@@ -153,6 +207,7 @@ test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
   // Una API anterior puede omitir ambos datos de la mesa.
   await expect(page.getByRole("contentinfo").getByText("Sin informar", { exact: true })).toHaveCount(2);
+  await expect(page.getByRole("contentinfo").locator("details")).toHaveCount(0);
   await page.reload();
   await expect(page.getByText("Chico a 26 tantos.")).toBeVisible();
 });

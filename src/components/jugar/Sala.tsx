@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import FichaModelo from "../FichaModelo";
 import {
   ErrorMesa,
   idComando,
@@ -233,17 +235,13 @@ function MesaAbierta({
   useEffect(() => {
     if (!enMesa) return;
     const motor = document.getElementById("version-motor-mesa");
-    const modelo = document.getElementById("version-modelo-mesa");
-    if (!motor || !modelo) return;
+    if (!motor) return;
     const sinMotor = motor.textContent;
-    const sinModelo = modelo.textContent;
     motor.textContent = mesa?.versionReglas == null ? "Sin informar" : `v${mesa.versionReglas}`;
-    modelo.textContent = mesa?.politica || "Sin informar";
     return () => {
       motor.textContent = sinMotor;
-      modelo.textContent = sinModelo;
     };
-  }, [enMesa, mesa?.versionReglas, mesa?.politica]);
+  }, [enMesa, mesa?.versionReglas]);
   useEffect(() => {
     const clave = "truco.ultima-mesa." + jugador.id;
     try {
@@ -292,12 +290,18 @@ function MesaAbierta({
       </div>
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
+  const pieModelo = document.getElementById("version-modelo-mesa");
+  const formatoModelo = mesa.formato ?? { "1v1": "duel", "2v2": "pairs", "3v3": "triples" }[mesa.modo];
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
   const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
   const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
   return (
     <div ref={tablero}>
+      {pieModelo && createPortal(
+        mesa.politica ? <FichaModelo id={mesa.politica} formato={formatoModelo} /> : "Sin informar",
+        pieModelo,
+      )}
       <div className="j-barra">
         <span>
           {versionSenas ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
