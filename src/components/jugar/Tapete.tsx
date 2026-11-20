@@ -76,7 +76,7 @@ export function Tapete({
   const veredicto = resultado?.tipo === "parda" ? "Parda" :
     ganador != null ? "Ganó " + asientos.find(a => a.asiento === ganador)?.nombre : undefined;
 
-  return <section className="j-tapete" aria-label="Tapete">
+  return <section className={nombrarJugadas ? "j-tapete j-tapete-con-rotulos" : "j-tapete"} aria-label="Tapete">
     <header>
       <strong>{titulo}</strong>
       <div className="j-estado-vuelta">

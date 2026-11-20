@@ -58,3 +58,15 @@
 .j-dorsos { display: flex; align-items: center; justify-content: center; padding-top: 7px; }
 .j-dorsos img { width: clamp(18px, 2.5vw, 28px); height: auto; border-radius: 2px; box-shadow: 0 2px 3px #173423; }
 .j-dorsos img + img { margin-left: -10px; }
+
+/* La muestra conserva su anclaje cuando aparece el nombre de una jugada o el ganador. */
+.j-tapete-con-rotulos .j-puestos { grid-template-rows: repeat(2, minmax(9rem, auto)) auto; }
+.j-tapete-con-rotulos .j-ocupante { align-content: start; display: grid; place-items: start center; }
+.j-tapete-con-rotulos .j-jugada img { width: clamp(34px, 4.5vw, 42px); }
+.j-tapete-con-rotulos :is(.j-frente, .j-vos) .j-muestra { align-self: start; }
+.j-tapete-con-rotulos .j-vos .j-ocupante { align-self: start; }
+.j-tapete-con-rotulos :is(.j-izquierda, .j-derecha):has(.j-muestra) .j-ocupante { min-height: 9rem; }
+.j-tapete-con-rotulos .j-izquierda:has(.j-muestra) .j-ocupante { align-content: end; }
+.j-tapete-con-rotulos header { align-items: start; gap: .5rem; min-height: 4.25rem; }
+.j-tapete-con-rotulos .j-estado-vuelta { line-height: 1.2; }
+.j-tapete-con-rotulos header strong { font-size: clamp(1rem, 2.1vw, 1.5rem); }
