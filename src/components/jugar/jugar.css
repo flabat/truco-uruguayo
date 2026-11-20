@@ -193,3 +193,5 @@
 .j-discord > div { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .8rem; }
 .j-discord [role=status] { font-size: .88rem; }
 .j-discord [role=status]:empty { display: none; }
+
+.j-titulo > .j-link + .j-link { margin-inline-start: 1rem; }

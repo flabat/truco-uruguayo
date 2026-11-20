@@ -99,6 +99,12 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
+## Salón y exhibiciones
+
+Los dos interruptores de la API están apagados por defecto. En un proyecto de ensayo, configurá `SALON_HABILITADO=1` para habilitar el directorio y la vista espectadora a las cuentas que ingresen. Un duelo o una mesa de parejas que se cree desde esa interfaz se ofrece como pública, con opción privada. Para el ensayo con reposición de partidas de computadora, configurá también `EXHIBICIONES_HABILITADAS=1`.
+
+Después de cambiar el entorno, recreá la API con `dc up -d --wait api` usando el proyecto y los archivos Compose de ese despliegue. Con `EXHIBICIONES_HABILITADAS=0` se suspende la reposición y las exhibiciones sanas terminan el chico. Con `SALON_HABILITADO=0` la API cierra las lecturas incluso a través de enlaces directos y vuelve a aceptar únicamente altas privadas. Los jugadores conservan sus asientos e invitaciones. Los cambios de configuración requieren recrear la API en cada instancia. El [plan del piloto](multijugador/salon-en-vivo/implementacion.md) define el ensayo de carga y las mediciones previas a ampliar el salón.
+
 ## Publicación automática desde main
 
 El VPS consulta el repositorio privado cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents** y **Actions** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa el segundo para comprobar el resultado del workflow.

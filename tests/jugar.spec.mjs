@@ -55,8 +55,11 @@ async function simular(page, handler) {
   await page.route("**/api/**", async (route) => {
     const request = route.request();
     const path = new URL(request.url()).pathname;
+    if (path === "/api/salon/mesas") return route.fulfill({ json: { mesas: [] } });
     const result = await handler(path, request);
-    await route.fulfill({ status: result?.status ?? 200, json: result?.json ?? yo });
+    const datos = result?.json ?? yo;
+    const json = path === "/api/jugador" && !result?.status ? { ...datos, salonHabilitado: true } : datos;
+    await route.fulfill({ status: result?.status ?? 200, json });
   });
   return sockets;
 }
@@ -126,12 +129,13 @@ test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
   await simular(page, (path, req) => {
     if (path === "/api/mesas") {
       const datos = req.postDataJSON();
-      expect(datos).toEqual({ modo: "1v1", meta: 26 });
+      expect(datos).toEqual({ modo: "1v1", meta: 26, publica: false });
       meta = datos.meta;
     }
     if (path === "/api/mesas" || path.endsWith("/" + mesaId)) return { json: { ...mesa("1v1", asientos), meta } };
   });
   await page.goto("jugar/");
+  await page.getByRole("button", { name: "Crear mi mesa" }).click();
   await page.getByRole("radio", { name: /1 contra 1/ }).check();
   const campo = page.getByRole("spinbutton", { name: "Tantos para ganar el chico" });
   const crear = page.getByRole("button", { name: "Crear mesa", exact: true });
@@ -139,6 +143,9 @@ test("la mesa guarda la meta acordada al crearla", async ({ page }) => {
   await campo.fill("25");
   await expect(crear).toBeDisabled();
   await campo.fill("26");
+  const visibilidad = page.getByRole("checkbox", { name: "Mostrar en el salón" });
+  await expect(visibilidad).toBeChecked();
+  await visibilidad.uncheck();
   await expect(page.getByText("13 malas y 13 buenas")).toBeVisible();
   if (process.env.CAPTURAS_UI)
     await page.locator(".j-crear .j-panel").screenshot({ path: `${process.env.CAPTURAS_UI}/crear-meta-${test.info().project.name}.png`, scale: "css" });
@@ -157,7 +164,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
   let segunda;
   const sockets = await simular(page, (path, req) => {
     if (path === "/api/mesas") {
-      expect(req.postDataJSON()).toEqual({ modo: "1v1" });
+      expect(req.postDataJSON()).toEqual({ modo: "1v1", publica: true });
       return { json: mesa("1v1", [personas[0], seat(1, "vacio", null)]) };
     }
     if (path.endsWith("/computadoras")) {
@@ -216,6 +223,7 @@ test("crea un duelo con computadora y juega desde su mano", async ({ page }) => 
       };
   });
   await page.goto("jugar/");
+  await page.getByRole("button", { name: "Crear mi mesa" }).click();
   await page.getByRole("radio", { name: /1 contra 1/ }).check();
   await page.getByRole("button", { name: "Jugar con computadoras" }).click();
   await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
@@ -518,6 +526,7 @@ for (const entrada of ["crear la mesa", "completar la sala de espera"]) {
       await agregar.press("Enter");
     } else {
       await page.goto("jugar/");
+      await page.getByRole("button", { name: "Crear mi mesa" }).click();
       await page.getByRole("button", { name: "Jugar con computadoras" }).press("Enter");
     }
     const cartas = page.getByRole("region", { name: "Tapete" }).locator(".j-jugada img");
@@ -611,6 +620,7 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
   await simular(page, (path) => {
     if (path === "/api/jugador")
       return anon ? { status: 401, json: { error: "Ingresá" } } : { json: { id: "clara", nombre: "Clara" } };
+    if (path === "/api/invitaciones/" + token) return { json: { publica: true, sentada: false } };
     if (path.endsWith("/unirse")) {
       joined++;
       return { json: mesa("2v2", misAsientos, 2) };
@@ -623,6 +633,9 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
   await expect(page.locator('input[name="volver"]')).toHaveValue("/jugar/?invitacion=" + token);
   anon = false;
   await page.reload();
+  await expect(page.getByText(/mesa pública/i).first()).toBeVisible();
+  expect(joined).toBe(0);
+  await page.getByRole("button", { name: "Ocupar mi asiento" }).press("Enter");
   await expect(page.getByRole("button", { name: "Real envido", exact: true })).toBeEnabled();
   expect(joined).toBe(1);
   await expect(page.getByRole("group", { name: "Tu pareja · Ana", exact: true })).toBeVisible();
@@ -657,6 +670,7 @@ test("reintenta una sesión temporalmente indisponible sin perder la invitación
         ? { status: 503, json: { error: "Servicio temporalmente indisponible." } }
         : { json: { id: "clara", nombre: "Clara" } };
     }
+    if (path === "/api/invitaciones/" + token) return { json: { publica: false, sentada: false } };
     if (path === "/api/invitaciones/" + token + "/unirse") ingresos++;
     return { json: mesa("2v2", lugares, 2) };
   });
@@ -665,6 +679,8 @@ test("reintenta una sesión temporalmente indisponible sin perder la invitación
   await expect(page).toHaveURL(new RegExp("invitacion=" + token + "$"));
   expect(ingresos).toBe(0);
   await page.getByRole("button", { name: "Reintentar" }).click();
+  await expect(page.getByText(/mesa privada/i).first()).toBeVisible();
+  await page.getByRole("button", { name: "Ocupar mi asiento" }).click();
   await expect(page).toHaveURL(new RegExp("mesa=" + mesaId + "$"));
   await expect(page.getByText("Clara · Vos")).toBeVisible();
   expect(ingresos).toBe(1);
@@ -679,7 +695,7 @@ test("crea un lugar para tres amigos y completa un asiento puntual", async ({ pa
   let jugador = yo;
   const sockets = await simular(page, (path, req) => {
     if (path === "/api/jugador") return { json: jugador };
-    if (path === "/api/mesas") expect(req.postDataJSON()).toEqual({ modo: "2v2" });
+    if (path === "/api/mesas") expect(req.postDataJSON()).toEqual({ modo: "2v2", publica: true });
     if (path.endsWith("/computadoras")) {
       expect(req.postDataJSON()).toEqual({ asiento: 2 });
       lugares[2] = seat(2, "computadora", "CPU 1");
@@ -687,6 +703,7 @@ test("crea un lugar para tres amigos y completa un asiento puntual", async ({ pa
     return { json: mesa("2v2", lugares) };
   });
   await page.goto("jugar/");
+  await page.getByRole("button", { name: "Crear mi mesa" }).click();
   await page.getByRole("button", { name: "Crear mesa", exact: true }).click();
   await expect(page.getByText("Faltan 3 jugadores para repartir.")).toBeVisible();
   await expect(page.getByRole("textbox", { name: "Enlace de invitación" })).toHaveValue(
@@ -701,14 +718,11 @@ test("crea un lugar para tres amigos y completa un asiento puntual", async ({ pa
   sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
   await expect(page.getByText("Falta un jugador para repartir.")).toBeVisible();
   await page.getByRole("link", { name: "Volver al salón" }).click();
-  await expect(page.getByRole("link", { name: "Volver a mi mesa" })).toHaveAttribute(
-    "href",
-    new RegExp(mesaId + "$"),
-  );
+  await expect(page.getByRole("button", { name: "Volver a mi mesa" })).toBeVisible();
   jugador = { id: "bruno", nombre: "Bruno" };
   await page.reload();
-  await expect(page.getByRole("button", { name: "Crear mesa", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Volver a mi mesa" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Crear mi mesa" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Volver a mi mesa" })).toHaveCount(0);
 });
 
 test("recupera el marcador al reconectar y cierra la partida por envido", async ({ page }) => {

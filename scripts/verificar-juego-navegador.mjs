@@ -3,7 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { canto } from "../src/lib/cantos.ts";
 import { probarTercetos } from "./verificar-tercetos-navegador.mjs";
-import { ingresarConClaveLocal as ingresar } from "./ingreso-local-navegador.mjs";
+import { ingresarConClaveLocal as ingresar, ingresarDesdeIdentidad } from "./ingreso-local-navegador.mjs";
 import { chromium, expect } from "@playwright/test";
 
 const [web, proyecto] = process.argv.slice(2);
@@ -24,6 +24,7 @@ async function navegador(movil) {
 
 async function crear(p, modo, computadoras = false, meta) {
   await p.goto("/jugar/");
+  await boton(p, "Crear mi mesa").click();
   await p.getByRole("radio", { name: { "1v1": /1 contra 1/, "2v2": /2 contra 2/, "3v3": /3 contra 3/ }[modo] }).check();
   if (meta) await p.getByRole("spinbutton").fill(String(meta));
   await boton(p, computadoras ? "Jugar con computadoras" : "Crear mesa").click();
@@ -36,6 +37,7 @@ async function invitar(p, anfitrion, usuario) {
     await expect(p.getByRole("heading", { name: "Te invitaron a una mesa" })).toBeVisible(espera);
     await ingresar(p, usuario);
   }
+  await boton(p, "Ocupar mi asiento").click();
   await p.waitForURL(anfitrion.url());
 }
 
@@ -125,13 +127,32 @@ async function probarParejas(paginas) {
   const [ana, bruno, clara, diego] = paginas;
   await ana.goto("/");
   await ingresar(ana, "ana");
-  await ana.getByRole("link", { name: /Jugar al truco/ }).click();
+  await expect(ana.getByRole("heading", { name: "Mesas en juego" })).toBeVisible(espera);
   await crear(ana, "2v2");
   await invitar(bruno, ana, "bruno");
   await invitar(clara, ana, "clara");
   await invitar(diego, ana, "diego");
   await Promise.all(paginas.map(p => expect(tapete(p)).toBeVisible(espera)));
   await comprobarPrivacidad(paginas);
+  // Un tercer usuario vuelve desde Discord, entra por OIDC y observa la misma mano.
+  const espectadora = await navegador(false);
+  try {
+    const id = new URL(ana.url()).searchParams.get("mesa");
+    await espectadora.goto("/volver/?mesa=" + id);
+    await expect(espectadora.locator("#username")).toBeAttached(espera);
+    await ingresarDesdeIdentidad(espectadora, "eva");
+    await expect(espectadora).toHaveURL(url => url.pathname === "/jugar/" && url.searchParams.get("mirar") === id, espera);
+    const historial = espectadora.getByRole("region", { name: "Historial de la mano" });
+    await expect(historial).toBeVisible(espera);
+    for (const cantidad of [1, 2]) {
+      await hasta(paginas, m => m.vista.acciones.filter(a => a.tipo === "carta").length >= cantidad);
+      await expect(historial.getByRole("listitem", { includeHidden: true }).filter({ hasText: " jugó " })).toHaveCount(cantidad, espera);
+    }
+    assert.equal(await espectadora.evaluate(() => Object.keys(localStorage).some(k => k.startsWith("truco.ultima-mesa."))), false);
+    await expect(espectadora.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+    await espectadora.getByRole("button", { name: "Volver al salón" }).press("Enter");
+    await expect(espectadora.getByRole("heading", { name: "Mesas en juego" })).toBeVisible(espera);
+  } finally { await espectadora.context().close(); }
   // Tras la primera vuelta cada asiento ya declaró sus flores y puede responder al truco.
   await hasta(paginas, m => m.vista.vueltas.length === 1);
   await paso(paginas, ["truco"]);
