@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "../../motor/mesa-online";
 import type { CardId } from "../../motor/cartas";
+import type { EdicionModelo } from "../../lib/modelos";
 
 import type { Format, PublicTurn } from "../../../training/contracts/index";
 
@@ -24,6 +25,7 @@ export interface Mesa {
   formato?: Format | "triples";
   versionReglas?: number;
   politica?: string;
+  edicionModelo?: EdicionModelo;
   creadorId: string;
   miAsiento: number;
   invitacion: string;

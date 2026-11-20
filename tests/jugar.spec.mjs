@@ -98,7 +98,7 @@ test("el pie muestra el motor y el modelo asignados a la mesa y los quita al vol
   await expect(modelo.locator("details")).toHaveCount(0);
 });
 
-for (const { modo, formato, pin, nombre, fecha } of [
+for (const { modo, formato, pin, nombre, fecha, edicionModelo } of [
   {
     modo: "1v1", formato: "duel", nombre: "Ceibo Duelo", fecha: "20 nov 2026",
     pin: "d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3",
@@ -108,17 +108,23 @@ for (const { modo, formato, pin, nombre, fecha } of [
     pin: "d2b2293d4d8c9ee4f067ee74c1d6d5983eb5c8ad3a4ebce57bbdb561f946b78b",
   },
   { modo: "1v1", formato: "duel", nombre: "Clásico v1", fecha: "19 nov 2026", pin: "incumbent-online-v1" },
+  {
+    modo: "1v1", formato: "duel", pin: "1a".repeat(32), nombre: "Duelo 7", fecha: "3 ene 2027",
+    edicionModelo: { nombre: "Duelo 7", publicado: "2027-01-03" },
+  },
 ]) {
   test("el pie identifica el modelo asignado " + nombre, async ({ page }) => {
     const asientos = [personas[0], seat(1, "vacio", null)];
     if (modo === "2v2") asientos.push(personas[2], personas[3]);
     await simular(page, (path) => {
-      if (path.endsWith("/" + mesaId)) return { json: { ...mesa(modo, asientos), formato, politica: pin, versionReglas: 1 } };
+      if (path.endsWith("/" + mesaId))
+        return { json: { ...mesa(modo, asientos), formato, politica: pin, edicionModelo, versionReglas: 1 } };
     });
     await page.goto("jugar/?mesa=" + mesaId);
     const modelo = page.getByRole("contentinfo").getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
     const resumen = modelo.locator("summary");
     await expect(resumen).toHaveText(nombre + " · Publicado el " + fecha);
+    if (edicionModelo) await expect(resumen.locator("time")).toHaveAttribute("datetime", edicionModelo.publicado);
     await resumen.press("Enter");
     await expect(modelo.locator("code")).toHaveText(pin);
   });

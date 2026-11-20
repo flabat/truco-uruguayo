@@ -299,7 +299,7 @@ function MesaAbierta({
   return (
     <div ref={tablero}>
       {pieModelo && createPortal(
-        mesa.politica ? <FichaModelo id={mesa.politica} formato={formatoModelo} /> : "Sin informar",
+        mesa.politica ? <FichaModelo id={mesa.politica} formato={formatoModelo} edicion={mesa.edicionModelo} /> : "Sin informar",
         pieModelo,
       )}
       <div className="j-barra">

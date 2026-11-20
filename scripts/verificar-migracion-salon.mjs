@@ -33,9 +33,27 @@ try {
   const invitados = () => db.query(`SELECT m.id, m.invitacion, a.asiento, a.jugador, a.computadora FROM juego.mesas m
     JOIN juego.asientos a ON a.mesa=m.id ORDER BY m.id, a.asiento`).then(r => r.rows);
   const anteriores = await invitados();
+  const activoHistorico = "a".repeat(64), usadoEnMesa = "b".repeat(64), soloEnEnsayo = "c".repeat(64);
+  await db.query("INSERT INTO juego.artefactos VALUES ($1,'pairs','{}'),($2,'pairs','{}'),($3,'pairs','{}')",
+    [activoHistorico, usadoEnMesa, soloEnEnsayo]);
+  await db.query("INSERT INTO juego.activaciones VALUES ('pairs',$1)", [activoHistorico]);
+  await db.query("UPDATE juego.mesas SET politica=CASE WHEN solo_computadoras THEN $1 ELSE $2 END WHERE modo='2v2'",
+    [soloEnEnsayo, usadoEnMesa]);
   const pool = new pg.Pool({ connectionString: url.href });
   try { await migrate(pool); await migrate(pool); } finally { await pool.end(); }
   assert.deepEqual(await invitados(), anteriores);
+  const publicacion = async pin => (await db.query(
+    "SELECT nombre, publicada_el::text AS fecha FROM juego.publicaciones_modelo WHERE pin=$1", [pin])).rows[0];
+  assert.equal((await publicacion(activoHistorico)).fecha, null);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [usadoEnMesa]);
+  assert.equal((await publicacion(usadoEnMesa)).fecha, null);
+  assert.equal(await publicacion(soloEnEnsayo), undefined);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [soloEnEnsayo]);
+  assert.equal((await publicacion(soloEnEnsayo)).nombre, "Parejas 2");
+  const ceibo = "6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2";
+  await db.query("INSERT INTO juego.artefactos VALUES ($1,'pairs','{}')", [ceibo]);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [ceibo]);
+  assert.deepEqual(await publicacion(ceibo), { nombre: "Ceibo Parejas", fecha: "2026-11-20" });
   assert.equal((await db.query("SELECT id FROM juego.mesas WHERE publica OR origen <> CASE WHEN solo_computadoras THEN 'ensayo' ELSE 'humana' END")).rowCount, 0);
   assert.equal((await db.query("SELECT id FROM juego.mesas_en_juego")).rowCount, 0);
   assert.equal((await db.query("SELECT numero FROM juego.cupos_exhibicion")).rowCount, 10);

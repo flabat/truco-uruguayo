@@ -1,4 +1,4 @@
-interface EdicionModelo {
+export interface EdicionModelo {
   nombre: string;
   publicado: string | null;
 }
