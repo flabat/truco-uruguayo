@@ -38,7 +38,7 @@ try {
   assert.deepEqual(await invitados(), anteriores);
   assert.equal((await db.query("SELECT id FROM juego.mesas WHERE publica OR origen <> CASE WHEN solo_computadoras THEN 'ensayo' ELSE 'humana' END")).rowCount, 0);
   assert.equal((await db.query("SELECT id FROM juego.mesas_en_juego")).rowCount, 0);
-  assert.equal((await db.query("SELECT numero FROM juego.cupos_exhibicion")).rowCount, 6);
+  assert.equal((await db.query("SELECT numero FROM juego.cupos_exhibicion")).rowCount, 10);
 
   const alta = () => db.query(`INSERT INTO juego.mesas(modo,creador,invitacion,publica,solo_computadoras,cupo_exhibicion)
     VALUES ('1v1',$1,$2,true,true,1) RETURNING id, origen`, [jugador.id, randomUUID()]).then(r => r.rows[0]);

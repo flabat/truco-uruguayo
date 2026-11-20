@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import pg from "pg";
-import { procesarExhibiciones } from "./exhibiciones.ts";
+import { configuracionExhibiciones, procesarExhibiciones } from "./exhibiciones.ts";
 import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
@@ -78,8 +78,8 @@ const vivo = crearVivo(server, web, {
   ejecutar: partidas.ejecutar,
 });
 
-const detenerExhibiciones = procesarExhibiciones(pool, process.env.EXHIBICIONES_HABILITADAS === "1", alCambiar);
 const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados, web.origin);
+const detenerExhibiciones = procesarExhibiciones(pool, configuracionExhibiciones(process.env), alCambiar);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
