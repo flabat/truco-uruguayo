@@ -27,6 +27,14 @@ interface Fila {
   computadoras: boolean[];
 }
 
+interface FilaDetalle extends Fila {
+  registro: Registro;
+  version: number;
+  politica: string;
+  nombre_modelo: string | null;
+  fecha_modelo: string | null;
+}
+
 // El evento en la posición exacta certifica el tanteador de esta versión de la mano.
 // El directorio nunca selecciona el reparto. Cada consulta ve un solo snapshot de PostgreSQL.
 const columnas = `m.id, m.modo, m.meta, m.origen, m.version_senas, m.ultimo_hecho_publico,
@@ -105,8 +113,11 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
         return responderJson(res, error.status, { error: error.message });
       }
     }
-    const { rows: [fila] } = await pool.query<Fila & { registro: Registro; version: number }>(`
-      SELECT ${columnas}, h.registro, h.version FROM juego.mesas m ${manoActual(true)}
+    const { rows: [fila] } = await pool.query<FilaDetalle>(`
+      SELECT ${columnas}, h.registro, h.version, m.politica,
+        p.nombre AS nombre_modelo, to_char(p.publicada_el, 'YYYY-MM-DD') AS fecha_modelo
+      FROM juego.mesas m ${manoActual(true)}
+      LEFT JOIN juego.publicaciones_modelo p ON p.pin = m.politica
       WHERE m.id=$1 AND (${disponibleParaVoz}
         OR (m.publica AND m.exhibicion_retirada AND m.ultimo_hecho_publico IS NOT NULL AND m.fin_publico IS NULL))`, [id]);
     if (!fila) return ausente();
@@ -123,6 +134,10 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
       nombre: (cpu ? "Computadora " : "Jugador ") + (asiento + 1),
     }));
     const estado = fila.fin_publico ? "terminada" : fila.exhibicion_retirada ? "interrumpida" : "en-juego";
-    responderVista(req, res, { ...mesa, asientos, estado, vozDisponible: Boolean(voz) && estado !== "interrumpida", tablero: actual.tablero });
+    responderVista(req, res, {
+      ...mesa, asientos, estado, versionReglas: fila.registro.version_reglas, politica: fila.politica,
+      edicionModelo: fila.nombre_modelo == null ? undefined : { nombre: fila.nombre_modelo, publicado: fila.fecha_modelo },
+      vozDisponible: Boolean(voz) && estado !== "interrumpida", tablero: actual.tablero,
+    });
   };
 }
