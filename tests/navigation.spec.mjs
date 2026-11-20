@@ -2,6 +2,20 @@ import { expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { versionModeloPractica, versionMotorPractica } from "../src/probabilidad/perfil.ts";
 
+test("la portada carga una imagen principal WebP según el ancho de pantalla", async ({ page, isMobile }) => {
+  await page.goto("./");
+  const imagen = page.getByRole("img", { name: /^Grabado ilustrado de tres gauchos/ });
+  await expect(imagen).toBeVisible();
+  await expect(imagen).toHaveAttribute("fetchpriority", "high");
+  const elegida = await imagen.evaluate(async (img) => {
+    await img.decode();
+    return img.srcset.split(",").map(candidato => candidato.trim().split(/\s+/))
+      .find(([src]) => new URL(src, document.baseURI).href === img.currentSrc);
+  });
+  expect(elegida?.[0]).toMatch(/^\/_astro\/mesa-criolla\..+\.webp$/);
+  expect(elegida?.[1]).toBe(isMobile ? "960w" : "768w");
+});
+
 test("del tema de la portada al último capítulo y sus fuentes", async ({ page }) => {
   await page.goto("./");
   const primary = page.getByRole("navigation", { name: "Navegación principal" });
