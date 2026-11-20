@@ -118,3 +118,42 @@ test("jugadores navega grupos de resultados", async ({page}) => {
   await expect(page.getByRole("button",{name:"Ver partidas de Catalina"})).toBeVisible();
   await expect(page.getByText("Página 2 de 2")).toBeVisible();
 });
+
+test("Funciones edita la audiencia de Tercetos y recupera una edición obsoleta", async ({page}, info) => {
+  let datos = { audiencia: "desactivado", jugadores: [], version: 0, historial: [] };
+  let conflicto = false;
+  await page.route("**/api/gestion/vivo?**", r => r.fulfill({json:vivo}));
+  await page.route("**/api/gestion/jugadores?**", r => r.fulfill({json:pagina([persona])}));
+  await page.route("**/api/gestion/funciones/tercetos", async r => {
+    if (r.request().method() === "PUT") {
+      if (conflicto) return r.fulfill({status:409,json:{}});
+      expect(r.request().postDataJSON()).toEqual({audiencia:"seleccionados", jugadores:[mateo],version:0});
+      datos = { audiencia: "seleccionados", jugadores:[persona], version:1, historial:[
+        {version:1,anterior:"desactivado",audiencia:"seleccionados",agregados:[mateo],retirados:[],operador:"Ana",fecha:"2026-11-20T12:00:00Z"},
+      ] };
+    }
+    return r.fulfill({json:datos});
+  });
+  await page.goto("/gestion/");
+  await page.getByRole("button", {name:"Funciones",exact:true}).click();
+  await page.getByRole("button", {name:"Editar audiencia"}).press("Enter");
+  await page.getByLabel("Quién puede jugar").selectOption("seleccionados");
+  await page.getByLabel("Nombre del jugador").fill("Mateo");
+  await page.getByRole("button", {name:"Buscar",exact:true}).click();
+  await page.getByRole("button", {name:"Agregar a Mateo"}).click();
+  await expect(page.getByRole("heading", {name:"Jugadores seleccionados (1)"})).toBeVisible();
+  await page.getByRole("button", {name:"Quitar a Mateo"}).click();
+  await page.getByRole("button", {name:"Agregar a Mateo"}).click();
+  await page.getByRole("button", {name:"Guardar cambios"}).click();
+  await expect(page.getByText("Configuración guardada.")).toBeVisible();
+  await expect(page.getByText("Desactivado → Jugadores seleccionados")).toBeVisible();
+  await page.getByRole("button", {name:"Editar audiencia"}).click();
+  await page.getByLabel("Quién puede jugar").selectOption("todos");
+  await expect(page.getByText(/Al guardar, cualquier jugador/)).toBeVisible();
+  if (process.env.CAPTURAS_FUNCIONES) await page.screenshot({path:process.env.CAPTURAS_FUNCIONES+"/funciones-"+info.project.name+".png",fullPage:true,scale:"css"});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  conflicto = true;
+  await page.getByRole("button", {name:"Guardar cambios"}).click();
+  await expect(page.getByRole("alert")).toContainText("Otra edición");
+  await expect(page.getByRole("button", {name:"Editar audiencia"})).toBeVisible();
+});

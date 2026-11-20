@@ -6,6 +6,7 @@ import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
 import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
 import { FalloDiscord } from "./discord.ts";
 import type { crearVoz } from "./voz-discord.ts";
+import { permiteTercetos, exigirTercetos } from "./funciones.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
@@ -101,14 +102,14 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
   throw new Error("Versión de señas desconocida.");
 }
 
-async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, tercetos: boolean, salonHabilitado: boolean): Promise<Cambio> {
+async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, salonHabilitado: boolean): Promise<Cambio> {
   const { modo, formato, meta: metaElegida, publica = false } = datos;
   if (typeof publica !== "boolean" || (publica && modo === "3v3")) {
     throw new ErrorPeticion(400, "Solo duelo y parejas admiten una mesa pública. Indicá la visibilidad con verdadero o falso.");
   }
   if (publica && !salonHabilitado) throw new ErrorPeticion(409, "El salón está cerrado. Podés crear una mesa privada.");
   if (modo !== "1v1" && modo !== "2v2" && modo !== "3v3") throw new ErrorPeticion(400, "Modalidad de mesa desconocida.");
-  if (modo === "3v3" && !tercetos) throw new ErrorPeticion(400, "La creación de mesas de tercetos está deshabilitada.");
+  if (modo === "3v3") await exigirTercetos(db, jugador);
   const meta = metaElegida === undefined ? metaPorModalidad[modo] : metaElegida;
   if (!esMetaDeChico(meta)) throw new ErrorPeticion(400, "Elegí un puntaje par válido para el chico.");
   let nueva = formatoMesa(modo, null);
@@ -131,6 +132,7 @@ async function unir(db: PoolClient, jugador: string, token: string): Promise<Cam
   if (!mesa) throw new ErrorPeticion(404, "La invitación no es válida.");
   const { rows } = await db.query("SELECT asiento, jugador FROM juego.asientos WHERE mesa=$1", [mesa.id]);
   if (rows.some(a => a.jugador === jugador)) return { id: mesa.id, cambiado: false };
+  if (mesa.modo === "3v3") await exigirTercetos(db, jugador);
   const libres = Array.from({ length: capacidad[mesa.modo] }, (_, i) => i);
   const asiento = libres.find(i => !rows.some(a => a.asiento === i));
   if (asiento === undefined) throw new ErrorPeticion(409, "La mesa ya está completa.");
@@ -156,12 +158,14 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
   return { id, cambiado: true };
 }
 
-export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, tercetos = false, voz?: ReturnType<typeof crearVoz>, salonHabilitado = false) {
+export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}, voz?: ReturnType<typeof crearVoz>, salonHabilitado = false) {
   return async function mesas(req: IncomingMessage, res: ServerResponse) {
     try {
       const path = (req.url ?? "").split("?")[0];
       if (path === "/api/modalidades") {
         if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
+        const jugador = await jugadorDeSesion(pool, req);
+        const tercetos = jugador && await permiteTercetos(pool, jugador.id);
         responderJson(res, 200, { modos: tercetos ? ["1v1", "2v2", "3v3"] : ["1v1", "2v2"] });
         return;
       }
@@ -173,10 +177,11 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
       if (invitacion && !invitacion[2]) {
         if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
         const { rows: [info] } = await pool.query(`
-          SELECT m.publica, a.mesa AS id FROM juego.mesas m
+          SELECT m.publica, m.modo, a.mesa AS id FROM juego.mesas m
           LEFT JOIN juego.asientos a ON a.mesa=m.id AND a.jugador=$2
           WHERE m.invitacion=$1`, [invitacion[1], jugador.id]);
         if (!info) throw new ErrorPeticion(404, "La invitación no es válida.");
+        if (!info.id && info.modo === "3v3") await exigirTercetos(pool, jugador.id);
         responderJson(res, 200, { publica: info.publica, sentada: Boolean(info.id), ...(info.id && { id: info.id }) });
         return;
       }
@@ -203,7 +208,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         await db.query("BEGIN");
         if (invitacion) cambio = await unir(db, jugador.id, invitacion[1]);
         else if (mesa) cambio = await agregarComputadora(db, mesa[1], jugador.id, datos.asiento);
-        else cambio = await crear(db, jugador.id, datos, tercetos, salonHabilitado);
+        else cambio = await crear(db, jugador.id, datos, salonHabilitado);
         vista = await leerMesa(db, cambio.id, jugador.id, web);
         await db.query("COMMIT");
       } catch (error) {

@@ -26,7 +26,6 @@ services:
       DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
       SALON_HABILITADO: "${SALON_HABILITADO:-0}"
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-0}"
-      TERCETOS_HABILITADOS: "${TERCETOS_HABILITADOS:-1}"
       WEB_ORIGIN: http://${TRUCO_HOST:-localhost}:${WEB_PORT:-8081}
       OIDC_CALLBACK: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/api/auth/callback
       OIDC_ISSUER: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/realms/mesa-local

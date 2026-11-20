@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
-export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0
+export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0
 export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
@@ -75,10 +75,12 @@ jugadores=$(sql "$consulta_jugadores")
 sql "CREATE TABLE juego.prueba_persistencia (valor text); INSERT INTO juego.prueba_persistencia VALUES ('conservado')"
 migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'")
 [[ -n "$migration" ]]
+# Cerrar las altas en la base descartable antes de comprobar la persistencia del cierre.
+sql "UPDATE juego.funciones SET audiencia='desactivado' WHERE clave='tercetos'"
 "${compose[@]}" stop db
 [[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
-export TERCETOS_HABILITADOS=0 SALON_HABILITADO=0
+export SALON_HABILITADO=0
 up
 "${compose[@]}" exec -T api node --input-type=module - cerrar-altas < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-persistencia-tercetos.mjs

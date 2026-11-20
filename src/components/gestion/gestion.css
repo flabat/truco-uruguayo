@@ -83,3 +83,6 @@
   .gestion-tabla .gestion-col-sesion { display: none; }
 }
 @media (min-width: 621px) { .gestion-sesion-movil { display: none; } }
+.gestion-persona { display: flex; align-items: center; justify-content: space-between; gap: .65rem; padding-block: .5rem; }
+.gestion-persona small { display: block; overflow-wrap: anywhere; color: var(--tblr-secondary-color); }
+.gestion-nav nav { flex-wrap: wrap; }

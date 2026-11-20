@@ -71,7 +71,7 @@ const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABAS
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
 const detenerLimpieza = voz?.iniciarLimpieza();
-const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz, salonHabilitado);
+const mesas = crearRutasMesas(pool, web, alCambiar, voz, salonHabilitado);
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
@@ -79,7 +79,7 @@ const vivo = crearVivo(server, web, {
 });
 
 const detenerExhibiciones = procesarExhibiciones(pool, process.env.EXHIBICIONES_HABILITADAS === "1", alCambiar);
-const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados);
+const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados, web.origin);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {

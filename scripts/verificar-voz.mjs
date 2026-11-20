@@ -18,7 +18,7 @@ const sim = real ? null : discordSimulado(config.servidor, config.categoria);
 const transporte = sim?.transporte ?? fetch;
 const discord = crearDiscord(config, transporte);
 const voz = crearVoz(pool, discord, origen);
-let rutas = crearRutasMesas(pool, origen, () => {}, true, voz);
+let rutas = crearRutasMesas(pool, origen, () => {}, voz);
 const server = real ? null : createServer((req,res) => rutas(req,res).catch(() => res.writeHead(503).end()));
 if (server) await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 const base = "http://127.0.0.1:" + (server?.address().port ?? process.env.PORT);
@@ -128,7 +128,7 @@ try {
     assert.equal((await pedir()).status,503);
     assert.equal(sim.canales.size,creados);
     sim.fallos.auditoria = false;
-    rutas = crearRutasMesas(pool, origen, () => {}, true, crearVoz(pool, crearDiscord(config, transporte), origen));
+    rutas = crearRutasMesas(pool, origen, () => {}, crearVoz(pool, crearDiscord(config, transporte), origen));
     const recuperado = await abrir(tercera,a);
     assert.equal(sim.canales.size,creados);
     assert.equal((await vinculo(tercera.id)).canal,recuperado);
