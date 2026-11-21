@@ -25,6 +25,8 @@ def main():
     if len(sys.argv) < 2 or sys.argv[1] == "--help":
         print("Usage: python3 training/transformer/run.py RUN [--ceibo FILE] [--format FORMAT]"
               " [--seed N] [--warmup N] [--rounds N] [--batch N] [--pairs N] [--stopAfter N]\n"
+              "       [--size small|medium|large] [--device cpu|mps] [--arms full|both]\n"
+              "       [--small-reference RUN] [--microbatch N] [--eval-batch N] [--checkpoint-every N]\n"
               "Resume: give the same RUN directory alone. Inspect: give RUN --status.\n"
               "Set NODE or TRUCO_PYTHON to override the executable paths.")
         return 0

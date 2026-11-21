@@ -1,34 +1,56 @@
-# Experimento de historial de la mano
+# Entrenar y evaluar Transformers de Truco
 
-Dos Transformers de una capa y dos cabezas reciben los mismos rasgos de Ceibo, la misma lista de jugadas legales y vuelven a empezar con los mismos pesos. Uno también lee la secuencia de la mano desde el asiento que decide: quién jugó, qué carta o canto hizo, los puntos visibles que se cobraron, el tanto mostrado y las señas que ese asiento puede ver. Con señas se usa exclusivamente `pairs-private-senas`. La proyección de la arena filtra las señas antes de codificar la observación.
+El aprendiz juega chicos a 40 con el motor de la arena. Primero aprende de Ceibo y después ajusta sus pesos con el resultado de cada chico contra Ceibo, estilos fijos y sí mismo. El modelo con historial ve la secuencia de la mano desde su propio asiento. Con `--arms both` se entrena también un modelo con los rasgos resumidos de Ceibo. Ambos empiezan con los mismos pesos y reciben el mismo presupuesto de partidas. Los participantes son computadoras y la variante con señas usa exclusivamente `pairs-private-senas`.
 
-Ambos aprenden primero de las mismas decisiones de Ceibo y luego juegan chicos a 40, con asientos alternados, contra Ceibo, estilos fijos y ellos mismos. Durante esta segunda etapa cada red elige sus propias jugadas. El aprendizaje ajusta los pesos con el resultado de cada chico completo. El árbitro de la arena aplica las reglas y ambos modelos puntúan únicamente las jugadas que ese árbitro ofrece.
+| Tamaño | Pesos por modelo | Capas | Ancho | Cabezas | Dispositivo por defecto |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `small` | 14.906 | 1 | 24 | 2 | CPU |
+| `medium` | 846.594 | 4 | 128 | 4 | GPU Metal |
+| `large` | 4.845.570 | 6 | 256 | 8 | GPU Metal |
 
-## Ejecutar en una terminal
+## Arrancar en la terminal del Mac
 
-Desde este checkout, con Node 24, Python 3 y uv:
+Usá Node 24, Python 3 y uv. Desde este checkout:
 
 ~~~sh
 uv sync --frozen --project training/partners/python
-RUN=runs/transformer-duel
+RUN=runs/transformer-medium-duel
 CEIBO=runs/league-extended-02/qualified/duel/candidate.json
-python3 training/transformer/run.py "$RUN" --ceibo "$CEIBO" --warmup 96 --rounds 96 --batch 8 --pairs 256
+SMALL=runs/transformer-272-duel-replication
+nohup caffeinate -i python3 training/transformer/run.py "$RUN" \
+  --size medium --device mps --ceibo "$CEIBO" --small-reference "$SMALL" \
+  --seed 27401 --warmup 512 --rounds 512 --batch 16 --pairs 512 \
+  > "$RUN.log" 2>&1 < /dev/null &
 ~~~
 
-Si los artefactos viven en otro checkout, usá la ruta absoluta de `candidate.json`. El primer comando de corrida guarda y verifica una copia del Ceibo publicado para ese formato. Para repetir con una semilla independiente, usá otro directorio y agregá `--seed 27202`. Para parejas, pasá `--format pairs` o `--format pairs-private-senas` y el `candidate.json` correspondiente. Todos los participantes son computadoras.
+Si los datos viven en otro checkout, usá rutas absolutas. `--small-reference` toma el directorio de una corrida pequeña terminada en el mismo formato. El experimento conserva copias verificadas de esa referencia y del Ceibo publicado. Para usar otro formato, pasá `--format pairs` o `--format pairs-private-senas` y los insumos correspondientes. Para el modelo grande, usá otro directorio de salida y `--size large`.
 
-Para dejar una corrida nueva en segundo plano, agregá `nohup nice -n 10` antes de `python3` y `> archivo.log 2>&1 < /dev/null &` al final. En macOS, `caffeinate -i` puede mantener la máquina activa mientras corre el proceso.
+El entrenador ejecuta las redes, las pérdidas y el optimizador en Metal. El árbitro y el Transformer pequeño congelado corren en CPU. Si PyTorch no puede acceder a Metal, una corrida que pide `mps` se detiene con un diagnóstico. Para comparar rendimiento con CPU, creá otra corrida con `--device cpu` y el mismo plan de partidas. Para una prueba corta antes de usar el presupuesto de arriba, elegí otro directorio y pasá `--warmup 2 --rounds 2 --batch 2 --pairs 4`.
+
+## Mirar el progreso y reanudar
 
 ~~~sh
 python3 training/transformer/run.py "$RUN" --status
-python3 training/transformer/run.py "$RUN"
+tail -f "$RUN.log"
 ~~~
 
-El segundo comando reanuda desde la última ronda o bloque de evaluación confirmado. Conservá este checkout y sus versiones de Node y PyTorch. El directorio guarda el plan, los pesos de ambos candidatos con el estado del optimizador, el progreso y los resultados. El plan fija los presupuestos al crear la corrida. Para detenerla limpiamente en una ronda de entrenamiento, usá `--stopAfter N`, donde `N` cuenta las rondas de ambas etapas acumuladas. También podés interrumpir con Ctrl+C y repetir el comando de reanudación con el mismo directorio.
+El estado muestra las rondas calculadas y confirmadas, decisiones, chicos procesados por segundo y memoria asignada por el controlador Metal. Para reanudar un trabajo que se detuvo, conservá el mismo checkout y entorno:
 
-## Interpretar el resultado
+~~~sh
+nohup caffeinate -i python3 training/transformer/run.py "$RUN" \
+  >> "$RUN.log" 2>&1 < /dev/null &
+~~~
 
-- `plan.json` registra el Ceibo utilizado, las semillas separadas y el presupuesto por modelo. Cada ronda juega `2 × batch` chicos por modelo, con datos de imitación compartidos.
-- `evaluation.json` guarda los dos resultados por reparto y enfrentamiento. La evaluación comienza después de congelar ambos modelos. Cada comparación usa repartos independientes del entrenamiento con dos juegos por reparto e intercambio de bandos.
-- `result.json` informa las victorias e intervalos simultáneos del 95 %. Para afirmar que el Transformer con historial supera a ambos, el extremo inferior de su tasa de victoria debe superar el 50 % frente a Ceibo y frente al Transformer con resumen. Los estilos reservados y, en parejas, el compañero fijo sirven para detectar dependencia de un rival o de la coordinación entre dos copias del modelo.
-- El entrenamiento de una sola semilla mide esos pesos y ese presupuesto. Las corridas con semillas de entrenamiento independientes ayudan a comprobar si el resultado se repite.
+Cada ronda reúne dos juegos por cada par de repartos de `--batch`. `--microbatch` limita las posiciones que entran juntas a la GPU. Si falta memoria, probá una corrida nueva con un valor más chico. Por defecto los tamaños mediano y grande guardan un checkpoint cada ocho rondas. `--checkpoint-every` permite ajustar ese intervalo. Una interrupción puede repetir rondas posteriores al último guardado. Para terminar limpiamente en una ronda de entrenamiento, agregá `--stopAfter N`, donde `N` cuenta todas las rondas ya hechas y las que querés completar. El dispositivo y los presupuestos quedan fijados en el plan.
+
+## Interpretar los resultados
+
+- `policy-full.pt` contiene los pesos entrenados en CPU para cargar o exportar sin el estado del optimizador. Con `--arms both` también se genera `policy-summary.pt`. `checkpoint.pt` permite reanudar.
+- `result.json` informa victorias e intervalos simultáneos del 95 % frente a Ceibo, la referencia pequeña cuando se incluye y estilos reservados. Cada comparación juega dos veces los mismos repartos nuevos e intercambia los bandos. En parejas también se prueba con un compañero fijo.
+- La referencia pequeña histórica sirve como comparación práctica. Para medir el efecto del tamaño, entrená una referencia pequeña nueva con la misma semilla, presupuesto, formato y modo de historial, y compará las versiones en repartos reservados. Una victoria ante Ceibo solamente mide ese enfrentamiento. Buscá ventajas que se repitan con otros rivales y semillas.
+
+Pruebas del modelo, dispositivo, guardado y reanudación:
+
+~~~sh
+training/partners/python/.venv/bin/python -B tests/training/test_transformer.py
+~~~

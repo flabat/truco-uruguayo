@@ -12,6 +12,8 @@ import { encode, sizes, type Encoded } from "./features.ts";
 const {positionals, values: args} = parseArgs({allowPositionals:true, options:{
   ceibo:{type:"string"}, format:{type:"string"}, seed:{type:"string"}, rounds:{type:"string"},
   warmup:{type:"string"}, batch:{type:"string"}, pairs:{type:"string"}, stopAfter:{type:"string"},
+  size:{type:"string"}, device:{type:"string"}, arms:{type:"string"}, microbatch:{type:"string"},
+  "checkpoint-every":{type:"string"}, "eval-batch":{type:"string"}, "small-reference":{type:"string"},
 }});
 const [directory, python] = positionals;
 if (positionals.length !== 2) throw new Error("Use run.py RUN [--ceibo FILE].");
@@ -48,17 +50,55 @@ function seedFor(seed: number, purpose: string) {
 }
 const source = runtime();
 const holdouts = ["folder", "rare-bluff"] as const;
-const arms = ["full", "summary"] as const;
-const coreComparisons = [
-  ["full", "ceibo"], ["summary", "ceibo"], ["full", "summary"],
-  ...holdouts.flatMap(opponent => arms.map(arm => [arm, opponent] as const)),
-] as const;
+const sizesByName = ["small", "medium", "large"] as const;
+const devices = ["cpu", "mps"] as const;
 
 type Format = keyof typeof pins;
+type Size = typeof sizesByName[number];
+type Device = typeof devices[number];
 type Match = readonly [string, string, "shared-partner"?];
-function matchups(format: Format): Match[] {
-  return format === "duel" ? [...coreComparisons] : [...coreComparisons,
-    ["full","ceibo","shared-partner"], ["summary","ceibo","shared-partner"], ["full","summary","shared-partner"]];
+interface Reference {
+  plan: string;
+  sha256: string;
+  completed: number;
+  trainingSeed: number;
+  legacy: boolean;
+}
+function fingerprint(bytes: Buffer) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+function option<T extends string>(name: string, value: string, choices: readonly T[]): T {
+  const choice = choices.find(item => item === value);
+  if (!choice) throw new Error(`Invalid ${name}. Choose ${choices.join(", ")}.`);
+  return choice;
+}
+function matchups(format: Format, arms: readonly Arm[], reference: Reference | null): Match[] {
+  const challengers = [...arms, ...(reference ? ["small"] : [])];
+  const headToHead: Match[] = arms.length === 2 ? [["full", "summary"]] : [];
+  if (reference) headToHead.push(...arms.map(arm => [arm, "small"] as const));
+  const main: Match[] = [...challengers.map(arm => [arm, "ceibo"] as const), ...headToHead,
+    ...holdouts.flatMap(opponent => challengers.map(arm => [arm, opponent] as const))];
+  if (format !== "duel") {
+    main.push(...main.filter(([,opponent]) => !holdouts.some(holdout => holdout === opponent)).map(
+      ([left,right]) => [left,right,"shared-partner"] as const));
+  }
+  return main;
+}
+function freezeReference(directory: string, format: Format): Reference {
+  const plan = JSON.parse(readFileSync(join(directory, "plan.json"), "utf8"));
+  const result = JSON.parse(readFileSync(join(directory, "result.json"), "utf8"));
+  const legacy = plan.schema === "ceibo-history-v1";
+  if (!(legacy || (plan.schema === "ceibo-history-v2" && plan.size === "small")) ||
+      plan.format !== format || result.format !== format || result.pin !== pins[format]) {
+    throw new Error("Use a completed small Transformer run in the selected format.");
+  }
+  const checkpoint = readFileSync(join(directory, "checkpoint.pt"));
+  const sha256 = fingerprint(checkpoint);
+  if (result.checkpoint !== sha256 || result.warmup !== plan.warmup || result.rounds !== plan.rounds) {
+    throw new Error("The small reference checkpoint does not match its evaluation.");
+  }
+  writeFileSync(path("small-reference.pt"), checkpoint);
+  return {plan:artifactPin(plan), sha256, completed:plan.warmup+plan.rounds, trainingSeed:plan.trainingSeed, legacy};
 }
 interface Plan {
   schema: string;
@@ -73,6 +113,13 @@ interface Plan {
   batch: number;
   pairs: number;
   comparisons: Match[];
+  size: Size;
+  device: Device;
+  arms: Arm[];
+  microbatch: number;
+  evalBatch: number;
+  checkpointEvery: number;
+  reference: Reference | null;
 }
 function prepare(): Plan {
   const format = args.format ?? "duel";
@@ -81,11 +128,25 @@ function prepare(): Plan {
   const artifact = JSON.parse(readFileSync(args.ceibo, "utf8"));
   const pin = artifactPin(artifact);
   if (pin !== pins[format]) throw new Error("The file must match the published Ceibo fingerprint for " + format);
-  const seed = integer(args.seed, 27201, 0, 0xffffffff);
-  const plan = {schema:"ceibo-history-v1", source, format, pin, seed,
-    trainingSeed:seedFor(seed,"train"), evaluationSeed:seedFor(seed,"evaluate"),
-    warmup:integer(args.warmup, 16, 0, 10000), rounds:integer(args.rounds, 128, 1, 10000),
-    batch:integer(args.batch, 4, 1, 16), pairs:integer(args.pairs, 256, 2, 8192), comparisons:matchups(format)};
+  const size = option("size", args.size ?? "small", sizesByName);
+  const device = option("device", args.device ?? (size === "small" ? "cpu" : "mps"), devices);
+  const armMode = option("arms", args.arms ?? (size === "small" ? "both" : "full"), ["full", "both"] as const);
+  const arms: Arm[] = armMode === "both" ? ["full", "summary"] : ["full"];
+  const seed = integer(args.seed, 27401, 0, 0xffffffff);
+  const trainingSeed = seedFor(seed,"gpu-v2:train"), evaluationSeed = seedFor(seed,"gpu-v2:evaluate");
+  const reference = args["small-reference"] ? freezeReference(args["small-reference"], format) : null;
+  if (trainingSeed === evaluationSeed || reference?.trainingSeed === evaluationSeed) {
+    throw new Error("The evaluation seed overlaps a training seed. Choose another --seed.");
+  }
+  const plan = {schema:"ceibo-history-v2", source, format, pin, seed, trainingSeed, evaluationSeed,
+    size, device, arms, reference, comparisons: matchups(format, arms, reference),
+    warmup:integer(args.warmup, size === "small" ? 16 : 512, 0, 10000),
+    rounds:integer(args.rounds, size === "small" ? 128 : 512, 1, 10000),
+    batch:integer(args.batch, size === "small" ? 4 : 16, 1, 64),
+    pairs:integer(args.pairs, size === "small" ? 256 : 512, 2, 8192),
+    evalBatch:integer(args["eval-batch"], 4, 1, 16),
+    microbatch:integer(args.microbatch, size === "large" ? 32 : size === "medium" ? 64 : 128, 1, 256),
+    checkpointEvery:integer(args["checkpoint-every"], size === "small" ? 1 : 8, 1, 128)};
   write("ceibo.json", artifact);
   write("plan.json", plan);
   return plan;
@@ -99,8 +160,14 @@ if (saved && Object.keys(args).some(key => key !== "stopAfter")) {
 const plan: Plan = saved ? read("plan.json") : prepare();
 requireTrainingFormat(plan.format);
 const stopAfter = integer(args.stopAfter, plan.warmup + plan.rounds, 0, plan.warmup + plan.rounds);
-if (plan.source !== source) throw new Error("Resume with the same Node version and source files that prepared this run.");
-const comparisons = matchups(plan.format);
+if (plan.schema !== "ceibo-history-v2" || plan.source !== source) {
+  throw new Error("Resume with the same Node version and source checkout that prepared this run.");
+}
+const {arms} = plan;
+const reference = plan.reference && {...plan.reference, path:path("small-reference.pt")};
+if (reference && fingerprint(readFileSync(reference.path)) !== reference.sha256) throw new Error("Frozen small reference does not match the plan.");
+const comparisons = matchups(plan.format, arms, reference);
+
 if (artifactPin(plan.comparisons) !== artifactPin(comparisons)) throw new Error("Evaluation matchups differ from the plan.");
 const artifact = read("ceibo.json");
 if (artifactPin(artifact) !== plan.pin || plan.pin !== pins[plan.format]) throw new Error("Frozen Ceibo does not match the plan.");
@@ -168,7 +235,7 @@ async function selfPlayRound(round: number) {
   return examples;
 }
 
-async function evaluate(checkpoint: string) {
+async function evaluate(checkpoint: string, policies: Record<string,string>) {
   type LegWins = [number, number];
   interface Ledger {checkpoint: string; results: LegWins[][]}
   const ledger: Ledger = existsSync(path("evaluation.json")) ? read("evaluation.json") : {checkpoint, results:[]};
@@ -176,16 +243,16 @@ async function evaluate(checkpoint: string) {
   function setup([left,right,lineup]: Match, pair: number, leg: 0|1) {
     return playMatchAsync({format:plan.format, seed:plan.evaluationSeed, pair, leg, responders: seat => {
       const fighter = lineup && seat>=2 ? "rare-bluff" : teamOf(seat) === leg ? left : right;
-      if (fighter === "full" || fighter === "summary") return async (obs, random) => {
-        const probabilities = await learners.predict(fighter,encode(obs,fighter==="full"));
+      if (fighter === "full" || fighter === "summary" || fighter === "small") return async (obs, random) => {
+        const probabilities = await learners.predict(fighter,encode(obs,fighter!=="summary"));
         return obs.legalActions[choose(probabilities,obs,random)];
       };
       const policy = fighter === "ceibo" ? ceibo[seat] : opponents[fighter];
       return (obs, random) => obs.legalActions[choose(policy.decide(obs,obs.legalActions),obs,random)];
     }}).then(game => Number(game.winner===leg));
   }
-  for (let start=ledger.results.length; start<plan.pairs; start+=plan.batch) {
-    const pairs = Array.from({length:Math.min(plan.batch,plan.pairs-start)}, (_,i) => start+i);
+  for (let start=ledger.results.length; start<plan.pairs; start+=plan.evalBatch) {
+    const pairs = Array.from({length:Math.min(plan.evalBatch,plan.pairs-start)}, (_,i) => start+i);
     const outcomes = await Promise.all(pairs.map(pair => Promise.all(comparisons.map(match =>
       Promise.all(legs.map(leg => setup(match,pair,leg))) as Promise<LegWins>))));
     ledger.results.push(...outcomes);
@@ -200,33 +267,50 @@ async function evaluate(checkpoint: string) {
     const rate = wins / (2*plan.pairs);
     return {left,right,lineup:lineup??"whole-team",wins,games:2*plan.pairs,rate,lower:Math.max(0,rate-radius),upper:Math.min(1,rate+radius)};
   });
-  const confirmed = results[0].lower>0.5 && results[2].lower>0.5;
+  const benchmark = ["ceibo", ...(arms.includes("summary") ? ["summary"] : []), ...(reference ? ["small"] : [])];
+  const confirmed = benchmark.every(right => results.some(result =>
+    result.left === "full" && result.right === right && result.lineup === "whole-team" && result.lower > 0.5));
   write("result.json", {format:plan.format, pin:plan.pin, seed:plan.seed, checkpoint,
+    size:plan.size, device:plan.device, reference:plan.reference?.sha256 ?? null, benchmark, policies,
     warmup:plan.warmup, rounds:plan.rounds, pairs:plan.pairs, confidence:"95% simultaneous paired Hoeffding",
-    verdict:confirmed ? "full beats both" : "full did not establish superiority to both", results});
+    verdict:confirmed ? "full beats all primary benchmarks" : "full did not establish superiority to all primary benchmarks", results});
   console.table(results);
 }
 
 try {
   const total = plan.warmup + plan.rounds;
-  const initial = await learners.command<{completed:number; torch:string; parameters:number}>({
-    kind:"init", seed:seedFor(plan.seed,"initialization"), checkpoint:path("checkpoint.pt"), sizes, plan:artifactPin(plan),
-  });
-  const model = {torch:initial.torch, parameters:initial.parameters};
+  const {completed, ...model} = await learners.command<{
+    completed:number; torch:string; parameters:number; device:Device; architecture:number[];
+  }>({kind:"init", seed:seedFor(plan.seed,"initialization"), checkpoint:path("checkpoint.pt"), sizes, plan:artifactPin(plan),
+    device:plan.device, size:plan.size, arms, microbatch:plan.microbatch, reference});
   if (existsSync(path("model.json")) && artifactPin(read("model.json")) !== artifactPin(model)) {
     throw new Error("Resume with the same PyTorch version.");
   }
   write("model.json", model);
-  for (let round=initial.completed; round<stopAfter; round++) {
+  let checkpointRound = completed;
+  write("progress.json", {completed,total,checkpointRound});
+  console.log(`Dispositivo ${model.device}, ${model.parameters} parámetros por modelo. Checkpoint ${completed}/${total}.`);
+  for (let round=completed; round<stopAfter; round++) {
+    const start = performance.now();
     const warmup = round < plan.warmup;
     const examples = warmup ? teaching(round) : await selfPlayRound(round);
-    const metrics = await learners.command({kind:"learn", round, warmup, examples});
-    write("progress.json", {completed:round+1,total,warmup,metrics});
-    console.log(`Entrenamiento ${round+1}/${total}`, JSON.stringify(metrics));
+    const save = (round+1)%plan.checkpointEvery === 0 || round+1 === stopAfter;
+    const metrics = await learners.command({kind:"learn", round, warmup, examples, save});
+    if (save) checkpointRound = round+1;
+    const seconds = (performance.now() - start)/1000;
+    const gamesPerSecond = 2 * plan.batch * (warmup ? 1 : arms.length) / seconds;
+    const progress = {completed:round+1,total,checkpointRound,warmup,seconds,gamesPerSecond,metrics};
+    write("progress.json", progress);
+    console.log(`Entrenamiento ${round+1}/${total}`, JSON.stringify(progress));
   }
-  if (Math.max(initial.completed, stopAfter) === total) {
-    const checkpoint = createHash("sha256").update(readFileSync(path("checkpoint.pt"))).digest("hex");
-    await evaluate(checkpoint);
+  if (Math.max(completed, stopAfter) === total) {
+    const checkpoint = fingerprint(readFileSync(path("checkpoint.pt")));
+    const exported = await learners.command<Arm[]>({kind:"export"});
+    const policies = Object.fromEntries(exported.map(arm => {
+      const file = `policy-${arm}.pt`;
+      return [file,fingerprint(readFileSync(path(file)))];
+    }));
+    await evaluate(checkpoint, policies);
   }
 } finally {
   learners.close();

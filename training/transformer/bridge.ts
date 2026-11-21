@@ -4,11 +4,12 @@ import { fileURLToPath } from "node:url";
 import type { Encoded } from "./features.ts";
 
 export type Arm = "full" | "summary";
+type NeuralPolicy = Arm | "small";
 
 export class Worker {
   private child;
   private requests = [] as { resolve: (result: any) => void; reject: (error: Error) => void }[];
-  private predictions = [] as { arm: Arm; row: Encoded; resolve: (result: number[]) => void; reject: (error: Error) => void }[];
+  private predictions = [] as { arm: NeuralPolicy; row: Encoded; resolve: (result: number[]) => void; reject: (error: Error) => void }[];
   private failure?: Error;
 
   constructor(python: string) {
@@ -41,7 +42,7 @@ export class Worker {
     });
   }
 
-  predict(arm: Arm, row: Encoded): Promise<number[]> {
+  predict(arm: NeuralPolicy, row: Encoded): Promise<number[]> {
     return new Promise((resolve, reject) => {
       if (!this.predictions.length) setImmediate(() => void this.flush());
       this.predictions.push({arm, row, resolve, reject});
