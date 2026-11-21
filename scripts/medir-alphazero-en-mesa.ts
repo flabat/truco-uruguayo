@@ -52,6 +52,7 @@ async function leg(pair: number, side: 0|1) {
 
 const outcomes: PairOutcome[] = [];
 try {
+  await server.warm();
   for (let pair=0;pair<pairs;pair++) {
     const candidate: [number,number] = [await leg(pair,0),await leg(pair,1)];
     outcomes.push({pair,candidate,incumbent:[1-candidate[0],1-candidate[1]]});

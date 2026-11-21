@@ -32,7 +32,7 @@ Las primeras ediciones documentadas son **Ceibo Duelo**, **Ceibo Parejas** y **C
 
 ## Actores AlphaZero
 
-Exportá un candidato después de completar su evaluación. El exportador comprueba las huellas del plan, del actor y del Ceibo utilizado. La exportación incluye el Ceibo de referencia, la tabla de continuación y el presupuesto fijo de búsqueda. El contenedor sirve el actor en CPU.
+Exportá un candidato después de completar su evaluación. El exportador comprueba las huellas del plan, del actor y del Ceibo utilizado. La exportación incluye el Ceibo de referencia, la tabla de continuación y el presupuesto fijo de búsqueda. El contenedor sirve el actor en CPU. El servicio inicia su worker al arrancar y lo deja terminar de cargar si vence un plazo durante ese inicio.
 
 ```sh
 node scripts/exportar-alphazero.ts /ruta/a/corrida > /ruta/a/actor.json

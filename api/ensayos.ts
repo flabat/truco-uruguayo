@@ -37,8 +37,10 @@ export async function crearEnsayo(pool: Pool, formato: FormatoMesa, creador: str
 }
 
 export function servicioComputadoras(pool: Pool) {
-  return createServing({loadArtifact: async pin =>
+  const servicio = createServing({loadArtifact: async pin =>
     (await pool.query("SELECT contenido FROM juego.artefactos WHERE pin=$1", [pin])).rows[0]?.contenido});
+  void servicio.warm();
+  return servicio;
 }
 
 export function procesarEnsayos(pool: Pool, alCambiar: (id: string) => void) {

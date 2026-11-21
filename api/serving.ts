@@ -31,11 +31,16 @@ export function createServing(options: Options) {
   const deadlineMs = options.deadlineMs ?? defaultDeadlineMs;
   if (!Number.isFinite(deadlineMs) || deadlineMs <= 0) throw new Error("Plazo de inferencia inválido.");
   let worker: Worker | null = null, sequence = 0, closed = false;
+  let startup: Promise<void> | undefined;
+  let finishStartup: (()=>void) | undefined;
   const ready = new Set<string>();
   const pending = new Map<number, {resolve: (v: number[]) => void; reject: (e: Error) => void}>();
   function abandon() {
     const previous = worker;
     worker = null; ready.clear();
+    finishStartup?.();
+    startup = undefined;
+    finishStartup = undefined;
     for (const request of pending.values()) request.reject(new Error("restart"));
     pending.clear();
     return previous?.terminate();
@@ -44,7 +49,12 @@ export function createServing(options: Options) {
     if (closed) throw new Error("closed");
     if (worker) return worker;
     const next = new Worker(new URL("./serving-worker.ts", import.meta.url), {env: {}, execArgv: []});
+    startup = new Promise<void>(resolve=>{finishStartup = resolve;});
     next.on("message", msg => {
+      if (msg.ready) {
+        if (worker===next) finishStartup?.();
+        return;
+      }
       const request = pending.get(msg.id);
       if (!request) return;
       pending.delete(msg.id);
@@ -71,9 +81,12 @@ export function createServing(options: Options) {
       const inference = async () => {
         const thread = ensureWorker();
         const load = !ready.has(pin);
+        const warming = startup;
         const artifact = load ? await options.loadArtifact(pin) : undefined;
         if (expired || closed || thread !== worker) throw new Error("restart");
         if (load && !artifact) throw new Error("missing");
+        await warming;
+        if (expired || closed || thread !== worker) throw new Error("restart");
         const weights = await new Promise<number[]>((resolve, reject) => {
           pending.set(id, {resolve, reject}); posted = true;
           thread.postMessage({id, pin, obs: observation, ...(load && {artifact})});
@@ -98,5 +111,5 @@ export function createServing(options: Options) {
     }
     return {action, policy, fallback, latencyMs: performance.now() - start};
   }
-  return {decide, async close() { closed = true; await abandon(); }};
+  return {decide, warm() {ensureWorker(); return startup!;}, async close() { closed = true; await abandon(); }};
 }

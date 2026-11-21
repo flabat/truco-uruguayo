@@ -23,3 +23,4 @@ parentPort!.on("message", (request: {id: number; pin: string; artifact?: unknown
     parentPort!.postMessage({id: request.id, error: "incompatible"});
   }
 });
+parentPort!.postMessage({ready:true});
