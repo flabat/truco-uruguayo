@@ -122,7 +122,7 @@
   .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: 1fr 1fr; }
   .j-tapete--jugador .j-parejas {
     grid-template-areas: "izquierda frente derecha" "izquierda . derecha" "izquierda vos derecha";
-    grid-template-rows: 1fr auto 1fr;
+    grid-template-rows: repeat(3, auto);
   }
   .j-tapete--jugador .j-puestos-seis {
     min-height: calc(var(--alto-ronda) + 3rem);
@@ -150,6 +150,8 @@
     grid-row: 1; align-self: end; margin: 0;
   }
   .j-tapete--jugador .j-muestra {
+    /* La caja vacía de un flanco ocupa varias filas de la cuadrícula. */
+    z-index: 1;
     padding: 3px 5px;
     border: 1px solid #d8cb9c80;
     border-radius: .4rem;
