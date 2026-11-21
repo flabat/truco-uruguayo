@@ -85,7 +85,7 @@
 .j-tapete--jugador .j-muestra strong { overflow-wrap: break-word; }
 .j-tapete--jugador .j-puesto:not(:has(.j-muestra)) > .j-ocupante { grid-column: 1 / -1; }
 
-@media (min-width: 601px), (min-width: 360px) and (orientation: landscape) {
+@media (min-width: 601px) and (min-height: 501px) {
   .j-tapete--jugador .j-puestos.j-parejas {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr) minmax(0, 1fr);
     grid-template-areas: "izquierda frente derecha" "izquierda vos derecha";
@@ -99,7 +99,21 @@
   .j-tapete--jugador > header strong { font-size: 1.1rem; }
   .j-tapete--jugador .j-puestos { grid-template-rows: auto; grid-auto-rows: auto; gap: 4px 0; }
   .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: auto auto; row-gap: .5rem; }
+  /* En la fila central los dos rivales comparten altura. El mazo del dador
+     lateral queda en la fila contigua, en su propia columna. */
+  .j-tapete--jugador .j-parejas {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-areas: "izquierda frente derecha" "izquierda . derecha" "izquierda vos derecha";
+    grid-template-rows: repeat(3, auto);
+  }
+  .j-tapete--jugador .j-parejas :is(.j-frente, .j-vos):has(.j-muestra) { grid-column: 1 / -1; }
+  .j-tapete--jugador :is(.j-izquierda, .j-derecha) { align-self: stretch; grid-template-rows: subgrid; }
+  .j-tapete--jugador :is(.j-izquierda, .j-derecha) > .j-ocupante { grid-row: 2; align-self: start; }
+  .j-tapete--jugador .j-izquierda > .j-muestra { grid-row: 3; align-self: start; margin: 0; }
+  .j-tapete--jugador .j-derecha > .j-muestra { grid-row: 1; align-self: end; margin: 0; }
   .j-tapete--jugador .j-muestra {
+    /* La caja vacía de un flanco puede ocupar varias filas de la cuadrícula. */
+    z-index: 1;
     display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
     gap: 2px 4px;
   }
@@ -120,10 +134,6 @@
   }
   .j-tapete--jugador .j-puestos::before { inset: 10% 6%; border-color: #dbcc8f70; }
   .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: 1fr 1fr; }
-  .j-tapete--jugador .j-parejas {
-    grid-template-areas: "izquierda frente derecha" "izquierda . derecha" "izquierda vos derecha";
-    grid-template-rows: repeat(3, auto);
-  }
   .j-tapete--jugador .j-puestos-seis {
     min-height: calc(var(--alto-ronda) + 3rem);
     grid-template-areas: ". frente ." "lejos-izquierda . lejos-derecha" ". . ."
@@ -134,30 +144,39 @@
   .j-tapete--jugador .j-vos { align-self: end; }
   .j-tapete--jugador :is(.j-frente, .j-vos):has(.j-muestra) { grid-column: 1 / -1; }
 
-  /* Los nombres de ambos flancos comparten la fila central. La derecha del dador
-     ocupa la fila de arriba o abajo sin desplazar a ese jugador respecto al otro. */
-  .j-tapete--jugador .j-puesto:not(.j-frente, .j-vos) {
+  .j-tapete--jugador .j-puestos-seis .j-puesto:not(.j-frente, .j-vos) {
     align-self: stretch;
     grid-template-rows: subgrid;
   }
   .j-tapete--jugador :is(.j-lejos-izquierda, .j-lejos-derecha) { grid-row: 1 / span 3; }
   .j-tapete--jugador :is(.j-cerca-izquierda, .j-cerca-derecha) { grid-row: 3 / span 3; }
-  .j-tapete--jugador .j-puesto:not(.j-frente, .j-vos) > .j-ocupante { grid-row: 2; align-self: start; }
-  .j-tapete--jugador :is(.j-izquierda, .j-lejos-izquierda, .j-cerca-izquierda) > .j-muestra {
+  .j-tapete--jugador .j-puestos-seis .j-puesto:not(.j-frente, .j-vos) > .j-ocupante { grid-row: 2; align-self: start; }
+  .j-tapete--jugador :is(.j-lejos-izquierda, .j-cerca-izquierda) > .j-muestra {
     grid-row: 3; align-self: start; margin: 0;
   }
-  .j-tapete--jugador :is(.j-derecha, .j-lejos-derecha, .j-cerca-derecha) > .j-muestra {
+  .j-tapete--jugador :is(.j-lejos-derecha, .j-cerca-derecha) > .j-muestra {
     grid-row: 1; align-self: end; margin: 0;
   }
   .j-tapete--jugador .j-muestra {
-    /* La caja vacía de un flanco ocupa varias filas de la cuadrícula. */
-    z-index: 1;
     padding: 3px 5px;
     border: 1px solid #d8cb9c80;
     border-radius: .4rem;
     background: #1d3f30;
   }
   .j-tapete--jugador .j-muestra > div { width: clamp(50px, 15vw, 60px); }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .j-tapete--jugador .j-parejas { max-width: 40rem; row-gap: 2px; }
+  .j-tapete--jugador .j-parejas .j-frente { align-self: start; }
+  .j-tapete--jugador .j-parejas .j-vos { align-self: end; }
+  .j-tapete--jugador :is(.j-izquierda, .j-derecha) .j-ocupante:has(.j-dorsos) {
+    display: grid;
+    grid-template-columns: minmax(0, auto) auto;
+    align-items: center;
+    column-gap: .4rem;
+  }
+  .j-tapete--jugador :is(.j-izquierda, .j-derecha) .j-dorsos { grid-area: 1 / 2 / span 2; padding-top: 0; }
 }
 
 @media (min-width: 600px) and (orientation: landscape) and (max-height: 500px) {
