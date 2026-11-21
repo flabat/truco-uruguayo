@@ -253,3 +253,45 @@ test("el salón pausa la consulta en segundo plano y revalida una sola vez al vo
   await expect(page.getByText("Exhibición · Solo computadoras")).toBeVisible();
   await expect(page.getByText("2 personas y 2 computadoras")).toHaveCount(0);
 });
+
+test("la comunidad puede descartarse sin interrumpir el salón", async ({ page }) => {
+  await servicio(page);
+  await page.goto('/jugar/');
+  const comunidad = page.getByRole('complementary', { name: 'Comunidad de Discord' });
+  await expect(comunidad).toBeVisible();
+  await expect(comunidad.getByRole('link', { name: /Unirme al Discord/ })).toHaveAttribute('href', 'https://discord.gg/HpaWCPQDr');
+  await comunidad.getByRole('button', { name: 'Ahora no' }).click();
+  await expect(comunidad).toHaveCount(0);
+  await page.reload();
+  await expect(comunidad).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Comunidad en Discord/ })).toBeVisible();
+});
+
+test("una invitación a mesa no muestra la tarjeta de comunidad", async ({ page }) => {
+  await page.route('**/api/**', route => {
+    const ruta = new URL(route.request().url()).pathname;
+    if (ruta === '/api/jugador') return route.fulfill({ json: { id: 'ana', nombre: 'Ana', salonHabilitado: true } });
+    if (ruta.startsWith('/api/invitaciones/')) return route.fulfill({ json: { publica: false, sentada: false } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/jugar/?invitacion=prueba');
+  await expect(page.getByRole('button', { name: 'Ocupar mi asiento' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Comunidad de Discord' })).toHaveCount(0);
+});
+
+test('cuenta un ingreso exitoso sin incluir el token en el evento', async ({ page }) => {
+  await page.route('**/api/**', route => {
+    const ruta = new URL(route.request().url()).pathname;
+    if (ruta === '/api/jugador') return route.fulfill({ json: { id: 'ana', nombre: 'Ana', salonHabilitado: true } });
+    if (ruta.endsWith('/unirse')) return route.fulfill({ json: { id } });
+    if (ruta.startsWith('/api/invitaciones/')) return route.fulfill({ json: { publica: false, sentada: false } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/jugar/?invitacion=token-privado');
+  const evento = page.waitForRequest(request => new URL(request.url()).pathname === '/eventos/ingreso-mesa.txt');
+  await page.getByRole('button', { name: 'Ocupar mi asiento' }).click();
+  const solicitud = await evento;
+  expect(new URL(solicitud.url()).search).toBe('');
+  expect(solicitud.postData()).toBeNull();
+  expect(solicitud.headers().referer || "").toBe("");
+});

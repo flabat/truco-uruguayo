@@ -45,7 +45,7 @@ public final class VerificarCorreo extends VerifyEmail {
         // IdentityBrokerService deja esta nota al terminar un ingreso con el broker.
         // El primer ingreso y la vinculación usan notas de autenticación propias.
         String proveedor = session.getUserSessionNotes().get(Details.IDENTITY_PROVIDER);
-        return ("google".equals(proveedor) || "facebook".equals(proveedor))
+        return ("google".equals(proveedor) || "facebook".equals(proveedor) || "discord".equals(proveedor))
                 && session.getAuthNote(AbstractIdpAuthenticator.FIRST_BROKER_LOGIN_SUCCESS) == null
                 && session.getAuthNote(AbstractIdpAuthenticator.BROKERED_CONTEXT_NOTE) == null
                 && session.getAuthNote(IdentityBrokerService.LINKING_IDENTITY_PROVIDER) == null

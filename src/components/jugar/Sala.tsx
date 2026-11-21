@@ -11,6 +11,8 @@ import {
   type Modo,
 } from "./cliente";
 import PieMesa from "./PieMesa";
+import Comunidad from "./Comunidad";
+import { contar } from "../../lib/eventos";
 import SalonEnVivo from "./SalonEnVivo";
 import VisorEspectador from "./VisorEspectador";
 import { VozDiscord } from "./VozDiscord";
@@ -193,15 +195,26 @@ function Invitacion({ enlace }: { enlace: string }) {
       avisar(copiada ? "Invitación copiada." : "Enlace seleccionado. Copialo para compartirlo.");
     }
   }
+  async function compartir() {
+    contar("compartir-mesa");
+    if (!navigator.share) return copiar();
+    try {
+      await navigator.share({ title: "Truco Oriental", text: "¡Te invité a jugar al truco! Sumate a mi mesa:", url: enlace });
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      await copiar();
+    }
+  }
   return (
     <div className="j-invita">
       <label htmlFor="invitacion">Enlace de invitación</label>
       <div>
         <input id="invitacion" ref={input} value={enlace} readOnly onFocus={(e) => e.target.select()} />
-        <button className="j-sec" onClick={copiar}>
+        <button className="j-sec" onClick={() => { contar("compartir-mesa"); void copiar(); }}>
           Copiar invitación
         </button>
       </div>
+      <button type="button" className="j-sec" onClick={compartir}>Compartir invitación</button>
       <span role="status">{mensaje}</span>
     </div>
   );
@@ -429,6 +442,7 @@ export default function Sala({ base }: { base: string }) {
     aceptar(true);
     try {
       const mesa = await pedir<Mesa>("/api/invitaciones/" + encodeURIComponent(invitacion) + "/unirse", {});
+      contar("ingreso-mesa");
       history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(mesa.id));
       abrir({ id: mesa.id });
     } catch (e) {
@@ -457,6 +471,7 @@ export default function Sala({ base }: { base: string }) {
           <em>truco</em>
         </h1>
       </header>
+      {jugador && !error && !mesa && !previa && !invitacion && vista !== "mirar" && <Comunidad jugador={jugador.id} />}
       {error ? (
         <div className="j-panel">
           <p role="alert">{mensajeDe(error)}</p>

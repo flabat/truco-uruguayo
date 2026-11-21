@@ -1,6 +1,6 @@
-# Habilitar el ingreso con Google y Facebook
+# Habilitar el ingreso con Google, Facebook y Discord
 
-Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
+Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook** o **Continuar con Discord**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
 
 ![Pantalla de ingreso de Truco Oriental con las opciones Facebook y Google](ingreso-social.png)
 
@@ -8,12 +8,13 @@ Podés habilitar uno de los proveedores y agregar el otro más adelante. Si toda
 
 ## URLs que tenés que registrar
 
-Google y Facebook devuelven el navegador a **Keycloak**. Copiá la URL de la fila correspondiente, incluido el puerto y sin agregar una barra al final.
+Google, Facebook y Discord devuelven el navegador a **Keycloak**. Copiá la URL de la fila correspondiente, incluido el puerto y sin agregar una barra al final.
 
 | Proveedor | Compose local | Ejemplo para un entorno HTTPS |
 | --- | --- | --- |
 | Google | `http://localhost:8080/realms/mesa-local/broker/google/endpoint` | `https://identidad.example.org/realms/mesa/broker/google/endpoint` |
 | Facebook | `http://localhost:8080/realms/mesa-local/broker/facebook/endpoint` | `https://identidad.example.org/realms/mesa/broker/facebook/endpoint` |
+| Discord | `http://localhost:8080/realms/mesa-local/broker/discord/endpoint` | `https://identidad.example.org/realms/mesa/broker/discord/endpoint` |
 
 En pruebas compartidas y producción, sustituí el dominio y el realm del ejemplo por los públicos de tu instalación. Podés confirmar el valor en **Identity providers → Google o Facebook → Redirect URI** de Keycloak. Luego Keycloak devuelve el navegador al **juego** en `/api/auth/callback`. Esa segunda dirección se registra en el cliente `truco-web` de Keycloak.
 
@@ -24,6 +25,12 @@ En pruebas compartidas y producción, sustituí el dominio y el realm del ejempl
 1. En el proyecto de Google Cloud, abrí **Google Auth Platform → Branding**. Si es nuevo, elegí **Get started**, cargá el nombre del juego, el correo de soporte y el de contacto. Elegí la audiencia **External** para que puedan ingresar jugadores con cuentas personales. Usá proyectos separados para pruebas y producción. [Configurar Google Auth Platform](https://developers.google.com/workspace/guides/configure-oauth-consent)
 2. En **Data Access**, usá solo `openid`, `email` y `profile`. En **Clients → Create client → Web application**, añadí el retorno de Google de la tabla en **Authorized redirect URIs**. Keycloak realiza el canje en el servidor y el campo **Authorized JavaScript origins** puede quedar vacío. Google admite HTTP en localhost para desarrollo. [Crear el cliente web](https://developers.google.com/identity/protocols/oauth2/web-server)
 3. Guardá **Client ID** y **Client secret** como `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en tu gestor de secretos. Para el lanzamiento, cambiá **Audience → Publishing status** a **In production** y completá los requisitos de marca que indique la consola. Con estos tres permisos Google permite probar sin cargar una lista de usuarios de prueba. [Audiencia y publicación](https://support.google.com/cloud/answer/15549945?hl=en)
+
+### Discord
+
+1. Creá una aplicación en el [portal de desarrolladores de Discord](https://discord.com/developers/applications) y agregá el retorno de la tabla en **OAuth2 → Redirects**. Usá aplicaciones separadas para pruebas y producción.
+2. Guardá el **Client ID** y el **Client Secret** como `DISCORD_CLIENT_ID` y `DISCORD_CLIENT_SECRET`. El ingreso solicita únicamente `identify` y `email`; no necesita permisos de bot ni acceso a servidores. El nombre o correo pueden requerir que el jugador complete su perfil. [OAuth2 de Discord](https://docs.discord.com/developers/topics/oauth2)
+3. Configurá el proveedor después de desplegar la versión de Keycloak incluida aquí. El alias `discord` usa OAuth v2 y el ID estable de Discord; mantené **Trust email** desactivado y verificá el vínculo a cuentas existentes mediante el método original.
 
 ### Facebook
 
@@ -39,6 +46,7 @@ Exportá desde tu gestor de secretos las dos variables del proveedor elegido. Si
 
 ```sh
 read -r GOOGLE_CLIENT_ID && read -rs GOOGLE_CLIENT_SECRET && export GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET
+read -r DISCORD_CLIENT_ID && read -rs DISCORD_CLIENT_SECRET && export DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET
 read -r FACEBOOK_APP_ID && read -rs FACEBOOK_APP_SECRET && export FACEBOOK_APP_ID FACEBOOK_APP_SECRET
 ```
 
@@ -50,6 +58,7 @@ export KC_BOOTSTRAP_ADMIN_PASSWORD="$(openssl rand -hex 24)"
 docker compose up -d --wait
 npm run auth:google
 npm run auth:facebook
+npm run auth:discord
 ```
 
 Si el realm ya existe, ejecutá directamente `npm run auth:google` o `npm run auth:facebook`. Exportá un token administrativo vigente en `KEYCLOAK_ADMIN_TOKEN`, o las credenciales de un administrador de `master` en las dos variables `KC_BOOTSTRAP_ADMIN_*`. Keycloak solo crea la cuenta de arranque cuando inicializa `master` por primera vez.
@@ -62,11 +71,12 @@ docker compose run --rm --no-deps identidad bootstrap-admin user
 docker compose up -d --wait
 ```
 
-**Keycloak propio o de producción.** Desde un equipo con acceso a la API administrativa, cargá `KEYCLOAK_ADMIN_URL` con la URL base de Keycloak (por ejemplo, `https://admin-identidad.example.org`), `KEYCLOAK_REALM` con el nombre del realm del juego y `KEYCLOAK_ADMIN_TOKEN` con un token de acceso de corta duración con permiso para administrar sus proveedores de identidad. Cargá también las variables de Google o Facebook. El proxy público de Compose expone los retornos de ingreso y reserva la administración para la red interna. Mantené los secretos en el entorno del proceso que configura Keycloak y fuera del repositorio. Ejecutá el comando correspondiente.
+**Keycloak propio o de producción.** Desde un equipo con acceso a la API administrativa, cargá `KEYCLOAK_ADMIN_URL` con la URL base de Keycloak (por ejemplo, `https://admin-identidad.example.org`), `KEYCLOAK_REALM` con el nombre del realm del juego y `KEYCLOAK_ADMIN_TOKEN` con un token de acceso de corta duración con permiso para administrar sus proveedores de identidad. Cargá también las variables del proveedor elegido. El proxy público de Compose expone los retornos de ingreso y reserva la administración para la red interna. Mantené los secretos en el entorno del proceso que configura Keycloak y fuera del repositorio. Ejecutá el comando correspondiente.
 
 ```sh
 node scripts/configurar-ingreso-social.mjs google
 node scripts/configurar-ingreso-social.mjs facebook
+node scripts/configurar-ingreso-social.mjs discord
 ```
 
 ## Activar la pantalla de Truco Oriental
