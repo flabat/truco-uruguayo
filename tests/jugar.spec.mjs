@@ -329,8 +329,8 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
     } } };
   });
   await page.goto("jugar/?mesa=" + mesaId);
-  const puesto = page.getByRole("group", { name: "Vos · Ana", exact: true });
-  const mano = puesto.getByRole("group", { name: "Tus cartas" });
+  const zona = page.getByRole("region", { name: "Zona de juego" });
+  const mano = zona.getByRole("group", { name: "Tus cartas" });
   const nombres = ["5 de oros", "Rey de copas", "Caballo de bastos"];
   for (const nombre of nombres) {
     const boton = mano.getByRole("button", { name: "Jugar " + nombre, exact: true });
@@ -348,7 +348,7 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
     expect(bordes[i].left).toBeGreaterThanOrEqual(bordes[i - 1].right);
   }
   if (process.env.CAPTURAS_UI)
-    await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+    await zona.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
 });
 
 test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno sin pases", async ({ page }) => {
@@ -460,7 +460,7 @@ for (const [caso, cantos] of [
         return { json: { ...partida, version: estado.acciones.length, puntos: marcadorOnline(estado), vista: vistaOnline(estado, 0) } };
     });
     await page.goto("jugar/?mesa=" + mesaId);
-    const panel = page.locator(".j-jugada-panel");
+    const panel = page.getByRole("region", { name: "Zona de juego" });
     const respuesta = panel.getByRole("button", { name: "Yo no canto", exact: true });
     const estadoDelTurno = panel.getByRole("status");
     const anuncio = estadoDelTurno.getByText(/Computadora 2 cantó flor/i);
@@ -701,10 +701,13 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
   expect(joined).toBe(1);
   await expect(page.getByRole("group", { name: "Tu pareja · Ana", exact: true })).toBeVisible();
   await expect(page.getByText("Queda pendiente el truco de Ana.")).toBeVisible();
-  const [frente, muestra, naipes] = await Promise.all(
-    [".j-frente", ".j-muestra", ".j-mano"].map((sel) => page.locator(sel).boundingBox()),
+  const [frente, muestra, dador, naipes] = await Promise.all(
+    [".j-frente .j-ocupante", ".j-derecha .j-muestra", ".j-derecha .j-ocupante", ".j-mano"]
+      .map(sel => page.locator(sel).boundingBox()),
   );
-  expect(frente.y + frente.height).toBeLessThanOrEqual(muestra.y);
+  // En dos filas, la muestra del dador de la derecha puede quedar a la altura del puesto de enfrente.
+  expect(muestra.x >= frente.x + frente.width || muestra.y >= frente.y + frente.height).toBe(true);
+  expect(muestra.y + muestra.height).toBeLessThanOrEqual(dador.y);
   expect(muestra.y + muestra.height).toBeLessThanOrEqual(naipes.y);
   if (process.env.CAPTURAS_UI)
     await page.screenshot({
@@ -822,7 +825,7 @@ test("recupera el marcador al reconectar y cierra la partida por envido", async 
   await expect(carta).toBeEnabled();
   interrumpida = true;
   sockets.at(-1).close();
-  await expect(page.getByText("Reconectando con tu mesa…")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Zona de juego" }).getByRole("heading", { name: "Reconectando con tu mesa…" })).toBeVisible();
   await expect(carta).toBeDisabled();
   mano = {
     ...mano,

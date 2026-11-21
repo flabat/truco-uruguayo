@@ -65,14 +65,14 @@ for (const { canto, manos, valor, puntos } of casos) {
       await page.clock.runFor(1500);
     }
     await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
-    await expect(tapete.getByText("Vuelta 1", { exact: true })).toBeVisible();
+    await expect(tapete.locator("header").getByText("Vuelta 1", { exact: true })).toBeVisible();
     await expect(page.locator(".j-cuenta div").filter({ hasText: "Valor de la mano" }).locator("dd")).toHaveText(valor);
     await expect(page.locator(".j-tanteador strong")).toHaveText(puntos);
     if (canto === "Real envido") {
       await expect(page.locator(".j-lances")).toContainText("Tu rival · 3 tantos por envido");
     }
     await page.clock.runFor(2000);
-    await expect(tapete.getByText("Vuelta 2", { exact: true })).toBeVisible();
+    await expect(tapete.locator("header").getByText("Vuelta 2", { exact: true })).toBeVisible();
     await expect(page.locator(".j-tanteador strong")).toHaveText(puntos);
   });
 }
