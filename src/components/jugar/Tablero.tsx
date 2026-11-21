@@ -1,3 +1,4 @@
+import { motivoDelCobro } from "../../lib/cobros";
 import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
@@ -166,7 +167,7 @@ export function EnJuego({
   const disponibles = grupos
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
-  const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
+  const cobrados = v.cobros;
   return (
     <>
       <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
@@ -281,7 +282,7 @@ export function EnJuego({
                     <b>
                       {equipo(c.equipo)} · {tantos(c.tantos)}
                     </b>{" "}
-                    por {c.motivo}
+                    por {motivoDelCobro(c, v.acciones, resultado)}
                     {c.tantoGanador != null &&
                       " (" + (c.asiento != null ? nombre(c.asiento) + " con " : "") + c.tantoGanador + ")"}
                   </li>
