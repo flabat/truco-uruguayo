@@ -52,7 +52,7 @@ function pendingClass(id: string | undefined) {
   if (id==="retruco") return 5;
   return 6;
 }
-function context(obs: SeatObservation) {
+export function selfplayContext(obs: SeatObservation) {
   const {view,score,target} = obs, seat = view.asiento, team = view.equipoPorAsiento[seat];
   const partner = obs.seats===4 ? obs.relativeSeats[2] : undefined;
   const cards = [...view.cartas].sort((a,b) => compararCartas(a,b,view.muestra));
@@ -85,7 +85,12 @@ function context(obs: SeatObservation) {
     slot(23,rangoDe(view.muestra)/2),slot(24,Math.max(...score)/7)];
   return {features,cards,powers,allyHigh,enemyHigh,sentBefore};
 }
-type Context = ReturnType<typeof context>;
+type Context = ReturnType<typeof selfplayContext>;
+export function selfplayCardFeatures(c: Context, position: number, card: CardId, muestra: CardId) {
+  const power = c.powers[position];
+  return [slot(25,power/3),slot(26,Math.sign(power-c.enemyHigh)+1),slot(27,Math.sign(power-c.allyHigh)+1),
+    slot(28,pieza(card,muestra)!==null?1:0)];
+}
 interface Alternative { index: number; features: number[]; probability: number; slope: number }
 interface MoveOption { id: Move; move: Alternative; gestures: {id: ActionId; choice: Alternative}[] }
 interface Decision { moves: MoveOption[]; features: number[]; distribution: number[] }
@@ -128,7 +133,7 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
   const view = legal===obs.legalActions ? obs : {...obs,legalActions:legal};
   const anchored = anchor.decide(view,legal), preferred=legal[anchored.indexOf(1)];
   const [prefix,body]=preferred.split("/"), preferredMove=(body??prefix) as Move;
-  const c=context(obs), moves:MoveOption[]=[];
+  const c=selfplayContext(obs), moves:MoveOption[]=[];
   const byId=new Map(legal.map((id,i)=>[id,i]));
   for (const action of legal) {
     if (action.includes("/")) continue;
@@ -136,12 +141,7 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
     const position=card?c.cards.indexOf(id):-1;
     const group=card?position:3+bids.indexOf(id === "con-flor-quiero" ? "quiero" : id as typeof bids[number]);
     if (group<0 || (!card && group===2)) throw Error("Unknown move");
-    let f=c.features;
-    if (card) {
-      const power=c.powers[position];
-      f=[...c.features,slot(25,power/3),slot(26,Math.sign(power-c.enemyHigh)+1),slot(27,Math.sign(power-c.allyHigh)+1),
-        slot(28,pieza(id,obs.view.muestra)!==null?1:0)];
-    }
+    const f = card ? [...c.features, ...selfplayCardFeatures(c,position,id,obs.view.muestra)] : c.features;
     const gestures=[{id:action,choice:alternative(gestureOffset,c.features)}];
     for (const cue of truthful(obs,c,id)) {
       const signed=(cue+"/"+id) as ActionId;

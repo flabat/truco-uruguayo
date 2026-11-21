@@ -46,5 +46,6 @@ La liga local reúne tres semillas por formato. El campeonato fija los pesos de 
 - [Liga de tres semillas, límites de tiempo y checkpoints](league/README.md)
 - [Campeonato y puerta de promoción](championship/README.md)
 - [Resultados de noviembre de 2026, intervalos y decisiones por formato](championship/results/2026-11-local/README.md)
+- [Experimento reanudable de Transformers e historial de la mano](transformer/README.md)
 - [Registro, activación y reversión local](../api/README-politicas.md)
 - [Registro de coordinación y pruebas por paquete](https://github.com/flabat/truco-uruguayo/issues/118)
