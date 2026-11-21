@@ -312,6 +312,17 @@ test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ p
     await expect(dador).toHaveClass(/j-vos/);
     await expect(dador.getByRole("img", { name: /^Muestra / })).toHaveCount(1);
     await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(i === 2 ? 1 : 0);
-    if (i === 2) await capturarTapete(page, "tercetos");
+    if (i === 2) {
+      await capturarTapete(page, "tercetos");
+      const anterior = page.getByRole("region", { name: "Historial del reparto" }).locator("summary").first();
+      await anterior.press("Enter");
+      const zona = tapete.getByRole("region", { name: "Zona de juego" });
+      const contenido = await zona.ariaSnapshot();
+      await page.setViewportSize({ width: 852, height: 393 });
+      await expect(anterior).toBeFocused();
+      await expect(anterior.locator("..")).toHaveAttribute("open", "");
+      expect(await zona.ariaSnapshot()).toBe(contenido);
+      await expect(activas).toHaveText(activos);
+    }
   }
 });

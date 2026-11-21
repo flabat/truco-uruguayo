@@ -61,7 +61,7 @@ async function comprobarGeometria(page, zona, visible) {
     return { top, bottom, left, right, cajas, ancho: innerWidth, alto: innerHeight,
       scroll: document.documentElement.scrollWidth, pagina: scrollY };
   });
-  expect(rects.scroll).toBeLessThanOrEqual(rects.ancho);
+  expect(rects.scroll).toBeLessThanOrEqual(page.viewportSize().width);
   for (const caja of rects.cajas) {
     expect(caja.x, caja.nombre).toBeGreaterThanOrEqual(Math.max(0, rects.left) - 1);
     expect(caja.derecha, caja.nombre).toBeLessThanOrEqual(Math.min(rects.ancho, rects.right) + 1);
@@ -102,7 +102,10 @@ for (const [formato, cantidad] of Object.entries(formatos)) {
       await comprobarGeometria(page, zona, isMobile && !seis);
       if (!respuesta && formato === "duel" && isMobile) await captura(page, "duelo-vertical");
       if (respuesta && formato === "pairs" && isMobile) await captura(page, "respuesta-parejas");
-      if (!respuesta && formato === "pairs" && !isMobile) await captura(page, "parejas-escritorio");
+      if (!respuesta && formato === "pairs" && !isMobile) {
+        await comprobarGeometria(page, zona, true);
+        await captura(page, "parejas-escritorio");
+      }
 
       const boton = zona.getByRole("button", { name: respuesta ? "Quiero" : "Truco", exact: true });
       const selector = zona.getByRole("combobox");

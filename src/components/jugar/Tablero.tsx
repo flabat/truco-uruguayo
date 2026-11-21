@@ -83,6 +83,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   if (turno === mesa.miAsiento) {
     let indicacion = "Elegí una carta en el tapete.";
     if (legales.length > 1) indicacion = "Elegí una carta en el tapete o hacé un canto.";
+    if (legales.includes("mazo") && !legales.includes("carta")) indicacion = "Podés irte al mazo.";
     if (legales.includes("flor")) indicacion = "Cantá tu flor antes de tirar la primera carta.";
     return { titulo: "Tu turno", indicacion };
   }
@@ -223,7 +224,9 @@ export function EnJuego({
             detalle={<>
               {aviso && <p className="j-aviso">{aviso}</p>}
               <AvisoFlor pendiente={pendientes} porDeclararFlor={v.porDeclararFlor} nombre={nombre} />
-              <p>{indicacion}{resultado && detalleVuelta && " " + detalleVuelta}</p>
+              {(!estadoRed || mostrandoCartas || resultado) && (
+                <p>{indicacion}{resultado && detalleVuelta && " " + detalleVuelta}</p>
+              )}
               {v.trucoPendiente && pendientes && v.trucoPendiente.tipo !== pendientes.tipo && (
                 <p className="j-reserva">
                   Queda pendiente el {canto[v.trucoPendiente.tipo].toLowerCase()} de{" "}

@@ -145,7 +145,7 @@ test("el duelo conserva la ganadora dos segundos aunque la computadora ya haya s
   await expect(ganadora).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: /CPU 1/ })).toContainText(/ganó/i);
   await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
-  await expect(tapete.getByText("Vuelta 1", { exact: true })).toBeVisible();
+  await expect(tapete.locator("header").getByText("Vuelta 1", { exact: true })).toBeVisible();
   await expect(jugarCuatro).toBeDisabled();
   await captura(tapete, "ganada");
 
