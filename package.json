@@ -13,6 +13,7 @@
     "check:production": "bash scripts/verificar-produccion.sh",
     "check:stack": "bash scripts/verificar-stack.sh",
     "auth:google": "bash scripts/ingreso-social-local.sh google",
+    "auth:discord": "bash scripts/ingreso-social-local.sh discord",
     "auth:facebook": "bash scripts/ingreso-social-local.sh facebook",
     "preview": "astro preview",
     "cartas:generar": "node scripts/tatu/generar.mjs",
