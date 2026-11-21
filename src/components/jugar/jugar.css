@@ -160,3 +160,9 @@
 .j-discord [role=status]:empty { display: none; }
 
 .j-titulo > .j-link + .j-link { margin-inline-start: 1rem; }
+
+.j-resumen-tantos { margin-block: 1rem; padding: 1rem; border: 1px solid var(--line); border-radius: 8px; }
+.j-resumen-tantos h3 { margin: 0 0 .6rem; }
+.j-resumen-tantos > ul { margin: 0; padding-left: 1.2rem; }
+.j-resumen-tantos > ul > li + li { margin-top: .6rem; }
+.j-resumen-tantos ul ul { color: var(--muted); padding-left: 1.2rem; }

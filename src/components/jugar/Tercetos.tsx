@@ -1,3 +1,5 @@
+import { ResumenDeTantos } from "./ResumenDeTantos";
+import { resumirTantos } from "../../motor/resumen-tantos";
 import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
@@ -65,6 +67,8 @@ function DetallesDelLance({ acciones = [], cobros, vueltas, nombre }: Pick<Vista
 function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre: (asiento: number) => string; esActual: boolean }) {
   return <details className="j-historia">
     <summary>{nombreDelLance(lance)} · Ganó el equipo {lance.resultado.equipo + 1} por {motivoDelCierre[lance.resultado.motivo]} · {lance.puntos.join(" a ")}</summary>
+    <ResumenDeTantos resumen={resumirTantos(lance.cobros)} propio={0} equipo={e => `Equipo ${e + 1}`}
+      acciones={lance.acciones} resultado={lance.resultado} titulo="Tantos de este lance" detalle={false} />
     <DetallesDelLance {...lance} acciones={esActual ? [] : lance.acciones} nombre={nombre} />
   </details>;
 }
@@ -158,6 +162,9 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
           {opciones.map(tipo => <button key={tipo} className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"} disabled={bloqueada}
             onClick={() => jugar({ tipo })}>{canto[tipo]}</button>)}
         </div>}
+        {vista.estado === "terminado" && vista.resumenReparto && <ResumenDeTantos
+          resumen={vista.resumenReparto} propio={propio} equipo={e => e === propio ? "Tu equipo" : "Rivales"}
+          titulo="Tantos de este reparto" detalle={false} />}
         {esFin ? <a className="button" href={base + "jugar/"}>Crear otra mesa</a> : vista.estado === "terminado" &&
           <button className="button" disabled={bloqueada} onClick={() => jugar()}>Repartir otra mano</button>}
         <HistorialDeMano key={`${partida.manoNumero}-${lance.duelo}`} acciones={vista.acciones} cobros={vista.cobros}

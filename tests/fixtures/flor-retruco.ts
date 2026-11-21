@@ -14,6 +14,7 @@ export const acciones: AccionOnline[] = [
 ];
 export function manoReportada(puntos: readonly [number, number] = [0, 0], meta = 10) {
   return acciones.reduce((estado, accion) => {
+    if (estado.resultado) return estado;
     const paso = aplicarOnline(estado, accion);
     if (!paso.ok) throw new Error(JSON.stringify({ accion, paso }));
     return paso.estado;

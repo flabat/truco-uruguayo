@@ -1,3 +1,4 @@
+import { resumirTantos, type ResumenTantos } from "./resumen-tantos.ts";
 import { randomInt } from "node:crypto";
 import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza, type CardId } from "./cartas.ts";
@@ -176,6 +177,8 @@ export interface PruebaDeTantos {
 }
 
 export interface VistaOnline extends VistaAsiento {
+  readonly resumenTantos?: ResumenTantos;
+  readonly resumenReparto?: ResumenTantos;
   readonly apuesta: "sin-canto" | "pendiente" | "querido" | "rechazado";
   readonly acciones: readonly AccionOnline[];
   readonly legales: readonly TipoAccionOnline[];
@@ -241,7 +244,8 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   if (estado.lance && (estado.resultado || !estado.lance.activos.includes(asiento))) {
     throw new RangeError("Ese asiento necesita la proyección pública de tercetos.");
   }
-  const vista = { ...privadaJugable(estado, asiento), ...cantosPublicos(estado) };
+  const vista = { ...privadaJugable(estado, asiento), ...cantosPublicos(estado),
+    resumenTantos: resumirTantos(estado.cobros, estado.puntosInicio, estado.meta) };
   if (!estado.comparacionFlor) return vista;
   // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
   const comparacionFlor = structuredClone(estado.comparacionFlor);
@@ -270,7 +274,11 @@ export type VistaTercetos = FaltaPorEquipo & (
 
 export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTercetos {
   if (!estado.lance) throw new RangeError("Se necesita una mesa de tercetos.");
-  const comunes = { faltaPorEquipo: estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number],
+  const archivados = estado.historialLances ?? [];
+  const actualArchivado = archivados.some(l => l.tipo === estado.lance!.tipo && l.duelo === estado.lance!.duelo);
+  const cobrosReparto = [...archivados.flatMap(l => l.cobros), ...(actualArchivado ? [] : estado.cobros)];
+  const comunes = { resumenTantos: resumirTantos(estado.cobros, estado.puntosInicio, estado.meta),
+    resumenReparto: resumirTantos(cobrosReparto), faltaPorEquipo: estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number],
     ...cantosPublicos(estado) };
   if (estado.resultado || !estado.lance.activos.includes(asiento)) {
     return { ...vistaPublicaOnline(estado, asiento), ...comunes,
