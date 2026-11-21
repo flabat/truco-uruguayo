@@ -2,6 +2,20 @@ import { expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { versionModeloPractica, versionMotorPractica } from "../src/probabilidad/perfil.ts";
 
+test("la portada carga una imagen principal WebP según el ancho de pantalla", async ({ page, isMobile }) => {
+  await page.goto("./");
+  const imagen = page.getByRole("img", { name: /^Grabado ilustrado de tres gauchos/ });
+  await expect(imagen).toBeVisible();
+  await expect(imagen).toHaveAttribute("fetchpriority", "high");
+  const elegida = await imagen.evaluate(async (img) => {
+    await img.decode();
+    return img.srcset.split(",").map(candidato => candidato.trim().split(/\s+/))
+      .find(([src]) => new URL(src, document.baseURI).href === img.currentSrc);
+  });
+  expect(elegida?.[0]).toMatch(/^\/_astro\/mesa-criolla\..+\.webp$/);
+  expect(elegida?.[1]).toBe(isMobile ? "960w" : "768w");
+});
+
 test("del tema de la portada al último capítulo y sus fuentes", async ({ page }) => {
   await page.goto("./");
   const primary = page.getByRole("navigation", { name: "Navegación principal" });
@@ -51,14 +65,17 @@ test.describe("sin JavaScript", () => {
       await expect(enlace).toBeVisible();
       await expect(enlace).toHaveText(commit.slice(0, 8));
       await expect(enlace).toHaveAttribute("href", `https://github.com/flabat/truco-uruguayo/commit/${commit}`);
-      for (const [etiqueta, valor] of [
-        ["Motor local", versionMotorPractica],
-        ["Modelo local", versionModeloPractica],
-      ]) {
-        const dato = pie.getByText(etiqueta, { exact: true }).locator("+ dd");
-        await expect(dato).toBeVisible();
-        await expect(dato).toHaveText(valor);
-      }
+      const motor = pie.getByText("Motor local", { exact: true }).locator("+ dd");
+      await expect(motor).toBeVisible();
+      await expect(motor).toHaveText(versionMotorPractica);
+      const modelo = pie.getByText("Modelo local", { exact: true }).locator("+ dd");
+      const resumen = modelo.locator("summary");
+      await expect(resumen).toHaveText("Práctica v1 · Publicado el 18 nov 2026");
+      await expect(resumen.locator("time")).toHaveAttribute("datetime", "2026-11-18");
+      await expect(modelo.locator("code")).toBeHidden();
+      await resumen.press("Enter");
+      await expect(modelo.locator("code")).toBeVisible();
+      await expect(modelo.locator("code")).toHaveText(versionModeloPractica);
     }
   });
 

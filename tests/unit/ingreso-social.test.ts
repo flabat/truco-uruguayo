@@ -54,6 +54,7 @@ function ejecutar(proveedor: string, url: string, variables: Record<string, stri
 for (const [proveedor, campoId, campoSecreto] of [
   ["google", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
   ["facebook", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET"],
+  ["discord", "DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"],
 ]) {
   test(`crea solo el proveedor ${proveedor} con las credenciales indicadas`, async t => {
     const admin = await administrador(t, [404], [201]);
@@ -67,7 +68,7 @@ for (const [proveedor, campoId, campoSecreto] of [
     ]);
     const creado = JSON.parse(admin.peticiones[1].cuerpo);
     assert.equal(creado.alias, proveedor);
-    assert.equal(creado.providerId, proveedor);
+    assert.equal(creado.providerId, proveedor === "discord" ? "oauth2" : proveedor);
     assert.equal(creado.enabled, true);
     assert.equal(creado.hideOnLogin, false);
     assert.equal(creado.linkOnly, false);
@@ -76,7 +77,13 @@ for (const [proveedor, campoId, campoSecreto] of [
     assert.equal(creado.firstBrokerLoginFlowAlias, "first broker login");
     assert.equal(creado.config.clientId, "aplicacion");
     assert.equal(creado.config.clientSecret, secreto);
-    assert.equal(creado.config.prompt, proveedor === "google" ? "select_account" : undefined);
+    assert.equal(creado.config.prompt, proveedor === "google" ? "select_account" : proveedor === "discord" ? "consent" : undefined);
+    if (proveedor === "discord") {
+      assert.equal(creado.config.userIDClaim, "id");
+      assert.equal(creado.config.userNameClaim, "username");
+      assert.equal(creado.config.userInfoUrl, "https://discord.com/api/users/@me");
+      assert.equal(creado.config.defaultScope, "identify email");
+    }
     assert.ok(!resultado.salida.includes(token) && !resultado.salida.includes(secreto));
   });
 }
@@ -160,4 +167,22 @@ test("el operador local puede obtener un token de administración antes del alta
   assert.equal(consulta.autorizacion, `Bearer ${token}`);
   assert.equal(alta.autorizacion, `Bearer ${token}`);
   assert.ok(!resultado.salida.includes("clave-de-prueba"));
+});
+
+test("la rotación de Discord conserva su configuración y rechaza otro tipo de proveedor", async t => {
+  const existente = {
+    alias: "discord", providerId: "oauth2", firstBrokerLoginFlowAlias: "verificar-cuenta",
+    config: { userIDClaim: "id", defaultScope: "identify email", clientId: "anterior" },
+  };
+  const admin = await administrador(t, [200, existente], [204]);
+  const variables = { KEYCLOAK_ADMIN_TOKEN: token, DISCORD_CLIENT_ID: "nueva", DISCORD_CLIENT_SECRET: secreto };
+  const resultado = await ejecutar("discord", admin.url, variables);
+  assert.equal(resultado.codigo, 0, resultado.salida);
+  const actualizado = JSON.parse(admin.peticiones[1].cuerpo);
+  assert.equal(actualizado.firstBrokerLoginFlowAlias, "verificar-cuenta");
+  assert.equal(actualizado.config.userIDClaim, "id");
+  assert.equal(actualizado.config.clientSecret, secreto);
+  const incompatible = await administrador(t, [200, { alias: "discord", providerId: "google" }]);
+  assert.notEqual((await ejecutar("discord", incompatible.url, variables)).codigo, 0);
+  assert.equal(incompatible.peticiones.length, 1);
 });

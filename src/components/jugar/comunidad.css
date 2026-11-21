@@ -1,0 +1,5 @@
+.j-comunidad { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 1.25rem; background: #e8eee8; border-left: 3px solid var(--accent); }
+.j-comunidad h2 { font-size: 1.25rem; }
+.j-comunidad p { margin: .4rem 0; }
+.j-comunidad button { flex-shrink: 0; }
+@media (max-width: 480px) { .j-comunidad { flex-wrap: wrap; } }

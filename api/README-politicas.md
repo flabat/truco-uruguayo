@@ -21,3 +21,11 @@ node scripts/medir-inferencia.ts pairs-private-senas /ruta/al/run/actor.json 24 
 ```
 
 El campeonato puede usar `playMatchAsync` de `training/arena/index.ts` con un respondedor por asiento. Este recibe la observación y el número uniforme generado por el árbitro para ese asiento. Una llamada a `servicio.decide(pin, observacion, uniforme)` usa el mismo lector de pesos, la misma selección y el mismo plazo que la API. El entrenamiento y los contadores del árbitro quedan fuera del servicio.
+
+## Nombre y fecha que ve el jugador
+
+Para publicar un modelo registrado, ejecutá `policyctl.ts activate <formato> <PIN>`. Al activarlo por primera vez, PostgreSQL le asigna un nombre según la modalidad y el número de edición, y guarda la fecha de ese día en Uruguay. Por ejemplo, el sucesor de Ceibo Duelo se muestra como **Duelo 2**. La publicación se confirma en la misma transacción que la activación, también cuando se activan varios modelos directamente en SQL.
+
+Cada mesa muestra la edición correspondiente a su PIN. Si cambiás el campeón, revertís la activación o volvés a activar uno anterior, la mesa conserva ese nombre y la fecha original. Para consultar o copiar el PIN completo, abrí el nombre en el pie.
+
+Las primeras ediciones documentadas son **Ceibo Duelo**, **Ceibo Parejas** y **Ceibo Parejas con señas**, publicadas el 20 de noviembre de 2026. Para las ediciones anteriores con fecha desconocida, el pie indica «Fecha sin registrar». Los bots integrados conservan sus fechas documentadas: Práctica v1 el 18 de noviembre de 2026, y Clásico v1 y Clásico de tercetos v1 el 19. [Activación de Ceibo](https://github.com/flabat/truco-uruguayo/issues/251#issuecomment-7043360261) · [Publicación de la práctica](https://github.com/flabat/truco-uruguayo/actions/runs/44367361710) · [Despliegue de los bots integrados](https://github.com/flabat/truco-uruguayo/issues/214#issuecomment-7027835056)

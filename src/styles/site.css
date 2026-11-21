@@ -502,9 +502,36 @@ footer {
 }
 .footer-versiones dd {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
   font-weight: 600;
   overflow-wrap: anywhere;
   color: var(--ink);
+}
+#version-modelo-mesa:not(:empty) + span {
+  display: none;
+}
+.ficha-modelo summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.ficha-modelo summary:focus-visible {
+  outline-offset: 1px;
+}
+.ficha-modelo summary::marker {
+  color: var(--accent);
+}
+.modelo-publicacion,
+.modelo-identificador {
+  font-weight: 400;
+  color: var(--muted);
+}
+.modelo-identificador {
+  margin-block-start: 4px;
+}
+.modelo-identificador code {
+  color: var(--ink);
+  user-select: all;
 }
 .page-intro {
   background: var(--canvas);

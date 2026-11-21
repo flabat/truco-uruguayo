@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { iniciarOnline, aplicarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
 import { comprobarMuestra } from "./helpers/muestra.mjs";
+import { tableroEspectador } from "../api/tablero-espectador.ts";
 
 const id = "07682d57-2c6e-45ec-8aa2-369951b9d229";
 const manos = [
@@ -119,5 +120,116 @@ for (const [modo, cantidad, miAsiento, ladoAna, ladoSiguiente] of [
     await expect(page.locator(".j-tapete header")).toContainText("Mano 2");
     await comprobarDador(page, estado, nombres, ladoSiguiente);
     await capturarTapete();
+  });
+}
+
+test("el jugador y el espectador ven el mismo tapete desde el asiento inferior", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+  const nombres = manos.map((_, i) => "Computadora " + (i + 1));
+  const asientos = nombres.map((nombre, asiento) => ({
+    nombre, asiento, equipo: asiento % 2, tipo: "computadora",
+  }));
+  let estado = repartir(4, 2, "oros-07");
+  for (let i = 0; i < 4; i++) {
+    const asiento = estado.mano.turno;
+    const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta: manos[asiento][0] });
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+  }
+  const cerrada = estado.mano.vueltas[0];
+  // La presentación de jugador deja la vuelta a la vista antes de iniciar la siguiente.
+  const vista = { ...vistaOnline(estado, 0), vueltaActual: null };
+  const veredicto = cerrada.resultado.tipo === "ganada"
+    ? "Ganó " + nombres[cerrada.resultado.asiento] : "Parda";
+  let numero = 8;
+  await page.route("**/api/jugador", r => r.fulfill({ json: { id: "yo", nombre: "Ana", salonHabilitado: true } }));
+  await page.route("**/api/mesas/" + id, r => r.fulfill({ json: { id, modo: "2v2", lista: true, miAsiento: 0, asientos } }));
+  await page.route("**/partida", r => r.fulfill({ json: {
+    version: 1, manoNumero: 8, meta: 40, puntos: [22, 15], ganadorPartida: null, vista,
+  } }));
+  await page.route("**/api/salon/mesas/" + id, r => r.fulfill({ json: {
+    id, modo: "2v2", origen: "exhibicion", humanos: 0, computadoras: 4, estado: "en-juego",
+    manoNumero: numero, meta: 40, puntos: [22, 15], asientos, tablero: tableroEspectador(estado),
+  } }));
+
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  for (const entrada of ["mesa", "mirar"]) {
+    await page.goto("/jugar/?" + entrada + "=" + id);
+    await comprobarDador(page, estado, nombres, "izquierda");
+    await expect(tapete.locator("header")).toContainText("Mano 8");
+    await expect(tapete.locator("header")).toContainText(veredicto);
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
+    await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toHaveCount(cerrada.resultado.tipo === "ganada" ? 1 : 0);
+    if (process.env.CAPTURAS_UI) await tapete.screenshot({
+      path: `${process.env.CAPTURAS_UI}/tapete-compartido-${test.info().project.name}-${entrada}.png`,
+      scale: "css",
+    });
+  }
+
+  estado = repartir(4, 3, "bastos-07");
+  numero++;
+  await expect(tapete.locator("header")).toContainText("Mano 9");
+  await expect(tapete.getByRole("img", { name: /^Muestra 7 de bastos$/i })).toBeVisible();
+  await comprobarDador(page, estado, nombres, "abajo");
+  await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+});
+
+for (const [modo, cantidad] of [["1v1", 2], ["2v2", 4]]) {
+  test(`el espectador de ${modo} ve los dorsos que corresponden a la vuelta visible`, async ({ page, isMobile }) => {
+    if (isMobile) await page.setViewportSize({ width: 320, height: 780 });
+    const asientos = manos.slice(0, cantidad).map((_, asiento) => ({
+      nombre: "Computadora " + (asiento + 1), asiento, equipo: asiento % 2, tipo: "computadora",
+    }));
+    let estado = repartir(cantidad, cantidad - 1, "oros-07");
+    let numero = 1;
+    await page.route("**/api/jugador", r => r.fulfill({ json: { id: "yo", nombre: "Ana", salonHabilitado: true } }));
+    await page.route("**/api/salon/mesas/" + id, r => r.fulfill({ json: {
+      id, modo, origen: "exhibicion", humanos: 0, computadoras: cantidad, estado: "en-juego",
+      manoNumero: numero, meta: 40, puntos: [0, 0], asientos, tablero: tableroEspectador(estado),
+    } }));
+
+    function jugar(vuelta) {
+      const asiento = estado.mano.turno;
+      const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta: manos[asiento][vuelta] });
+      expect(paso.ok).toBe(true);
+      estado = paso.estado;
+      return asiento;
+    }
+
+    const tapete = page.getByRole("region", { name: "Tapete" });
+    const puesto = asiento => tapete.getByRole("group", { name: asientos[asiento].nombre, exact: true });
+    const dorsos = (asiento, numero) => puesto(asiento).getByRole("img", { name: numero + " cartas en mano", exact: true });
+    await page.goto("jugar/?mirar=" + id);
+    for (const { asiento } of asientos) {
+      await expect(dorsos(asiento, 3).locator('img[src$="/reverso.webp"]')).toHaveCount(3);
+    }
+    await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
+    await expect(tapete.locator(".j-jugada")).toHaveCount(0);
+    if (process.env.CAPTURAS_TAPETE) await tapete.screenshot({
+      path: `${process.env.CAPTURAS_TAPETE}/dorsos-espectador-${modo}-${test.info().project.name}.jpg`,
+      type: "jpeg", quality: 86, scale: "css",
+    });
+
+    const primero = jugar(0);
+    await expect(puesto(primero).locator(".j-jugada")).toHaveCount(1);
+    await expect(dorsos(primero, 3)).toHaveCount(0);
+    await expect(dorsos((primero + 1) % cantidad, 3)).toHaveCount(1);
+
+    for (let i = 1; i < cantidad; i++) jugar(0);
+    await expect(tapete.locator(".j-jugada")).toHaveCount(cantidad);
+    await expect(tapete.locator(".j-dorsos")).toHaveCount(0);
+
+    const salida = jugar(1);
+    await expect(tapete.locator("header")).toContainText("Vuelta 2");
+    await expect(tapete.locator(".j-jugada")).toHaveCount(1);
+    await expect(puesto(salida).locator(".j-jugada")).toHaveCount(1);
+    for (const { asiento } of asientos.filter(a => a.asiento !== salida)) {
+      await expect(dorsos(asiento, 2).locator('img[src$="/reverso.webp"]')).toHaveCount(2);
+    }
+
+    estado = repartir(cantidad, 0, "bastos-07");
+    numero++;
+    await expect(tapete.locator("header")).toContainText("Mano 2");
+    for (const { asiento } of asientos) await expect(dorsos(asiento, 3)).toHaveCount(1);
   });
 }

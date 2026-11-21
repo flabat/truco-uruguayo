@@ -4,11 +4,11 @@ import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
-import type { VueltaCerrada } from "../../motor/mano";
 import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
-import type { Asiento, Eleccion, Mesa, Partida, Tipo } from "./cliente";
+import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
+import { Naipe, Tapete } from "./Tapete";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -19,10 +19,6 @@ const grupos: { nombre: string; opciones: Canto[] }[] = [
     opciones: ["envido", "real-envido", "falta-envido", "flor", "con-flor-envido", "contraflor-al-resto"],
   },
 ];
-
-export function Naipe({ id, base }: { id: CardId; base: string }) {
-  return <img src={base + "img/cartas/tatu/" + id + ".webp"} width={384} height={596} alt={nombrar(id)} />;
-}
 
 export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
   prueba: PruebaDeTantos; acciones: VistaOnline["acciones"]; base: string; jugada?: CardId; ganadora?: boolean;
@@ -41,109 +37,6 @@ export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
       </div>
     ))}</div>
   </figure>;
-}
-
-function AsientoEnMesa({
-  asiento,
-  mesa,
-  vista,
-  cerrada,
-  voz,
-  base,
-  bloqueada,
-  jugar,
-}: {
-  asiento: Asiento;
-  mesa: Mesa;
-  vista: VistaOnline;
-  cerrada?: VueltaCerrada;
-  voz?: Voz;
-  base: string;
-  bloqueada: boolean;
-  jugar: (a: Eleccion) => void;
-}) {
-  const propio = asiento.asiento === mesa.miAsiento;
-  const dador = asiento.asiento === vista.dador;
-  const n = mesa.asientos.length;
-  const relativo = (asiento.asiento - mesa.miAsiento + n) % n;
-  const lugar = propio
-    ? "vos"
-    : n === 2 || relativo === 2
-      ? "frente"
-      : relativo === 1
-        ? "derecha"
-        : "izquierda";
-  const vuelta = vista.vueltaActual ?? cerrada;
-  const jugada = vuelta?.jugadas.find((j) => j.asiento === asiento.asiento);
-  const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento.asiento);
-  const mano = prueba ? vista.cartas.filter(carta => !prueba.cartas.includes(carta)) : vista.cartas;
-  const ganadora = cerrada?.resultado.tipo === "ganada" && cerrada.resultado.asiento === asiento.asiento;
-  const restantes =
-    3 - vista.acciones.filter((a) => a.tipo === "carta" && a.asiento === asiento.asiento).length;
-  const papel = propio
-    ? "Vos"
-    : n === 2 || asiento.equipo !== mesa.asientos[mesa.miAsiento].equipo
-      ? "Rival"
-      : "Tu pareja";
-  return (
-    <div className={"j-puesto j-" + lugar} role="group" aria-label={papel + " · " + asiento.nombre}>
-      <div className="j-ocupante">
-        <div className="j-persona">
-          <b>{asiento.nombre}</b>
-          <span>
-            {papel}
-            {dador && " · Dador"}
-            {asiento.asiento === vista.mano && " · Mano"}
-          </span>
-        </div>
-        {!prueba && <GloboDeVoz voz={voz} />}
-        {prueba && <PruebaEnMesa prueba={prueba} acciones={vista.acciones} base={base} jugada={jugada?.carta} ganadora={ganadora} />}
-        {jugada && !prueba?.cartas.includes(jugada.carta) && (
-          <div className={ganadora ? "j-jugada j-ganadora" : "j-jugada"}>
-            <Naipe base={base} id={jugada.carta} />
-            {ganadora && <small>Ganó la vuelta</small>}
-          </div>
-        )}
-        {!jugada && !prueba && !propio && restantes > 0 && (
-          <div className="j-dorsos" role="img" aria-label={restantes + " cartas en mano"}>
-            {Array.from({ length: restantes }, (_, i) => (
-              <img key={i} alt="" width={384} height={596} src={base + "img/cartas/tatu/reverso.webp"} />
-            ))}
-          </div>
-        )}
-      </div>
-      {dador && (
-        <div className="j-muestra" role="img" aria-label={"Muestra " + nombrar(vista.muestra)}>
-          <div aria-hidden="true">
-            <Naipe base={base} id={vista.muestra} />
-            <img
-              className="j-mazo"
-              src={base + "img/cartas/tatu/reverso.webp"}
-              alt=""
-              width={384}
-              height={596}
-            />
-          </div>
-          <small aria-hidden="true">Muestra</small>
-          <strong aria-hidden="true">{nombrar(vista.muestra)}</strong>
-        </div>
-      )}
-      {propio && mano.length > 0 && (
-        <div className="j-mano" role="group" aria-label="Tus cartas">
-          {mano.map((c) => (
-            <button
-              key={c}
-              disabled={bloqueada || !vista.legales.includes("carta")}
-              aria-label={"Jugar " + nombrar(c)}
-              onClick={() => jugar({ tipo: "carta", carta: c })}
-            >
-              <Naipe base={base} id={c} />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
@@ -249,7 +142,6 @@ export function EnJuego({
   const numeroVuelta = v.vueltas.length + (cerrada ? 0 : 1);
   const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : undefined;
   const ganadora = cerrada?.jugadas.find(j => j.asiento === ganador);
-  const veredicto = ganadora ? "Ganó " + nombre(ganadora.asiento) : cerrada && "Parda";
   // La presentación mantiene la vuelta completa abierta mientras carga su último naipe.
   const cargandoCierre = v.vueltaActual?.jugadas.length === mesa.asientos.length;
   const ultima = cargandoCierre ? undefined : (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
@@ -287,30 +179,44 @@ export function EnJuego({
             desdeTeclado.current = e.detail === 0;
         }}
       >
-        <section className="j-tapete" aria-label="Tapete">
-          <header>
-            <strong>Mano {partida.manoNumero}</strong>
-            <div className="j-estado-vuelta">
-              <span>{resultado && !cerrada ? "Terminada" : "Vuelta " + numeroVuelta}</span>
-              {veredicto && <b>{veredicto}</b>}
-            </div>
-          </header>
-          <div className={"j-puestos " + (mesa.modo === "1v1" ? "j-duelo" : "")}>
-            {mesa.asientos.map((a) => (
-              <AsientoEnMesa
-                key={a.asiento}
-                asiento={a}
-                mesa={mesa}
-                vista={v}
-                cerrada={cerrada}
-                voz={voces.find(dicho => dicho.asiento === a.asiento)}
-                base={base}
-                bloqueada={bloqueada}
-                jugar={jugar}
-              />
-            ))}
-          </div>
-        </section>
+        <Tapete
+          base={base}
+          asientos={mesa.asientos.map(a => {
+            const papel = a.asiento === mesa.miAsiento ? "Vos" : a.equipo === propio ? "Tu pareja" : "Rival";
+            return { ...a, papel, etiqueta: papel + " · " + a.nombre };
+          })}
+          asientoInferior={mesa.miAsiento}
+          dador={v.dador}
+          mano={v.mano}
+          muestra={v.muestra}
+          titulo={"Mano " + partida.manoNumero}
+          numeroVuelta={numeroVuelta}
+          vuelta={v.vueltaActual ?? cerrada}
+          terminada={Boolean(resultado && !cerrada)}
+          manosOcultas={{ jugadas: v.acciones.filter(a => a.tipo === "carta"), asientoVisible: mesa.miAsiento }}
+          detalle={(asiento, carta, ganadora) => {
+            const esPropio = asiento === mesa.miAsiento;
+            const prueba = resultado && v.pruebasDeTantos?.find(p => p.asiento === asiento);
+            const mano = esPropio ? v.cartas.filter(c => !prueba || !prueba.cartas.includes(c)) : [];
+            return {
+              contenido: prueba
+                ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
+                : <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />,
+              ocultaDorsos: Boolean(prueba),
+              reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
+              mano: mano.length > 0 && <div className="j-mano" role="group" aria-label="Tus cartas">
+                {mano.map(c => <button
+                  key={c}
+                  disabled={bloqueada || !v.legales.includes("carta")}
+                  aria-label={"Jugar " + nombrar(c)}
+                  onClick={() => jugar({ tipo: "carta", carta: c })}
+                >
+                  <Naipe base={base} id={c} />
+                </button>)}
+              </div>,
+            };
+          }}
+        />
         <section className="j-jugada-panel">
           <div role="status" aria-live="polite" aria-atomic="true">
             <AvisoFlor pendiente={pendientes} porDeclararFlor={v.porDeclararFlor} nombre={nombre} />

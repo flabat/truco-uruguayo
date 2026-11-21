@@ -6,7 +6,7 @@ import { crearClienteAnalisis, type EstadoConsulta } from "../../probabilidad/cl
 import { posicionPublica } from "../../probabilidad/informacion";
 import { asientos, nombre, pareja, resultadoMano } from "../mesa/relato";
 import { contrastarCartas, motivoSinCifras, presentarResultado } from "./presentacion";
-import { Tapete } from "./Tapete";
+import { CartaEnLeccion, TapeteLeccion } from "../mesa/TapeteLeccion";
 
 export default function Leccion({ base }: { base: string }) {
   const [juego] = useState(() => crearLeccionProbabilidad());
@@ -94,8 +94,11 @@ export default function Leccion({ base }: { base: string }) {
       </button>
     </div>
     <div className="mesa-columnas">
-      <Tapete mesa={mesa} enRepaso={repaso} base={base} seleccionada={seleccionada} primeraCarta={primeraCarta}
-        seleccionar={carta => { juego.seleccionar(carta); actualizar(); }}/>
+      <TapeteLeccion mesa={mesa} finDeVuelta={repaso} base={base} etiquetaCartas="Tus cartas en mano"
+        cartas={mesa.cartas.map((carta, i) => <CartaEnLeccion key={carta} base={base} carta={carta}
+          seleccionada={propio ? seleccionada === carta : undefined}
+          referencia={i === 0 ? primeraCarta : undefined}
+          elegir={propio ? () => { juego.seleccionar(carta); actualizar(); } : undefined} />)} />
       <section className="mesa-panel" aria-labelledby={id + "-titulo"}>
         <p className="prob-turno" id={id + "-turno"}>Vuelta {numero} · {turno}</p>
         <h2 ref={titulo} tabIndex={-1} aria-describedby={id + "-turno"} id={id + "-titulo"}>{encabezado}</h2>

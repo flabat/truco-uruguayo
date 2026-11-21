@@ -35,12 +35,15 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
 ' "$issuer"
 node scripts/verificar-identidad.mjs "$issuer"
 export GOOGLE_CLIENT_ID=google-prueba GOOGLE_CLIENT_SECRET=secreto-google-prueba
+export DISCORD_CLIENT_ID=discord-prueba DISCORD_CLIENT_SECRET=secreto-discord-prueba
 export FACEBOOK_APP_ID=123456789 FACEBOOK_APP_SECRET=secreto-facebook-prueba
 node scripts/verificar-ingreso-social.mjs "$web"
 COMPOSE_PROJECT_NAME="$project" npm run auth:google
 node scripts/verificar-ingreso-social.mjs "$web" google
 COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
+COMPOSE_PROJECT_NAME="$project" npm run auth:discord
+node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs

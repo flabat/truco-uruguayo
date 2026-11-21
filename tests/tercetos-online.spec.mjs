@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { capturarTapete, comprobarMuestraDelDador } from "./helpers/muestra.mjs";
 import { readFileSync } from "node:fs";
 import { proyectarTercetos } from "../api/partidas-tercetos.ts";
 import { aplicarOnline, iniciarOnline } from "../src/motor/mesa-online.ts";
@@ -76,7 +77,12 @@ test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta 
   await expect(cartas).toHaveText(["", "", ""], { useInnerText: true });
   const pie = page.getByRole("contentinfo");
   await expect(pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd")).toHaveText("v2");
-  await expect(pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd")).toHaveText("tercetos-basica-v1");
+  const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  const resumen = modelo.locator("summary");
+  await expect(resumen).toHaveText("Clásico de tercetos v1 · Publicado el 19 nov 2026");
+  await expect(resumen.locator("time")).toHaveAttribute("datetime", "2026-11-19");
+  await resumen.press("Enter");
+  await expect(modelo.locator("code")).toHaveText("tercetos-basica-v1");
 });
 
 test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({ browser, baseURL }, info) => {
@@ -122,26 +128,10 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(3);
       return page;
     }));
-    if (ancho > 760) {
-      for (const page of paginas) {
-        // Girar hacia la derecha desde la perspectiva de quien reparte y mira al centro.
-        const aLaDerecha = await page.getByRole("group", { name: "Los seis asientos" }).evaluate(mesa => {
-          const centro = elemento => {
-            const { x, y, width, height } = elemento.getBoundingClientRect();
-            return [x + width / 2, y + height / 2];
-          };
-          const muestra = mesa.querySelector(".j-seis-muestra");
-          const [mx, my] = centro(muestra);
-          const [dx, dy] = centro(muestra.parentElement.querySelector(".j-seis-nombre"));
-          const [cx, cy] = centro(mesa.querySelector(".j-seis-centro"));
-          return (mx - dx) * (dy - cy) + (my - dy) * (cx - dx) > 0;
-        });
-        expect(aLaDerecha).toBe(true);
-      }
-    }
+    for (const page of paginas) await comprobarMuestraDelDador(page, ejemplo.reparto.muestra);
     for (const i of [0, 5]) {
       const puestos = paginas[i].getByRole("group", { name: "Los seis asientos" });
-      await expect(puestos.getByRole("group")).toHaveCount(6);
+      await expect(puestos.getByRole("group", { name: /^Asiento / })).toHaveCount(6);
       await expect(puestos.getByRole("group", { name: /Asiento 4/ })).toContainText("Dador");
       await expect(puestos.getByRole("group", { name: new RegExp(nombres[i]) })).toContainText("Vos");
       if (ancho > 760) {
@@ -289,4 +279,41 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await expect(lance).toContainText("Equipo 2 · 0 tantos");
   await page.reload();
   await expect(page.getByRole("region", { name: "Tantos de este reparto" })).toContainText("Tu equipo · +14 tantos");
+});
+
+test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  let estado = iniciarOnline(ejemplo.reparto, [0, 0], 50, ejemplo.numero);
+  await page.routeWebSocket("**/vivo", () => {});
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    const json = pathname === "/api/jugador" ? jugadores[4] : pathname.endsWith("/partida")
+      ? lectura(estado, 4, estado.lance.duelo) : crearSala(4);
+    return route.fulfill({ json });
+  });
+
+  function aplicar(acciones) {
+    for (const accion of acciones) {
+      const paso = aplicarOnline(estado, accion);
+      expect(paso.ok).toBe(true);
+      estado = paso.estado;
+    }
+  }
+
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  const activas = tapete.locator('[data-activo="true"] .j-persona b');
+  const acciones = ejemplo.acciones.map(({ duelo, ...accion }) => accion);
+  for (const [i, activos] of [["Clara", "Félix"], ["Ana", "Diego"], ["Bruno", "Elena"]].entries()) {
+    if (i === 0) await page.goto("jugar/?mesa=" + id);
+    if (i === 1) { aplicar(acciones.slice(0, 3)); await page.reload(); }
+    if (i === 2) { aplicar([...acciones.slice(3), { tipo: "mazo", asiento: 0 }]); await page.reload(); }
+    await expect(page.getByText(new RegExp("Duelo " + (i + 1) + " de 3 ·"))).toBeVisible();
+    await expect(activas).toHaveText(activos);
+    await comprobarMuestraDelDador(page, ejemplo.reparto.muestra);
+    const dador = tapete.getByRole("group", { name: "Asiento 5 · Elena" });
+    await expect(dador).toHaveClass(/j-vos/);
+    await expect(dador.getByRole("img", { name: /^Muestra / })).toHaveCount(1);
+    await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(i === 2 ? 1 : 0);
+    if (i === 2) await capturarTapete(page, "tercetos");
+  }
 });

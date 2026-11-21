@@ -1,7 +1,7 @@
-import type { Vuelta } from "../src/motor/mano.ts";
+import type { Vuelta, VueltaCerrada } from "../src/motor/mano.ts";
 import type { EstadoOnline } from "../src/motor/mesa-online.ts";
 
-function vueltaPublica(vuelta: Vuelta) {
+function vueltaPublica(vuelta: Vuelta): Vuelta {
   return { salida: vuelta.salida, jugadas: vuelta.jugadas.map(({ asiento, carta }) => ({ asiento, carta })) };
 }
 
@@ -10,7 +10,7 @@ export function tableroEspectador(estado: EstadoOnline) {
   const { mano, resultado } = estado;
   return {
     dador: mano.reparto.dador, mano: mano.reparto.mano, muestra: mano.reparto.muestra,
-    vueltas: mano.vueltas.map(v => ({
+    vueltas: mano.vueltas.map((v): VueltaCerrada => ({
       ...vueltaPublica(v), resultado: v.resultado.tipo === "parda" ? { tipo: "parda" } :
         { tipo: "ganada", asiento: v.resultado.asiento, equipo: v.resultado.equipo },
     })),

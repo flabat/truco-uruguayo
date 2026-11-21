@@ -21,7 +21,7 @@ export async function comprobarMuestra(page, cartaEsperada) {
     await dorso.decode();
     const mazo = dorso.getBoundingClientRect();
     const visible = (x, y) => document.elementFromPoint(carta.left + x * carta.width, carta.top + y * carta.height);
-    const vecinos = document.querySelectorAll(".asiento, .mesa-panel, .ap-mano, .ap-abanico, .jugadas");
+    const vecinos = document.querySelectorAll(".asiento, .mesa-panel, .ap-mano, .ap-abanico, .jugadas, .j-persona, .j-jugada, .j-dorsos img, .mesa-naipes button");
     const invade = [...vecinos].some((vecino) => {
       const otro = vecino.getBoundingClientRect();
       return otro.width && otro.height && otro.left < mazo.right && otro.right > mazo.left
@@ -39,9 +39,36 @@ export async function comprobarMuestra(page, cartaEsperada) {
 }
 
 export async function posicionEnTapete(page) {
-  return page.locator(".tapete .frente").evaluate((frente) => {
+  return page.getByRole("img", { name: /^Muestra / }).locator('img:not([src$="/reverso.webp"])').evaluate(async (frente) => {
+    await document.fonts.ready;
     const cara = frente.getBoundingClientRect();
-    const tapete = frente.closest(".tapete").getBoundingClientRect();
+    const tapete = frente.closest(".j-tapete").getBoundingClientRect();
     return [Math.round(cara.left - tapete.left), Math.round(cara.top - tapete.top)];
+  });
+}
+
+export async function comprobarMuestraDelDador(page, carta) {
+  await comprobarMuestra(page, carta);
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  const dador = tapete.locator(".j-puesto").filter({ has: page.locator(".j-persona span").filter({ hasText: /Dador/ }) });
+  await expect(dador.getByRole("img", { name: /^Muestra / })).toHaveCount(1);
+  const aLaDerecha = await dador.evaluate(puesto => {
+    const centro = elemento => {
+      const { x, y, width, height } = elemento.getBoundingClientRect();
+      return [x + width / 2, y + height / 2];
+    };
+    const [mx, my] = centro(puesto.querySelector(".j-muestra"));
+    const [dx, dy] = centro(puesto.querySelector(".j-ocupante"));
+    const [cx, cy] = centro(puesto.closest(".j-puestos"));
+    return (mx - dx) * (dy - cy) + (my - dy) * (cx - dx) > 0;
+  });
+  expect(aLaDerecha).toBe(true);
+}
+
+export async function capturarTapete(page, nombre) {
+  if (!process.env.CAPTURAS_TAPETE) return;
+  const ancho = page.viewportSize().width;
+  await page.getByRole("region", { name: "Tapete" }).screenshot({
+    path: `${process.env.CAPTURAS_TAPETE}/${nombre}-${ancho}.jpg`, type: "jpeg", quality: 86, scale: "css",
   });
 }

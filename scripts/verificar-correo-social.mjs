@@ -132,7 +132,7 @@ try {
     redirectUris: [identidad + "/realms/" + local + "/broker/*"],
   });
   const oidc = "/realms/" + upstream + "/protocol/openid-connect";
-  for (const [alias, nombre, acciones] of [["google", "Gloria", ["VERIFY_EMAIL"]], ["facebook", "Fabian", []]]) {
+  for (const [alias, nombre, acciones] of [["google", "Gloria", ["VERIFY_EMAIL"]], ["facebook", "Fabian", []], ["discord", "Diana", []]]) {
     const rutaProveedor = local + "/identity-provider/instances";
     admin(rutaProveedor + "/" + alias, 204, "DELETE");
     admin(rutaProveedor, 201, "POST", {
@@ -183,6 +183,24 @@ try {
     await ingresoSocial(page, "google", "Primera");
     await comprobarVerificacion(page);
     await enlaceDeCorreo("primera@example.test", "Verify email");
+  });
+
+  alta(upstream, "PrimeraDiscord", "primeradiscord@example.test");
+  await conPagina(async page => {
+    await ingresoSocial(page, "discord", "PrimeraDiscord");
+    await comprobarVerificacion(page);
+    await enlaceDeCorreo("primeradiscord@example.test", "Verify email");
+  });
+
+  const colisionDiscord = "colisiondiscord@example.test";
+  alta(upstream, "ColisionDiscord", colisionDiscord);
+  const sinVinculoDiscord = alta(local, "ColisionDiscord", colisionDiscord);
+  await conPagina(async page => {
+    await ingresoSocial(page, "discord", "ColisionDiscord");
+    await page.locator("#linkAccount").click();
+    await enlaceDeCorreo(colisionDiscord, "Link");
+    assert.equal((await page.request.get(usuarioLocal)).status(), 401);
+    assert.deepEqual(admin(local + "/users/" + sinVinculoDiscord + "/federated-identity"), []);
   });
 
   const colision = "colision@example.test";

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "../../motor/mesa-online";
 import type { CardId } from "../../motor/cartas";
+import type { EdicionModelo } from "../../lib/modelos";
 
 import type { Format, PublicTurn } from "../../../training/contracts/index";
 
@@ -16,14 +17,17 @@ export interface Asiento {
   tipo: "vacio" | "humano" | "computadora";
   nombre: string | null;
 }
-export interface Mesa {
+export interface VersionesMesa {
+  versionReglas?: number;
+  politica?: string;
+  edicionModelo?: EdicionModelo;
+}
+export interface Mesa extends VersionesMesa {
   publica: boolean;
   id: string;
   modo: Modo;
   meta: number;
   formato?: Format | "triples";
-  versionReglas?: number;
-  politica?: string;
   creadorId: string;
   miAsiento: number;
   invitacion: string;
