@@ -61,7 +61,8 @@ const pages = [
     <header class="masthead">
       <div class="shell masthead-inner">
         <Brand />
-        <nav class="site-nav" aria-label="Navegación principal">
+        {enSalon && <button class="menu-partida" type="button" aria-expanded="false" aria-controls="nav-principal open-search enlaces-juego">Menú</button>}
+        <nav id="nav-principal" class="site-nav" aria-label="Navegación principal">
           {pages.map((page) => (
             <a href={url(page.path)} aria-current={active === page.key ? "page" : undefined}>
               {page.name}
@@ -115,8 +116,13 @@ const pages = [
 <script>
   import { contar } from "../lib/eventos";
   document.querySelector("[data-discord-comunidad]")?.addEventListener("click", () => contar("discord"));
+  const menuPartida = document.querySelector<HTMLButtonElement>(".menu-partida");
+  menuPartida?.addEventListener("click", () => {
+    menuPartida.setAttribute("aria-expanded", String(menuPartida.getAttribute("aria-expanded") !== "true"));
+  });
 </script>
 <style>
+  .menu-partida { display: none; }
   @media (min-width: 701px) and (max-width: 820px) {
     .masthead-inner, .masthead-inner .site-nav { gap: 12px; }
   }

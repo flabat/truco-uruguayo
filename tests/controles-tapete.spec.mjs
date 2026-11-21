@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { aplicarOnline, iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
 import { proyectarTercetos } from "../api/partidas-tercetos.ts";
 import { canto } from "../src/lib/cantos.ts";
+import { comprobarMuestraDelDador } from "./helpers/muestra.mjs";
 import { teamSignalsVersion } from "../training/contracts/index.ts";
 
 const id = "54a97db3-c18f-420e-90bd-a23b3060aac7";
@@ -13,13 +14,13 @@ const manos = [
 const nombres = ["Ana", "Bruno", "Clara", "Diego", "Elena", "Félix"];
 const formatos = { duel: 2, pairs: 4, "pairs-private-senas": 4, triples: 6 };
 
-async function abrir(page, formato, respuesta = false) {
+async function abrir(page, formato, respuesta = false, { jugadores = nombres, muestra = "bastos-01" } = {}) {
   const cantidad = formatos[formato];
   const seis = cantidad === 6;
   const mano = respuesta ? 1 : 0;
   const dador = (mano + cantidad - 1) % cantidad;
   let estado = iniciarOnline({
-    versionReparto: seis ? "online-2" : "online-1", mano, dador, muestra: "bastos-01",
+    versionReparto: seis ? "online-2" : "online-1", mano, dador, muestra,
     manos: manos.slice(0, cantidad),
   });
   if (respuesta) {
@@ -27,7 +28,7 @@ async function abrir(page, formato, respuesta = false) {
     expect(paso.ok).toBe(true);
     estado = paso.estado;
   }
-  const asientos = nombres.slice(0, cantidad).map((nombre, asiento) => ({
+  const asientos = jugadores.slice(0, cantidad).map((nombre, asiento) => ({
     asiento, equipo: asiento % 2, tipo: "computadora",
     nombre: seis && asiento === 0 ? "Computadora de la Costa de Oro" : nombre,
   }));
@@ -86,6 +87,76 @@ async function captura(page, nombre) {
     path: process.env.CAPTURAS_CONTROLES + "/" + nombre + ".png", scale: "css",
   });
 }
+
+test("la pareja queda enfrente, los rivales a los lados y la muestra junto al dador al girar", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 724 });
+  const { zona } = await abrir(page, "pairs", false, {
+    jugadores: ["Ana", "Computadora 2", "Computadora 3", "Computadora 4"], muestra: "copas-12",
+  });
+  const centro = async (puesto) => {
+    const { x, y, width, height } = await page.locator(`.j-${puesto} .j-persona`).boundingBox();
+    return { x: x + width / 2, y: y + height / 2 };
+  };
+  for (const [width, height] of [[393, 724], [393, 852], [800, 360], [852, 393]]) {
+    await page.setViewportSize({ width, height });
+    const vertical = height > width;
+    const tapete = await page.getByRole("region", { name: "Tapete", exact: true }).boundingBox();
+    const campo = await page.locator(".j-puestos").boundingBox();
+    expect(tapete.y).toBeLessThan(150);
+    if (vertical) expect(campo.height).toBeGreaterThanOrEqual(height * .30);
+    const [frente, izquierda, derecha, vos] = await Promise.all(["frente", "izquierda", "derecha", "vos"].map(centro));
+    expect(izquierda.x).toBeLessThan(frente.x - campo.width / 4);
+    expect(derecha.x).toBeGreaterThan(frente.x + campo.width / 4);
+    expect(Math.abs(frente.x - vos.x)).toBeLessThan(4);
+    expect(Math.abs(izquierda.y - derecha.y)).toBeLessThan(4);
+    const separacion = Math.round(vertical ? campo.height / 4 : 24);
+    expect(Math.round(izquierda.y - frente.y)).toBeGreaterThanOrEqual(separacion);
+    expect(Math.round(vos.y - derecha.y)).toBeGreaterThanOrEqual(separacion);
+    await comprobarGeometria(page, zona, vertical);
+    await comprobarMuestraDelDador(page, "copas-12");
+    if (height === 852) await captura(page, "ronda-parejas-vertical");
+    if (width === 800 && process.env.CAPTURAS_CONTROLES) {
+      await page.getByRole("region", { name: "Tapete", exact: true }).screenshot({
+        path: process.env.CAPTURAS_CONTROLES + "/ronda-parejas-horizontal.png", scale: "css",
+      });
+    }
+  }
+});
+
+test("el menú de la partida conserva la navegación, la búsqueda y el foco de la mano", async ({ page, browserName }) => {
+  await page.setViewportSize({ width: 393, height: 724 });
+  const { zona } = await abrir(page, "pairs");
+  const menu = page.getByRole("button", { name: "Menú", exact: true });
+  const nav = page.getByRole("navigation", { name: "Navegación principal" });
+  const perfil = page.getByRole("link", { name: "Mi perfil" });
+  await expect(page.getByRole("heading", { name: "Mesa de truco", level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "Volver al salón" })).toBeVisible();
+  await expect(nav).toBeHidden();
+  await expect(perfil).toBeHidden();
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await expect(menu).toHaveAttribute("aria-expanded", "true");
+  // Safari incluye los enlaces en el recorrido con Opción + Tab.
+  const tabEnlaces = browserName === "webkit" ? "Alt+Tab" : "Tab";
+  await page.keyboard.press(tabEnlaces);
+  await expect(nav.getByRole("link", { name: "Inicio", exact: true })).toBeFocused();
+  await expect(perfil).toBeVisible();
+  await menu.focus();
+  await page.keyboard.press("Space");
+  await expect(menu).toHaveAttribute("aria-expanded", "false");
+  await page.keyboard.press(tabEnlaces);
+  await expect(page.getByRole("link", { name: "Volver al salón" })).toBeFocused();
+  const carta = zona.getByRole("group", { name: "Tus cartas" }).getByRole("button").first();
+  await carta.focus();
+  await page.keyboard.press("/");
+  await expect(page.getByRole("dialog", { name: "Buscar en la guía" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(carta).toBeFocused();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(menu).toBeHidden();
+  await expect(nav).toBeVisible();
+  await expect(perfil).toBeVisible();
+});
 
 for (const [formato, cantidad] of Object.entries(formatos)) {
   for (const respuesta of [false, true]) {
