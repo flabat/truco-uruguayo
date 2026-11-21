@@ -70,3 +70,46 @@
 .j-tapete-con-rotulos header { align-items: start; gap: .5rem; min-height: 4.25rem; }
 .j-tapete-con-rotulos .j-estado-vuelta { line-height: 1.2; }
 .j-tapete-con-rotulos header strong { font-size: clamp(1rem, 2.1vw, 1.5rem); }
+
+/* La zona de juego tiene una fila propia. El borde del fieltro pasa por debajo. */
+.j-tapete--jugador {
+  background:
+    linear-gradient(to top, #fffdf6 0 1.5rem, transparent 1.5rem),
+    radial-gradient(ellipse at 48% 30%, #3a614a, #244936 67%, #1c392d);
+  padding-bottom: 0;
+}
+.j-tapete--jugador > .j-puestos,
+.j-zona-tapete { width: 100%; max-width: 54rem; margin-inline: auto; }
+.j-zona-tapete { margin-top: clamp(.5rem, 1.5vw, 1rem); min-width: 0; }
+.j-tapete--jugador .j-muestra strong { overflow-wrap: anywhere; }
+
+@media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  .j-tapete--jugador { padding: 6px 6px 0; }
+  .j-tapete--jugador > header { padding-bottom: 4px; }
+  .j-tapete--jugador > header strong { font-size: 1.1rem; }
+  .j-tapete--jugador .j-puestos { grid-template-rows: auto; grid-auto-rows: auto; gap: 4px 0; }
+  .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: auto auto; row-gap: .5rem; }
+  .j-tapete--jugador .j-muestra > div { width: 44px; }
+  .j-tapete--jugador .j-muestra small { margin-top: 1px; }
+  .j-tapete--jugador .j-dorsos { padding-top: 2px; }
+  .j-tapete--jugador .j-dorsos img { width: 17px; }
+}
+
+@media (min-width: 600px) and (orientation: landscape) and (max-height: 500px) {
+  .j-tapete--jugador .j-puestos:not(.j-duelo) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-areas: "izquierda frente derecha" "izquierda vos derecha";
+  }
+  .j-tapete--jugador .j-puestos.j-puestos-seis {
+    grid-template-areas: "lejos-izquierda frente lejos-derecha" "cerca-izquierda vos cerca-derecha";
+  }
+  .j-tapete--jugador .j-muestra {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    column-gap: 4px;
+  }
+  .j-tapete--jugador .j-muestra > div { grid-row: span 2; }
+  .j-tapete--jugador .j-muestra strong { align-self: start; }
+  .j-tapete--jugador .j-jugada img { width: 32px; }
+  .j-tapete--jugador .j-estado-vuelta { display: flex; gap: .65rem; flex-wrap: wrap; justify-content: end; }
+}
