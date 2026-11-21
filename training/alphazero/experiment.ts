@@ -12,6 +12,7 @@ import { summarize, type PairOutcome } from "../eval/statistics.ts";
 import { fitContinuation, type Continuation } from "../search/continuation.ts";
 import { evaluator, hiddenUnits, learn, networkShape, newNetwork, validHidden, validNetwork, widenNetwork, type Example, type Network } from "./model.ts";
 import { metalWorker } from "./metal.ts";
+import { liftMoves, moveView } from "./rank-signals.ts";
 import { search, type SearchStats } from "./search.ts";
 
 const {positionals, values} = parseArgs({allowPositionals:true,options:{
@@ -31,10 +32,11 @@ function write(name: string, data: unknown) {
 const pins = {
   duel:"d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3",
   pairs:"6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2",
+  "pairs-private-senas":"d2b2293d4d8c9ee4f067ee74c1d6d5983eb5c8ad3a4ebce57bbdb561f946b78b",
 };
 type Format = keyof typeof pins;
 const core = ["learned-search","learned-policy","initial-search"] as const;
-const arms = [...core,"against-previous","fixed-partner"] as const;
+const arms = [...core,"against-previous","fixed-partner","signals-ablation"] as const;
 const legs = [0,1] as const;
 type Arm = typeof arms[number];
 type Wins = [number, number];
@@ -79,7 +81,9 @@ function sourcePin() {
 const source = sourcePin();
 function prepare(): Plan {
   const format = values.format ?? "duel";
-  if (format!=="duel" && format!=="pairs") throw new Error("Use --format duel or --format pairs.");
+  if (format!=="duel" && format!=="pairs" && format!=="pairs-private-senas") {
+    throw new Error("Use --format duel, pairs or pairs-private-senas.");
+  }
   if (!values.ceibo) throw new Error("Supply the published Ceibo actor for this format via --ceibo FILE.");
   const ceibo = JSON.parse(readFileSync(values.ceibo,"utf8"));
   const pin = pins[format];
@@ -98,7 +102,7 @@ function prepare(): Plan {
   const startedAt = Date.now();
   const budget = budgetSeconds ? {startedAt,trainUntil:startedAt+(budgetSeconds-reserveSeconds)*1000,
     endAt:startedAt+budgetSeconds*1000} : null;
-  const plan: Plan = {schema:"truco-alphazero-v3",source,pin,format,hidden,initialPin:previous ? artifactPin(previous) : null,seed:integer(values.seed,27601,0,0xffffffff),
+  const plan: Plan = {schema:"truco-alphazero-v4",source,pin,format,hidden,initialPin:previous ? artifactPin(previous) : null,seed:integer(values.seed,27601,0,0xffffffff),
     epochs:integer(values.epochs,12,1,1000),trainPairs:integer(values["train-pairs"],4,1,64),
     evalPairs:integer(values["eval-pairs"],128,2,4096),simulations:integer(values.simulations,16,2,512),
     continuationGames:512,device,budget,primaryOnly:values["primary-only"] ?? false};
@@ -111,7 +115,7 @@ function prepare(): Plan {
 const existing = existsSync(file("plan"));
 if (existing && Object.keys(values).length) throw new Error("The plan is frozen. Resume with the run directory alone.");
 const plan = existing ? read<Plan>("plan") : prepare();
-if (plan.source!==source || plan.schema!=="truco-alphazero-v3" || plan.pin!==pins[plan.format]) throw new Error("Resume in the original checkout and Node version.");
+if (plan.source!==source || plan.schema!=="truco-alphazero-v4" || plan.pin!==pins[plan.format]) throw new Error("Resume in the original checkout and Node version.");
 const {format, pin} = plan;
 const previous = plan.initialPin ? initialActor(read("initial-policy"),format) : null;
 if (previous && artifactPin(previous)!==plan.initialPin) throw new Error("The frozen initial policy does not match.");
@@ -203,29 +207,35 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
   };
   const activeArms: Arm[] = plan.primaryOnly ? ["learned-search"] : [...core];
   if (previous) activeArms.push("against-previous");
-  if (format==="pairs") activeArms.push("fixed-partner");
+  if (format!=="duel") activeArms.push("fixed-partner");
+  if (format==="pairs-private-senas") activeArms.push("signals-ablation");
   const count = evalLog.results["learned-search"].length;
   if (evalLog.policy!==policy || count>plan.evalPairs || activeArms.some(arm=>evalLog.results[arm].length!==count)) throw new Error("Invalid evaluation checkpoint.");
   const config = {field,table,simulations:plan.simulations,seed:seed("search-evaluation")};
-  const searched = (id: string, net: Network, stats?: SearchStats): Policy => {
-    const decide = search(net,config,stats);
+  const searched = (id: string, net: Network, stats?: SearchStats, signals = true): Policy => {
+    const decide = search(net,{...config,signals},stats);
     return {id,decide:obs=>decide(obs).probabilities};
   };
   const learned = seats.map(seat=>evaluator(checkpoint.net,field(seat)));
   const initialSearch = searched("initial-search",initial,evalLog.stats["initial-search"]);
   const previousOpponent = searched("previous-opponent",previous?.net ?? initial);
   const fixedPartner = baseline("rare-bluff");
+  const silent = searched("same-policy-silent",checkpoint.net,undefined,false);
   const candidates: Record<Arm,Policy> = {
     "learned-search":searched("learned-search",checkpoint.net,evalLog.stats["learned-search"]),
     "against-previous":searched("against-previous",checkpoint.net,evalLog.stats["against-previous"]),
     "fixed-partner":searched("fixed-partner",checkpoint.net,evalLog.stats["fixed-partner"]),
+    "signals-ablation":searched("signals-ablation",checkpoint.net,evalLog.stats["signals-ablation"]),
     "initial-search":initialSearch,
-    "learned-policy":{id:"learned-policy",decide:obs=>learned[obs.view.asiento](obs).probabilities},
+    "learned-policy":{id:"learned-policy",decide(obs) {
+      const view = moveView(obs);
+      return liftMoves(obs,view.legalActions,learned[view.view.asiento](view).probabilities,true);
+    }},
   };
   const lineup = (arm: Arm, leg: 0|1) => (seat: Asiento) =>
     arm==="fixed-partner" && seat>=2 ? fixedPartner
       : equipoDelAsiento(seat)===leg ? candidates[arm]
-        : arm==="against-previous" ? previousOpponent : field(seat);
+        : arm==="against-previous" ? previousOpponent : arm==="signals-ablation" ? silent : field(seat);
   progress("evaluation",count,plan.evalPairs);
   for (let pair=count; pair<plan.evalPairs; pair++) {
     if (past(plan.budget?.endAt)) {
@@ -235,7 +245,14 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
       return;
     }
     for (const arm of activeArms) {
-      const wins = legs.map(leg => Number(playMatch({format,seed:seed("holdout"),pair,leg,policies:lineup(arm,leg)}).winner===leg)) as Wins;
+      const wins = legs.map(leg => Number(playMatch({format,seed:seed("holdout"),pair,leg,policies:lineup(arm,leg),
+        onDecision({action,seat}) {
+          if (format!=="pairs-private-senas" || equipoDelAsiento(seat)!==leg ||
+              (arm==="fixed-partner" && seat>=2) || !action.includes("/")) return;
+          const stats = evalLog.stats[arm];
+          stats.rankSignals = (stats.rankSignals??0)+1;
+        },
+      }).winner===leg)) as Wins;
       evalLog.results[arm].push(wins);
     }
     write("evaluation",evalLog);
@@ -247,7 +264,7 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
       incumbent:[1-candidate[0],1-candidate[1]]}));
     const {direct} = summarize([{id:arm,pairs}],arm,10000,.10/activeArms.length);
     const wins = pairs.reduce((total,pair)=>total+pair.candidate[0]+pair.candidate[1],0);
-    return {arm,opponent:arm==="against-previous"?"initial-policy":"ceibo",
+    return {arm,opponent:arm==="against-previous"?"initial-policy":arm==="signals-ablation"?"same-policy-silent":"ceibo",
       partner:arm==="fixed-partner"?fixedPartner.id:null,wins,games:2*plan.evalPairs,...direct,search:evalLog.stats[arm]};
   });
   const primary = results[0];

@@ -24,7 +24,7 @@ python3 training/alphazero/run.py "$RUN"
 
 El plan fija el código, los presupuestos y el Ceibo por huella. La segunda orden retoma desde la última época guardada o desde el último par confirmado de evaluación. El reporte principal en `result.json` compara el actor aprendido con búsqueda contra Ceibo en dos juegos por reparto con asientos intercambiados. El intervalo del 95 % vuelve a muestrear pares completos. Como controles exploratorios se mide la misma red sin búsqueda y la búsqueda con la red inicial. `evaluation.json` conserva las victorias por reparto y `policy.json` los pesos y la tabla de continuación.
 
-Usá `--format duel` o `--format pairs` y el Ceibo publicado correspondiente. En parejas se muestrean las manos ajenas conjuntamente y cada resultado entrena a ambos asientos del equipo ganador. Una evaluación adicional fija el mismo compañero `rare-bluff` para ambos candidatos y alterna sus asientos. Esta variante juega parejas sin señas. Publicar un candidato al juego en línea queda fuera del experimento.
+Usá `--format duel`, `--format pairs` o `--format pairs-private-senas` y el Ceibo publicado correspondiente. En parejas se muestrean las manos ajenas conjuntamente y cada resultado entrena a ambos asientos del equipo ganador. Una evaluación adicional fija el mismo compañero `rare-bluff` para ambos candidatos y alterna sus asientos. Esta variante juega parejas sin señas. Publicar un candidato al juego en línea queda fuera del experimento.
 
 ## Corrida de una hora con la GPU del Mac
 
@@ -71,3 +71,19 @@ nohup caffeinate -i python3 training/alphazero/run.py runs/alphazero-night-pairs
 `--initial-policy` conserva una copia verificada del actor y su tabla de continuación. El duelo compara el candidato entrenado tanto con Ceibo como con ese actor congelado usando el mismo número de simulaciones. En parejas, `--primary-only` conserva el duelo de equipos completos y el contraste con compañero fijo. Los contrastes usan repartos nuevos, con intervalos pareados simultáneos del 95 %.
 
 Para comparar capacidad, repetí la orden de duelo con otro directorio de salida y `--hidden 256`. El ancho por defecto de 24 tiene 1.248 pesos y el de 256 tiene 13.312. El ensanchamiento conserva las probabilidades y el valor del actor de partida antes de cualquier actualización. Ambas corridas pueden usar la misma semilla y el mismo presupuesto de búsqueda. El tope de tiempo puede darles presupuestos efectivos de autojuego distintos.
+
+
+## Parejas con señas privadas de rango
+
+~~~sh
+python3 training/alphazero/run.py runs/alphazero-rangos \
+  --format pairs-private-senas --device mps --seed 29601 --epochs 24 --train-pairs 4 \
+  --simulations 24 --eval-pairs 128 --primary-only \
+  --ceibo runs/league-extended-02/qualified/pairs-private-senas/candidate.json
+~~~
+
+La política elige la jugada y, una vez por mano cuando puede, señala la carta más fuerte que todavía conserva y que tiene un gesto de rango. La red recibe una estimación conservadora de la fuerza anunciada por su compañero. La búsqueda da prioridad a repartos compatibles y descarta una pista cuando aparece una carta del rango indicado. Los gestos ambiguos conservan todas las cartas compatibles. Cuando el presupuesto no encuentra repartos compatibles con la pista, se usan repartos compatibles con la historia pública o se vuelve al prior legal.
+
+Solo el emisor y su compañero ven la seña. Para los rivales, el historial, el evento y la semilla de búsqueda son iguales a los de la misma jugada en silencio. Dentro de la búsqueda, la clave del árbol aplica la misma visibilidad.
+
+Además de enfrentar a Ceibo con el equipo completo y con un compañero fijo, `signals-ablation` enfrenta los mismos pesos en ambos equipos. Uno envía y usa señas y el otro juega en silencio. El informe cuenta las señas emitidas y las decisiones con una pista disponible. El experimento usa la convención de rangos de la guía del juego.

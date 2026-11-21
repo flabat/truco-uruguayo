@@ -33,7 +33,7 @@ export function exportSelfplay(learner: LearnerState): SelfplayActor { return st
 function cardPower(card: CardId, muestra: CardId) {
   return compararCartas(card, muestra.startsWith("copas") ? "bastos-04" : "copas-04", muestra);
 }
-function honestCardSignal(card: CardId, sample: CardId): Signal | undefined {
+export function honestCardSignal(card: CardId, sample: CardId): Signal | undefined {
   const effective = pieza(card, sample);
   if (effective !== null) return ({2:"cejas",4:"beso",5:"nariz",11:"ojo-derecho",10:"ojo-izquierdo"} as const)[effective];
   if (card==="espadas-01" || card==="bastos-01") return "labios-derecha";

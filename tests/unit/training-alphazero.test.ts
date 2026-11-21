@@ -4,6 +4,7 @@ import { iniciarOnline } from "../../src/motor/mesa-online.ts";
 import type { RepartoOnline } from "../../src/motor/reparto.ts";
 import { evaluator, hiddenUnits, learn, newNetwork, widenNetwork } from "../../training/alphazero/model.ts";
 import { search } from "../../training/alphazero/search.ts";
+import { matchesClue, moveView, rankClue, signedRank, visibleTurn } from "../../training/alphazero/rank-signals.ts";
 import { seatView } from "../../training/search/belief.ts";
 import { fitContinuation } from "../../training/search/continuation.ts";
 import { incumbent } from "../../training/seat/index.ts";
@@ -80,4 +81,47 @@ test("la red ancha conserva la política inicial y permite entrenar nuevos pará
   assert.equal(widened.value,before.value);
   learn(wide,[example],.08);
   assert.notEqual(evaluator(wide,incumbent)(obs).value,before.value);
+});
+
+
+test("una seña rankea una carta retenida y la búsqueda rival recibe exactamente silencio", () => {
+  const cards: RepartoOnline = {...deal, dador:3, manos:[...deal.manos,
+    ["copas-03","copas-07","espadas-02"], ["bastos-04","oros-01","espadas-05"]]};
+  const state = iniciarOnline(cards);
+  const format = "pairs-private-senas";
+  const opening = seatView(state,0,format,[]);
+  assert.equal(signedRank(opening,"truco"),"cejas/truco");
+  assert.equal(signedRank(opening,"bastos-02"),"labio-inferior/bastos-02");
+  const signed = commitTurn(state,0,format,"cejas/truco");
+  const silent = commitTurn(state,0,format,"truco");
+  const partner = seatView(signed.state,2,format,[signed.turn]);
+  const clue = rankClue(partner)!;
+  assert.deepEqual(clue,{seat:0,cards:["bastos-02"]});
+  assert.ok(matchesClue(cards,clue));
+  assert.equal(rankClue(moveView(partner,false)),undefined);
+  const spent = {action:{tipo:"carta" as const,carta:"bastos-02" as const,asiento:0 as const},awards:[]};
+  assert.equal(rankClue({...partner,history:[...partner.history,spent]}),undefined);
+  for (const rival of [1,3] as const) {
+    assert.deepEqual(visibleTurn(signed.turn,format,rival),silent.turn);
+    assert.deepEqual(seatView(signed.state,rival,format,[signed.turn]),seatView(silent.state,rival,format,[silent.turn]));
+  }
+  assert.deepEqual(visibleTurn(signed.turn,format,2),signed.turn);
+  const table = fitContinuation(format,()=>incumbent,14,8);
+  const decide = search(newNetwork(11),{field:()=>incumbent,table,seed:13,simulations:4});
+  const rival = (turn: typeof signed) => seatView(turn.state,1,format,[turn.turn]);
+  assert.deepEqual(decide(rival(signed)),decide(rival(silent)));
+  const prob = decide(opening).probabilities;
+  assert.ok(prob.every((weight,i)=>weight===0 || opening.legalActions[i].includes("/")));
+  const ablated = search(newNetwork(11),{field:()=>incumbent,table,seed:13,simulations:4,signals:false});
+  assert.ok(ablated(opening).probabilities.every((weight,i)=>weight===0 || !opening.legalActions[i].includes("/")));
+});
+
+test("una seña ambigua conserva los dos ases bravos compatibles y respeta cartas propias", () => {
+  const cards: RepartoOnline = {...deal,dador:3,muestra:"copas-06",manos:[
+    ["espadas-01","oros-06","bastos-02"],deal.manos[1],
+    ["copas-03","copas-07","espadas-02"],["bastos-01","oros-01","espadas-05"]]};
+  const turn = commitTurn(iniciarOnline(cards),0,"pairs-private-senas","labios-derecha/truco");
+  const obs = seatView(turn.state,2,"pairs-private-senas",[turn.turn]);
+  assert.deepEqual([...rankClue(obs)!.cards].sort(),["bastos-01","espadas-01"]);
+  assert.deepEqual(rankClue({...obs,originalCards:[...obs.originalCards,"bastos-01"]})?.cards,["espadas-01"]);
 });

@@ -2,6 +2,7 @@ import { esCardId, pieza, type CardId } from "../../src/motor/cartas.ts";
 import { compararCartas } from "../../src/motor/jerarquia.ts";
 import { crearAzar } from "../../src/motor/reparto.ts";
 import type { ActionId, Policy, SeatObservation } from "../contracts/index.ts";
+import { rankClue } from "./rank-signals.ts";
 
 const bids = ["flor","paso-flor","con-flor-envido","contraflor-al-resto","falta-envido","envido",
   "real-envido","truco","retruco","vale-cuatro","quiero","no-quiero","con-flor-quiero","mazo"] as const;
@@ -46,7 +47,7 @@ export function widenNetwork(source: Network, hidden: number, seed: number): Net
 }
 export function features(obs: SeatObservation, legal: readonly ActionId[], prior: readonly number[]): Position {
   const {view, score, stakes, target} = obs;
-  if (obs.format !== "duel" && obs.format !== "pairs") throw new Error("La red admite duelo o parejas sin señas.");
+  if (obs.format !== "duel" && obs.format !== "pairs" && obs.format !== "pairs-private-senas") throw new Error("Formato experimental no admitido.");
   const own = view.asiento, team = view.equipoPorAsiento[own], foe = 1-team;
   const cards = [...view.cartas].sort((a,b) => compararCartas(a,b,view.muestra) || a.localeCompare(b));
   const weak = view.muestra.startsWith("copas") ? "bastos-04" : "copas-04";
@@ -57,11 +58,14 @@ export function features(obs: SeatObservation, legal: readonly ActionId[], prior
   const enemyLead = Math.max(0,...(view.vueltaActual?.jugadas ?? []).filter(turn => enemy(turn.asiento)).map(turn => strength(turn.carta)));
   const before = obs.history.filter(turn => enemy(turn.action.asiento) && turn.action.tipo !== "carta");
   const lead = (score[team]-score[foe])/target;
+  const clue = rankClue(obs);
+  const piecesOrClue = obs.format==="pairs-private-senas" ? (clue ? Math.min(...clue.cards.map(strength)) : 0)
+    : cards.filter(card => pieza(card,view.muestra)!==null).length/3;
   const x = [1, score[team]/target, score[foe]/target, lead, Number(own === view.mano), view.tantosPropios.total/40,
     view.valorTruco/4, (stakes.side?.accept??0)/target, (stakes.side?.decline??0)/target,
     (stakes.truco?.accept??0)/4, view.vueltas.length/3, first?.tipo === "ganada" ? first.equipo === team ? 1 : -1 : 0,
     strength(cards[0]),strength(cards[1]),strength(cards[2]),enemyLead,
-    enemyCards.length/3, Math.max(0,...enemyCards.map(strength)), cards.filter(card => pieza(card,view.muestra)!==null).length/3,
+    enemyCards.length/3, Math.max(0,...enemyCards.map(strength)), piecesOrClue,
     before.length/8, ...bids.map(bid => Number(bid === view.pendiente?.tipo))];
   const slots = legal.map(action => esCardId(action) ? cards.indexOf(action) : bids.includes(action as typeof bids[number]) ? 3+bids.indexOf(action as typeof bids[number]) : -1);
   if (slots.some(slot => slot<0 || slot>=outputs-1) || new Set(slots).size !== slots.length) throw new Error("Jugada inválida para la red.");
