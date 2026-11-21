@@ -65,7 +65,7 @@ export function drawDeal(obs: SeatObservation, random: () => number) {
   return deal(obs, hands);
 }
 export interface World { state: EstadoOnline; logLikelihood: number }
-export function inferWorld(obs: SeatObservation, candidate: RepartoOnline, styles: Field): World | null {
+export function inferWorld(obs: SeatObservation, candidate: RepartoOnline, styles: Field, anyLegalSeat = false): World | null {
   if (candidate.muestra !== obs.view.muestra || candidate.mano !== obs.view.mano || candidate.dador !== obs.view.dador
       || candidate.manos.length !== obs.seats || !isDeepStrictEqual(candidate.manos[obs.view.asiento], obs.originalCards)) return null;
   let state = iniciarOnline(candidate, obs.startScore, obs.target);
@@ -73,7 +73,8 @@ export function inferWorld(obs: SeatObservation, candidate: RepartoOnline, style
   const prefix: PublicTurn[] = [];
   for (const turn of obs.history) {
     const seat = turn.action.asiento;
-    if (aDecidir(state)[0] !== seat) return null;
+    const enabled = aDecidir(state);
+    if (anyLegalSeat ? !enabled.includes(seat) : enabled[0] !== seat) return null;
     const view = seatView(state, seat, obs.format, prefix);
     const base = turn.action.tipo === "carta" ? turn.action.carta : turn.action.tipo;
     const id: ActionId = turn.signal ? `${turn.signal}/${base}` : base;

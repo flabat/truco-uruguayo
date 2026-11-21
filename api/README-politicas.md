@@ -29,3 +29,20 @@ Para publicar un modelo registrado, ejecutá `policyctl.ts activate <formato> <P
 Cada mesa muestra la edición correspondiente a su PIN. Si cambiás el campeón, revertís la activación o volvés a activar uno anterior, la mesa conserva ese nombre y la fecha original. Para consultar o copiar el PIN completo, abrí el nombre en el pie.
 
 Las primeras ediciones documentadas son **Ceibo Duelo**, **Ceibo Parejas** y **Ceibo Parejas con señas**, publicadas el 20 de noviembre de 2026. Para las ediciones anteriores con fecha desconocida, el pie indica «Fecha sin registrar». Los bots integrados conservan sus fechas documentadas: Práctica v1 el 18 de noviembre de 2026, y Clásico v1 y Clásico de tercetos v1 el 19. [Activación de Ceibo](https://github.com/flabat/truco-uruguayo/issues/251#issuecomment-7043360261) · [Publicación de la práctica](https://github.com/flabat/truco-uruguayo/actions/runs/44367361710) · [Despliegue de los bots integrados](https://github.com/flabat/truco-uruguayo/issues/214#issuecomment-7027835056)
+
+## Actores AlphaZero
+
+Exportá un candidato después de completar su evaluación. El exportador comprueba las huellas del plan, del actor y del Ceibo utilizado. La exportación incluye el Ceibo de referencia, la tabla de continuación y el presupuesto fijo de búsqueda. El contenedor sirve el actor en CPU.
+
+```sh
+node scripts/exportar-alphazero.ts /ruta/a/corrida > /ruta/a/actor.json
+node scripts/medir-inferencia.ts duel /ruta/a/actor.json 24 8010131
+```
+
+Medí con el contenedor y la carga previstos antes de activar. En parejas con señas, usá `pairs-private-senas`; la API conserva la misma proyección privada que la arena.
+
+La búsqueda AlphaZero se entrenó a 40. Otras metas usan la política de Ceibo incluida en la exportación. Para evaluar a 40 con la preparación de turnos y la confirmación de jugadas del servicio, corré un contraste pareado entre computadoras:
+
+```sh
+node scripts/medir-alphazero-en-mesa.ts /ruta/a/actor.json 128 2981007
+```

@@ -9,7 +9,7 @@ import { commitTurn } from "../signals/index.ts";
 import { evaluator, type Network } from "./model.ts";
 import { liftMoves, matchesClue, moveView, rankClue, signedRank, visibleTurn } from "./rank-signals.ts";
 
-interface Options {field: Field; table: Continuation; simulations: number; seed: number; signals?: boolean}
+interface Options {field: Field; table: Continuation; simulations: number; seed: number; signals?: boolean; live?: boolean}
 interface Node {legal: readonly ActionId[]; prior: number[]; counts: number[]; values: number[]}
 export interface SearchStats {decisions: number; fallbacks: number; milliseconds: number; rankClues?:number; rankSignals?:number}
 const depthLimit = 8;
@@ -93,6 +93,16 @@ export function search(net: Network, options: Options, stats?: SearchStats) {
     const random = crearAzar(createHash("sha256").update(JSON.stringify([
       options.seed,obs.startScore,own,obs.view.muestra,obs.originalCards,obs.history,
     ])).digest().readUInt32BE());
+    const infer = (deal: RepartoOnline) => {
+      const world = inferWorld(obs,deal,belief,options.live);
+      if (world && options.live) {
+        const enabled = aDecidir(world.state);
+        if (!enabled.includes(own)) return null;
+        const simulated = moveView(seatView(world.state,own,format,obs.history),listen).legalActions;
+        if (!obs.legalActions.every(action=>simulated.includes(action))) return null;
+      }
+      return world;
+    };
     const worlds: World[] = [];
     const alternatives: RepartoOnline[] = [];
     for (let i=0; i<(clue?8:2)*options.simulations; i++) {
@@ -101,13 +111,13 @@ export function search(net: Network, options: Options, stats?: SearchStats) {
         if (alternatives.length<options.simulations) alternatives.push(deal);
         continue;
       }
-      const candidate = inferWorld(obs,deal,belief);
+      const candidate = infer(deal);
       if (candidate) worlds.push(candidate);
       if (worlds.length>=options.simulations) break;
     }
     if (!worlds.length) {
       for (const deal of alternatives) {
-        const compatible = inferWorld(obs,deal,belief);
+        const compatible = infer(deal);
         if (compatible) worlds.push(compatible);
       }
     }
@@ -124,7 +134,7 @@ export function search(net: Network, options: Options, stats?: SearchStats) {
       const history = [...obs.history], suffix: PublicTurn[] = [];
       const trail: {node: Node; index: number}[] = [];
       while (!state.resultado && depth<depthLimit) {
-        const seat = aDecidir(state)[0];
+        const seat = depth===0 ? own : aDecidir(state)[0];
         const view = depth===0 ? obs : moveView(seatView(state,seat,format,history),listen);
         let action: ActionId;
         if (seat===own) {

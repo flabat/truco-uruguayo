@@ -27,3 +27,12 @@
 !training/selfplay/learner.ts
 !training/selfplay/team-mixture.ts
 !training/selfplay/team-transfer.ts
+!training/arena/
+!training/arena/index.ts
+!training/search/
+!training/search/belief.ts
+!training/search/continuation.ts
+!training/alphazero/
+!training/alphazero/model.ts
+!training/alphazero/rank-signals.ts
+!training/alphazero/search.ts

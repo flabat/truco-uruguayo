@@ -1,3 +1,4 @@
+import {alphaZeroKind, openAlphaZero} from "./alphazero-actor.ts";
 import {teamTransferKind, openTeamTransfer, type TeamTransferActor} from "../training/selfplay/team-transfer.ts";
 import {teamMixtureKind, openTeamMixture, type TeamMixtureActor} from "../training/selfplay/team-mixture.ts";
 import {selfplayKind, openSelfplay, type SelfplayActor} from "../training/selfplay/learner.ts";
@@ -21,6 +22,9 @@ export const artifactPin = (artifact: unknown) => createHash("sha256").update(ca
 export function openActor(artifact: unknown, format: Format, seat: Asiento): Policy {
   if (!artifact || typeof artifact !== "object" || !("format" in artifact) || artifact.format !== format) {
     throw new TypeError("Formato de actor incompatible.");
+  }
+  if ("kind" in artifact && artifact.kind === alphaZeroKind) {
+    return openAlphaZero(artifact,format,seat,artifactPin,(base,position)=>openActor(base,format,position));
   }
   if ("kind" in artifact && artifact.kind === teamTransferKind) return openTeamTransfer(artifact as TeamTransferActor);
   if ("kind" in artifact && artifact.kind === teamMixtureKind) return openTeamMixture(artifact as TeamMixtureActor);
