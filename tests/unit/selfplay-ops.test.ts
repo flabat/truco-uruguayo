@@ -49,7 +49,9 @@ test("checkpoint-aware scheduler, retry, independent evaluation and final monito
     monitor=run("monitor.py",[dir,"--port","0"]);
     supervisor=run("supervise.py",[dir,"--node",process.execPath]);
     await until(async()=> (await json(join(dir,"ops/schedule.json"))).status==="waiting" && (await readFile(join(dir,"monitor.html"),"utf8")).includes("Training workers"));
-    const urlFile=await readFile(join(dir,"ops/monitor-url.txt"),"utf8");
+    const urlPath=join(dir,"ops/monitor-url.txt");
+    await until(async()=>/^http:\/\/127\.0\.0\.1:\d+\/\n$/.test(await readFile(urlPath,"utf8")));
+    const urlFile=await readFile(urlPath,"utf8");
     assert.match(urlFile,/^http:\/\/127\.0\.0\.1:\d+\/\n$/);
     const dashboard=await fetch(urlFile.trim());
     assert.equal(dashboard.status,200);
