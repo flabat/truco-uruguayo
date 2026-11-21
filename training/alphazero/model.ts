@@ -18,6 +18,10 @@ function dot(a: readonly number[], b: readonly number[], offset: number) {
 }
 
 export interface Network {weights: number[]}
+export function validNetwork(value: unknown): value is Network {
+  if (!value || typeof value !== "object" || !("weights" in value)) return false;
+  return Array.isArray(value.weights) && value.weights.length===length && value.weights.every(Number.isFinite);
+}
 interface Position {x: number[]; slots: number[]; logPrior: number[]; valuePrior: number}
 export interface Example {position: Position; visits: readonly number[]; outcome: number}
 
@@ -27,25 +31,26 @@ export function newNetwork(seed: number): Network {
 }
 export function features(obs: SeatObservation, legal: readonly ActionId[], prior: readonly number[]): Position {
   const {view, score, stakes, target} = obs;
-  if (obs.format !== "duel") throw new Error("La red experimental solo admite duelo.");
-  const own = view.asiento, foe = 1-own;
+  if (obs.format !== "duel" && obs.format !== "pairs") throw new Error("La red admite duelo o parejas sin señas.");
+  const own = view.asiento, team = view.equipoPorAsiento[own], foe = 1-team;
   const cards = [...view.cartas].sort((a,b) => compararCartas(a,b,view.muestra) || a.localeCompare(b));
   const weak = view.muestra.startsWith("copas") ? "bastos-04" : "copas-04";
   const strength = (card?: CardId) => card ? (compararCartas(card,weak,view.muestra)+1)/19 : 0;
   const first = view.vueltas[0]?.resultado;
-  const enemyCards = obs.history.flatMap(({action}) => action.tipo === "carta" && action.asiento === foe ? [action.carta] : []);
-  const enemyLead = view.vueltaActual?.jugadas.find(turn => turn.asiento === foe)?.carta;
-  const before = obs.history.filter(turn => turn.action.asiento === foe && turn.action.tipo !== "carta");
-  const lead = (score[own]-score[foe])/target;
-  const x = [1, score[own]/target, score[foe]/target, lead, Number(own === view.mano), view.tantosPropios.total/40,
+  const enemy = (seat: number) => view.equipoPorAsiento[seat]===foe;
+  const enemyCards = obs.history.flatMap(({action}) => action.tipo === "carta" && enemy(action.asiento) ? [action.carta] : []);
+  const enemyLead = Math.max(0,...(view.vueltaActual?.jugadas ?? []).filter(turn => enemy(turn.asiento)).map(turn => strength(turn.carta)));
+  const before = obs.history.filter(turn => enemy(turn.action.asiento) && turn.action.tipo !== "carta");
+  const lead = (score[team]-score[foe])/target;
+  const x = [1, score[team]/target, score[foe]/target, lead, Number(own === view.mano), view.tantosPropios.total/40,
     view.valorTruco/4, (stakes.side?.accept??0)/target, (stakes.side?.decline??0)/target,
-    (stakes.truco?.accept??0)/4, view.vueltas.length/3, first?.tipo === "ganada" ? first.equipo === own ? 1 : -1 : 0,
-    strength(cards[0]),strength(cards[1]),strength(cards[2]),strength(enemyLead),
+    (stakes.truco?.accept??0)/4, view.vueltas.length/3, first?.tipo === "ganada" ? first.equipo === team ? 1 : -1 : 0,
+    strength(cards[0]),strength(cards[1]),strength(cards[2]),enemyLead,
     enemyCards.length/3, Math.max(0,...enemyCards.map(strength)), cards.filter(card => pieza(card,view.muestra)!==null).length/3,
     before.length/8, ...bids.map(bid => Number(bid === view.pendiente?.tipo))];
   const slots = legal.map(action => esCardId(action) ? cards.indexOf(action) : bids.includes(action as typeof bids[number]) ? 3+bids.indexOf(action as typeof bids[number]) : -1);
   if (slots.some(slot => slot<0 || slot>=outputs-1) || new Set(slots).size !== slots.length) throw new Error("Jugada inválida para la red.");
-  const valuePrior = Math.atanh(Math.max(-.99, Math.min(.99, (score[own]-score[foe])/(2*target-score[own]-score[foe]))));
+  const valuePrior = Math.atanh(Math.max(-.99, Math.min(.99, (score[team]-score[foe])/(2*target-score[team]-score[foe]))));
   return {x,slots,logPrior:prior.map(p => Math.log(.90*p+.10/legal.length)),valuePrior};
 }
 

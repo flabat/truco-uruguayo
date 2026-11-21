@@ -4,12 +4,13 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { fileURLToPath } from "node:url";
 import { artifactPin, openActor } from "../../api/actor-registry.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import { equipoDelAsiento, type Asiento } from "../../src/motor/reparto.ts";
 import { playMatch } from "../arena/index.ts";
-import type { Policy } from "../contracts/index.ts";
+import { baseline } from "../baselines/index.ts";
+import { seatsFor, type Policy } from "../contracts/index.ts";
 import { summarize, type PairOutcome } from "../eval/statistics.ts";
 import { fitContinuation, type Continuation } from "../search/continuation.ts";
-import { evaluator, learn, networkShape, newNetwork, type Example, type Network } from "./model.ts";
+import { evaluator, learn, networkShape, newNetwork, validNetwork, type Example, type Network } from "./model.ts";
 import { metalWorker } from "./metal.ts";
 import { search, type SearchStats } from "./search.ts";
 
@@ -17,6 +18,7 @@ const {positionals, values} = parseArgs({allowPositionals:true,options:{
   ceibo:{type:"string"}, seed:{type:"string"}, epochs:{type:"string"},
   "train-pairs":{type:"string"}, "eval-pairs":{type:"string"}, simulations:{type:"string"},
   device:{type:"string"}, "primary-only":{type:"boolean"}, "budget-seconds":{type:"string"}, "reserve-seconds":{type:"string"},
+  format:{type:"string"}, "initial-policy":{type:"string"},
 }});
 const [directory] = positionals;
 if (positionals.length!==1) throw new Error("Use run.py RUN [--ceibo FILE].");
@@ -26,16 +28,34 @@ function write(name: string, data: unknown) {
   writeFileSync(file(name)+".tmp",JSON.stringify(data)+"\n");
   renameSync(file(name)+".tmp",file(name));
 }
-const pin = "d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3";
-const arms = ["learned-search","learned-policy","initial-search"] as const;
+const pins = {
+  duel:"d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3",
+  pairs:"6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2",
+};
+type Format = keyof typeof pins;
+const core = ["learned-search","learned-policy","initial-search"] as const;
+const arms = [...core,"against-previous","fixed-partner"] as const;
 const legs = [0,1] as const;
 type Arm = typeof arms[number];
 type Wins = [number, number];
 interface Plan {
-  schema: string; source: string; pin: string; seed: number; epochs: number;
+  schema: string; source: string; pin: string; format: Format; initialPin: string | null; seed: number; epochs: number;
   simulations: number; trainPairs: number; evalPairs: number; continuationGames: number;
   device: "cpu"|"mps"; primaryOnly: boolean;
   budget: {startedAt:number; trainUntil:number; endAt:number} | null;
+}
+interface Actor {
+  schema: "truco-alphazero-policy-v1";
+  plan: string;
+  ceibo: string;
+  net: Network;
+  continuation: Continuation;
+}
+function initialActor(value: Actor, format: Format): Actor {
+  if (value?.schema !== "truco-alphazero-policy-v1" || value.ceibo !== pins[format] ||
+      value.continuation?.schema !== "score-continuation-v1" || value.continuation.format !== format ||
+      !validNetwork(value.net)) throw new Error("La política de partida no coincide con el formato y el Ceibo publicado.");
+  return value;
 }
 interface Checkpoint {plan: string; completed: number; net: Network; examples: number}
 interface Evaluation {policy: string; results: Record<Arm,Wins[]>; stats: Record<Arm,SearchStats>}
@@ -58,9 +78,13 @@ function sourcePin() {
 }
 const source = sourcePin();
 function prepare(): Plan {
-  if (!values.ceibo) throw new Error("Supply the published duel actor via --ceibo FILE.");
+  const format = values.format ?? "duel";
+  if (format!=="duel" && format!=="pairs") throw new Error("Use --format duel or --format pairs.");
+  if (!values.ceibo) throw new Error("Supply the published Ceibo actor for this format via --ceibo FILE.");
   const ceibo = JSON.parse(readFileSync(values.ceibo,"utf8"));
-  if (artifactPin(ceibo)!==pin) throw new Error("The file is not the published Ceibo Duelo actor.");
+  const pin = pins[format];
+  if (artifactPin(ceibo)!==pin) throw new Error("The file is not the published Ceibo actor for this format.");
+  const previous = values["initial-policy"] ? initialActor(JSON.parse(readFileSync(values["initial-policy"],"utf8")),format) : null;
   const device = values.device ?? "cpu";
   if (device !== "cpu" && device !== "mps") throw new Error("Use --device cpu or --device mps.");
   const budgetSeconds = integer(values["budget-seconds"],0,0,86400);
@@ -71,11 +95,12 @@ function prepare(): Plan {
   const startedAt = Date.now();
   const budget = budgetSeconds ? {startedAt,trainUntil:startedAt+(budgetSeconds-reserveSeconds)*1000,
     endAt:startedAt+budgetSeconds*1000} : null;
-  const plan: Plan = {schema:"truco-alphazero-duel-v2",source,pin,seed:integer(values.seed,27601,0,0xffffffff),
+  const plan: Plan = {schema:"truco-alphazero-v3",source,pin,format,initialPin:previous ? artifactPin(previous) : null,seed:integer(values.seed,27601,0,0xffffffff),
     epochs:integer(values.epochs,12,1,1000),trainPairs:integer(values["train-pairs"],4,1,64),
     evalPairs:integer(values["eval-pairs"],128,2,4096),simulations:integer(values.simulations,16,2,512),
     continuationGames:512,device,budget,primaryOnly:values["primary-only"] ?? false};
   write("ceibo",ceibo);
+  if (previous) write("initial-policy",previous);
   write("plan",plan);
   return plan;
 }
@@ -83,20 +108,25 @@ function prepare(): Plan {
 const existing = existsSync(file("plan"));
 if (existing && Object.keys(values).length) throw new Error("The plan is frozen. Resume with the run directory alone.");
 const plan = existing ? read<Plan>("plan") : prepare();
-if (plan.source!==source || plan.pin!==pin || plan.schema!=="truco-alphazero-duel-v2") throw new Error("Resume in the original checkout and Node version.");
+if (plan.source!==source || plan.schema!=="truco-alphazero-v3" || plan.pin!==pins[plan.format]) throw new Error("Resume in the original checkout and Node version.");
+const {format, pin} = plan;
+const previous = plan.initialPin ? initialActor(read("initial-policy"),format) : null;
+if (previous && artifactPin(previous)!==plan.initialPin) throw new Error("The frozen initial policy does not match.");
 const ceibo = read("ceibo");
 if (artifactPin(ceibo)!==pin) throw new Error("Frozen Ceibo does not match.");
 const planHash = artifactPin(plan);
 const seed = (domain: string) => createHash("sha256").update(`${plan.seed}:${domain}`).digest().readUInt32BE();
-const frozen = [openActor(ceibo,"duel",0),openActor(ceibo,"duel",1)];
+const seats = Array.from({length:seatsFor(format)},(_,seat)=>seat as Asiento);
+const frozen = seats.map(seat=>openActor(ceibo,format,seat));
 const field = (seat: Asiento) => frozen[seat];
 const table = existsSync(file("continuation")) ? read<Continuation>("continuation")
-  : fitContinuation("duel",field,seed("continuation"),plan.continuationGames);
+  : previous?.continuation ?? fitContinuation(format,field,seed("continuation"),plan.continuationGames);
+if (table.format!==format || table.schema!=="score-continuation-v1") throw new Error("Invalid continuation table.");
 if (!existsSync(file("continuation"))) write("continuation",table);
-const initial = newNetwork(seed("init"));
+const initial = previous?.net ?? newNetwork(seed("init"));
 const checkpoint = existsSync(file("checkpoint")) ? read<Checkpoint>("checkpoint")
   : {plan:planHash,completed:0,net:structuredClone(initial),examples:0};
-if (checkpoint.plan!==planHash || checkpoint.completed>plan.epochs) throw new Error("Checkpoint does not match.");
+if (checkpoint.plan!==planHash || checkpoint.completed>plan.epochs || !validNetwork(checkpoint.net)) throw new Error("Checkpoint does not match.");
 const progress = (phase: string, completed: number, total: number) =>
   write("progress",{phase,completed,total,device:plan.device,budget:plan.budget});
 const past = (deadline: number | undefined) => deadline!==undefined && Date.now()>=deadline;
@@ -126,8 +156,8 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
           turns.push({seat:obs.view.asiento,example});
           return example.probabilities;
         }};
-        const match = playMatch({format:"duel",seed:seed("training"),pair:epoch*plan.trainPairs+index,leg,policies:()=>actor});
-        for (const {seat,example} of turns) examples.push({position:example.position,visits:example.visits,outcome:seat===match.winner?1:-1});
+        const match = playMatch({format,seed:seed("training"),pair:epoch*plan.trainPairs+index,leg,policies:()=>actor});
+        for (const {seat,example} of turns) examples.push({position:example.position,visits:example.visits,outcome:equipoDelAsiento(seat)===match.winner?1:-1});
       }
       // Freeze the weights while generating the epoch, then optimize on the selected device.
       const now = performance.now();
@@ -160,26 +190,39 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
     write("train-frozen",{epoch:checkpoint.completed,time:Date.now(),checkpoint:artifactPin(checkpoint)});
   }
   if (read<{checkpoint:string}>("train-frozen").checkpoint!==artifactPin(checkpoint)) throw new Error("Frozen checkpoint does not match.");
-  const artifact = {schema:"truco-alphazero-policy-v1",plan:planHash,ceibo:pin,net:checkpoint.net,continuation:table};
+  const artifact: Actor = {schema:"truco-alphazero-policy-v1",plan:planHash,ceibo:pin,net:checkpoint.net,continuation:table};
   const policy = artifactPin(artifact);
   write("policy",artifact);
   const blank = () => ({decisions:0,fallbacks:0,milliseconds:0});
   const evalLog: Evaluation = existsSync(file("evaluation")) ? read("evaluation") : {
-    policy,results:{"learned-search":[],"learned-policy":[],"initial-search":[]},
-    stats:{"learned-search":blank(),"learned-policy":blank(),"initial-search":blank()},
+    policy,results:Object.fromEntries(arms.map(arm=>[arm,[]])) as Evaluation["results"],
+    stats:Object.fromEntries(arms.map(arm=>[arm,blank()])) as Evaluation["stats"],
   };
-  const activeArms = plan.primaryOnly ? arms.slice(0,1) : arms;
+  const activeArms: Arm[] = plan.primaryOnly ? ["learned-search"] : [...core];
+  if (previous) activeArms.push("against-previous");
+  if (format==="pairs") activeArms.push("fixed-partner");
   const count = evalLog.results["learned-search"].length;
   if (evalLog.policy!==policy || count>plan.evalPairs || activeArms.some(arm=>evalLog.results[arm].length!==count)) throw new Error("Invalid evaluation checkpoint.");
   const config = {field,table,simulations:plan.simulations,seed:seed("search-evaluation")};
-  const learnedSearch = search(checkpoint.net,config,evalLog.stats["learned-search"]);
-  const initialSearch = search(initial,config,evalLog.stats["initial-search"]);
-  const learned = legs.map(seat=>evaluator(checkpoint.net,field(seat)));
+  const searched = (id: string, net: Network, stats?: SearchStats): Policy => {
+    const decide = search(net,config,stats);
+    return {id,decide:obs=>decide(obs).probabilities};
+  };
+  const learned = seats.map(seat=>evaluator(checkpoint.net,field(seat)));
+  const initialSearch = searched("initial-search",initial,evalLog.stats["initial-search"]);
+  const previousOpponent = searched("previous-opponent",initial);
+  const fixedPartner = baseline("rare-bluff");
   const candidates: Record<Arm,Policy> = {
-    "learned-search":{id:"learned-search",decide:obs=>learnedSearch(obs).probabilities},
-    "initial-search":{id:"initial-search",decide:obs=>initialSearch(obs).probabilities},
+    "learned-search":searched("learned-search",checkpoint.net,evalLog.stats["learned-search"]),
+    "against-previous":searched("against-previous",checkpoint.net,evalLog.stats["against-previous"]),
+    "fixed-partner":searched("fixed-partner",checkpoint.net,evalLog.stats["fixed-partner"]),
+    "initial-search":initialSearch,
     "learned-policy":{id:"learned-policy",decide:obs=>learned[obs.view.asiento](obs).probabilities},
   };
+  const lineup = (arm: Arm, leg: 0|1) => (seat: Asiento) =>
+    arm==="fixed-partner" && seat>=2 ? fixedPartner
+      : equipoDelAsiento(seat)===leg ? candidates[arm]
+        : arm==="against-previous" ? previousOpponent : field(seat);
   progress("evaluation",count,plan.evalPairs);
   for (let pair=count; pair<plan.evalPairs; pair++) {
     if (past(plan.budget?.endAt)) {
@@ -189,8 +232,7 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
       return;
     }
     for (const arm of activeArms) {
-      const wins = legs.map(leg => Number(playMatch({format:"duel",seed:seed("holdout"),pair,leg,
-        policies:seat=>seat===leg?candidates[arm]:field(seat)}).winner===leg)) as Wins;
+      const wins = legs.map(leg => Number(playMatch({format,seed:seed("holdout"),pair,leg,policies:lineup(arm,leg)}).winner===leg)) as Wins;
       evalLog.results[arm].push(wins);
     }
     write("evaluation",evalLog);
@@ -200,12 +242,14 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
   const results = activeArms.map(arm => {
     const pairs: PairOutcome[] = evalLog.results[arm].map((candidate,pair)=>({pair,candidate,
       incumbent:[1-candidate[0],1-candidate[1]]}));
-    const {direct} = summarize([{id:arm,pairs}],arm,10000,.10);
+    const {direct} = summarize([{id:arm,pairs}],arm,10000,.10/activeArms.length);
     const wins = pairs.reduce((total,pair)=>total+pair.candidate[0]+pair.candidate[1],0);
-    return {arm,wins,games:2*plan.evalPairs,...direct,search:evalLog.stats[arm]};
+    return {arm,opponent:arm==="against-previous"?"initial-policy":"ceibo",
+      partner:arm==="fixed-partner"?fixedPartner.id:null,wins,games:2*plan.evalPairs,...direct,search:evalLog.stats[arm]};
   });
   const primary = results[0];
-  write("result",{format:"duel",plan:planHash,policy,ceibo:pin,device:plan.device,epochs:checkpoint.completed,examples:checkpoint.examples,
+  write("result",{format,plan:planHash,policy,ceibo:pin,initialPolicy:plan.initialPin,
+    confidence:"95% paired bootstrap, simultaneous across reported win rates",device:plan.device,epochs:checkpoint.completed,examples:checkpoint.examples,
     simulations:plan.simulations,trainGames:2*plan.trainPairs*checkpoint.completed,pairedDeals:plan.evalPairs,
     durationSeconds:plan.budget ? (Date.now()-plan.budget.startedAt)/1000 : null,
     verdict:primary.lower>.5 ? "beats Ceibo" : primary.upper<.5 ? "loses to Ceibo" : "inconclusive against Ceibo",results});

@@ -44,3 +44,22 @@ test("la política aprende las visitas legales y el valor aprende el resultado d
   assert.ok(after.probabilities[index]>before.probabilities[index]);
   assert.ok(Math.abs(after.probabilities.reduce((a,b)=>a+b,0)-1)<1e-10);
 });
+
+test("en parejas los asientos 2 y 3 reciben tanteador de equipo y la búsqueda no ve las otras manos", () => {
+  const hands: RepartoOnline["manos"] = [
+    ["espadas-03","oros-06","bastos-02"], ["oros-07","oros-11","bastos-03"],
+    ["copas-03","copas-07","espadas-02"], ["bastos-04","oros-01","espadas-05"],
+  ];
+  const cards: RepartoOnline = {...deal, dador:1, mano:2, manos:hands};
+  const other: RepartoOnline = {...cards, manos:[hands[3],hands[0],hands[2],hands[1]]};
+  const views = [cards,other].map(candidate=>seatView(iniciarOnline(candidate,[29,14]),2,"pairs",[]));
+  assert.deepEqual(views[0],views[1]);
+  const net = newNetwork(31);
+  const startValue = evaluator(net,incumbent)(views[0]).value;
+  assert.ok(Number.isFinite(startValue) && startValue>0);
+  const rival = seatView(iniciarOnline(cards,[29,14]),3,"pairs",[]);
+  assert.ok(evaluator(net,incumbent)(rival).value<0);
+  const table = fitContinuation("pairs",()=>incumbent,19,8);
+  const policy = search(net,{field:()=>incumbent,table,seed:44,simulations:12});
+  assert.deepEqual(policy(views[0],true),policy(views[1],true));
+});
