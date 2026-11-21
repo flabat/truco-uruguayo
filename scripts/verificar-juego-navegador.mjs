@@ -160,10 +160,11 @@ async function probarParejas(paginas) {
   await clara.reload();
   await expect(clara.getByRole("heading", { name: "Truco", exact: true })).toBeVisible(espera);
   assert.deepEqual(await partida(clara), guardadas[2]);
+  const reconectando = p => tapete(p).getByRole("heading", { name: "Reconectando con tu mesa…", exact: true });
   await compose("stop", "api", "db");
-  await Promise.all(paginas.map(p => expect(p.getByText("Reconectando con tu mesa…")).toBeVisible(espera)));
+  await Promise.all(paginas.map(p => expect(reconectando(p)).toBeVisible(espera)));
   await compose("up", "-d", "--wait", "--wait-timeout", "180", "db", "api");
-  await Promise.all(paginas.map(p => expect(p.getByText("Reconectando con tu mesa…")).toBeHidden(espera)));
+  await Promise.all(paginas.map(p => expect(reconectando(p)).toBeHidden(espera)));
   assert.deepEqual(await Promise.all(paginas.map(partida)), guardadas);
   // Ambos clics pasan por la UI. La barrera deja salir los POST juntos con la misma versión.
   const rivales = paginas.filter((_, i) => guardadas[i].vista.legales.includes("quiero"));
