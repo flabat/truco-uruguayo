@@ -63,8 +63,10 @@ function MuestraConMazo({ carta, base }: { carta: CardId; base: string }) {
       <Naipe base={base} id={carta} />
       <img className="j-mazo" src={base + "img/cartas/tatu/reverso.webp"} alt="" width={384} height={596} />
     </div>
-    <small aria-hidden="true">Muestra</small>
-    <strong aria-hidden="true">{nombre}</strong>
+    <span className="j-rotulo-muestra" aria-hidden="true">
+      <small>Muestra</small>
+      <strong>{nombre}</strong>
+    </span>
   </div>;
 }
 

@@ -27,6 +27,7 @@
 .j-ganadora small { display: block; color: #ffe5a8; font-size: .75rem; font-weight: 700; }
 
 .j-muestra { display: grid; justify-items: center; min-width: 0; max-width: 100%; }
+.j-rotulo-muestra { display: grid; justify-items: center; }
 .j-muestra > div { display: grid; grid-template-columns: minmax(0, 1fr); place-items: start center; width: clamp(60px,11vw,84px); max-width: 100%; aspect-ratio: 1 / 1.145; }
 .j-muestra img { grid-area: 1 / 1; width: calc(100% * 384 / 596); height: auto; border-radius: 3px; }
 .j-muestra img.j-mazo { transform: translateY(32%) rotate(90deg); }
@@ -81,7 +82,7 @@
 .j-tapete--jugador > .j-puestos,
 .j-zona-tapete { width: 100%; max-width: 54rem; margin-inline: auto; }
 .j-zona-tapete { margin-top: clamp(.5rem, 1.5vw, 1rem); min-width: 0; }
-.j-tapete--jugador .j-muestra strong { overflow-wrap: anywhere; }
+.j-tapete--jugador .j-muestra strong { overflow-wrap: break-word; }
 .j-tapete--jugador .j-puesto:not(:has(.j-muestra)) > .j-ocupante { grid-column: 1 / -1; }
 
 @media (min-width: 360px) {
@@ -99,12 +100,11 @@
   .j-tapete--jugador .j-puestos { grid-template-rows: auto; grid-auto-rows: auto; gap: 4px 0; }
   .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: auto auto; row-gap: .5rem; }
   .j-tapete--jugador .j-muestra {
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: end;
-    column-gap: 3px;
+    display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+    gap: 2px 4px;
   }
-  .j-tapete--jugador .j-muestra > div { width: 44px; grid-row: span 2; }
-  .j-tapete--jugador .j-muestra strong { align-self: start; }
+  .j-tapete--jugador .j-muestra > div { width: 44px; flex: 0 0 auto; }
+  .j-tapete--jugador .j-rotulo-muestra { flex: 1 1 min-content; max-width: 100%; }
   .j-tapete--jugador .j-muestra small { margin-top: 1px; }
   .j-tapete--jugador .j-dorsos { padding-top: 2px; }
   .j-tapete--jugador .j-dorsos img { width: 17px; }
@@ -117,10 +117,7 @@
   }
   .j-tapete--jugador .j-parejas .j-vos:has(.j-muestra) .j-ocupante { grid-column: 1; }
   .j-tapete--jugador .j-parejas .j-vos .j-muestra { grid-column: 2; }
-  .j-tapete--jugador .j-parejas :is(.j-frente, .j-vos) .j-muestra {
-    grid-template-columns: minmax(0, 1fr);
-    justify-self: center;
-  }
+  .j-tapete--jugador .j-parejas :is(.j-frente, .j-vos) .j-muestra { justify-self: center; }
 }
 
 @media (min-width: 600px) and (orientation: landscape) and (max-height: 500px) {
