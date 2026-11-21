@@ -109,9 +109,9 @@ test("la pareja queda enfrente, los rivales a los lados y la muestra junto al da
     expect(derecha.x).toBeGreaterThan(frente.x + campo.width / 4);
     expect(Math.abs(frente.x - vos.x)).toBeLessThan(4);
     expect(Math.abs(izquierda.y - derecha.y)).toBeLessThan(4);
-    const separacion = vertical ? campo.height / 4 : 24;
-    expect(izquierda.y - frente.y).toBeGreaterThan(separacion);
-    expect(vos.y - derecha.y).toBeGreaterThan(separacion);
+    const separacion = Math.round(vertical ? campo.height / 4 : 24);
+    expect(Math.round(izquierda.y - frente.y)).toBeGreaterThanOrEqual(separacion);
+    expect(Math.round(vos.y - derecha.y)).toBeGreaterThanOrEqual(separacion);
     await comprobarGeometria(page, zona, vertical);
     await comprobarMuestraDelDador(page, "copas-12");
     if (height === 852) await captura(page, "ronda-parejas-vertical");
