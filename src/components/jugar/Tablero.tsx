@@ -1,3 +1,5 @@
+import { ResumenDeTantos } from "./ResumenDeTantos";
+import { motivoDelCobro } from "../../lib/cobros";
 import { canto, respuestaConFlor } from "../../lib/cantos";
 import { useEffect, useRef } from "react";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
@@ -53,8 +55,8 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
           ? "Ganaste la mano"
           : "El rival ganó la mano",
       indicacion: resultado.motivo === "mazo"
-        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo. Se anotaron ${tantos(resultado.tantos)}.`
-        : `Se anotaron ${tantos(resultado.tantos)} por ${motivos[resultado.motivo]}.`,
+        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo.`
+        : `El cierre fue por ${motivos[resultado.motivo]}.`,
     };
   }
   if (porDeclararFlor !== null) {
@@ -95,7 +97,7 @@ export function Tanteador({ meta, puntos, propio, equipo }: {
       <div className="j-tanteador" role="group" aria-label="Tanteador">
         <div className="j-meta">
           <b>Chico a {meta}</b>
-          <small>{mitadesDelChico(meta)}</small>
+          <small>Acumulado · {mitadesDelChico(meta)}</small>
         </div>
         {[propio, 1 - propio].map((e) => (
           <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
@@ -166,7 +168,7 @@ export function EnJuego({
   const disponibles = grupos
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
-  const cobrados = v.cobros.filter((c) => c.motivo !== "truco");
+  const cobrados = v.resumenTantos?.cobros ?? v.cobros;
   return (
     <>
       <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
@@ -246,6 +248,9 @@ export function EnJuego({
               </div>
             </fieldset>
           ))}
+          {resultado && v.resumenTantos && <ResumenDeTantos resumen={v.resumenTantos} propio={propio}
+            equipo={e => mesa.modo === "1v1" ? `${equipo(e)} (${nombre(e)})` : equipo(e)}
+            acciones={v.acciones} resultado={resultado} nombre={nombre} />}
           {fin ? (
             <a className="button" href={base + "jugar/"}>
               Crear otra mesa
@@ -272,7 +277,7 @@ export function EnJuego({
               </div>
             </dl>
           )}
-          {cobrados.length > 0 && (
+          {(!resultado || !v.resumenTantos) && cobrados.length > 0 && (
             <section className="j-lances">
               <h3>Tantos cobrados</h3>
               <ul>
@@ -281,7 +286,7 @@ export function EnJuego({
                     <b>
                       {equipo(c.equipo)} · {tantos(c.tantos)}
                     </b>{" "}
-                    por {c.motivo}
+                    por {motivoDelCobro(c, v.acciones, resultado)}
                     {c.tantoGanador != null &&
                       " (" + (c.asiento != null ? nombre(c.asiento) + " con " : "") + c.tantoGanador + ")"}
                   </li>

@@ -270,6 +270,15 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await expect(flor).toContainText("Duelo 2");
   await expect(envido.getByRole("img")).toHaveCount(2);
   await expect(envido).toContainText("Duelo 1");
+  const resumen = page.getByRole("region", { name: "Tantos de este reparto" });
+  await expect(resumen).toContainText("Tu equipo · +14 tantos");
+  await expect(resumen).toContainText("Rivales · 0 tantos");
+  await page.getByText(/Duelo 2 de 3 · Ganó el equipo 1/).click();
+  const lance = page.getByRole("region", { name: "Tantos de este lance" }).last();
+  await expect(lance).toContainText("Equipo 1 · +11 tantos");
+  await expect(lance).toContainText("Equipo 2 · 0 tantos");
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Tantos de este reparto" })).toContainText("Tu equipo · +14 tantos");
 });
 
 test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ page, isMobile }) => {
