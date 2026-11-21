@@ -99,7 +99,7 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
-La imagen de identidad se construye desde `infra/keycloak/`. Incluye un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google o Facebook ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak.
+La imagen de identidad se construye desde `infra/keycloak/`. Incluye un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google, Facebook o Discord ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak.
 
 ## Salón y exhibiciones
 
