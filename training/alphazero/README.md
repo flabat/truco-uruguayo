@@ -24,7 +24,23 @@ python3 training/alphazero/run.py "$RUN"
 
 El plan fija el código, los presupuestos y el Ceibo por huella. La segunda orden retoma desde la última época guardada o desde el último par confirmado de evaluación. El reporte principal en `result.json` compara el actor aprendido con búsqueda contra Ceibo en dos juegos por reparto con asientos intercambiados. El intervalo del 95 % vuelve a muestrear pares completos. Como controles exploratorios se mide la misma red sin búsqueda y la búsqueda con la red inicial. `evaluation.json` conserva las victorias por reparto y `policy.json` los pesos y la tabla de continuación.
 
-El piloto usa CPU y solo cubre duelo. Publicar o integrar un candidato al juego en línea queda fuera del experimento.
+El experimento solo cubre duelo. Publicar un candidato al juego en línea queda fuera del experimento.
+
+## Corrida de una hora con la GPU del Mac
+
+Instalá el entorno PyTorch fijado con `uv sync --frozen --project training/partners/python`. Desde una terminal nativa de macOS:
+
+~~~sh
+RUN=runs/alphazero-metal-hour
+CEIBO=runs/league-extended-02/qualified/duel/candidate.json
+python3 training/alphazero/run.py "$RUN" --ceibo "$CEIBO" --device mps \
+  --seed 28001 --epochs 128 --train-pairs 6 --simulations 48 --eval-pairs 512 \
+  --budget-seconds 3600 --reserve-seconds 1200 --primary-only
+~~~
+
+Metal ajusta los pesos de política y valor. La arena y las simulaciones del árbol se ejecutan en CPU. Cada época registra el tiempo de ajuste y la memoria asignada en Metal. `TRUCO_PYTHON` permite seleccionar el ejecutable de otro entorno compatible con PyTorch.
+
+Esta configuración genera hasta 1.536 chicos de autojuego con 48 simulaciones por decisión, reserva 20 minutos para evaluar y contrasta al candidato aprendido con búsqueda contra Ceibo en 512 repartos nuevos. El reloj del plan sigue corriendo durante una interrupción. Hasta el tope de entrenamiento solo se guardan épocas completas. Al terminar esa etapa se congela el candidato antes de abrir los repartos de evaluación y se guarda cada par completo. Si vence la hora antes del último par, se conserva el avance y el proceso termina sin emitir un veredicto.
 
 ~~~sh
 node --test tests/unit/training-alphazero.test.ts

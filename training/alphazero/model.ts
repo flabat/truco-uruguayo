@@ -8,6 +8,7 @@ const bids = ["flor","paso-flor","con-flor-envido","contraflor-al-resto","falta-
 const hidden = 24;
 const inputs = 20 + bids.length;
 const outputs = 4 + bids.length;
+export const networkShape = [hidden, inputs] as const;
 const trunk = hidden * inputs;
 const length = trunk + hidden * outputs;
 function dot(a: readonly number[], b: readonly number[], offset: number) {
