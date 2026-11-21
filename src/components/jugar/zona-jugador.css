@@ -1,5 +1,6 @@
 .j-zona-jugador {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: .5rem;
   min-width: 0;
   padding: clamp(.6rem, 1.5vw, 1rem);

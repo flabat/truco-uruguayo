@@ -470,10 +470,10 @@ export default function Sala({ base }: { base: string }) {
   return (
     <>
       <header className="j-titulo">
-        <a className="j-link" href={base}>
-          ← Volver al inicio
-        </a>
-        {jugador && <a className="j-link" href={base + "perfil/"}>Mi perfil</a>}
+        <span id="enlaces-juego">
+          <a className="j-link" href={base}>← Volver al inicio</a>{" "}
+          {jugador && <a className="j-link" href={base + "perfil/"}>Mi perfil</a>}
+        </span>
         <h1>
           {mesa ? "Mesa de " : "Jugar al "}
           <em>truco</em>

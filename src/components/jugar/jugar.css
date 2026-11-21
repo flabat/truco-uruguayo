@@ -149,17 +149,40 @@
 }
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
+  body:has(.j-partida--jugador) .masthead-inner {
+    width: auto; min-height: 44px; margin-inline: max(.75rem, env(safe-area-inset-left)) max(.75rem, env(safe-area-inset-right));
+    padding-block: 0; gap: 0 .5rem; flex-wrap: wrap;
+  }
+  body:has(.j-partida--jugador) .masthead .brand { gap: .4rem; }
+  body:has(.j-partida--jugador) .masthead .brand svg { width: 21px; height: 24px; }
+  body:has(.j-partida--jugador) .masthead .brand span { font-size: 1.2rem; }
+  body:has(.j-partida--jugador) .menu-partida {
+    display: inline-flex; align-items: center; justify-content: center; gap: .4rem; margin-left: auto;
+    min-height: 44px; padding-inline: .5rem; border: 0; background: transparent; color: var(--ink); font-weight: 650;
+  }
+  .menu-partida::after { content: ""; width: .45rem; height: .45rem; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); }
+  .menu-partida[aria-expanded="true"]::after { transform: translateY(2px) rotate(225deg); }
+  body:has(.j-partida--jugador) .masthead-inner .site-nav { order: 1; width: 100%; flex-wrap: wrap; justify-content: center; margin: 0; }
+  body:has(.j-partida--jugador) .masthead-inner .site-nav a { min-height: 44px; }
+  body:has(.j-partida--jugador) .masthead .search-trigger { order: 2; margin-block: .25rem; }
+  body:has(.j-partida--jugador) .menu-partida[aria-expanded="false"] ~ :is(.site-nav, .search-trigger):not(:focus-within),
+  body:has(.menu-partida[aria-expanded="false"]) .juego:has(.j-partida--jugador) #enlaces-juego:not(:focus-within) { display: none; }
   .juego:has(.j-partida--jugador) {
     width: auto;
-    padding-top: .5rem;
+    padding-top: .25rem;
     margin-inline: max(.5rem, env(safe-area-inset-left)) max(.5rem, env(safe-area-inset-right));
   }
   .juego:has(.j-partida--jugador) .j-titulo {
     display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .7rem;
     margin-bottom: .4rem;
   }
-  .juego:has(.j-partida--jugador) .j-titulo > .j-link { margin: 0; font-size: .81rem; }
-  .juego:has(.j-partida--jugador) .j-titulo h1 { margin: 0; font-size: 1.6rem; }
+  .juego:has(.j-partida--jugador) .j-titulo .j-link {
+    display: inline-flex; align-items: center; min-height: 44px; margin-right: .65rem; font-size: .875rem;
+  }
+  body:has(.menu-partida[aria-expanded="false"]) .juego:has(.j-partida--jugador) .j-titulo { margin: 0; }
+  .juego:has(.j-partida--jugador) .j-titulo h1 {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
   .juego:has(.j-partida--jugador) .j-barra { gap: .3rem .6rem; margin-bottom: .35rem; }
   .juego:has(.j-partida--jugador) .j-barra span { min-width: 0; overflow-wrap: anywhere; }
   .juego:has(.j-partida--jugador) .j-tanteador {
