@@ -304,7 +304,7 @@ function MesaAbierta({
   else if (ocupado) estadoRed = "Enviando jugada…";
   const estadoZona = { bloqueada, estadoRed, aviso };
   return (
-    <div ref={tablero}>
+    <div className="j-mesa-abierta" ref={tablero}>
       <PieMesa mesa={mesa} />
       <div className="j-barra">
         <span>

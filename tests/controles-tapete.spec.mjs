@@ -88,32 +88,39 @@ async function captura(page, nombre) {
   });
 }
 
-test("la pareja queda enfrente, los rivales a los lados y la muestra junto al dador en vertical", async ({ page }) => {
+test("la pareja queda enfrente, los rivales a los lados y la muestra junto al dador al girar", async ({ page }) => {
   await page.setViewportSize({ width: 393, height: 724 });
   const { zona } = await abrir(page, "pairs", false, {
     jugadores: ["Ana", "Computadora 2", "Computadora 3", "Computadora 4"], muestra: "copas-12",
   });
-  for (const height of [724, 852]) {
-    await page.setViewportSize({ width: 393, height });
+  const centro = async (puesto) => {
+    const { x, y, width, height } = await page.locator(`.j-${puesto} .j-persona`).boundingBox();
+    return { x: x + width / 2, y: y + height / 2 };
+  };
+  for (const [width, height] of [[393, 724], [393, 852], [800, 360], [852, 393]]) {
+    await page.setViewportSize({ width, height });
+    const vertical = height > width;
     const tapete = await page.getByRole("region", { name: "Tapete", exact: true }).boundingBox();
     const campo = await page.locator(".j-puestos").boundingBox();
     expect(tapete.y).toBeLessThan(150);
-    expect(campo.height).toBeGreaterThanOrEqual(height * .30);
-    const centro = async (puesto) => {
-      const { x, y, width, height } = await page.locator(`.j-${puesto} .j-persona`).boundingBox();
-      return { x: x + width / 2, y: y + height / 2 };
-    };
+    if (vertical) expect(campo.height).toBeGreaterThanOrEqual(height * .30);
     const [frente, izquierda, derecha, vos] = await Promise.all(["frente", "izquierda", "derecha", "vos"].map(centro));
     expect(izquierda.x).toBeLessThan(frente.x - campo.width / 4);
     expect(derecha.x).toBeGreaterThan(frente.x + campo.width / 4);
     expect(Math.abs(frente.x - vos.x)).toBeLessThan(4);
     expect(Math.abs(izquierda.y - derecha.y)).toBeLessThan(4);
-    expect(izquierda.y - frente.y).toBeGreaterThan(campo.height / 4);
-    expect(vos.y - derecha.y).toBeGreaterThan(campo.height / 4);
-    await comprobarGeometria(page, zona, true);
+    const separacion = vertical ? campo.height / 4 : 24;
+    expect(izquierda.y - frente.y).toBeGreaterThan(separacion);
+    expect(vos.y - derecha.y).toBeGreaterThan(separacion);
+    await comprobarGeometria(page, zona, vertical);
     await comprobarMuestraDelDador(page, "copas-12");
+    if (height === 852) await captura(page, "ronda-parejas-vertical");
+    if (width === 800 && process.env.CAPTURAS_CONTROLES) {
+      await page.getByRole("region", { name: "Tapete", exact: true }).screenshot({
+        path: process.env.CAPTURAS_CONTROLES + "/ronda-parejas-horizontal.png", scale: "css",
+      });
+    }
   }
-  await captura(page, "ronda-parejas-vertical");
 });
 
 test("el menú de la partida conserva la navegación, la búsqueda y el foco de la mano", async ({ page, browserName }) => {
