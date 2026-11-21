@@ -91,7 +91,7 @@ export function Tapete({
         {veredicto && <b>{veredicto}</b>}
       </div>
     </header>
-    <div className={"j-puestos" + (seis ? " j-puestos-seis" : lugares.length === 2 ? " j-duelo" : "")}
+    <div className={"j-puestos " + (seis ? "j-puestos-seis" : lugares.length === 2 ? "j-duelo" : "j-parejas")}
       role={seis ? "group" : undefined} aria-label={seis ? "Los seis asientos" : undefined}>
       {asientos.map(a => {
         const posicion = lugares[(a.asiento - asientoInferior + lugares.length) % lugares.length];

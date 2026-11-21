@@ -82,6 +82,15 @@
 .j-zona-tapete { width: 100%; max-width: 54rem; margin-inline: auto; }
 .j-zona-tapete { margin-top: clamp(.5rem, 1.5vw, 1rem); min-width: 0; }
 .j-tapete--jugador .j-muestra strong { overflow-wrap: anywhere; }
+.j-tapete--jugador .j-puesto:not(:has(.j-muestra)) > .j-ocupante { grid-column: 1 / -1; }
+
+@media (min-width: 360px) {
+  .j-tapete--jugador .j-puestos.j-parejas {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr) minmax(0, 1fr);
+    grid-template-areas: "izquierda frente derecha" "izquierda vos derecha";
+    grid-template-rows: auto auto;
+  }
+}
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 500px) {
   .j-tapete--jugador { padding: 6px 6px 0; }
@@ -89,27 +98,36 @@
   .j-tapete--jugador > header strong { font-size: 1.1rem; }
   .j-tapete--jugador .j-puestos { grid-template-rows: auto; grid-auto-rows: auto; gap: 4px 0; }
   .j-tapete--jugador .j-puestos.j-duelo { grid-template-rows: auto auto; row-gap: .5rem; }
-  .j-tapete--jugador .j-muestra > div { width: 44px; }
+  .j-tapete--jugador .j-muestra {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: end;
+    column-gap: 3px;
+  }
+  .j-tapete--jugador .j-muestra > div { width: 44px; grid-row: span 2; }
+  .j-tapete--jugador .j-muestra strong { align-self: start; }
   .j-tapete--jugador .j-muestra small { margin-top: 1px; }
   .j-tapete--jugador .j-dorsos { padding-top: 2px; }
   .j-tapete--jugador .j-dorsos img { width: 17px; }
 }
 
-@media (min-width: 600px) and (orientation: landscape) and (max-height: 500px) {
-  .j-tapete--jugador .j-puestos:not(.j-duelo) {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
-    grid-template-areas: "izquierda frente derecha" "izquierda vos derecha";
+/* En la columna central angosta reservamos media celda para la muestra del dador. */
+@media (min-width: 360px) and (max-width: 600px) {
+  .j-tapete--jugador .j-parejas :is(.j-frente, .j-vos):has(.j-muestra) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .j-tapete--jugador .j-parejas .j-vos:has(.j-muestra) .j-ocupante { grid-column: 1; }
+  .j-tapete--jugador .j-parejas .j-vos .j-muestra { grid-column: 2; }
+  .j-tapete--jugador .j-parejas :is(.j-frente, .j-vos) .j-muestra {
+    grid-template-columns: minmax(0, 1fr);
+    justify-self: center;
+  }
+}
+
+@media (min-width: 600px) and (orientation: landscape) and (max-height: 500px) {
   .j-tapete--jugador .j-puestos.j-puestos-seis {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr) minmax(0, 1fr);
     grid-template-areas: "lejos-izquierda frente lejos-derecha" "cerca-izquierda vos cerca-derecha";
   }
-  .j-tapete--jugador .j-muestra {
-    grid-template-columns: auto minmax(0, 1fr);
-    align-items: end;
-    column-gap: 4px;
-  }
-  .j-tapete--jugador .j-muestra > div { grid-row: span 2; }
-  .j-tapete--jugador .j-muestra strong { align-self: start; }
   .j-tapete--jugador .j-jugada img { width: 32px; }
   .j-tapete--jugador .j-estado-vuelta { display: flex; gap: .65rem; flex-wrap: wrap; justify-content: end; }
 }
