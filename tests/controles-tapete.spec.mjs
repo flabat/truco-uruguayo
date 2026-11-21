@@ -113,7 +113,7 @@ for (const [formato, cantidad] of Object.entries(formatos)) {
         await page.setViewportSize(tamano);
         // En horizontal la página puede desplazarse hasta el tapete. La mano y todas
         // sus alternativas tienen que caber juntas desde allí.
-        await zona.evaluate(el => el.scrollIntoView({ block: "end" }));
+        await zona.evaluate(el => el.scrollIntoView({ block: "end", behavior: "instant" }));
         await comprobarGeometria(page, zona, true);
         await expect(boton).toBeFocused();
         expect(await zona.ariaSnapshot()).toBe(antes);

@@ -329,8 +329,8 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
     } } };
   });
   await page.goto("jugar/?mesa=" + mesaId);
-  const puesto = page.getByRole("group", { name: "Vos · Ana", exact: true });
-  const mano = puesto.getByRole("group", { name: "Tus cartas" });
+  const zona = page.getByRole("region", { name: "Zona de juego" });
+  const mano = zona.getByRole("group", { name: "Tus cartas" });
   const nombres = ["5 de oros", "Rey de copas", "Caballo de bastos"];
   for (const nombre of nombres) {
     const boton = mano.getByRole("button", { name: "Jugar " + nombre, exact: true });
@@ -348,7 +348,7 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
     expect(bordes[i].left).toBeGreaterThanOrEqual(bordes[i - 1].right);
   }
   if (process.env.CAPTURAS_UI)
-    await puesto.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+    await zona.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
 });
 
 test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno sin pases", async ({ page }) => {

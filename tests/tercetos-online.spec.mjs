@@ -154,10 +154,8 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
     expect(cajaAviso.y + cajaAviso.height).toBeLessThanOrEqual(cajaRespuesta.y);
     const redondilla = paginas[1].getByRole("region", { name: "Historial de la redondilla" });
     await expect(redondilla.getByRole("listitem")).toHaveText(["Ana dijo «Flor»."]);
-    if (ancho <= 760) {
-      const tapete = await paginas[1].getByRole("region", { name: "Tapete" }).boundingBox();
-      expect((await redondilla.boundingBox()).y).toBeLessThan(tapete.y);
-    }
+    const tapete = await paginas[1].getByRole("region", { name: "Tapete" }).boundingBox();
+    expect((await redondilla.boundingBox()).y).toBeGreaterThanOrEqual(tapete.y + tapete.height);
     estado = iniciarOnline(ejemplo.reparto, ejemplo.puntosInicio, ejemplo.meta, ejemplo.numero);
     avisar();
     for (const [i, page] of paginas.entries()) {
