@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { iniciarOnline } from "../../src/motor/mesa-online.ts";
 import type { RepartoOnline } from "../../src/motor/reparto.ts";
-import { evaluator, learn, newNetwork } from "../../training/alphazero/model.ts";
+import { evaluator, hiddenUnits, learn, newNetwork, widenNetwork } from "../../training/alphazero/model.ts";
 import { search } from "../../training/alphazero/search.ts";
 import { seatView } from "../../training/search/belief.ts";
 import { fitContinuation } from "../../training/search/continuation.ts";
@@ -62,4 +62,22 @@ test("en parejas los asientos 2 y 3 reciben tanteador de equipo y la búsqueda n
   const table = fitContinuation("pairs",()=>incumbent,19,8);
   const policy = search(net,{field:()=>incumbent,table,seed:44,simulations:12});
   assert.deepEqual(policy(views[0],true),policy(views[1],true));
+});
+
+
+test("la red ancha conserva la política inicial y permite entrenar nuevos parámetros", () => {
+  const obs = seatView(iniciarOnline(deal),0,"duel",[]);
+  const net = newNetwork(41);
+  const starting = evaluator(net,incumbent)(obs);
+  const visits = starting.probabilities.map((_,i)=>Number(i===0));
+  const example = {position:starting.position,visits,outcome:1};
+  for(let i=0;i<5;i++) learn(net,[example],.08);
+  const wide = widenNetwork(net,256,81);
+  assert.equal(hiddenUnits(wide),256);
+  const before = evaluator(net,incumbent)(obs);
+  const widened = evaluator(wide,incumbent)(obs);
+  assert.deepEqual(widened.probabilities,before.probabilities);
+  assert.equal(widened.value,before.value);
+  learn(wide,[example],.08);
+  assert.notEqual(evaluator(wide,incumbent)(obs).value,before.value);
 });

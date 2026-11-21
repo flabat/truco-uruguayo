@@ -5,12 +5,12 @@ import type { ActionId, Policy, SeatObservation } from "../contracts/index.ts";
 
 const bids = ["flor","paso-flor","con-flor-envido","contraflor-al-resto","falta-envido","envido",
   "real-envido","truco","retruco","vale-cuatro","quiero","no-quiero","con-flor-quiero","mazo"] as const;
-const hidden = 24;
+const defaultHidden = 24;
 const inputs = 20 + bids.length;
 const outputs = 4 + bids.length;
-export const networkShape = [hidden, inputs] as const;
-const trunk = hidden * inputs;
-const length = trunk + hidden * outputs;
+export const hiddenUnits = (net: Network) => net.weights.length/(inputs+outputs);
+export const networkShape = (net: Network) => [hiddenUnits(net),inputs] as const;
+export const validHidden = (hidden: number) => Number.isSafeInteger(hidden) && hidden>=24 && hidden<=512 && hidden%8===0;
 function dot(a: readonly number[], b: readonly number[], offset: number) {
   let sum = 0;
   for (let i=0; i<a.length; i++) sum += a[i]*b[offset+i];
@@ -20,14 +20,29 @@ function dot(a: readonly number[], b: readonly number[], offset: number) {
 export interface Network {weights: number[]}
 export function validNetwork(value: unknown): value is Network {
   if (!value || typeof value !== "object" || !("weights" in value)) return false;
-  return Array.isArray(value.weights) && value.weights.length===length && value.weights.every(Number.isFinite);
+  return Array.isArray(value.weights) && validHidden(value.weights.length/(inputs+outputs)) && value.weights.every(Number.isFinite);
 }
 interface Position {x: number[]; slots: number[]; logPrior: number[]; valuePrior: number}
 export interface Example {position: Position; visits: readonly number[]; outcome: number}
 
-export function newNetwork(seed: number): Network {
+export function newNetwork(seed: number, hidden = defaultHidden): Network {
+  if (!validHidden(hidden)) throw new Error("El ancho debe ser múltiplo de ocho, entre 24 y 512.");
   const random = crearAzar(seed);
-  return {weights:Array.from({length}, (_,i) => i < trunk ? (random()-.5)*.5 : 0)};
+  return {weights:Array.from({length:hidden*(inputs+outputs)}, (_,i) => i < hidden*inputs ? (random()-.5)*.5 : 0)};
+}
+export function widenNetwork(source: Network, hidden: number, seed: number): Network {
+  const from = hiddenUnits(source);
+  if (hidden===from) return structuredClone(source);
+  if (hidden<from) throw new Error("No se puede reducir una política de partida.");
+  const result = newNetwork(seed,hidden);
+  const oldTrunk = from*inputs, newTrunk = hidden*inputs;
+  for (let i=0;i<oldTrunk;i++) result.weights[i] = source.weights[i];
+  for (let row=0;row<outputs;row++) {
+    for (let column=0;column<from;column++) {
+      result.weights[newTrunk+row*hidden+column] = source.weights[oldTrunk+row*from+column];
+    }
+  }
+  return result;
 }
 export function features(obs: SeatObservation, legal: readonly ActionId[], prior: readonly number[]): Position {
   const {view, score, stakes, target} = obs;
@@ -55,6 +70,7 @@ export function features(obs: SeatObservation, legal: readonly ActionId[], prior
 }
 
 function forward(net: Network, p: Position) {
+  const hidden = hiddenUnits(net), trunk = hidden*inputs, length = net.weights.length;
   const h = Array.from({length:hidden}, (_,i) => Math.tanh(dot(p.x,net.weights,i*inputs)));
   const logits = p.slots.map((slot,i) => p.logPrior[i]+dot(h,net.weights,trunk+slot*hidden));
   const max = Math.max(...logits);
@@ -72,6 +88,7 @@ export function evaluator(net: Network, teacher: Policy) {
 }
 
 export function learn(net: Network, examples: readonly Example[], rate: number) {
+  const hidden = hiddenUnits(net), trunk = hidden*inputs, length = net.weights.length;
   const snapshot = {weights:[...net.weights]};
   let policyLoss = 0, valueLoss = 0;
   for (const {position,visits,outcome} of examples) {

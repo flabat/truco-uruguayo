@@ -14,7 +14,7 @@ def main():
     if len(sys.argv) < 2 or sys.argv[1] == "--help":
         print("python3 training/alphazero/run.py RUN [--ceibo FILE --seed N --epochs N "
               "--train-pairs N --simulations N --eval-pairs N]")
-        print("Options: --format duel|pairs --initial-policy FILE --device cpu|mps "
+        print("Options: --format duel|pairs --initial-policy FILE --hidden N --device cpu|mps "
               "--budget-seconds N --reserve-seconds N --primary-only")
         print("Resume with only RUN; inspect with RUN --status. NODE may override the Node 24 path.")
         return 0

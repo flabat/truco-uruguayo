@@ -69,3 +69,5 @@ nohup caffeinate -i python3 training/alphazero/run.py runs/alphazero-night-pairs
 ~~~
 
 `--initial-policy` conserva una copia verificada del actor y su tabla de continuación. El duelo compara el candidato entrenado tanto con Ceibo como con ese actor congelado usando el mismo número de simulaciones. En parejas, `--primary-only` conserva el duelo de equipos completos y el contraste con compañero fijo. Los contrastes usan repartos nuevos, con intervalos pareados simultáneos del 95 %.
+
+Para comparar capacidad, repetí la orden de duelo con otro directorio de salida y `--hidden 256`. El ancho por defecto de 24 tiene 1.248 pesos y el de 256 tiene 13.312. El ensanchamiento conserva las probabilidades y el valor del actor de partida antes de cualquier actualización. Ambas corridas pueden usar la misma semilla y el mismo presupuesto de búsqueda. El tope de tiempo puede darles presupuestos efectivos de autojuego distintos.

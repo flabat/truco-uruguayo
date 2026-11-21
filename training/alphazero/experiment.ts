@@ -10,7 +10,7 @@ import { baseline } from "../baselines/index.ts";
 import { seatsFor, type Policy } from "../contracts/index.ts";
 import { summarize, type PairOutcome } from "../eval/statistics.ts";
 import { fitContinuation, type Continuation } from "../search/continuation.ts";
-import { evaluator, learn, networkShape, newNetwork, validNetwork, type Example, type Network } from "./model.ts";
+import { evaluator, hiddenUnits, learn, networkShape, newNetwork, validHidden, validNetwork, widenNetwork, type Example, type Network } from "./model.ts";
 import { metalWorker } from "./metal.ts";
 import { search, type SearchStats } from "./search.ts";
 
@@ -18,7 +18,7 @@ const {positionals, values} = parseArgs({allowPositionals:true,options:{
   ceibo:{type:"string"}, seed:{type:"string"}, epochs:{type:"string"},
   "train-pairs":{type:"string"}, "eval-pairs":{type:"string"}, simulations:{type:"string"},
   device:{type:"string"}, "primary-only":{type:"boolean"}, "budget-seconds":{type:"string"}, "reserve-seconds":{type:"string"},
-  format:{type:"string"}, "initial-policy":{type:"string"},
+  format:{type:"string"}, "initial-policy":{type:"string"}, hidden:{type:"string"},
 }});
 const [directory] = positionals;
 if (positionals.length!==1) throw new Error("Use run.py RUN [--ceibo FILE].");
@@ -41,7 +41,7 @@ type Wins = [number, number];
 interface Plan {
   schema: string; source: string; pin: string; format: Format; initialPin: string | null; seed: number; epochs: number;
   simulations: number; trainPairs: number; evalPairs: number; continuationGames: number;
-  device: "cpu"|"mps"; primaryOnly: boolean;
+  device: "cpu"|"mps"; primaryOnly: boolean; hidden: number;
   budget: {startedAt:number; trainUntil:number; endAt:number} | null;
 }
 interface Actor {
@@ -85,6 +85,9 @@ function prepare(): Plan {
   const pin = pins[format];
   if (artifactPin(ceibo)!==pin) throw new Error("The file is not the published Ceibo actor for this format.");
   const previous = values["initial-policy"] ? initialActor(JSON.parse(readFileSync(values["initial-policy"],"utf8")),format) : null;
+  const previousWidth = previous ? hiddenUnits(previous.net) : 24;
+  const hidden = integer(values.hidden,previousWidth,previousWidth,512);
+  if (!validHidden(hidden)) throw new Error("Use a multiple of eight for --hidden.");
   const device = values.device ?? "cpu";
   if (device !== "cpu" && device !== "mps") throw new Error("Use --device cpu or --device mps.");
   const budgetSeconds = integer(values["budget-seconds"],0,0,86400);
@@ -95,7 +98,7 @@ function prepare(): Plan {
   const startedAt = Date.now();
   const budget = budgetSeconds ? {startedAt,trainUntil:startedAt+(budgetSeconds-reserveSeconds)*1000,
     endAt:startedAt+budgetSeconds*1000} : null;
-  const plan: Plan = {schema:"truco-alphazero-v3",source,pin,format,initialPin:previous ? artifactPin(previous) : null,seed:integer(values.seed,27601,0,0xffffffff),
+  const plan: Plan = {schema:"truco-alphazero-v3",source,pin,format,hidden,initialPin:previous ? artifactPin(previous) : null,seed:integer(values.seed,27601,0,0xffffffff),
     epochs:integer(values.epochs,12,1,1000),trainPairs:integer(values["train-pairs"],4,1,64),
     evalPairs:integer(values["eval-pairs"],128,2,4096),simulations:integer(values.simulations,16,2,512),
     continuationGames:512,device,budget,primaryOnly:values["primary-only"] ?? false};
@@ -123,10 +126,10 @@ const table = existsSync(file("continuation")) ? read<Continuation>("continuatio
   : previous?.continuation ?? fitContinuation(format,field,seed("continuation"),plan.continuationGames);
 if (table.format!==format || table.schema!=="score-continuation-v1") throw new Error("Invalid continuation table.");
 if (!existsSync(file("continuation"))) write("continuation",table);
-const initial = previous?.net ?? newNetwork(seed("init"));
+const initial = previous ? widenNetwork(previous.net,plan.hidden,seed("init")) : newNetwork(seed("init"),plan.hidden);
 const checkpoint = existsSync(file("checkpoint")) ? read<Checkpoint>("checkpoint")
   : {plan:planHash,completed:0,net:structuredClone(initial),examples:0};
-if (checkpoint.plan!==planHash || checkpoint.completed>plan.epochs || !validNetwork(checkpoint.net)) throw new Error("Checkpoint does not match.");
+if (checkpoint.plan!==planHash || checkpoint.completed>plan.epochs || (!validNetwork(checkpoint.net) || hiddenUnits(checkpoint.net)!==plan.hidden)) throw new Error("Checkpoint does not match.");
 const progress = (phase: string, completed: number, total: number) =>
   write("progress",{phase,completed,total,device:plan.device,budget:plan.budget});
 const past = (deadline: number | undefined) => deadline!==undefined && Date.now()>=deadline;
@@ -163,7 +166,7 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
       const now = performance.now();
       let trainingMetrics: object;
       if (metal) {
-        const {net,...metrics} = await metal.update(checkpoint.net,networkShape,examples);
+        const {net,...metrics} = await metal.update(checkpoint.net,networkShape(checkpoint.net),examples);
         checkpoint.net = net;
         trainingMetrics = metrics;
       } else {
@@ -210,7 +213,7 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
   };
   const learned = seats.map(seat=>evaluator(checkpoint.net,field(seat)));
   const initialSearch = searched("initial-search",initial,evalLog.stats["initial-search"]);
-  const previousOpponent = searched("previous-opponent",initial);
+  const previousOpponent = searched("previous-opponent",previous?.net ?? initial);
   const fixedPartner = baseline("rare-bluff");
   const candidates: Record<Arm,Policy> = {
     "learned-search":searched("learned-search",checkpoint.net,evalLog.stats["learned-search"]),
@@ -249,7 +252,8 @@ async function run(metal: ReturnType<typeof metalWorker> | null) {
   });
   const primary = results[0];
   write("result",{format,plan:planHash,policy,ceibo:pin,initialPolicy:plan.initialPin,
-    confidence:"95% paired bootstrap, simultaneous across reported win rates",device:plan.device,epochs:checkpoint.completed,examples:checkpoint.examples,
+    confidence:"95% paired bootstrap, simultaneous across reported win rates",device:plan.device,
+    hidden:plan.hidden,parameters:checkpoint.net.weights.length,epochs:checkpoint.completed,examples:checkpoint.examples,
     simulations:plan.simulations,trainGames:2*plan.trainPairs*checkpoint.completed,pairedDeals:plan.evalPairs,
     durationSeconds:plan.budget ? (Date.now()-plan.budget.startedAt)/1000 : null,
     verdict:primary.lower>.5 ? "beats Ceibo" : primary.upper<.5 ? "loses to Ceibo" : "inconclusive against Ceibo",results});
