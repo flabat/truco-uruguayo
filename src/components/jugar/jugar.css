@@ -54,6 +54,9 @@
 .j-partida { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
 .j-partida.j-partida--jugador { grid-template-columns: minmax(0, 1fr); }
 .j-partida--jugador > .j-jugada-panel { order: 0; }
+.juego:has(.j-partida--jugador) { padding-top: clamp(.5rem, 1.5vw, 1.1rem); }
+.juego:has(.j-partida--jugador) .j-titulo { margin-bottom: .5rem; }
+.juego:has(.j-partida--jugador) .j-titulo h1 { margin: .15rem 0 0; font-size: clamp(1.5rem, 3.2vw, 2.4rem); }
 .j-voz {
   display: table;
   position: relative;
@@ -161,7 +164,7 @@
   .juego:has(.j-partida--jugador) .j-barra span { min-width: 0; overflow-wrap: anywhere; }
   .juego:has(.j-partida--jugador) .j-tanteador {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1.45fr) repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: .35rem .6rem;
     padding-block: .35rem;
@@ -172,6 +175,7 @@
     margin: 0; font-size: .85rem; line-height: 1.18; overflow-wrap: anywhere;
   }
   .juego:has(.j-partida--jugador) .j-tanteador small { font-size: .75rem; }
+  .juego:has(.j-partida--jugador) .j-tanteador .j-meta { grid-template-columns: minmax(0, 1fr); }
   .juego:has(.j-partida--jugador) .j-tanteador strong { font-size: 1.25rem; }
 }
 
