@@ -35,6 +35,7 @@ interface Props {
   nombrarJugadas?: boolean;
   manosOcultas?: { jugadas: readonly { asiento: number }[]; asientoVisible?: number };
   detalle?: (asiento: number, carta: CardId | undefined, ganadora: boolean) => DetallePuesto;
+  zonaJugador?: ReactNode;
 }
 
 const posiciones: Readonly<Record<number, readonly string[]>> = {
@@ -69,7 +70,7 @@ function MuestraConMazo({ carta, base }: { carta: CardId; base: string }) {
 
 export function Tapete({
   base, asientos, asientoInferior, dador, mano, muestra, titulo, numeroVuelta, estado,
-  participantes, turno, vuelta, terminada, nombrarJugadas, manosOcultas, detalle,
+  participantes, turno, vuelta, terminada, nombrarJugadas, manosOcultas, detalle, zonaJugador,
 }: Props) {
   const lugares = posiciones[asientos.length];
   const seis = lugares.length === 6;
@@ -78,7 +79,10 @@ export function Tapete({
   const veredicto = resultado?.tipo === "parda" ? "Parda" :
     ganador != null ? "Ganó " + asientos.find(a => a.asiento === ganador)?.nombre : undefined;
 
-  return <section className={nombrarJugadas ? "j-tapete j-tapete-con-rotulos" : "j-tapete"} aria-label="Tapete">
+  const conZona = zonaJugador != null && typeof zonaJugador !== "boolean";
+  const clase = ["j-tapete", nombrarJugadas && "j-tapete-con-rotulos", conZona && "j-tapete--jugador"]
+    .filter(Boolean).join(" ");
+  return <section className={clase} aria-label="Tapete">
     <header>
       <strong>{titulo}</strong>
       <div className="j-estado-vuelta">
@@ -118,5 +122,6 @@ export function Tapete({
         </div>;
       })}
     </div>
+    {conZona && <div className="j-zona-tapete">{zonaJugador}</div>}
   </section>;
 }
