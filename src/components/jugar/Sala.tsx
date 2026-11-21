@@ -19,6 +19,7 @@ import { VozDiscord } from "./VozDiscord";
 import { EnJuego } from "./Tablero";
 import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
+import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
 import { MesaConSenas } from "./Senas";
 import { usePresentacionVueltas } from "./presentacion-vueltas";
 import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
@@ -234,6 +235,7 @@ function MesaAbierta({
   recienCreada?: boolean;
 }) {
   const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
+  const encabezadoEspera = useRef<HTMLHeadingElement>(null);
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
   const esTerceto = recibida?.formato === "triples";
@@ -295,6 +297,12 @@ function MesaAbierta({
   const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
   const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
+  const enJuego = mesa.lista && partida?.vista;
+  let estadoRed: string | undefined;
+  if (!conectada) estadoRed = "Reconectando con tu mesa…";
+  else if (versionDesconocida) estadoRed = "Actualizá la aplicación para jugar con esta versión de señas.";
+  else if (ocupado) estadoRed = "Enviando jugada…";
+  const estadoZona = { bloqueada, estadoRed, aviso };
   return (
     <div ref={tablero}>
       <PieMesa mesa={mesa} />
@@ -306,29 +314,27 @@ function MesaAbierta({
           Volver al salón
         </a>
       </div>
-      {mesa.vozDisponible && <VozDiscord key={mesa.id} ruta={ruta} />}
-      {!conectada && (
+      {!enJuego && !conectada && (
         <p role="status" className="j-aviso">
           Reconectando con tu mesa…
         </p>
       )}
-      {versionDesconocida && <p role="alert">Actualizá la aplicación para jugar con esta versión de señas.</p>}
-      {aviso && (
+      {!enJuego && aviso && (
         <p role="alert" className="j-aviso">
           {aviso}
         </p>
       )}
-      {mesa.lista && partida?.vista ? (
+      {enJuego && partida ? (
         partida.formato === "triples" ? (
-          <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada}
+          <MesaDeTercetos base={base} mesa={mesa} partida={partida} {...estadoZona}
             jugar={jugada} presencioReparto={presencioReparto} />
         ) : versionSenas && !versionDesconocida ? (
-          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
-        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+          <MesaConSenas base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">
-            <h2>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
+            <h2 ref={encabezadoEspera} tabIndex={-1}>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
             <Visibilidad publica={mesa.publica} />
             <p>Chico a {mesa.meta} tantos.</p>
             <p>
@@ -338,6 +344,7 @@ function MesaAbierta({
                   ? "Faltan " + faltan + " jugadores para repartir."
                   : "La mesa está completa."}
             </p>
+            {faltan > 0 && mesa.modo !== "1v1" && <SugerenciaHorizontal encabezado={encabezadoEspera} />}
             {faltan > 0 && <Invitacion enlace={mesa.invitacion} />}
           </div>
           <section className="j-asientos">
@@ -375,6 +382,7 @@ function MesaAbierta({
           </section>
         </div>
       )}
+      {mesa.vozDisponible && <VozDiscord key={mesa.id} ruta={ruta} />}
     </div>
   );
 }

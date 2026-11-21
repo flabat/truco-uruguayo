@@ -460,7 +460,7 @@ for (const [caso, cantos] of [
         return { json: { ...partida, version: estado.acciones.length, puntos: marcadorOnline(estado), vista: vistaOnline(estado, 0) } };
     });
     await page.goto("jugar/?mesa=" + mesaId);
-    const panel = page.locator(".j-jugada-panel");
+    const panel = page.getByRole("region", { name: "Zona de juego" });
     const respuesta = panel.getByRole("button", { name: "Yo no canto", exact: true });
     const estadoDelTurno = panel.getByRole("status");
     const anuncio = estadoDelTurno.getByText(/Computadora 2 cantó flor/i);
@@ -822,7 +822,7 @@ test("recupera el marcador al reconectar y cierra la partida por envido", async 
   await expect(carta).toBeEnabled();
   interrumpida = true;
   sockets.at(-1).close();
-  await expect(page.getByText("Reconectando con tu mesa…")).toBeVisible();
+  await expect(page.getByRole("region", { name: "Zona de juego" }).getByRole("heading", { name: "Reconectando con tu mesa…" })).toBeVisible();
   await expect(carta).toBeDisabled();
   mano = {
     ...mano,
