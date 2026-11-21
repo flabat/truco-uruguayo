@@ -36,3 +36,7 @@ Las capturas se generan con `CAPTURAS_TAPETE` durante las pruebas de navegador.
 | Mano guiada | [1280 px](../capturas/mano-guiada-1280.jpg) | [320 px](../capturas/mano-guiada-320.jpg) |
 | Lección de truco | [1280 px](../capturas/truco-1280.jpg) | [320 px](../capturas/truco-320.jpg) |
 | Lección de probabilidad | [1280 px](../capturas/probabilidad-1280.jpg) | [320 px](../capturas/probabilidad-320.jpg) |
+
+## Decisiones posteriores
+
+La composición de las acciones en una mesa activa se especifica en el [ADR 0002](0002-controles-en-el-tapete.md). La invitación a girar el celular y los estados que deben conservarse se describen en el [ADR 0003](0003-orientacion-en-celulares.md).
