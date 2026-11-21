@@ -1,6 +1,8 @@
+import { ResumenDeTantos } from "./ResumenDeTantos";
 import { motivoDelCobro } from "../../lib/cobros";
 import { canto, respuestaConFlor } from "../../lib/cantos";
-import { useEffect, useRef } from "react";
+import type { ReactNode } from "react";
+import { ZonaJugador } from "./ZonaJugador";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
 import type { CardId } from "../../motor/cartas";
 import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
@@ -17,6 +19,7 @@ const grupos: { nombre: string; opciones: Canto[] }[] = [
     nombre: "Envido y flor",
     opciones: ["envido", "real-envido", "falta-envido", "flor", "con-flor-envido", "contraflor-al-resto"],
   },
+  { nombre: "Retiro", opciones: ["mazo"] },
 ];
 
 export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
@@ -54,8 +57,8 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
           ? "Ganaste la mano"
           : "El rival ganó la mano",
       indicacion: resultado.motivo === "mazo"
-        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo. Se anotaron ${tantos(resultado.tantos)}.`
-        : `Se anotaron ${tantos(resultado.tantos)} por ${motivos[resultado.motivo]}.`,
+        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo.`
+        : `El cierre fue por ${motivos[resultado.motivo]}.`,
     };
   }
   if (porDeclararFlor !== null) {
@@ -80,6 +83,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   if (turno === mesa.miAsiento) {
     let indicacion = "Elegí una carta en el tapete.";
     if (legales.length > 1) indicacion = "Elegí una carta en el tapete o hacé un canto.";
+    if (legales.includes("mazo") && !legales.includes("carta")) indicacion = "Podés irte al mazo.";
     if (legales.includes("flor")) indicacion = "Cantá tu flor antes de tirar la primera carta.";
     return { titulo: "Tu turno", indicacion };
   }
@@ -96,7 +100,7 @@ export function Tanteador({ meta, puntos, propio, equipo }: {
       <div className="j-tanteador" role="group" aria-label="Tanteador">
         <div className="j-meta">
           <b>Chico a {meta}</b>
-          <small>{mitadesDelChico(meta)}</small>
+          <small>Acumulado · {mitadesDelChico(meta)}</small>
         </div>
         {[propio, 1 - propio].map((e) => (
           <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
@@ -109,11 +113,32 @@ export function Tanteador({ meta, puntos, propio, equipo }: {
   );
 }
 
+export function ManoJugador({ cartas, habilitada, base, jugar }: {
+  cartas: readonly CardId[]; habilitada: boolean; base: string; jugar: (a: Eleccion) => void;
+}) {
+  return <div className="j-mano" role="group" aria-label="Tus cartas">
+    {cartas.map(carta => <button key={carta} disabled={!habilitada}
+      aria-label={"Jugar " + nombrar(carta)} onClick={() => jugar({ tipo: "carta", carta })}>
+      <Naipe base={base} id={carta} />
+    </button>)}
+  </div>;
+}
+
+export function Continuacion({ fin, bloqueada, base, repartir }: {
+  fin: boolean; bloqueada: boolean; base: string; repartir: () => void;
+}) {
+  if (fin) return <a className="button" href={base + "jugar/"}>Crear otra mesa</a>;
+  return <button className="button" disabled={bloqueada} onClick={repartir}>Repartir otra mano</button>;
+}
+
 export function EnJuego({
   mesa,
   partida,
   bloqueada,
   mostrandoCartas = false,
+  estadoRed,
+  aviso,
+  sena,
   voz,
   base,
   jugar,
@@ -122,6 +147,9 @@ export function EnJuego({
   partida: Partida;
   bloqueada: boolean;
   mostrandoCartas?: boolean;
+  estadoRed?: string;
+  aviso?: string;
+  sena?: ReactNode;
   voz?: Voz;
   base: string;
   jugar: (a?: Eleccion) => void;
@@ -155,29 +183,16 @@ export function EnJuego({
     ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
     : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };
   const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : estadoDelTurno(mesa, partida, v);
-  const encabezado = useRef<HTMLHeadingElement>(null);
-  const desdeTeclado = useRef(false);
-  useEffect(() => {
-    if (desdeTeclado.current && document.activeElement === document.body) {
-      encabezado.current?.focus();
-      desdeTeclado.current = false;
-    }
-    if (!mostrandoCartas) desdeTeclado.current = false;
-  }, [partida.version, mostrandoCartas, v.acciones.length]);
+  const pruebaPropia = resultado && v.pruebasDeTantos?.find(p => p.asiento === mesa.miAsiento);
+  const cartas = v.cartas.filter(carta => !pruebaPropia || !pruebaPropia.cartas.includes(carta));
   const disponibles = grupos
     .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
     .filter((g) => g.opciones.length);
-  const cobrados = v.cobros;
+  const cobrados = v.resumenTantos?.cobros ?? v.cobros;
   return (
     <>
       <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={equipo} />
-      <div
-        className="j-partida"
-        onClickCapture={(e) => {
-          if (e.target instanceof Element && e.target.closest("button"))
-            desdeTeclado.current = e.detail === 0;
-        }}
-      >
+      <div className="j-partida j-partida--jugador">
         <Tapete
           base={base}
           asientos={mesa.asientos.map(a => {
@@ -194,70 +209,57 @@ export function EnJuego({
           terminada={Boolean(resultado && !cerrada)}
           manosOcultas={{ jugadas: v.acciones.filter(a => a.tipo === "carta"), asientoVisible: mesa.miAsiento }}
           detalle={(asiento, carta, ganadora) => {
-            const esPropio = asiento === mesa.miAsiento;
             const prueba = resultado && v.pruebasDeTantos?.find(p => p.asiento === asiento);
-            const mano = esPropio ? v.cartas.filter(c => !prueba || !prueba.cartas.includes(c)) : [];
             return {
               contenido: prueba
                 ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
                 : <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />,
               ocultaDorsos: Boolean(prueba),
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
-              mano: mano.length > 0 && <div className="j-mano" role="group" aria-label="Tus cartas">
-                {mano.map(c => <button
-                  key={c}
-                  disabled={bloqueada || !v.legales.includes("carta")}
-                  aria-label={"Jugar " + nombrar(c)}
-                  onClick={() => jugar({ tipo: "carta", carta: c })}
-                >
-                  <Naipe base={base} id={c} />
-                </button>)}
-              </div>,
             };
           }}
+          zonaJugador={<ZonaJugador
+            titulo={estadoRed ?? titulo}
+            bloqueada={bloqueada}
+            detalle={<>
+              {aviso && <p className="j-aviso">{aviso}</p>}
+              <AvisoFlor pendiente={pendientes} porDeclararFlor={v.porDeclararFlor} nombre={nombre} />
+              {(!estadoRed || mostrandoCartas || resultado) && (
+                <p>{indicacion}{resultado && detalleVuelta && " " + detalleVuelta}</p>
+              )}
+              {v.trucoPendiente && pendientes && v.trucoPendiente.tipo !== pendientes.tipo && (
+                <p className="j-reserva">
+                  Queda pendiente el {canto[v.trucoPendiente.tipo].toLowerCase()} de{" "}
+                  {nombre(v.trucoPendiente.asiento)}.
+                </p>
+              )}
+            </>}
+            sena={sena}
+            mano={cartas.length > 0 && <ManoJugador cartas={cartas} habilitada={!bloqueada && v.legales.includes("carta")} base={base} jugar={jugar} />}
+            cantos={disponibles.length > 0 && disponibles.map((grupo) => (
+              <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
+                {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
+                <div className="j-cantos">
+                  {grupo.opciones.map((tipo) => (
+                    <button
+                      key={tipo}
+                      className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"}
+                      disabled={bloqueada}
+                      onClick={() => jugar({ tipo })}
+                    >
+                      {canto[tipo]}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            ))}
+            continuacion={(fin || resultado) && <Continuacion fin={fin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
+          />}
         />
         <section className="j-jugada-panel">
-          <div role="status" aria-live="polite" aria-atomic="true">
-            <AvisoFlor pendiente={pendientes} porDeclararFlor={v.porDeclararFlor} nombre={nombre} />
-            <h2 ref={encabezado} tabIndex={-1}>
-              {titulo}
-            </h2>
-            <p>{indicacion}{resultado && detalleVuelta && " " + detalleVuelta}</p>
-          </div>
-          {v.trucoPendiente && pendientes && v.trucoPendiente.tipo !== pendientes.tipo && (
-            <p className="j-reserva">
-              Queda pendiente el {canto[v.trucoPendiente.tipo].toLowerCase()} de{" "}
-              {nombre(v.trucoPendiente.asiento)}.
-            </p>
-          )}
-          {disponibles.map((grupo) => (
-            <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
-              {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
-              <div className="j-cantos">
-                {grupo.opciones.map((tipo) => (
-                  <button
-                    key={tipo}
-                    className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"}
-                    disabled={bloqueada}
-                    onClick={() => jugar({ tipo })}
-                  >
-                    {canto[tipo]}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-          ))}
-          {fin ? (
-            <a className="button" href={base + "jugar/"}>
-              Crear otra mesa
-            </a>
-          ) : (
-            resultado && (
-              <button className="button" disabled={bloqueada} onClick={() => jugar()}>
-                Repartir otra mano
-              </button>
-            )
-          )}
+          {resultado && v.resumenTantos && <ResumenDeTantos resumen={v.resumenTantos} propio={propio}
+            equipo={e => mesa.modo === "1v1" ? `${equipo(e)} (${nombre(e)})` : equipo(e)}
+            acciones={v.acciones} resultado={resultado} nombre={nombre} />}
           <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} />
           {!resultado && !(mostrandoCartas && voz) && (
             <dl className="j-cuenta">
@@ -273,7 +275,7 @@ export function EnJuego({
               </div>
             </dl>
           )}
-          {cobrados.length > 0 && (
+          {(!resultado || !v.resumenTantos) && cobrados.length > 0 && (
             <section className="j-lances">
               <h3>Tantos cobrados</h3>
               <ul>

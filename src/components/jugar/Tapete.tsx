@@ -35,6 +35,7 @@ interface Props {
   nombrarJugadas?: boolean;
   manosOcultas?: { jugadas: readonly { asiento: number }[]; asientoVisible?: number };
   detalle?: (asiento: number, carta: CardId | undefined, ganadora: boolean) => DetallePuesto;
+  zonaJugador?: ReactNode;
 }
 
 const posiciones: Readonly<Record<number, readonly string[]>> = {
@@ -62,14 +63,16 @@ function MuestraConMazo({ carta, base }: { carta: CardId; base: string }) {
       <Naipe base={base} id={carta} />
       <img className="j-mazo" src={base + "img/cartas/tatu/reverso.webp"} alt="" width={384} height={596} />
     </div>
-    <small aria-hidden="true">Muestra</small>
-    <strong aria-hidden="true">{nombre}</strong>
+    <span className="j-rotulo-muestra" aria-hidden="true">
+      <small>Muestra</small>
+      <strong>{nombre}</strong>
+    </span>
   </div>;
 }
 
 export function Tapete({
   base, asientos, asientoInferior, dador, mano, muestra, titulo, numeroVuelta, estado,
-  participantes, turno, vuelta, terminada, nombrarJugadas, manosOcultas, detalle,
+  participantes, turno, vuelta, terminada, nombrarJugadas, manosOcultas, detalle, zonaJugador,
 }: Props) {
   const lugares = posiciones[asientos.length];
   const seis = lugares.length === 6;
@@ -78,7 +81,10 @@ export function Tapete({
   const veredicto = resultado?.tipo === "parda" ? "Parda" :
     ganador != null ? "Ganó " + asientos.find(a => a.asiento === ganador)?.nombre : undefined;
 
-  return <section className={nombrarJugadas ? "j-tapete j-tapete-con-rotulos" : "j-tapete"} aria-label="Tapete">
+  const conZona = zonaJugador != null && typeof zonaJugador !== "boolean";
+  const clase = ["j-tapete", nombrarJugadas && "j-tapete-con-rotulos", conZona && "j-tapete--jugador"]
+    .filter(Boolean).join(" ");
+  return <section className={clase} aria-label="Tapete">
     <header>
       <strong>{titulo}</strong>
       <div className="j-estado-vuelta">
@@ -87,7 +93,7 @@ export function Tapete({
         {veredicto && <b>{veredicto}</b>}
       </div>
     </header>
-    <div className={"j-puestos" + (seis ? " j-puestos-seis" : lugares.length === 2 ? " j-duelo" : "")}
+    <div className={"j-puestos " + (seis ? "j-puestos-seis" : lugares.length === 2 ? "j-duelo" : "j-parejas")}
       role={seis ? "group" : undefined} aria-label={seis ? "Los seis asientos" : undefined}>
       {asientos.map(a => {
         const posicion = lugares[(a.asiento - asientoInferior + lugares.length) % lugares.length];
@@ -118,5 +124,6 @@ export function Tapete({
         </div>;
       })}
     </div>
+    {conZona && <div className="j-zona-tapete">{zonaJugador}</div>}
   </section>;
 }
