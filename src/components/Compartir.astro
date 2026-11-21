@@ -1,0 +1,50 @@
+---
+interface Props { title: string; description: string }
+const { title, description } = Astro.props;
+---
+<div class="compartir" data-compartir data-title={title} data-description={description}>
+  <button type="button" class="quiet-link" data-accion>Compartir esta página ↗</button>
+  <span aria-live="polite" data-estado></span>
+  <label hidden data-alternativa>Enlace para compartir <input readonly data-enlace /></label>
+</div>
+<script>
+  import { contar } from "../lib/eventos";
+  document.querySelectorAll<HTMLElement>("[data-compartir]").forEach(area => {
+    const boton = area.querySelector<HTMLButtonElement>("[data-accion]")!;
+    const estado = area.querySelector<HTMLElement>("[data-estado]")!;
+    const alternativa = area.querySelector<HTMLLabelElement>("[data-alternativa]")!;
+    const input = area.querySelector<HTMLInputElement>("[data-enlace]")!;
+    boton.addEventListener("click", async () => {
+      contar("compartir-pagina");
+      // Nunca compartir parámetros de sesión o invitaciones por accidente.
+      const enlace = location.origin + location.pathname;
+      const copiar = async () => {
+        try {
+          await navigator.clipboard.writeText(enlace);
+          estado.textContent = "Enlace copiado.";
+        } catch {
+          alternativa.hidden = false;
+          input.value = enlace;
+          input.focus();
+          input.select();
+          estado.textContent = "Enlace seleccionado. Copialo para compartirlo.";
+        }
+      };
+      if (!navigator.share) return copiar();
+      try {
+        await navigator.share({ title: area.dataset.title, text: area.dataset.description, url: enlace });
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        await copiar();
+      }
+    });
+  });
+</script>
+<style>
+  .compartir { margin-block: 1.25rem; }
+  .compartir button { border: 0; cursor: pointer; background: transparent; padding: .4rem 0; }
+  .compartir span { display: block; font-size: .85rem; }
+  .compartir label { display: block; font-size: .85rem; }
+  .compartir label[hidden] { display: none; }
+  .compartir input { display: block; max-width: 100%; width: 24rem; padding: .5rem; }
+</style>
