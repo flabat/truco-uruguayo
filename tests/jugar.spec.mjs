@@ -701,10 +701,13 @@ test("reserva la invitación para el ingreso y recupera la pareja con un canto p
   expect(joined).toBe(1);
   await expect(page.getByRole("group", { name: "Tu pareja · Ana", exact: true })).toBeVisible();
   await expect(page.getByText("Queda pendiente el truco de Ana.")).toBeVisible();
-  const [frente, muestra, naipes] = await Promise.all(
-    [".j-frente", ".j-muestra", ".j-mano"].map((sel) => page.locator(sel).boundingBox()),
+  const [frente, muestra, dador, naipes] = await Promise.all(
+    [".j-frente .j-ocupante", ".j-derecha .j-muestra", ".j-derecha .j-ocupante", ".j-mano"]
+      .map(sel => page.locator(sel).boundingBox()),
   );
-  expect(frente.y + frente.height).toBeLessThanOrEqual(muestra.y);
+  // En dos filas, la muestra del dador de la derecha puede quedar a la altura del puesto de enfrente.
+  expect(muestra.x >= frente.x + frente.width || muestra.y >= frente.y + frente.height).toBe(true);
+  expect(muestra.y + muestra.height).toBeLessThanOrEqual(dador.y);
   expect(muestra.y + muestra.height).toBeLessThanOrEqual(naipes.y);
   if (process.env.CAPTURAS_UI)
     await page.screenshot({
