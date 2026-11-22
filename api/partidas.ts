@@ -70,12 +70,14 @@ function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: read
 
 async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, humanos: number[], numero: number,
     version: number, puntos: Tanteador, meta: number, dador?: number, diferida = false) {
+  const cantidad = formato === "triples" ? 6 : seatsFor(formato);
+  const computadoras = Array.from({ length: cantidad }, (_, i) => i as Asiento).filter(i => !humanos.includes(i));
+  const reparto = repartirOnline(cantidad, dador, computadoras);
   if (formato === "triples") {
-    const estado = await repartirTercetosDB(db, mesa, numero, version, puntos, meta, humanos, dador);
+    const estado = await repartirTercetosDB(db, mesa, numero, version, puntos, meta, humanos, reparto);
     await iniciarReplayDB(db, mesa, formato, humanos, estado, numero);
     return {estado, turnos: []};
   }
-  const reparto = repartirOnline(seatsFor(formato), dador);
   const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
   const decisiones: DecisionReplay[] = [];
   const mano = diferida ? inicial : jugarBotsConReplay(inicial, formato, humanos, decisiones);

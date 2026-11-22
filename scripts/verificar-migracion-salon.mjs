@@ -64,8 +64,8 @@ try {
   assert.equal(mesa.origen, "exhibicion");
   await assert.rejects(alta, { code: "23505" });
   const visible = () => db.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [mesa.id]).then(r => r.rowCount);
-  const evento = (pos, dato) => db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
-    VALUES ($1,1,$2,$2::integer+1,$3,'prueba')`, [mesa.id, pos, dato]);
+  const evento = (pos, dato, id = mesa.id) => db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
+    VALUES ($1,1,$2,$2::integer+1,$3,'prueba')`, [id, pos, dato]);
   assert.equal(await visible(), 0);
   await evento(0, { tipo: "reparto" });
   assert.equal(await visible(), 1);
@@ -81,7 +81,13 @@ try {
   await evento(3, { tipo: "cierre", fecha: new Date().toISOString() });
   assert.equal(await visible(), 0);
   assert.ok((await db.query("SELECT fin_publico FROM juego.mesas WHERE id=$1", [mesa.id])).rows[0].fin_publico);
-  assert.notEqual((await alta()).id, mesa.id);
+  const nueva = await alta();
+  assert.notEqual(nueva.id, mesa.id);
+  await evento(0, { tipo: "reparto", reparto: { respondenSinFlor: [1] } }, nueva.id);
+  await evento(1, { tipo: "decision", accion: { tipo: "flor", asiento: 0 } }, nueva.id);
+  await db.query("UPDATE juego.mesas SET ultimo_hecho_publico=now()-interval '61 seconds' WHERE id=$1", [nueva.id]);
+  await evento(2, { tipo: "decision", accion: { tipo: "paso-flor", asiento: 1 } }, nueva.id);
+  assert.equal((await db.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [nueva.id])).rowCount, 1);
   console.log("Migración, privacidad histórica, frescura, cierre y reutilización del cupo comprobados.");
 } finally {
   await db.end();

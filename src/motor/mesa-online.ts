@@ -7,7 +7,7 @@ import { faltaDelGanador, tipoDeReparto } from "./reglas-tercetos.ts";
 import { compararCartas } from "./jerarquia.ts";
 import { elegirJugada } from "./jugadores.ts";
 import { iniciarMano, jugarCarta, vistaPublicaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
-import { esAsientoOnline, esRepartoOnline, type Asiento, type AsientoV1, type RepartoOnline, type TresCartas } from "./reparto.ts";
+import { esAsientoOnline, esRepartoOnline, sonAsientosDeMesa, type Asiento, type AsientoV1, type RepartoOnline, type TresCartas } from "./reparto.ts";
 import {
   aDecidir, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios, type AccionOnline, type AccionOnlineV1, type Cobro,
   type EstadoOnline, type LanceTercetos, type ResumenLance, type Oferta, type TipoAccionOnline, type TipoAccionOnlineV1,
@@ -20,8 +20,9 @@ export type { AccionOnline, AccionOnlineV1, Cobro, EstadoOnline, LanceTercetos, 
 export const versionReglasOnline = 1;
 
 /** Reparte en el servidor una carta por asiento en cada una de las tres rondas. */
-export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnline {
+export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number, computadoras: readonly Asiento[] = []): RepartoOnline {
   if (cantidad !== 2 && cantidad !== 4 && cantidad !== 6) throw new RangeError("La mesa requiere dos, cuatro o seis asientos.");
+  if (!sonAsientosDeMesa(computadoras, cantidad)) throw new RangeError("Las computadoras deben ocupar asientos distintos de la mesa.");
   dador ??= randomInt(cantidad);
   if (!esAsientoOnline(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
   const mano = ((dador + 1) % cantidad) as Asiento;
@@ -35,7 +36,8 @@ export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number): RepartoOnli
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { reglaFlor: "inmediata-v2", versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
+  return { reglaFlor: "inmediata-v2", ...(computadoras.length && { respondenSinFlor: [...computadoras] }),
+    versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 
 function dueloDelPico(mano: Asiento, duelo: 1 | 2 | 3): LanceTercetos {
@@ -196,7 +198,7 @@ export interface VistaOnline extends VistaAsiento {
 function vistaPublicaOnline(estado: EstadoOnline, asiento: Asiento) {
   const mesa = vistaPublicaPara(estado.mano, asiento);
   const proximo = estado.consultaFlor[0];
-  // En las manos nuevas la cola contiene únicamente flores reales, todavía privadas.
+  // Solo el asiento consultado ve que le toca declarar o contestar.
   const porDeclararFlor = estado.mano.reparto.reglaFlor && proximo !== asiento ? null : proximo ?? null;
   const { resultado, valorTruco } = estado;
   const trucoPendiente = resultado ? null : estado.trucoPendiente;

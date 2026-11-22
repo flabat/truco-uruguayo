@@ -17,7 +17,7 @@ export function tableroEspectador(estado: EstadoOnline) {
     vueltaActual: mano.vueltaActual ? vueltaPublica(mano.vueltaActual) : null,
     // Orden de cartas del tapete. La palabra para flor o una respuesta puede ser privada.
     turnoDeCartas: resultado ? null : mano.turno, valorTruco: estado.valorTruco,
-    acciones: estado.acciones.filter(a => a.tipo !== "paso-flor").map(a => a.tipo === "carta"
+    acciones: estado.acciones.filter(a => a.tipo !== "paso-flor" || mano.reparto.respondenSinFlor?.includes(a.asiento)).map(a => a.tipo === "carta"
       ? { tipo: a.tipo, asiento: a.asiento, carta: a.carta } : { tipo: a.tipo, asiento: a.asiento }),
     cobros: estado.cobros.map(({ equipo, tantos, motivo, asiento, tantoGanador }) =>
       ({ equipo, tantos, motivo, asiento, tantoGanador })),
