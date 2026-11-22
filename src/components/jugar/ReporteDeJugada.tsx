@@ -9,7 +9,7 @@ export function ReporteDeJugada({ mesaId, partida, vuelta, presentando, voz }: {
 }) {
   if (!partida.vista) return null;
   let posicion = partida.vista.acciones.length;
-  let duelo;
+  let duelo: number | null = null;
   if (partida.formato === "triples") {
     duelo = partida.lance.duelo;
     // Al cerrar el reparto, el último resumen contiene las mismas acciones que la vista.
