@@ -3,6 +3,7 @@ import { canto } from "../src/lib/cantos.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import { esCardId, type CardId } from "../src/motor/cartas.ts";
 import type { AccionOnline, Cobro } from "../src/motor/cantos-online.ts";
+import { resumirTantos } from "../src/motor/resumen-tantos.ts";
 
 export interface CursorReporte {
   mano: number;
@@ -28,7 +29,8 @@ interface ManoReporte {
   mano: number;
   dador: number;
   computadoras: boolean[];
-  cobros: Pick<Cobro, "motivo" | "equipo" | "tantos">[];
+  cobros: Cobro[];
+  puntos_anteriores: [number, number] | null;
   puntos_inicio: [number, number];
   puntos: [number, number] | null;
   build: string | null;
@@ -67,7 +69,7 @@ function jugadasDeMano(mano: ManoReporte): string[] {
 
 const limiteUrl = 3500;
 
-function enlaceBorrador(titulo: string, cabecera: string, manos: string[], jugadas: string[]) {
+function enlaceBorrador(titulo: string, cabecera: string, manos: string[], omitidas: number, jugadas: string[]) {
   const url = new URL("https://github.com/flabat/truco-uruguayo/issues/new");
   url.searchParams.set("title", titulo);
   let primeraMano = 0;
@@ -76,8 +78,8 @@ function enlaceBorrador(titulo: string, cabecera: string, manos: string[], jugad
     url.searchParams.set("body", [
       cabecera,
       "### Chico",
-      ...(primeraMano ? [`… ${primeraMano} manos anteriores en el registro.`] : []),
-      ...(manos.length ? manos.slice(primeraMano) : ["Primera mano."]),
+      ...(omitidas + primeraMano ? [`… ${omitidas + primeraMano} manos anteriores en el registro.`] : []),
+      ...(!manos.length && !omitidas ? ["Primera mano."] : manos.slice(primeraMano)),
       "",
       "### Jugadas de esta mano hasta el reporte",
       ...(primeraJugada ? [`… ${primeraJugada} jugadas anteriores en el registro.`] : []),
@@ -99,9 +101,10 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
       h.reparto->>'muestra' AS muestra, h.tipo_reparto, h.puntos_inicio, e.build, e.secuencia,
       (h.reparto->>'mano')::integer AS mano, (h.reparto->>'dador')::integer AS dador,
       (SELECT array_agg(a.computadora ORDER BY a.asiento) FROM juego.asientos a WHERE a.mesa=h.mesa) AS computadoras,
-      e.evento->'puntos' AS puntos,
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('equipo', c->'equipo', 'tantos', c->'tantos', 'motivo', c->'motivo')), '[]')
-        FROM jsonb_array_elements(e.evento->'cobros') AS premios(c)
+      e.evento->'puntos' AS puntos, previo.evento->'puntos' AS puntos_anteriores,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('equipo', c->'equipo', 'tantos', c->'tantos', 'motivo', c->'motivo',
+          'valor', c->'valor') ORDER BY indice), '[]')
+        FROM jsonb_array_elements(e.evento->'cobros') WITH ORDINALITY AS premios(c, indice)
         WHERE c->>'motivo' IN ('truco', 'flor', 'envido')) AS cobros,
       (SELECT coalesce(jsonb_agg(jsonb_build_object('asiento', dato->'asiento', 'tipo', dato->'tipo',
           'duelo', dato->'duelo', 'carta', CASE WHEN dato->>'tipo'='carta' THEN dato->'carta' END) ORDER BY i), '[]')
@@ -109,18 +112,25 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
       FROM juego.manos h JOIN juego.mesas m ON m.id=h.mesa
       LEFT JOIN juego.replays_chico r ON r.mesa=h.mesa
       LEFT JOIN juego.eventos_chico e ON e.mesa=h.mesa AND e.mano=h.numero AND e.posicion=$3
+      LEFT JOIN juego.eventos_chico previo ON previo.mesa=e.mesa AND previo.mano=e.mano AND previo.posicion=e.posicion-1
       WHERE h.mesa=$1 AND h.numero=$2 AND $3 BETWEEN 0 AND jsonb_array_length(h.acciones)`,
     [mesa, cursor.mano, cursor.posicion]);
   if (!mano) return null;
 
   const { rows: anteriores } = await db.query<ManoAnterior>(
-    "SELECT numero, puntos_inicio FROM juego.manos WHERE mesa=$1 AND numero<$2 ORDER BY numero", [mesa, cursor.mano]);
+    "SELECT numero, puntos_inicio FROM juego.manos WHERE mesa=$1 AND numero<$2 ORDER BY numero DESC LIMIT $3", [mesa, cursor.mano, 24]);
+  anteriores.reverse();
+  const omitidas = (anteriores[0]?.numero ?? cursor.mano) - 1;
   const historial = anteriores.map((anterior, i) => {
     const cierre = anteriores[i + 1]?.puntos_inicio ?? mano.puntos_inicio;
     return `- Mano ${anterior.numero}: ${anterior.puntos_inicio.join("-")} → ${cierre.join("-")}`;
   });
   const secuencia = mano.secuencia === null ? null : Number(mano.secuencia);
   const confirmados = cursor.posicion === 0 ? mano.puntos_inicio : mano.puntos;
+  const antesDeJugar = cursor.posicion === 1 ? mano.puntos_inicio : mano.puntos_anteriores;
+  const cobros = antesDeJugar ? resumirTantos(mano.cobros, antesDeJugar, mano.meta).cobros.map(c =>
+    `E${c.equipo} +${c.tantos} por ${c.motivo}${c.valor != null && c.valor !== c.tantos ? ` (valor ${c.valor})` : ""}`)
+    : mano.cobros.map(c => `E${c.equipo} · ${c.motivo} · valor registrado ${c.valor ?? c.tantos}`);
   const enlaceMesa = new URL("/jugar/", web.origin);
   enlaceMesa.searchParams.set("mesa", mesa);
   const lance = cursor.duelo ? `, duelo ${cursor.duelo}` : mano.tipo_reparto ? `, ${mano.tipo_reparto}` : "";
@@ -135,11 +145,11 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
     `- Asiento del reporte: A${asiento} (base 0) · modalidad: ${mano.modo} · meta: ${mano.meta}`,
     `- Asientos: ${mano.computadoras.map((bot, i) => `A${i} ${bot ? "computadora" : "persona"}`).join(", ")} · mano: A${mano.mano} · dador: A${mano.dador}`,
     `- Tanteador visible: ${cursor.puntos} · confirmado: ${confirmados?.join("-") ?? "sin registro"} · inicio de mano: ${mano.puntos_inicio.join("-")}`,
-    ...(mano.cobros.length ? [`- Cobros de la jugada: ${mano.cobros.map(c => `E${c.equipo} +${c.tantos} por ${c.motivo}`).join(", ")}`] : []),
+    ...(cobros.length ? [`- Cobros de la jugada: ${cobros.join(", ")}`] : []),
     `- Muestra: ${cartasPorId.get(mano.muestra)?.nombre ?? "sin registro"} · reglas: v${mano.version_reglas} · reparto: ${mano.version_reparto} · flor: ${mano.regla_flor ?? "original"}`,
     `- Perfil: ${mano.perfil ?? mano.modo} · política: ${mano.politica}`,
     `- Motor del evento: ${mano.build ?? "sin registro"} · cliente: ${cursor.cliente || "sin versión"}`,
     "[Cómo reproducir la posición](https://github.com/flabat/truco-uruguayo/blob/main/docs/multijugador/replay-chico.md)", "",
   ].join("\n");
-  return { secuencia, url: enlaceBorrador(titulo, cabecera, historial, jugadasDeMano(mano)) };
+  return { secuencia, url: enlaceBorrador(titulo, cabecera, historial, omitidas, jugadasDeMano(mano)) };
 }

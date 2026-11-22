@@ -3,7 +3,7 @@ import test from "node:test";
 import type { PoolClient } from "pg";
 import { prepararReporte, type CursorReporte } from "../../api/reporte-contexto.ts";
 
-const mesa = "646ef96f-9784-4817-ae69-2260be34e9fa";
+const mesa = "00000000-0000-4000-8000-000000000001";
 const reporte = "12345678-1234-4000-8000-abcdef123456";
 const web = new URL("https://eltru.co/jugar/?invitacion=secreto");
 const cursor: CursorReporte = { mano: 2, posicion: 1, vuelta: 1, puntos: "4-0", fase: "jugada", cliente: "" };
@@ -32,7 +32,7 @@ test("el borrador asocia la flor y el tanteador al asiento y al prefijo exacto",
   const borrador = await prepararReporte(db, mesa, 0, cursor, web, reporte);
   assert.ok(borrador);
   assert.equal(borrador.secuencia, 8);
-  assert.deepEqual(parametros, [[mesa, 2, 1], [mesa, 2]]);
+  assert.deepEqual(parametros, [[mesa, 2, 1], [mesa, 2, 24]]);
   const url = new URL(borrador.url);
   assert.equal(url.origin + url.pathname, "https://github.com/flabat/truco-uruguayo/issues/new");
   assert.match(url.searchParams.get("title")!, /mano 2, vuelta 1/);
@@ -42,6 +42,15 @@ test("el borrador asocia la flor y el tanteador al asiento y al prefijo exacto",
     assert.ok(texto.includes(parte), parte);
   }
   assert.doesNotMatch(texto, /privada|secreto|oros-04|Nombre Privado|invitacion/i);
+});
+
+test("al pasar de 39 a 40 se acredita un tanto de los tres de la flor", async () => {
+  const { db } = lectura({ ...mano, puntos_inicio: [39, 0], puntos: [40, 0] });
+  const borrador = await prepararReporte(db, mesa, 0, { ...cursor, puntos: "39-0", fase: "presentacion" }, web, reporte);
+  const texto = new URL(borrador!.url).searchParams.get("body")!;
+  assert.match(texto, /visible: 39-0 · confirmado: 40-0/);
+  assert.match(texto, /E0 \+1 por flor \(valor 3\)/);
+  assert.doesNotMatch(texto, /E0 \+3/);
 });
 
 test("el historial público identifica cada vuelta y reinicia la cuenta en cada duelo del pico", async () => {
@@ -79,16 +88,17 @@ test("un reparto anterior al replay conserva sus coordenadas y no inventa la sec
 });
 
 test("las manos y jugadas omitidas se pueden localizar desde un borrador de longitud acotada", async () => {
-  const anteriores = Array.from({ length: 79 }, (_, i) => ({ numero: i + 1, puntos_inicio: [i % 40, 0] }));
+  const anteriores = Array.from({ length: 24 }, (_, i) => ({ numero: 10000 - i, puntos_inicio: [i % 40, 0] }));
   const acciones = Array.from({ length: 80 }, (_, i) => ({ ...flor, tipo: "contraflor-al-resto", asiento: i % 6 }));
-  const { db } = lectura({ ...mano, acciones }, anteriores);
-  const borrador = await prepararReporte(db, mesa, 0, { ...cursor, mano: 80, posicion: 80 }, web, reporte);
+  const { db, parametros } = lectura({ ...mano, acciones }, anteriores);
+  const borrador = await prepararReporte(db, mesa, 0, { ...cursor, mano: 10001, posicion: 80 }, web, reporte);
+  assert.deepEqual(parametros[1], [mesa, 10001, 24]);
   assert.ok(borrador!.url.length <= 3500);
   const texto = new URL(borrador!.url).searchParams.get("body")!;
-  assert.match(texto, /79 manos anteriores en el registro/);
+  assert.match(texto, /10000 manos anteriores en el registro/);
   assert.match(texto, /jugadas anteriores en el registro/);
   assert.match(texto, /80\. V1 · A1 · Contraflor al resto/);
-  for (const ubicacion of [mesa, reporte, "Mano 80", "posición 80", "secuencia: 8"]) assert.ok(texto.includes(ubicacion));
+  for (const ubicacion of [mesa, reporte, "Mano 10001", "posición 80", "secuencia: 8"]) assert.ok(texto.includes(ubicacion));
 });
 
 test("una posición inexistente no genera un enlace ni consulta otro reparto", async () => {
