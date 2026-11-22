@@ -6,6 +6,7 @@ import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mes
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
+import { ReporteDeJugada } from "./ReporteDeJugada";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import { GloboDeVoz, vocesEnReposo } from "./Voz";
 import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
@@ -16,6 +17,7 @@ type Props = {
   partida: PartidaTercetos;
   base: string;
   bloqueada: boolean;
+  puedeReportar: boolean;
   estadoRed?: string;
   aviso?: string;
   jugar: (accion?: Eleccion) => void;
@@ -75,7 +77,7 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
   </details>;
 }
 
-export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, jugar, presencioReparto }: Props) {
+export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, presencioReparto }: Props) {
   const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
@@ -84,6 +86,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const titulo = presentando && voz ? mesa.asientos[voz.asiento].nombre : palabra(mesa, partida);
   const ultimaVuelta = vista.vueltas.at(-1);
   const vuelta = vista.vueltaActual?.jugadas.length ? vista.vueltaActual : ultimaVuelta;
+  const numeroVuelta = vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
@@ -110,7 +113,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
         muestra={vista.muestra}
         titulo={"Reparto " + partida.manoNumero}
         estado={esPico ? "Pico a pico" : "Redondilla"}
-        numeroVuelta={vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1)}
+        numeroVuelta={numeroVuelta}
         vuelta={vuelta}
         participantes={lance.activos}
         detalle={(asiento, carta, ganadora) => {
@@ -157,7 +160,10 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
           titulo="Tantos de este reparto" detalle={false} />}
         {ultimoCobro && <p>Último cobro · Equipo {ultimoCobro.equipo + 1}, {tantos(ultimoCobro.tantos)} por {ultimoCobro.motivo}.</p>}
         <HistorialDeMano key={`${partida.manoNumero}-${lance.duelo}`} acciones={vista.acciones} cobros={vista.cobros}
-          nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"} />
+          nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"}>
+          {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
+            presentando={presentando} voz={voz?.indice} />}
+        </HistorialDeMano>
         {jugando && <dl className="j-cuenta">
           <div><dt>Tus tantos</dt><dd>{jugando.tantosPropios.total} de {jugando.tantosPropios.modalidad}</dd></div>
           {!presentando && <div><dt>Valor del truco</dt><dd>{tantos(vista.valorTruco)}</dd></div>}

@@ -134,7 +134,14 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
 
     if (req.method === "GET" && url.pathname === "/api/jugador") {
       const player = await jugadorDeSesion(pool, req);
-      res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ? { ...player, salonHabilitado } : null));
+      if (!player) {
+        res.writeHead(401, { "Content-Type": "application/json" }).end("null");
+        return;
+      }
+      const permiso = await pool.query("SELECT 1 FROM juego.reporteros WHERE jugador = $1", [player.id]);
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+        ...player, salonHabilitado, puedeReportar: permiso.rowCount === 1,
+      }));
       return;
     }
 

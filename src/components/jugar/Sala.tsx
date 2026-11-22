@@ -302,7 +302,7 @@ function MesaAbierta({
   if (!conectada) estadoRed = "Reconectando con tu mesa…";
   else if (versionDesconocida) estadoRed = "Actualizá la aplicación para jugar con esta versión de señas.";
   else if (ocupado) estadoRed = "Enviando jugada…";
-  const estadoZona = { bloqueada, estadoRed, aviso };
+  const estadoZona = { bloqueada, estadoRed, aviso, puedeReportar: jugador.puedeReportar === true };
   return (
     <div className="j-mesa-abierta" ref={tablero}>
       <PieMesa mesa={mesa} />

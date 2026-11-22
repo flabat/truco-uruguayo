@@ -4,6 +4,7 @@ import type { VistaOnline } from "../../motor/mesa-online";
 export interface Voz {
   asiento: number;
   texto: string;
+  indice: number;
 }
 
 interface LancePublico {
@@ -18,12 +19,12 @@ export const pausaDeVoz = 1500;
 export function vocesEnAccion(lance: LancePublico, i: number): Voz[] {
   const accion = lance.acciones[i];
   if (!accion || accion.tipo === "carta") return [];
-  const voces = [{ asiento: accion.asiento, texto: accion.tipo === "mazo" ? "Me voy al mazo" : canto[accion.tipo] }];
+  const voces = [{ asiento: accion.asiento, texto: accion.tipo === "mazo" ? "Me voy al mazo" : canto[accion.tipo], indice: 0 }];
   const cobro = lance.cobros.find(c => c.motivo !== "truco");
   if (!cobro || i !== (lance.indiceCobroLateral ?? cobro.comparacionFlor?.indiceAccion)) return voces;
   const cuentas = cobro.comparacionFlor?.participantes ??
     (cobro.asiento != null && cobro.tantoGanador != null ? [{ asiento: cobro.asiento, total: cobro.tantoGanador }] : []);
-  return [...voces, ...cuentas.map(({ asiento, total }) => ({ asiento, texto: total + " de " + cobro.motivo }))];
+  return [...voces, ...cuentas.map(({ asiento, total }, i) => ({ asiento, texto: total + " de " + cobro.motivo, indice: i + 1 }))];
 }
 
 /** Al volver se ve la última voz. Un cierre conserva la comparación pública entre quienes cantaron. */

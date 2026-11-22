@@ -5,6 +5,9 @@
 !api/migrations/
 !api/migrations/*.sql
 !src/
+!src/lib/
+!src/lib/cartas.ts
+!src/lib/cantos.ts
 !src/motor/
 !src/motor/*.ts
 !training/

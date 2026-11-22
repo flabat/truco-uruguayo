@@ -61,3 +61,31 @@ SELECT replay FROM juego.replays_chico_v1 WHERE mesa = $1;
 ```
 
 La vista contiene todas las cartas y señas. El servidor autentica al jugador y le entrega la proyección de su asiento. La vista incluye únicamente los chicos compatibles observados desde el primer reparto cuyo registro cubre todas las acciones confirmadas. Si una mesa ya tenía manos al instalar esta versión, las jugadas nuevas conservan su número de mano y posición en la tabla de eventos. Los repartos y las acciones anteriores siguen en `juego.manos`. El mismo criterio conserva como parcial un historial al que le falten jugadas escritas por una instancia antigua durante el despliegue.
+
+## Reportar la jugada visible
+
+Las cuentas habilitadas tienen **Reportar esta jugada** junto al historial de la mesa. Abre un borrador en otra pestaña de GitHub. La persona completa qué pasó y qué esperaba y decide cuándo enviarlo. Necesita acceso al repositorio privado.
+
+El formulario conserva la mano, la posición dentro de esa mano, la vuelta y el tanteador que muestra el tapete. Si está presentando cantos o un pico a pico, también identifica la voz o el duelo que se ve. El servidor obtiene el asiento de la sesión, guarda la referencia y arma el historial hasta esa posición. El borrador incluye el UUID del reporte para recuperar el prefijo completo cuando el resumen excede el espacio del enlace.
+
+### Investigar un reporte
+
+En una conexión autorizada a PostgreSQL, usá el UUID que figura en el issue. El asiento del registro se numera desde cero. La secuencia es absoluta dentro del chico. La posición vuelve a cero al repartir cada mano y sigue contando al cambiar de duelo dentro de un pico a pico.
+
+```sql
+SELECT mesa, mano, posicion, secuencia, asiento, vuelta, duelo, fase, voz,
+       puntos AS tanteador_en_pantalla, cliente
+FROM juego.reportes WHERE id = $1;
+```
+
+Para un replay íntegro, pasá el documento de `juego.replays_chico_v1`, el asiento y la secuencia a `reproducirChico(replay, asiento, secuencia)`. Compará la decisión y sus cobros con la pantalla registrada. Una animación puede seguir mostrando el tanteador previo al cobro. Si la secuencia falta, consultá `juego.manos` por mesa y número, con las acciones anteriores o iguales a la posición. La posición cero corresponde al reparto. La cabecera y el resto de los datos del árbitro son privados.
+
+### Habilitar o revocar una cuenta
+
+El operador usa el **ID de jugador** de la cuenta y una conexión administrativa al esquema del juego. El cambio de permiso se aplica al servidor de inmediato. Al recargar la mesa se actualiza la visibilidad del control.
+
+```sql
+INSERT INTO juego.reporteros (jugador) VALUES ($1) ON CONFLICT DO NOTHING;
+-- Para revocar el acceso:
+DELETE FROM juego.reporteros WHERE jugador = $1;
+```
