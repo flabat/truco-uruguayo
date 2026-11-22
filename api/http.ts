@@ -13,10 +13,7 @@ export function responderJson(res: ServerResponse, status: number, valor: unknow
     .end(JSON.stringify(valor));
 }
 
-export async function leerJson(req: IncomingMessage, maxBytes = 4096): Promise<Record<string, unknown>> {
-  if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/json") {
-    throw new ErrorPeticion(415, "Se esperaba un cuerpo JSON.");
-  }
+export async function leerCuerpo(req: IncomingMessage, maxBytes: number): Promise<string> {
   const partes: Buffer[] = [];
   let longitud = 0;
   for await (const parte of req.iterator({ destroyOnReturn: false })) {
@@ -27,8 +24,16 @@ export async function leerJson(req: IncomingMessage, maxBytes = 4096): Promise<R
     }
     partes.push(parte);
   }
+  return Buffer.concat(partes).toString("utf8");
+}
+
+export async function leerJson(req: IncomingMessage, maxBytes = 4096): Promise<Record<string, unknown>> {
+  if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/json") {
+    throw new ErrorPeticion(415, "Se esperaba un cuerpo JSON.");
+  }
+  const cuerpo = await leerCuerpo(req, maxBytes);
   try {
-    const valor: unknown = JSON.parse(Buffer.concat(partes).toString("utf8"));
+    const valor: unknown = JSON.parse(cuerpo);
     if (typeof valor === "object" && valor !== null && !Array.isArray(valor)) {
       return valor as Record<string, unknown>;
     }

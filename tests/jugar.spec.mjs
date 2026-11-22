@@ -64,6 +64,40 @@ async function simular(page, handler) {
   return sockets;
 }
 
+test("la mesa permite reportar la flor que se ve en el historial sólo con el permiso del jugador", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  const inicial = iniciarOnline({
+    versionReparto: "online-1", reglaFlor: "inmediata-v2", mano: 0, dador: 1, muestra: "bastos-01",
+    manos: [["espadas-04", "espadas-10", "espadas-11"], ["copas-04", "oros-01", "espadas-03"]],
+  });
+  const flor = aplicarOnline(inicial, { tipo: "flor", asiento: 0 });
+  expect(flor.ok).toBe(true);
+  let puedeReportar = false;
+  await simular(page, path => {
+    if (path === "/api/jugador") return { json: { id: "ana", nombre: "Alex", puedeReportar } };
+    if (path.endsWith(mesaId)) return { json: mesa("1v1", [seat(0, "humano", "Alex"), seat(1, "computadora", "Computadora 2")]) };
+    if (path.endsWith("/partida")) return { json: {
+      ...partida, version: 8, manoNumero: 2, puntos: marcadorOnline(flor.estado), vista: vistaOnline(flor.estado, 0),
+    } };
+  });
+  await page.goto("/jugar/?mesa=" + mesaId);
+  const historial = page.getByRole("region", { name: "Historial de la mano" });
+  const reportar = historial.getByRole("button", { name: "Reportar esta jugada" });
+  await expect(historial.getByRole("listitem")).toHaveText("Alex dijo «Flor».");
+  await expect(reportar).toHaveCount(0);
+  puedeReportar = true;
+  await page.reload();
+  await expect(reportar).toBeVisible();
+  await expect(historial.locator("[name=mano]")).toHaveValue("2");
+  await expect(historial.locator("[name=posicion]")).toHaveValue("1");
+  await expect(historial.locator("[name=puntos]")).toHaveValue("3-0");
+  expect((await reportar.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  if (process.env.CAPTURAS_UI) await page.locator(".j-partida").screenshot({
+    path: process.env.CAPTURAS_UI + "/reportar-flor-" + test.info().project.name + ".jpg", quality: 88, scale: "css",
+  });
+});
+
 test("el pie muestra el motor y el modelo asignados a la mesa y los quita al volver al salón", async ({ page, isMobile }) => {
   if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
   const pin = "6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2";

@@ -66,6 +66,7 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   await page.getByRole("button",{name:"Falta envido",exact:true}).press("Enter");
   const entries=page.getByRole("region",{name:"Señas de esta mano"}).getByRole("listitem");
   const publicas=page.getByRole("region",{name:"Historial de la mano",exact:true}).getByRole("listitem");
+  await expect(page.getByRole("button", { name: "Reportar esta jugada" })).toHaveCount(0);
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido"]);
   await expect(publicas).toHaveText(["A dijo «Falta envido»."]);
   await page.reload();
@@ -80,7 +81,7 @@ test("un gesto se confirma junto a la jugada y se recupera una sola vez", async 
   await expect(entries).toHaveText(["A · Alzar ambas cejas · falta envido", "C · Alzar ambas cejas · Yo no canto"]);
 });
 
-test("rivales y espectador reciben y muestran la misma jugada con seña que en silencio", async ({ page }) => {
+test("rivales y espectador reciben y muestran la misma jugada con seña que en silencio", async ({ page, context }) => {
   let asiento = 1;
   let paso;
   const marcador = { manoNumero: 1, meta: 40, puntos: [0, 0], ganadorPartida: null };
@@ -93,7 +94,7 @@ test("rivales y espectador reciben y muestran la misma jugada con seña que en s
     humanos: 0, computadoras: 4, asientos, tablero: tableroEspectador(paso.state),
   });
   await page.routeWebSocket("**/vivo", () => {});
-  await page.route("**/api/jugador", r => r.fulfill({ json: { id: "s" + asiento, nombre: "CPU", salonHabilitado: true } }));
+  await page.route("**/api/jugador", r => r.fulfill({ json: { id: "s" + asiento, nombre: "CPU", salonHabilitado: true, puedeReportar: true } }));
   await page.route("**/api/mesas/" + id, r => r.fulfill({ json: sala(asiento) }));
   await page.route("**/partida", r => r.fulfill({ json: privada() }));
   await page.route("**/api/salon/mesas/" + id, r => r.fulfill({ json: publica() }));
@@ -109,6 +110,7 @@ test("rivales y espectador reciben y muestran la misma jugada con seña que en s
       await expect(historia.getByRole("listitem")).toHaveText(["A jugó 3 de espadas."]);
       const tapete = page.getByRole("region", { name: "Tapete" });
       if (mira) {
+        await expect(historia.getByRole("button", { name: "Reportar esta jugada" })).toHaveCount(0);
         await expect(tapete.getByRole("button")).toHaveCount(0);
         await expect(tapete.getByRole("combobox")).toHaveCount(0);
         await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
@@ -125,4 +127,27 @@ test("rivales y espectador reciben y muestran la misma jugada con seña que en s
     await expect(page.getByRole("region", { name: "Señas de esta mano" }).getByRole("listitem"))
       .toHaveText(["A · Alzar ambas cejas · 3 de espadas"]);
   }
+
+  // Una persona habilitada vio la seña. El formulario envía sólo la posición pública en otra pestaña.
+  const ruta = "/api/mesas/" + id + "/reportes";
+  await context.route("**" + ruta, route => route.fulfill({ contentType: "text/plain", body: "Borrador de prueba" }));
+  const recibida = context.waitForEvent("request", { predicate: req => new URL(req.url()).pathname === ruta });
+  const abierta = context.waitForEvent("page");
+  const reportar = page.getByRole("button", { name: "Reportar esta jugada" });
+  await reportar.focus();
+  await expect(reportar).toBeFocused();
+  await reportar.press("Enter");
+  const solicitud = await recibida;
+  expect(solicitud.method()).toBe("POST");
+  expect(await solicitud.headerValue("origin")).toBe(new URL(page.url()).origin);
+  const { cliente, ...datos } = Object.fromEntries(new URLSearchParams(solicitud.postData()));
+  expect(datos).toEqual({ mano: "1", posicion: "1", vuelta: "1", puntos: "0-0", fase: "jugada" });
+  const revision = page.getByRole("contentinfo").locator('a[href*="/commit/"]');
+  if (await revision.count()) expect(cliente).toBe((await revision.getAttribute("href")).split("/").at(-1));
+  else expect(cliente).toBeUndefined();
+  const pestana = await abierta;
+  await expect(pestana.locator("body")).toHaveText("Borrador de prueba");
+  expect(await pestana.evaluate(() => window.opener === null)).toBe(true);
+  await expect(page).toHaveURL("/jugar/?mesa=" + id);
+  await pestana.close();
 });

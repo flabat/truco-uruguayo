@@ -127,6 +127,8 @@
 .j-historia li { margin-block:.3rem; }
 .j-historia-actual { margin: 1rem 0; border-block: 1px solid var(--line); padding-block: .75rem; overflow-wrap: anywhere; }
 .j-historia-actual h3 { font: 650 1rem/1.3 var(--sans, sans-serif); }
+.j-cabecera-historial { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 1rem; }
+.j-reportar { min-height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .j-historia-actual ol { margin: .35rem 0 0; padding-inline-start: 1.75rem; }
 .j-historia-actual li { color: var(--body); padding-inline-start: .2rem; }
 .j-historia-actual li::marker { color: var(--muted); font-variant-numeric: tabular-nums; }

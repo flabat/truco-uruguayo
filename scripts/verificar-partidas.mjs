@@ -11,7 +11,7 @@ const servicio = crearPartidas(pool, web);
 const jugadores = [];
 const mesas = [];
 const sesiones = [];
-async function perfilDe(indice, query = "") {
+async function cookieDe(indice) {
   let cookie = sesiones[indice];
   if (!cookie) {
     const valor = randomUUID();
@@ -19,7 +19,11 @@ async function perfilDe(indice, query = "") {
     await pool.query("INSERT INTO juego.sesiones (clave, jugador) VALUES ($1,$2)", [clave, jugadores[indice]]);
     cookie = sesiones[indice] = "truco_sesion=" + valor;
   }
-  return fetch("http://localhost:3001/api/perfil" + query, { headers: { cookie } });
+  return cookie;
+}
+
+async function perfilDe(indice, query = "") {
+  return fetch("http://localhost:3001/api/perfil" + query, { headers: { cookie: await cookieDe(indice) } });
 }
 
 const comando = (version, accion) => ({ id: randomUUID(), version, ...(accion && { accion }) });
@@ -83,6 +87,44 @@ async function probarReintentoAtomico(mesa, orden) {
   return primera;
 }
 
+async function probarReporte(mesa) {
+  const api = "http://localhost:3001/api";
+  const ruta = api + "/mesas/" + mesa + "/reportes";
+  const cookie = await cookieDe(0);
+  const cursor = { mano: "1", posicion: "1", vuelta: "1", puntos: "0-0", fase: "jugada", cliente: "a".repeat(40) };
+  const enviar = (campos = cursor, sesion = cookie, origen = web.origin, url = ruta) =>
+    fetch(url, { method: "POST", headers: { cookie: sesion, origin: origen }, body: new URLSearchParams(campos), redirect: "manual" });
+  const permiso = async () => (await (await fetch(api + "/jugador", { headers: { cookie } })).json()).puedeReportar;
+  assert.equal(await permiso(), false);
+  assert.equal((await enviar(cursor, "")).status, 401);
+  assert.equal((await enviar()).status, 403);
+  await pool.query("INSERT INTO juego.reporteros (jugador) VALUES ($1)", [jugadores[0]]);
+  assert.equal(await permiso(), true);
+  assert.equal((await enviar(cursor, cookie, "https://otro.example")).status, 403);
+  assert.equal((await enviar(cursor, cookie, web.origin, api + "/mesas/" + randomUUID() + "/reportes")).status, 404);
+  assert.equal((await enviar({ ...cursor, posicion: "9999" })).status, 409);
+  assert.equal((await enviar({ ...cursor, asiento: "3" })).status, 400);
+  // La API ya está en la mano 2. El navegador envía la primera jugada de la mano anterior.
+  const respuestas = await Promise.all([enviar(), enviar()]);
+  assert.ok(respuestas.every(r => r.status === 303));
+  const ubicacion = respuestas[0].headers.get("location");
+  assert.equal(respuestas[1].headers.get("location"), ubicacion);
+  const url = new URL(ubicacion);
+  assert.equal(url.origin + url.pathname, "https://github.com/flabat/truco-uruguayo/issues/new");
+  const body = url.searchParams.get("body");
+  assert.ok(body.includes(mesa));
+  assert.match(body, /Truco/i);
+  assert.doesNotMatch(body, /Quiero|oros-03|espadas-12/);
+  const { rows } = await pool.query("SELECT id, mano, posicion, secuencia, asiento, cliente FROM juego.reportes WHERE mesa=$1", [mesa]);
+  assert.equal(rows.length, 1);
+  assert.ok(body.includes(rows[0].id));
+  assert.deepEqual([rows[0].mano, rows[0].posicion, Number(rows[0].secuencia), rows[0].asiento, rows[0].cliente],
+    [1, 1, 2, 0, cursor.cliente]);
+  await pool.query("DELETE FROM juego.reporteros WHERE jugador=$1", [jugadores[0]]);
+  assert.equal(await permiso(), false);
+  assert.equal((await enviar()).status, 403);
+}
+
 async function probarMesa() {
   const id = await preparar("2v2");
   const leer = i => servicio.leer(id, jugadores[i]);
@@ -139,6 +181,7 @@ async function probarMesa() {
   assert.deepEqual(await servicio.ejecutar(id, jugadores[0], "siguiente", nueva), siguiente);
   assert.deepEqual(await accion(0, truco), cantado);
   const { eventos } = await replayDe(id);
+  await probarReporte(id);
   assert.deepEqual(eventos.filter(e => e.tipo === "reparto").map(e => e.manoNumero), [1, 2]);
   assert.equal(eventos.filter(e => e.tipo === "decision" && e.accion.tipo === "quiero").length, 1);
 }

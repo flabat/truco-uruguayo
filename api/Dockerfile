@@ -5,6 +5,7 @@ RUN npm ci --omit=dev
 COPY api/*.ts ./
 COPY api/migrations ./migrations
 COPY src/motor /app/src/motor
+COPY src/lib/cartas.ts src/lib/cantos.ts /app/src/lib/
 COPY training/contracts /app/training/contracts
 COPY training/seat /app/training/seat
 COPY training/anchored/actor.ts training/anchored/duel.ts training/anchored/partners.ts /app/training/anchored/

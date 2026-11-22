@@ -10,6 +10,7 @@ import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
 import { Naipe, Tapete } from "./Tapete";
+import { ReporteDeJugada } from "./ReporteDeJugada";
 
 type Canto = Exclude<Tipo, "carta">;
 const grupos: { nombre: string; opciones: Canto[] }[] = [
@@ -135,6 +136,7 @@ export function EnJuego({
   mesa,
   partida,
   bloqueada,
+  puedeReportar,
   mostrandoCartas = false,
   estadoRed,
   aviso,
@@ -146,6 +148,7 @@ export function EnJuego({
   mesa: Mesa;
   partida: Partida;
   bloqueada: boolean;
+  puedeReportar: boolean;
   mostrandoCartas?: boolean;
   estadoRed?: string;
   aviso?: string;
@@ -260,7 +263,10 @@ export function EnJuego({
           {resultado && v.resumenTantos && <ResumenDeTantos resumen={v.resumenTantos} propio={propio}
             equipo={e => mesa.modo === "1v1" ? `${equipo(e)} (${nombre(e)})` : equipo(e)}
             acciones={v.acciones} resultado={resultado} nombre={nombre} />}
-          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} />
+          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre}>
+            {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
+              presentando={mostrandoCartas} voz={voz?.indice} />}
+          </HistorialDeMano>
           {!resultado && !(mostrandoCartas && voz) && (
             <dl className="j-cuenta">
               <div>

@@ -8,6 +8,7 @@ import type { Format, PublicTurn } from "../../../training/contracts/index";
 export type Modo = "1v1" | "2v2" | "3v3";
 export interface Jugador {
   salonHabilitado?: boolean;
+  puedeReportar?: boolean;
   id: string;
   nombre: string;
 }

@@ -22,8 +22,8 @@ export function descripcionDeJugada(accion: VistaOnline["acciones"][number], nom
   return quien + " dijo «" + canto[accion.tipo] + "».";
 }
 
-export function HistorialDeMano({ acciones, cobros, nombre, titulo = "Historial de la mano" }:
-  Pick<VistaOnline, "acciones" | "cobros"> & { nombre: Nombre; titulo?: string }) {
+export function HistorialDeMano({ acciones, cobros, nombre, titulo = "Historial de la mano", children }:
+  Pick<VistaOnline, "acciones" | "cobros"> & { nombre: Nombre; titulo?: string; children?: ReactNode }) {
   const entradas: ReactNode[] = acciones.map(a => descripcionDeJugada(a, nombre));
   const flor = cobros.find(c => c.comparacionFlor);
   if (flor?.comparacionFlor && flor.comparacionFlor.indiceAccion < acciones.length) {
@@ -37,7 +37,7 @@ export function HistorialDeMano({ acciones, cobros, nombre, titulo = "Historial 
   const anteriores = Math.max(0, entradas.length - 3);
   const filas = entradas.map((entrada, i) => <li key={i}>{entrada}</li>);
   return <section className="j-historia j-historia-actual" aria-label={titulo}>
-    <h3>{titulo}</h3>
+    <header className="j-cabecera-historial"><h3>{titulo}</h3>{children}</header>
     {anteriores > 0 && <details>
       <summary>{anteriores === 1 ? "Ver 1 jugada anterior" : `Ver ${anteriores} jugadas anteriores`}</summary>
       <ol>{filas.slice(0, anteriores)}</ol>

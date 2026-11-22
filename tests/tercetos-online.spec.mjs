@@ -236,7 +236,7 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await page.routeWebSocket("**/vivo", socket => { canal = socket; });
   await page.route("**/api/**", route => {
     const { pathname } = new URL(route.request().url());
-    const json = pathname === "/api/jugador" ? jugadores[espectadora] : pathname.endsWith("/partida")
+    const json = pathname === "/api/jugador" ? { ...jugadores[espectadora], puedeReportar: true } : pathname.endsWith("/partida")
       ? lectura(estado, espectadora, version) : crearSala(espectadora);
     return route.fulfill({ json });
   });
@@ -252,17 +252,22 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
     version++;
   }
   canal.send(JSON.stringify({ tipo: "actualizar" }));
-  for (const [asiento, canto] of [
-    [5, "Envido"], [2, "Quiero"], [2, "37 de envido"], [5, "Me voy al mazo"],
-    [0, "Flor"], [3, "Flor"], [3, "Contraflor al resto"], [0, "Quiero"], [0, "38 de flor"],
+  const reporte = page.getByRole("region", { name: "Historial del duelo" }).locator("form");
+  for (const [asiento, canto, duelo, posicion] of [
+    [5, "Envido", 1, 1], [2, "Quiero", 1, 2], [2, "37 de envido", 1, 2], [5, "Me voy al mazo", 1, 3],
+    [0, "Flor", 2, 4], [3, "Flor", 2, 5], [3, "Contraflor al resto", 2, 6], [0, "Quiero", 2, 7], [0, "38 de flor", 2, 7],
   ]) {
     const puesto = tapete.getByRole("group", { name: "Asiento " + (asiento + 1) + " · " + nombres[asiento], exact: true });
     await expect(puesto.locator(".j-voz")).toHaveText(canto);
+    await expect(reporte.locator("[name=duelo]")).toHaveValue(String(duelo));
+    await expect(reporte.locator("[name=posicion]")).toHaveValue(String(posicion));
     await expect(tapete.locator(".j-prueba-tantos")).toHaveCount(0);
     await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
     await page.clock.runFor(1500);
   }
   const flor = tapete.getByRole("figure", { name: "Flor ganadora · 38 tantos" });
+  await expect(reporte.locator("[name=fase]")).toHaveValue("resultado");
+  await expect(reporte.locator("[name=posicion]")).toHaveValue(String(ejemplo.acciones.length));
   const envido = tapete.getByRole("figure", { name: "Envido ganador · 37 tantos" });
   await expect(flor.getByRole("img")).toHaveCount(3);
   await expect(flor).toContainText("Duelo 2");

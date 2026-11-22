@@ -12,8 +12,9 @@ const bloques = juego.find(seccion => seccion.id === "senas")!.blocks;
 const filas = bloques.map(b => "table" in b ? b.table : undefined).find(tabla => tabla !== undefined)!.rows;
 const menu = signals.map((id, i) => ({ id, texto: filas[i][1].replace(/\.$/, "") }));
 
-export function MesaConSenas({ base, mesa, partida, bloqueada, estadoRed, aviso, mostrandoCartas, voz, jugar }: {
+export function MesaConSenas({ base, mesa, partida, bloqueada, estadoRed, aviso, puedeReportar, mostrandoCartas, voz, jugar }: {
   base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; estadoRed?: string; aviso?: string; mostrandoCartas: boolean; voz?: Voz;
+  puedeReportar: boolean;
   jugar: (accion?: Eleccion & { sena?: Signal }) => void;
 }) {
   const [seleccion, elegir] = useState<{version: number; sena: Signal | ""}>();
@@ -32,7 +33,7 @@ export function MesaConSenas({ base, mesa, partida, bloqueada, estadoRed, aviso,
     </div>
   );
   return <>
-    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} estadoRed={estadoRed} aviso={aviso} sena={selector} mostrandoCartas={mostrandoCartas} voz={voz}
+    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} estadoRed={estadoRed} aviso={aviso} sena={selector} mostrandoCartas={mostrandoCartas} voz={voz} puedeReportar={puedeReportar}
       jugar={accion => jugar(accion && sena ? {...accion, sena} : accion)} />
     {historial.length > 0 && (
       <section className="j-senas-vistas" aria-label="Señas de esta mano">
