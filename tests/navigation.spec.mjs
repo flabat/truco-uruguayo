@@ -56,6 +56,21 @@ test("abre una variante de mesa y vuelve al capítulo que la explica", async ({ 
 test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
+  test("las páginas de privacidad y eliminación se consultan sin cuenta", async ({ page }) => {
+    await page.goto("./");
+    const pie = page.getByRole("contentinfo").getByRole("navigation", { name: "Privacidad y datos" });
+    await pie.getByRole("link", { name: "Política de privacidad" }).click();
+    await expect(page).toHaveURL("privacidad/");
+    const contenido = page.getByRole("main");
+    await expect(contenido.getByRole("heading", { level: 1 })).toHaveText("Política de privacidad");
+    await expect(contenido.getByRole("link", { name: "flabat@flabat.com" })).toHaveAttribute("href", "mailto:flabat@flabat.com");
+    await contenido.getByRole("link", { name: "pedir la eliminación de tus datos" }).click();
+    await expect(page).toHaveURL("eliminacion-de-datos/");
+    await expect(contenido.getByRole("heading", { level: 1 })).toHaveText("Eliminación de datos");
+    await expect(contenido.getByRole("link", { name: "flabat@flabat.com" })).toHaveAttribute("href", "mailto:flabat@flabat.com");
+    await expect(pie.getByRole("link", { name: "Eliminación de datos" })).toHaveAttribute("href", "/eliminacion-de-datos/");
+  });
+
   test("el pie de la guía y la práctica identifica las versiones locales", async ({ page }) => {
     const commit = process.env.TRUCO_RELEASE || execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
     const pie = page.getByRole("contentinfo");
