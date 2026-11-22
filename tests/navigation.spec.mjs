@@ -63,10 +63,12 @@ test.describe("sin JavaScript", () => {
     await expect(page).toHaveURL("privacidad/");
     const contenido = page.getByRole("main");
     await expect(contenido.getByRole("heading", { level: 1 })).toHaveText("Política de privacidad");
+    await expect(contenido).toContainText("El ingreso con Facebook está pausado");
     await expect(contenido.getByRole("link", { name: "flabat@flabat.com" })).toHaveAttribute("href", "mailto:flabat@flabat.com");
     await contenido.getByRole("link", { name: "pedir la eliminación de tus datos" }).click();
     await expect(page).toHaveURL("eliminacion-de-datos/");
     await expect(contenido.getByRole("heading", { level: 1 })).toHaveText("Eliminación de datos");
+    await expect(contenido).toContainText("Si ya quitaste Truco Oriental de tus aplicaciones en Facebook");
     await expect(contenido.getByRole("link", { name: "flabat@flabat.com" })).toHaveAttribute("href", "mailto:flabat@flabat.com");
     await expect(pie.getByRole("link", { name: "Eliminación de datos" })).toHaveAttribute("href", "/eliminacion-de-datos/");
   });
