@@ -1,0 +1,38 @@
+---
+import Privacidad from "../layouts/Privacidad.astro";
+import { url } from "../lib/guide";
+---
+
+<Privacidad title="Política de privacidad" description="Conocé qué datos usa Truco Oriental en eltru.co, quién puede verlos y cómo contactarnos.">
+  <Fragment slot="introduccion">Truco Oriental opera eltru.co. Usamos tus datos para reconocerte cuando volvés, mantener tu lugar en la mesa y mostrarte las partidas que jugaste.</Fragment>
+
+  <section class="rule-block">
+    <h2>Tu cuenta</h2>
+    <p>Si entrás con Facebook, solicitamos tu perfil público y tu correo electrónico. Facebook puede compartir tu identificador para esta aplicación, tu nombre y el correo que hayas autorizado. Si elegís Google o Discord, también recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio.</p>
+    <p>Keycloak, el sistema de cuentas de Truco Oriental, gestiona el acceso y la vinculación con el proveedor. Si te registrás directamente con un correo y una contraseña, también gestiona su verificación y recuperación. El juego guarda tu identificador de jugador, la referencia a tu cuenta y el nombre que se muestra a los demás participantes de tu mesa.</p>
+  </section>
+
+  <section class="rule-block">
+    <h2>Partidas y espectadores</h2>
+    <p>Guardamos quién creó la mesa y quién ocupó cada asiento, los repartos, las jugadas, los tantos y el resultado. Eso permite continuar una partida y consultar tu historial en Mi perfil.</p>
+    <p>En las mesas públicas del salón, otros jugadores que hayan iniciado sesión pueden mirar las cartas jugadas, los cantos y el tanteador. Ven etiquetas de asiento como «Jugador 1». Las cartas ocultas y las señas privadas quedan fuera de la vista de espectadores.</p>
+  </section>
+
+  <section class="rule-block">
+    <h2>Cookies y datos de tu navegador</h2>
+    <p>Usamos cookies para completar el ingreso y mantener tu sesión. El intento de ingreso vence a los diez minutos y la sesión del juego dura hasta siete días. Cerrar sesión en el juego termina esa sesión.</p>
+    <p>El navegador recuerda el progreso de las lecciones, la última mesa que abriste y si cerraste la invitación a Discord. Podés borrar esos datos desde la configuración de almacenamiento del sitio en tu navegador.</p>
+  </section>
+
+  <section class="rule-block">
+    <h2>Servicios y registros</h2>
+    <p>Cuando elegís un proveedor de ingreso, le llega la solicitud para autenticarte. Si abrís la comunidad o un canal de voz, Discord gestiona esa conexión y el audio. Truco Oriental no recibe ni graba las conversaciones de voz.</p>
+    <p>Al usar los controles de compartir, de acceso a Discord o de ingreso a una mesa por invitación, el sitio envía un aviso a eltru.co para contar esa acción. El aviso contiene el tipo de acción y omite tu nombre, tu identificador y el enlace de invitación. Los servidores pueden registrar errores para diagnosticar problemas de acceso y funcionamiento.</p>
+  </section>
+
+  <section class="rule-block">
+    <h2>Conservación y contacto</h2>
+    <p>La cuenta y el historial permanecen disponibles entre visitas. Cerrar sesión o borrar las cookies conserva esos registros en el servidor. Las copias de seguridad que se hayan generado pueden conservar datos anteriores hasta su rotación.</p>
+    <p>Para consultar por tus datos, escribile a Truco Oriental a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>. También podés <a href={url("eliminacion-de-datos/")}>pedir la eliminación de tus datos</a>, incluso si perdiste acceso a la cuenta.</p>
+  </section>
+</Privacidad>

@@ -85,6 +85,10 @@ const pages = [
           Fuentes y variantes <span aria-hidden="true">↗</span>
         </a>
       </div>
+      <nav class="shell footer-privacidad" aria-label="Privacidad y datos">
+        <a href={url("privacidad/")}>Política de privacidad</a>
+        <a href={url("eliminacion-de-datos/")}>Eliminación de datos</a>
+      </nav>
       <dl class="shell footer-versiones" aria-label="Versiones">
         <div>
           <dt>Interfaz</dt>
@@ -122,6 +126,8 @@ const pages = [
   });
 </script>
 <style>
+  .footer-privacidad { display: flex; flex-wrap: wrap; gap: 6px 24px; padding-bottom: 16px; color: var(--muted); font-size: 12px; }
+  .footer-privacidad a { text-decoration: underline; text-underline-offset: 3px; }
   .menu-partida { display: none; }
   @media (min-width: 701px) and (max-width: 820px) {
     .masthead-inner, .masthead-inner .site-nav { gap: 12px; }
