@@ -217,10 +217,13 @@ async function probarComputadoras(modo, meta) {
   assert.deepEqual(await servicio.leer(id, jugadores[0]), partida);
   await assert.rejects(servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version)), { status: 409 });
   const replay = await replayDe(id);
-  const manos = (await pool.query("SELECT acciones FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id])).rows;
+  const manos = (await pool.query("SELECT reparto, acciones FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id])).rows;
   assert.equal(replay.id, id);
   assert.equal(replay.origen, "mesa");
-  assert.equal(replay.eventos.filter(e => e.tipo === "reparto").length, manos.length);
+  const repartos = replay.eventos.filter(e => e.tipo === "reparto").map(e => e.reparto);
+  assert.deepEqual(repartos, manos.map(m => m.reparto));
+  const computadoras = Array.from({ length: cantidad - 1 }, (_, i) => i + 1);
+  for (const reparto of repartos) assert.deepEqual(reparto.respondenSinFlor, computadoras);
   assert.equal(replay.eventos.filter(e => e.tipo === "cierre").length, 1);
   const decisiones = replay.eventos.filter(e => e.tipo === "decision");
   assert.deepEqual(decisiones.map(e => e.accion), manos.flatMap(m => m.acciones));

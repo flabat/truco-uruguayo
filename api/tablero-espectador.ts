@@ -1,5 +1,10 @@
 import type { Vuelta, VueltaCerrada } from "../src/motor/mano.ts";
-import type { EstadoOnline } from "../src/motor/mesa-online.ts";
+import type { AccionOnline, EstadoOnline } from "../src/motor/mesa-online.ts";
+
+/** Los pases anteriores a la respuesta pública de las computadoras eran consultas privadas. */
+export function esAccionPublica(accion: AccionOnline, respondenSinFlor: readonly number[] | null | undefined) {
+  return accion.tipo !== "paso-flor" || respondenSinFlor?.includes(accion.asiento) === true;
+}
 
 function vueltaPublica(vuelta: Vuelta): Vuelta {
   return { salida: vuelta.salida, jugadas: vuelta.jugadas.map(({ asiento, carta }) => ({ asiento, carta })) };
@@ -17,7 +22,7 @@ export function tableroEspectador(estado: EstadoOnline) {
     vueltaActual: mano.vueltaActual ? vueltaPublica(mano.vueltaActual) : null,
     // Orden de cartas del tapete. La palabra para flor o una respuesta puede ser privada.
     turnoDeCartas: resultado ? null : mano.turno, valorTruco: estado.valorTruco,
-    acciones: estado.acciones.filter(a => a.tipo !== "paso-flor").map(a => a.tipo === "carta"
+    acciones: estado.acciones.filter(a => esAccionPublica(a, mano.reparto.respondenSinFlor)).map(a => a.tipo === "carta"
       ? { tipo: a.tipo, asiento: a.asiento, carta: a.carta } : { tipo: a.tipo, asiento: a.asiento }),
     cobros: estado.cobros.map(({ equipo, tantos, motivo, asiento, tantoGanador }) =>
       ({ equipo, tantos, motivo, asiento, tantoGanador })),

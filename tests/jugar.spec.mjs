@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { confirmar, confirmarComputadora, jugarComputadoras, restaurar } from "../api/turnos.ts";
+import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, restaurar } from "../api/turnos.ts";
 import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
 import { reparto as tresFlores } from "./fixtures/flor-querida.ts";
 import { mesaFabian } from "./fixtures/mesa-flor-fabian.ts";
@@ -383,6 +383,61 @@ test("la mano alinea las tres cartas y conserva sus nombres accesibles", async (
   }
   if (process.env.CAPTURAS_UI)
     await zona.screenshot({ path: `${process.env.CAPTURAS_UI}/mano-${test.info().project.name}.png`, scale: "css" });
+});
+
+test("la computadora dice «Yo no canto» ante la flor de mano antes de la primera carta", async ({ page, isMobile }) => {
+  const rival = seat(1, "computadora", "Computadora 2");
+  const fila = {
+    numero: 2, version: 5, version_reglas: 1, version_senas: null, puntos_inicio: [1, 0], acciones: [],
+    reparto: { ...dueloFlor.reparto, reglaFlor: "inmediata-v2", respondenSinFlor: [1] },
+  };
+  function guardar(mano) {
+    fila.acciones = guardarAcciones(mano);
+    fila.version++;
+  }
+  const sockets = await simular(page, (path, req) => {
+    if (path.endsWith("/" + mesaId)) return { json: mesa("1v1", [personas[0], rival]) };
+    if (path.endsWith("/partida") || path.endsWith("/acciones")) {
+      let mano = restaurar(fila, "duel", 40, [0]);
+      if (path.endsWith("/acciones")) {
+        mano = confirmar(mano, "duel", { ...req.postDataJSON().accion, asiento: 0 });
+        guardar(mano);
+      }
+      return { json: { ...partida, manoNumero: fila.numero, version: fila.version,
+        puntos: marcadorOnline(mano.estado), vista: vistaOnline(mano.estado, 0) } };
+    }
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  const tanteador = page.getByRole("group", { name: "Tanteador" }).locator("strong");
+  const historial = page.getByRole("region", { name: "Historial de la mano" }).getByRole("listitem");
+  const carta = page.getByRole("button", { name: "Jugar 6 de oros" });
+  const respuesta = page.getByRole("group", { name: "Rival · Computadora 2" }).getByText("Yo no canto", { exact: true });
+  await expect(tanteador).toHaveText(["1", "0"]);
+  await page.getByRole("button", { name: "Flor", exact: true }).click();
+  await expect(historial).toHaveText(["Ana dijo «Flor»."]);
+  await expect(carta).toBeDisabled();
+
+  guardar(jugarComputadoras(restaurar(fila, "duel", 40, [0]), "duel", [0]));
+  sockets.at(-1).send(JSON.stringify({ tipo: "actualizar" }));
+  const anuncios = ["Ana dijo «Flor».", "Computadora 2 dijo «Yo no canto»."];
+  await expect(respuesta).toBeVisible();
+  await expect(historial).toHaveText(anuncios);
+  await expect(tanteador).toHaveText(["4", "0"]);
+  await expect(page.getByText("Vos · 3 tantos por flor")).toBeVisible();
+  await expect(carta).toBeEnabled();
+  if (isMobile && process.env.CAPTURAS_UI) await page.locator(".j-partida").screenshot({
+    path: process.env.CAPTURAS_UI + "/flor-yo-no-canto-mobile.jpg", quality: 85, scale: "css",
+  });
+
+  await page.reload();
+  await expect(historial).toHaveText(anuncios);
+  await expect(respuesta).toBeVisible();
+  await expect(tanteador).toHaveText(["4", "0"]);
+  await carta.press("Enter");
+  await expect(historial).toHaveText([...anuncios, "Ana jugó 6 de oros."]);
+  expect(fila.acciones).toEqual([
+    { tipo: "flor", asiento: 0 }, { tipo: "paso-flor", asiento: 1 }, { tipo: "carta", asiento: 0, carta: "oros-06" },
+  ]);
 });
 
 test("la flor de la pareja interrumpe el envido de Fabián y devuelve el turno sin pases", async ({ page }) => {

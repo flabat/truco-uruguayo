@@ -10,7 +10,7 @@ const cursor: CursorReporte = { mano: 2, posicion: 1, vuelta: 1, puntos: "4-0", 
 const flor = { asiento: 0, tipo: "flor", duelo: null };
 const mano = {
   modo: "1v1", meta: 40, politica: "incumbent-online-v1", perfil: "duel",
-  version_reglas: 1, version_reparto: "online-1", regla_flor: "inmediata-v2", tipo_reparto: null,
+  version_reglas: 1, version_reparto: "online-1", regla_flor: "inmediata-v2", responden_sin_flor: null, tipo_reparto: null,
   mano: 0, dador: 1, computadoras: [false, true], cobros: [{ equipo: 0, tantos: 3, motivo: "flor" }],
   muestra: "bastos-01", puntos_inicio: [1, 0], puntos: [4, 0], build: "sha256:" + "a".repeat(64),
   secuencia: "8", acciones: [flor],
@@ -74,6 +74,17 @@ test("una consulta de flor histórica se omite sin cambiar la posición de las j
   const texto = new URL(borrador!.url).searchParams.get("body")!;
   assert.doesNotMatch(texto, /Yo no canto|paso-flor/);
   assert.match(texto, /2\. V1 · A0 · Flor/);
+});
+
+test("el reporte incluye «Yo no canto» solo cuando el reparto hace pública la respuesta de ese asiento", async () => {
+  const acciones = [flor, { tipo: "paso-flor", asiento: 1, duelo: null }];
+  for (const asientos of [[1], [0], null]) {
+    const { db } = lectura({ ...mano, acciones, responden_sin_flor: asientos });
+    const borrador = await prepararReporte(db, mesa, 0, { ...cursor, posicion: 2 }, web, reporte);
+    const texto = new URL(borrador!.url).searchParams.get("body")!;
+    if (asientos?.includes(1)) assert.match(texto, /1\. V1 · A0 · Flor\n2\. V1 · A1 · Yo no canto/);
+    else assert.doesNotMatch(texto, /Yo no canto/);
+  }
 });
 
 test("un reparto anterior al replay conserva sus coordenadas y no inventa la secuencia", async () => {

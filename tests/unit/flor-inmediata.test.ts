@@ -4,7 +4,7 @@ import {
   aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, repartirOnline, vistaOnline, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline,
 } from "../../src/motor/mesa-online.ts";
-import type { Asiento, TresCartas } from "../../src/motor/reparto.ts";
+import { esRepartoOnline, type Asiento, type TresCartas } from "../../src/motor/reparto.ts";
 
 import { mesaFabian } from "../fixtures/mesa-flor-fabian.ts";
 
@@ -67,6 +67,79 @@ function repartir(cantidad: 2 | 4 | 6, flores: readonly Asiento[]): RepartoOnlin
     manos: ternas.slice(0, cantidad).map(([a, b, c], i) => [a, b, flores.includes(i as Asiento) ? c : sinFlor[i]]),
   };
 }
+
+test("la computadora rival contesta la flor antes del cobro, incluso si termina el chico", () => {
+  const reparto = { ...repartir(2, [0]), respondenSinFlor: [1] as const };
+  const canto = { tipo: "flor", asiento: 0 } as const;
+  const respuesta = { tipo: "paso-flor", asiento: 1 } as const;
+  for (const inicio of [1, 39]) {
+    const empezar = () => iniciarOnline(reparto, [inicio, 0], 40, 2);
+    const consulta = jugar(empezar(), canto);
+    assert.deepEqual(aDecidir(consulta), [1]);
+    assert.deepEqual(consulta.cobros, []);
+    assert.deepEqual(vistaOnline(consulta, 0).legales, []);
+    assert.deepEqual(vistaOnline(consulta, 1).legales, ["paso-flor"]);
+    assert.deepEqual(elegirAccionOnline(vistaOnline(consulta, 1)), respuesta);
+    const resuelta = jugar(consulta, respuesta);
+    assert.deepEqual(resuelta.acciones, [canto, respuesta]);
+    assert.equal(resuelta.indiceCobroLateral, 1);
+    const vista = vistaOnline(resuelta, 0);
+    assert.deepEqual(vista.resumenTantos?.totales, [Math.min(3, 40 - inicio), 0]);
+    assert.deepEqual(vista.legales, inicio === 39 ? [] : ["carta", "truco"]);
+    assert.equal(aplicarOnline(resuelta, respuesta).ok, false);
+    assert.deepEqual(resuelta.acciones.reduce(jugar, empezar()), resuelta);
+  }
+  // Los repartos anteriores no guardaban qué asientos tenían computadora.
+  const antiguo = jugar(iniciarOnline(repartir(2, [0])), canto);
+  assert.deepEqual(antiguo.acciones, [canto]);
+  assert.equal(aplicarOnline(antiguo, respuesta).ok, false);
+  assert.deepEqual(aDecidir(antiguo), [0]);
+});
+
+test("solo las computadoras rivales activas sin flor contestan y cada una habla una vez", () => {
+  const reparto = { ...repartir(6, [0, 2]), respondenSinFlor: [1, 3, 4] as const };
+  const canto = { tipo: "flor", asiento: 0 } as const;
+  const respuesta = { tipo: "paso-flor", asiento: 1 } as const;
+  const consulta = jugar(iniciarOnline(reparto), canto);
+  const conRival = jugar(iniciarOnline({ ...repartir(6, [0, 2, 5]), respondenSinFlor: reparto.respondenSinFlor }), canto);
+  assert.deepEqual(vistaTercetos(consulta, 1), vistaTercetos(conRival, 1));
+  const pasa = jugar(consulta, respuesta);
+  assert.equal(aplicarOnline(pasa, { tipo: "paso-flor", asiento: 2 }).ok, false);
+  const subida = jugar(pasa, { tipo: "con-flor-envido", asiento: 2 });
+  assert.deepEqual(aDecidir(subida), [3]);
+  const fin = jugar(subida, { tipo: "paso-flor", asiento: 3 });
+  assert.deepEqual(fin.cobros.map(c => c.tantos), [6]);
+  assert.deepEqual(aDecidir(fin), [0]);
+
+  const pico = jugar(iniciarOnline(reparto, [1, 1], 50, 2), canto);
+  assert.deepEqual(pico.lance?.activos, [0, 3]);
+  assert.deepEqual(aDecidir(pico), [3]);
+  assert.deepEqual(jugar(pico, { tipo: "paso-flor", asiento: 3 }).cobros.map(c => c.tantos), [3]);
+});
+
+test("la computadora que abrió envido contesta solo después de oír la flor", () => {
+  const computadoras = [0] as const;
+  const reparto = { ...repartir(2, [1]), respondenSinFlor: computadoras };
+  const envite = jugar(iniciarOnline(reparto), envido);
+  assert.deepEqual(aDecidir(envite), [1]);
+  const flor = jugar(envite, { tipo: "contraflor-al-resto", asiento: 1 });
+  assert.deepEqual(vistaOnline(flor, 0).legales, ["paso-flor"]);
+  const fin = jugar(flor, { tipo: "paso-flor", asiento: 0 });
+  assert.deepEqual(fin.cobros, [{ equipo: 1, motivo: "flor", tantos: 3 }]);
+  assert.deepEqual(aDecidir(fin), [0]);
+  const sinFlores = { ...repartir(6, []), respondenSinFlor: [1, 2, 3, 4, 5] as const };
+  const querido = jugar(jugar(iniciarOnline(sinFlores), envido), { tipo: "quiero", asiento: 1 });
+  assert.deepEqual(querido.cobros.map(c => c.motivo), ["envido"]);
+  assert.deepEqual(jugar(iniciarOnline(sinFlores), { tipo: "mazo", asiento: 0 }).cobros.map(c => c.motivo), ["truco"]);
+});
+
+test("el reparto guarda y valida los asientos que responden sin flor", () => {
+  const reparto = repartirOnline(2, 1, [1]);
+  assert.deepEqual(reparto.respondenSinFlor, [1]);
+  assert.ok(esRepartoOnline(JSON.parse(JSON.stringify(reparto))));
+  assert.throws(() => repartirOnline(2, 1, [2]), RangeError);
+  assert.equal(esRepartoOnline({ ...reparto, respondenSinFlor: [1, 1] }), false);
+});
 
 test("todos los repartos de flores en duelo, parejas y redondilla ante flor o cualquier envite directo", () => {
   for (const cantidad of [2, 4, 6] as const) {

@@ -28,6 +28,9 @@ export function iniciarChicoOnline(perfil: PerfilChicoOnline, reparto: unknown, 
   if (!esRepartoOnline(reparto) || reparto.manos.length !== asientosPorPerfil[perfil]) {
     throw new RangeError("El reparto no corresponde al perfil del replay.");
   }
+  if (reparto.respondenSinFlor?.some(asiento => humanos?.includes(asiento))) {
+    throw new RangeError("El reparto habilita una respuesta de computadora para un asiento humano.");
+  }
   const motor = iniciarOnline(reparto, puntosInicio, meta, manoNumero);
   return { perfil, motor, humanos, turnos: [], puntos: marcadorOnline(motor), cobros: [], terminada: false };
 }

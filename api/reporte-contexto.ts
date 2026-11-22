@@ -4,6 +4,7 @@ import { cartasPorId } from "../src/lib/cartas.ts";
 import { esCardId, type CardId } from "../src/motor/cartas.ts";
 import type { AccionOnline, Cobro } from "../src/motor/cantos-online.ts";
 import { resumirTantos } from "../src/motor/resumen-tantos.ts";
+import { esAccionPublica } from "./tablero-espectador.ts";
 
 export interface CursorReporte {
   mano: number;
@@ -24,6 +25,7 @@ interface ManoReporte {
   version_reglas: number;
   version_reparto: string;
   regla_flor: string | null;
+  responden_sin_flor: number[] | null;
   tipo_reparto: string | null;
   muestra: CardId;
   mano: number;
@@ -48,8 +50,7 @@ function jugadasDeMano(mano: ManoReporte): string[] {
   let dueloAnterior: number | null = null;
   let cartasJugadas = 0;
   return mano.acciones.flatMap((accion, indice) => {
-    // Los pases de consulta históricos también se omiten de la proyección para espectadores.
-    if (accion.tipo === "paso-flor") return [];
+    if (!esAccionPublica(accion, mano.responden_sin_flor)) return [];
     if (accion.duelo !== dueloAnterior) {
       dueloAnterior = accion.duelo;
       cartasJugadas = 0;
@@ -98,6 +99,7 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
   const { rows: [mano] } = await db.query<ManoReporte>(`
     SELECT m.modo, m.meta, m.politica, coalesce(r.cabecera->>'perfil', m.perfil_tercetos, h.version_senas) AS perfil,
       h.version_reglas, h.reparto->>'versionReparto' AS version_reparto, h.reparto->>'reglaFlor' AS regla_flor,
+      h.reparto->'respondenSinFlor' AS responden_sin_flor,
       h.reparto->>'muestra' AS muestra, h.tipo_reparto, h.puntos_inicio, e.build, e.secuencia,
       (h.reparto->>'mano')::integer AS mano, (h.reparto->>'dador')::integer AS dador,
       (SELECT array_agg(a.computadora ORDER BY a.asiento) FROM juego.asientos a WHERE a.mesa=h.mesa) AS computadoras,

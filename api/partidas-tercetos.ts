@@ -1,7 +1,7 @@
 import type { PoolClient } from "pg";
 import {
-  aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, repartirOnline, versionReglasTercetos, vistaTercetos,
-  type AccionOnline, type EstadoOnline,
+  aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, versionReglasTercetos, vistaTercetos,
+  type AccionOnline, type EstadoOnline, type RepartoOnline,
 } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
@@ -63,8 +63,7 @@ export async function confirmarTurnoTercetosDB(db: PoolClient, fila: RegistroTer
 }
 
 export async function repartirTercetosDB(db: PoolClient, mesa: string, numero: number, version: number,
-    puntos: [number, number], meta: number, humanos: readonly number[], dador?: number) {
-  const reparto = repartirOnline(6, dador);
+    puntos: [number, number], meta: number, humanos: readonly number[], reparto: RepartoOnline) {
   const estado = iniciarOnline(reparto, puntos, meta, numero);
   await db.query(`INSERT INTO juego.manos
     (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, meta_tercetos, tipo_reparto)

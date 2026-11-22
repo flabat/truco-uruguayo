@@ -228,9 +228,17 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   cerrarRetiroORechazo(estado);
 }
 
-function sinDeclaracion(estado: EstadoOnline) {
-  // Una primera acción distinta de flor ya descarta la flor propia.
-  return participantesDe(estado.mano).filter(a => !estado.acciones.some(j => j.asiento === a));
+function faltaConsultarFlor(estado: EstadoOnline, asiento: Asiento): boolean {
+  const { reglaFlor, respondenSinFlor } = estado.mano.reparto;
+  const sinJugar = !estado.acciones.some(j => j.asiento === asiento);
+  if (!reglaFlor) return sinJugar;
+
+  const debeContestar = !!respondenSinFlor?.includes(asiento)
+    && estado.flores.some(cantor => equipoDelAsiento(cantor) !== equipoDelAsiento(asiento));
+  if (!sinJugar && !debeContestar) return false;
+  // La flor se declara en la primera acción. Quien ya abrió envido aún puede contestar sin flor.
+  if (tantosPropios(estado, asiento).modalidad === "flor") return sinJugar;
+  return debeContestar && !estado.acciones.some(j => j.asiento === asiento && j.tipo === "paso-flor");
 }
 
 function terminarConsultas(estado: EstadoOnline) {
@@ -248,10 +256,7 @@ function terminarConsultas(estado: EstadoOnline) {
 }
 
 function consultarFlores(estado: EstadoOnline) {
-  const pendientes = estado.lateralCerrado ? [] : sinDeclaracion(estado);
-  estado.consultaFlor = estado.mano.reparto.reglaFlor
-    ? pendientes.filter(a => tantosPropios(estado, a).modalidad === "flor")
-    : pendientes;
+  estado.consultaFlor = estado.lateralCerrado ? [] : participantesDe(estado.mano).filter(a => faltaConsultarFlor(estado, a));
   terminarConsultas(estado);
 }
 

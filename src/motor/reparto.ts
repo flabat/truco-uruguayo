@@ -30,6 +30,8 @@ export interface RepartoV1 extends Distribucion {
 export interface RepartoOnline extends Distribucion {
   /** Los registros anteriores a la flor inmediata conservan la ronda pública de consultas. */
   readonly reglaFlor?: "inmediata" | "inmediata-v2";
+  /** Computadoras que contestan una flor rival aun cuando no tienen flor. */
+  readonly respondenSinFlor?: readonly Asiento[];
   readonly versionReparto: "online-1" | "online-2";
 }
 
@@ -41,6 +43,11 @@ export function esAsiento(valor: unknown): valor is AsientoV1 {
 
 export function esAsientoOnline(valor: unknown): valor is Asiento {
   return esAsiento(valor) || valor === 4 || valor === 5;
+}
+
+export function sonAsientosDeMesa(asientos: unknown, cantidad: number): asientos is readonly Asiento[] {
+  return Array.isArray(asientos) && new Set(asientos).size === asientos.length
+    && asientos.every(a => esAsientoOnline(a) && a < cantidad);
 }
 
 export function equipoDelAsiento(asiento: Asiento): Equipo {
@@ -73,6 +80,8 @@ export function esRepartoV1(valor: unknown): valor is RepartoV1 {
 
 export function esRepartoOnline(valor: unknown): valor is RepartoOnline {
   return esDistribucion(valor) && (!("reglaFlor" in valor) || valor.reglaFlor === "inmediata" || valor.reglaFlor === "inmediata-v2")
+    && (!("respondenSinFlor" in valor) || ("reglaFlor" in valor && valor.reglaFlor === "inmediata-v2"
+      && sonAsientosDeMesa(valor.respondenSinFlor, valor.manos.length)))
     && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
 }
 
