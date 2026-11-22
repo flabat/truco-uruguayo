@@ -70,6 +70,19 @@ test("el siguiente reparto conserva el marcador y rota el dador después de term
   assert.throws(() => reproducirChico(juego, 0), /Dador/);
 });
 
+test("el reparto solo puede habilitar la respuesta de una computadora registrada en la cabecera", () => {
+  const juego = fixture("duelo");
+  const reparto = juego.eventos[0].reparto;
+  reparto.reglaFlor = "inmediata-v2";
+  reparto.respondenSinFlor = [1];
+  assert.doesNotThrow(() => reproducirChico(juego, 0, 1));
+
+  juego.asientos[1] = { tipo: "humano" };
+  assert.throws(() => reproducirChico(juego, 0, 1), /Secuencia 1:.*asiento humano/);
+  delete reparto.respondenSinFlor;
+  assert.doesNotThrow(() => reproducirChico(juego, 0, 1));
+});
+
 test("la procedencia privada distingue una política alternativa, un humano y una corrida", () => {
   const juego = fixture("duelo");
   const decision = juego.eventos[2];
