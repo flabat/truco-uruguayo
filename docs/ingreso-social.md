@@ -1,8 +1,8 @@
 # Habilitar el ingreso con Google, Facebook y Discord
 
-Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. Para crear su jugador o volver a la mesa, elige **Continuar con Google** o **Continuar con Facebook** o **Continuar con Discord**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
+Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. En eltru.co puede elegir **Continuar con Google** o **Continuar con Discord**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
 
-![Pantalla de ingreso de Truco Oriental con las opciones Facebook y Google](ingreso-social.png)
+![Ejemplo de ingreso en un entorno de pruebas con Facebook y Google habilitados](ingreso-social.png)
 
 Podés habilitar uno de los proveedores y agregar el otro más adelante. Si todavía no habilitaste ninguno, Keycloak muestra el formulario de contraseña. La API recibe la identidad de Keycloak y emite su propia cookie de sesión.
 
@@ -33,6 +33,8 @@ En pruebas compartidas y producción, sustituí el dominio y el realm del ejempl
 3. Configurá el proveedor después de desplegar la versión de Keycloak incluida aquí. El alias `discord` usa OAuth v2 y el ID estable de Discord; mantené **Trust email** desactivado y verificá el vínculo a cuentas existentes mediante el método original.
 
 ### Facebook
+
+El ingreso con Facebook está pausado en eltru.co. El comando de configuración habilita el proveedor, así que durante la pausa usalo solo en entornos de prueba.
 
 1. En **Create App** de Meta, ingresá el nombre y el correo de contacto y elegí **Authenticate and request data from users with Facebook Login**. En **Use cases → Customize** habilitá `email` junto al `public_profile` incluido. El correo puede faltar si la persona no lo comparte o Facebook no tiene uno confirmado. [Crear la app en Meta](https://developers.facebook.com/documentation/development/create-an-app)
 2. En los ajustes de **Facebook Login**, activá **Client OAuth Login** y **Web OAuth Login**. En **Valid OAuth Redirect URIs** cargá el retorno HTTPS de Facebook de la tabla con tu dominio y realm reales. Si Meta indica que ya admite `http://localhost` automáticamente en modo de desarrollo, probá el retorno local con una cuenta que tenga un rol en la app. Si lo rechaza, usá el entorno HTTPS de pruebas. [Ajustes del flujo web](https://developers.facebook.com/documentation/facebook-login/guides/advanced/manual-flow)
@@ -75,7 +77,6 @@ docker compose up -d --wait
 
 ```sh
 node scripts/configurar-ingreso-social.mjs google
-node scripts/configurar-ingreso-social.mjs facebook
 node scripts/configurar-ingreso-social.mjs discord
 ```
 
