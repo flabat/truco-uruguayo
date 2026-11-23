@@ -89,7 +89,16 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const numeroVuelta = vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
-  const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
+  const numeroDeDuelo = (asiento: number) => 1 + ((asiento - vista.mano + 6) % 3);
+  const dueloPropio = numeroDeDuelo(mesa.miAsiento);
+  const yaJugaron = new Set<number>(historialLances.flatMap(l => l.activos));
+  function estadoDelPuesto(asiento: number) {
+    if (!esPico) return;
+    if (yaJugaron.has(asiento)) return "Ya jugó";
+    if (vista.estado === "terminado") return "Sin jugar";
+    if (lance.activos.some(a => a === asiento)) return "En duelo";
+    return "Espera el duelo " + numeroDeDuelo(asiento);
+  }
   const rivales = esPico && lance.activos.map(a => `${mesa.asientos[a].nombre} (equipo ${mesa.asientos[a].equipo + 1})`).join(" y ");
   const jugando = vista.estado === "jugando" ? vista : null;
   const opciones = jugando?.legales.filter(tipo => tipo !== "carta") ?? [];
@@ -105,7 +114,8 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
         base={base}
         asientos={mesa.asientos.map(a => {
           const papel = a.asiento === mesa.miAsiento ? "Vos" : a.equipo === propio ? "Compañero" : "Rival";
-          return { ...a, papel: papel + " · Equipo " + (a.equipo + 1), etiqueta: `Asiento ${a.asiento + 1} · ${a.nombre}` };
+          const etiquetas = [papel, "Equipo " + (a.equipo + 1), estadoDelPuesto(a.asiento)];
+          return { ...a, papel: etiquetas.filter(Boolean).join(" · "), etiqueta: `Asiento ${a.asiento + 1} · ${a.nombre}` };
         })}
         asientoInferior={mesa.miAsiento}
         dador={vista.dador}
@@ -116,9 +126,11 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
         numeroVuelta={numeroVuelta}
         vuelta={vuelta}
         participantes={lance.activos}
+        manosOcultas={{ jugadas: vista.acciones.filter(a => a.tipo === "carta"), asientoVisible: jugando?.asiento }}
         detalle={(asiento, carta, ganadora) => {
           const prueba = vista.resultado && vista.pruebasDeTantos?.find(p => p.asiento === asiento);
           return {
+            ocultaDorsos: Boolean(prueba) || (esPico && (vista.estado === "terminado" || yaJugaron.has(asiento))),
             contenido: prueba
               ? <PruebaEnMesa prueba={prueba} base={base} jugada={carta} ganadora={ganadora}
                   acciones={historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />
