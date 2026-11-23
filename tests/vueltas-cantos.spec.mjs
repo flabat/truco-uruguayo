@@ -53,7 +53,7 @@ for (const { canto, manos, valor, puntos } of casos) {
       await route.fulfill({ json: datos });
     });
     await page.goto("jugar/?mesa=" + id);
-    await expect(page.getByRole("heading", { name: canto, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Podés responder", exact: true })).toBeVisible();
     const quiero = page.getByRole("button", { name: "Quiero", exact: true });
     await expect(quiero).toBeEnabled();
     await quiero.press("Enter");

@@ -167,6 +167,12 @@ for (const [formato, cantidad] of Object.entries(formatos)) {
       const { zona, legales } = await abrir(page, formato, respuesta);
       await expect(page.locator(".j-puesto")).toHaveCount(cantidad);
       await expect(zona.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(3);
+      if (respuesta) {
+        await expect(zona.getByRole("heading", { name: "Podés responder" })).toBeVisible();
+        await expect(zona.getByRole("group", { name: "Responder", exact: true }).getByRole("button", { name: "Quiero", exact: true })).toBeEnabled();
+      } else {
+        await expect(zona.getByRole("group", { name: "Truco", exact: true }).getByRole("button", { name: "Truco", exact: true })).toBeEnabled();
+      }
       for (const tipo of legales.filter(t => t !== "carta"))
         await expect(zona.getByRole("button", { name: canto[tipo], exact: true })).toBeEnabled();
       expect(await page.evaluate(() => scrollY)).toBe(0);
