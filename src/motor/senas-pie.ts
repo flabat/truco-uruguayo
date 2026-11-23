@@ -83,7 +83,7 @@ export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, indicaciones
     return { emisor, gestos: gestosDeCartas(alAbrir, mano.reparto.muestra) };
   });
   const opciones: VistaPie["opciones"] = [];
-  if (asiento === pie) {
+  if (asiento === pie && estado.retiro === undefined && !estado.rechazoTruco) {
     for (const destinatario of companeros) {
       if (vueltaActual.jugadas.some(j => j.asiento === destinatario)
         || indicaciones.some(i => i.vuelta === vuelta && i.destinatario === destinatario)) continue;

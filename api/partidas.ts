@@ -42,7 +42,7 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
   const comando: Comando = { id: datos.id.toLowerCase(), version: datos.version, operacion };
   if (operacion === "indicaciones") {
     const dato = datos.indicacion;
-    if (!alPie || datos.accion !== undefined || !dato || typeof dato !== "object" || Array.isArray(dato)
+    if (!alPie || Object.keys(datos).length !== 3 || !dato || typeof dato !== "object" || Array.isArray(dato)
       || Object.keys(dato).length !== 3
       || !("destinatario" in dato) || typeof dato.destinatario !== "number" || !Number.isInteger(dato.destinatario)
       || !("vuelta" in dato) || typeof dato.vuelta !== "number" || !Number.isInteger(dato.vuelta)

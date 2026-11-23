@@ -144,6 +144,25 @@ test("duelo, pico a pico y cierre anticipado carecen de señas y de opciones", (
   }
 });
 
+test("el retiro y el rechazo de truco cierran las indicaciones mientras se cobran las flores", () => {
+  const cartas: TresCartas[] = [...manos];
+  cartas[1] = ["bastos-02", "bastos-04", "bastos-05"];
+  const redondilla = iniciarOnline({ ...reparto(6), manos: cartas });
+  const retiro = aplicar(redondilla, { tipo: "mazo", asiento: 0 });
+  const parejas = iniciarOnline({ ...reparto(4), manos: cartas.slice(0, 4) });
+  const truco = aplicar(parejas, { tipo: "truco", asiento: 0 });
+  assert.ok(crearIndicacionPie(truco, 2, 0, "veni", 1, []));
+  const rechazo = aplicar(truco, { tipo: "no-quiero", asiento: 3 });
+  assert.equal(retiro.retiro, 0);
+  assert.equal(rechazo.rechazoTruco, true);
+  for (const [estado, pie] of [[retiro, 4], [rechazo, 2]] as const) {
+    assert.equal(estado.resultado, null);
+    assert.deepEqual(estado.consultaFlor, [1]);
+    assert.deepEqual(vistaDelPie(estado, pie, [])?.opciones, []);
+    assert.equal(crearIndicacionPie(estado, pie, 0, "veni", 1, []), undefined);
+  }
+});
+
 test("el pie bot pide fuerza o baja según sus cartas y los gestos que recibió", () => {
   const r = reparto(4);
   const pedir = (reparto: RepartoOnline) => {
