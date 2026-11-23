@@ -12,6 +12,24 @@ const manos = [
   ["copas-05", "bastos-07", "oros-05"], ["oros-06", "espadas-11", "bastos-12"],
 ];
 
+// Cada cara debe seguir en movimiento mientras está visible, incluso al volver a la mesa.
+async function comprobarBucle(contenedor, cantidad) {
+  await expect.poll(() => contenedor.locator(".j-cara-sena").evaluateAll(caras =>
+    caras.filter(cara => cara.getAnimations({ subtree: true }).some(animacion =>
+      animacion.playState === "running" && animacion.effect.getTiming().iterations === Infinity
+    )).length
+  )).toBe(cantidad);
+}
+
+async function comprobarGestos(contenedor, categorias) {
+  const gestos = contenedor.getByRole("listitem");
+  await expect(gestos).toHaveText(categorias.map(() => ""), { useInnerText: true });
+  for (const [i, categoria] of categorias.entries()) {
+    await expect(gestos.nth(i)).toHaveAccessibleName(new RegExp(categoria + "$"));
+  }
+  await comprobarBucle(contenedor, categorias.length);
+}
+
 for (const modo of ["2v2", "3v3"]) {
   test(modo + " muestra los gestos en el asiento y publica la indicación con destinatario", async ({ page, isMobile }) => {
     const seis = modo === "3v3";
@@ -70,14 +88,15 @@ for (const modo of ["2v2", "3v3"]) {
     const tapete = page.getByRole("region",{name:"Tapete"});
     const globo = page.getByRole("region",{name:"Señas privadas de Ana"});
     const boton = page.getByRole("button",{name:"Señas de Ana ("+categorias.length+")"});
-    await expect(globo.getByRole("listitem")).toHaveText(categorias);
-    await expect(globo.locator("[data-animar]")).toHaveCount(categorias.length);
+    await comprobarGestos(globo, categorias);
     await expect(globo.getByRole("listitem").first()).toHaveAccessibleName("Ana · alza ambas cejas · 2 de copas");
     await expect(boton).toHaveAttribute("aria-expanded","true");
     await expect(page.getByRole("combobox",{name:"Seña para esta jugada"})).toHaveCount(0);
     if (isMobile) expect((await boton.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await page.emulateMedia({reducedMotion:"reduce"});
-    await expect(globo.locator(".j-cara-cejas").first()).toHaveCSS("animation-name","none");
+    await expect.poll(() => globo.locator(".j-cara-sena").evaluateAll(caras =>
+      caras.flatMap(cara => cara.getAnimations({subtree:true})).length
+    )).toBe(0);
     await expect(tapete.locator(".j-globo-senas")).toHaveCount(1);
     const punto = await globo.evaluate(el => {
       const b = el.getBoundingClientRect();
@@ -97,6 +116,7 @@ for (const modo of ["2v2", "3v3"]) {
       await tapete.screenshot({path:process.env.CAPTURAS_PIE+"/"+archivo});
     }
 
+    await page.emulateMedia({reducedMotion:"no-preference"});
     await globo.getByRole("button",{name:"Cerrar señas"}).press("Escape");
     await expect(boton).toBeFocused();
     await expect(globo).toHaveCount(0);
@@ -104,12 +124,11 @@ for (const modo of ["2v2", "3v3"]) {
       const otro = page.getByRole("button",{name:"Señas de Mateo (3)"});
       if (isMobile) await otro.tap(); else await otro.press("Enter");
       const segunda = page.getByRole("region",{name:"Señas privadas de Mateo"});
-      await expect(segunda.getByRole("listitem")).toHaveText(["4 de copas","Siete bravo","Dos común"]);
-      await expect(segunda.locator("[data-animar]")).toHaveCount(3);
+      await comprobarGestos(segunda, ["4 de copas", "Siete bravo", "Dos común"]);
     }
     if (isMobile) await boton.tap(); else await boton.press("Enter");
     await expect(globo).toBeVisible();
-    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    await comprobarBucle(globo, categorias.length);
     await expect(page.locator(".j-globo-senas")).toHaveCount(1);
     const ocupados = await tapete.evaluate(el => {
       const b = el.querySelector(".j-globo-senas").getBoundingClientRect();
@@ -128,7 +147,7 @@ for (const modo of ["2v2", "3v3"]) {
     await expect(hablar).toHaveCount(0);
     await page.reload();
     await expect(globo).toBeVisible();
-    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    await comprobarBucle(globo, categorias.length);
     await expect(historia.getByRole("listitem")).toHaveCount(1);
 
     await globo.getByRole("button",{name:"Cerrar señas"}).click();
@@ -157,20 +176,18 @@ for (const modo of ["2v2", "3v3"]) {
     await lecturaRecibida;
     await expect(page.getByRole("group",{name:"Decirle a Ana en voz alta"}).getByRole("button",{name:"Voy a vos"}))
       .toBeEnabled({timeout:900});
-    await expect(globo.getByRole("listitem")).toHaveText(["2 de copas","As bravo"]);
-    await expect(globo.locator("[data-animar]")).toHaveCount(2);
+    await comprobarGestos(globo, ["2 de copas", "As bravo"]);
     const destinatario = seis ? "Mateo" : "Ana";
     const hablarDespues = page.getByRole("group",{name:"Decirle a "+destinatario+" en voz alta"});
     await expect(hablarDespues.getByRole("button")).toHaveText(["Voy a vos"]);
     const cantidadSockets = sockets.length;
     sockets.at(-1).close({code:1001});
     await expect.poll(() => sockets.length).toBeGreaterThan(cantidadSockets);
-    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    await comprobarBucle(globo, 2);
     if (seis) {
       await page.getByRole("button",{name:"Señas de Mateo (2)"}).click();
       const segunda = page.getByRole("region",{name:"Señas privadas de Mateo"});
-      await expect(segunda.getByRole("listitem")).toHaveText(["4 de copas","Siete bravo"]);
-      await expect(segunda.locator("[data-animar]")).toHaveCount(0);
+      await comprobarGestos(segunda, ["4 de copas", "Siete bravo"]);
     }
     await hablarDespues.getByRole("button",{name:"Voy a vos"}).click();
     const publica = "Clara le dijo a "+destinatario+" «Voy a vos».";
@@ -181,7 +198,9 @@ for (const modo of ["2v2", "3v3"]) {
     asientos[0].tipo = "humano";
     asiento = 0;
     await page.reload();
-    await expect(page.getByText("Tus señas a Clara · 2")).toBeVisible();
+    const enviadas = page.locator(".j-senas-enviadas");
+    await enviadas.getByText("Tus señas a Clara · 2").click();
+    await comprobarGestos(enviadas, ["2 de copas", "As bravo"]);
     await expect(page.locator(".j-globo-senas,.j-boton-senas,.j-indicaciones-pie")).toHaveCount(0);
     await expect(historia.getByRole("listitem").last()).toHaveText(publica);
     if (seis) {
@@ -226,4 +245,61 @@ test("dos pies que hablan al reparto se oyen en orden, también cuando se vuelve
   await page.reload();
   await expect(ultima).toHaveText("Beto, jugá");
   await expect(primera).toHaveCount(0);
+});
+
+test("las once señas cambian de expresión en el segundo ciclo", async ({ page }) => {
+  const asientos = ["Ana", "Beto", "Clara", "Diego"].map((nombre, asiento) =>
+    ({ nombre, asiento, equipo: asiento % 2, tipo: "humano" }));
+  const muestras = [
+    [["copas-02", "copas-04", "copas-05"], ["cejas", "beso", "nariz"]],
+    [["copas-11", "copas-10", "bastos-01"], ["ojo-derecho", "ojo-izquierdo", "labios-derecha"]],
+    [["oros-07", "oros-03", "oros-02"], ["labios-izquierda", "labio-inferior", "boca"]],
+    [["oros-01", "copas-12", "bastos-12"], ["lengua"]],
+    [["copas-12", "bastos-12", "espadas-12"], ["ojos-cerrados"]],
+  ];
+  let cartas;
+  const mesa = { id, modo: "2v2", formato: "pairs-private-senas", versionSenas: versionSenasPie,
+    meta: 40, miAsiento: 2, asientos, lista: true, creadorId: "clara" };
+  await page.routeWebSocket("**/vivo", () => {});
+  await page.route("**/api/**", async route => {
+    const ruta = new URL(route.request().url()).pathname;
+    let json;
+    if (ruta === "/api/jugador") json = { id: "clara", nombre: "Clara", salonHabilitado: true };
+    if (ruta.endsWith("/" + id)) json = mesa;
+    if (ruta.endsWith("/partida")) {
+      const estado = iniciarOnline({ versionReparto: "online-1", dador: 3, mano: 0, muestra: "copas-06",
+        manos: [cartas, ["oros-04", "oros-05", "bastos-04"], ["oros-06", "bastos-06", "espadas-06"],
+          ["espadas-04", "espadas-05", "bastos-05"]] }, [0, 0], 40);
+      json = { ...mesa, version: 1, manoNumero: 1, puntos: [0, 0], ganadorPartida: null, indicaciones: [],
+        vista: vistaOnline(estado, 2), pie: vistaDelPie(estado, 2, []) };
+    }
+    await route.fulfill({ json: json ?? {} });
+  });
+  for (const [mano, gestos] of muestras) {
+    cartas = mano;
+    await page.goto("jugar/?mesa=" + id);
+    const caras = page.getByRole("region", { name: "Señas privadas de Ana" }).locator(".j-cara-sena");
+    await expect(caras).toHaveCount(gestos.length);
+    for (const [i, gesto] of gestos.entries()) {
+      const cara = caras.nth(i);
+      await expect(cara).toHaveAttribute("data-gesto", gesto);
+      const cambia = await cara.evaluate(svg => {
+        const animaciones = svg.getAnimations({ subtree: true }).filter(a =>
+          a.playState === "running" && a.effect.getTiming().iterations === Infinity);
+        // Comparar la pose de la cara en distintos instantes de la misma repetición.
+        const poses = [0, .25, .5, .75].map(fraccion => {
+          for (const a of animaciones) {
+            const {duration, delay} = a.effect.getTiming();
+            a.currentTime = delay + duration * (1 + fraccion);
+          }
+          return animaciones.map(a => {
+            const estilo = getComputedStyle(a.effect.target);
+            return estilo.transform + " " + estilo.opacity;
+          }).join("|");
+        });
+        return new Set(poses).size > 1;
+      });
+      expect(cambia, gesto).toBe(true);
+    }
+  }
 });

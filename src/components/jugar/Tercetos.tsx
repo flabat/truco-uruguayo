@@ -132,7 +132,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
           };
         }}
-        pie={pie && {vista:pie, mano:partida.manoNumero, llegadaEnVivo:Boolean(partida.llegadaEnVivo)}}
+        pie={pie && {vista:pie, mano:partida.manoNumero}}
         zonaJugador={<ZonaJugador titulo={estadoRed ?? titulo ?? "Esperando la jugada"} bloqueada={bloqueada}
           detalle={<>
             {aviso && <p className="j-aviso">{aviso}</p>}

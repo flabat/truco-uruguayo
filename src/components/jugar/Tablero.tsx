@@ -227,7 +227,7 @@ export function EnJuego({
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
             };
           }}
-          pie={pie && {vista:pie, mano:partida.manoNumero, llegadaEnVivo:Boolean(partida.llegadaEnVivo)}}
+          pie={pie && {vista:pie, mano:partida.manoNumero}}
           zonaJugador={<ZonaJugador
             titulo={estadoRed ?? titulo}
             bloqueada={bloqueada}

@@ -10,7 +10,6 @@ type Nombre = (asiento: number) => string;
 export interface PieEnTapete {
   vista: VistaPie;
   mano: number;
-  llegadaEnVivo: boolean;
 }
 
 function significado(gesto: GestoPie, muestra: CardId) {
@@ -41,12 +40,21 @@ export function AccionesDelPie({ pie, nombre, bloqueada, decir }: {
   </div>;
 }
 
+function Gestos({ gestos, emisor, muestra }: { gestos: readonly GestoPie[]; emisor: string; muestra: CardId }) {
+  return <ul className="j-gestos" aria-live="polite" aria-atomic="true">
+    {gestos.map(gesto => <li key={gesto}
+      aria-label={`${emisor} · ${catalogoGestosPie[gesto].expresion} · ${significado(gesto, muestra)}`}>
+      <CaraSena gesto={gesto}/>
+    </li>)}
+  </ul>;
+}
+
 export function SenasEnviadas({ pie, muestra, nombre }: { pie: VistaPie; muestra: CardId; nombre: Nombre }) {
   const propias = pie.grupos[0];
   if (!propias) return null;
   return <details className="j-senas-enviadas">
     <summary>Tus señas a {nombre(pie.pie)} · {propias.gestos.length}</summary>
-    <p>Al abrir la vuelta · {propias.gestos.map(g => significado(g, muestra)).join(" · ")}</p>
+    <Gestos gestos={propias.gestos} emisor={nombre(propias.emisor)} muestra={muestra}/>
   </details>;
 }
 
@@ -59,15 +67,12 @@ function Candado() {
 }
 
 function alAbrir(datos?: PieEnTapete) {
-  const abierto = datos?.vista.grupos[0]?.emisor ?? null;
   return {
-    mano: datos?.mano, vuelta: datos?.vista.vuelta, abierto,
-    vistos: new Set<number>(abierto === null ? [] : [abierto]),
-    animar: Boolean(datos?.llegadaEnVivo),
+    mano: datos?.mano, vuelta: datos?.vista.vuelta, abierto: datos?.vista.grupos[0]?.emisor ?? null,
   };
 }
 
-// La selección y la reproducción son locales a esta vista y esta vuelta.
+// Al empezar la vuelta, el pie ve al primer compañero en el orden de juego.
 export function useGloboDelCompanero(datos: PieEnTapete | undefined, muestra: CardId, nombre: Nombre) {
   const id = useId();
   const franja = useRef<HTMLDivElement>(null);
@@ -80,7 +85,7 @@ export function useGloboDelCompanero(datos: PieEnTapete | undefined, muestra: Ca
 
   function cerrar() {
     if (emisor !== undefined) anclas.current.get(emisor)?.focus();
-    cambiar(e => ({ ...e, abierto: null, animar: false }));
+    cambiar(e => ({ ...e, abierto: null }));
   }
   useEffect(() => {
     if (emisor === undefined) return;
@@ -126,27 +131,14 @@ export function useGloboDelCompanero(datos: PieEnTapete | undefined, muestra: Ca
         if (el) anclas.current.set(asiento, el);
         else anclas.current.delete(asiento);
       }}
-      onClick={() => cambiar(e => ({
-        ...e, abierto: abierto ? null : senas.emisor, vistos: new Set([...e.vistos, asiento]),
-        animar: !e.vistos.has(asiento) && Boolean(datos?.llegadaEnVivo),
-      }))}>
+      onClick={() => cambiar(e => ({ ...e, abierto: abierto ? null : senas.emisor }))}>
       <Candado/> Señas <span>{senas.gestos.length}</span>
     </button>;
   }
   const contenido = grupo && <div className="j-franja-globo" ref={franja}>
     <section id={id} className="j-globo-senas" aria-label={"Señas privadas de " + nombre(grupo.emisor)}>
-      <div className="j-globo-cabecera">
-        <Candado/>
-        <div><b>Privadas · {nombre(grupo.emisor)}</b><small>Al abrir la vuelta</small></div>
-        <button type="button" className="j-cerrar-globo" aria-label="Cerrar señas" onClick={cerrar}>×</button>
-      </div>
-      <ul key={estado.mano + "." + estado.vuelta + "." + grupo.emisor} aria-live="polite" aria-atomic="true">
-        {grupo.gestos.map(gesto => <li key={gesto}
-          aria-label={`${nombre(grupo.emisor)} · ${catalogoGestosPie[gesto].expresion} · ${significado(gesto, muestra)}`}>
-          <CaraSena gesto={gesto} animar={estado.animar && Boolean(datos?.llegadaEnVivo)}/>
-          <span>{significado(gesto, muestra)}</span>
-        </li>)}
-      </ul>
+      <Gestos gestos={grupo.gestos} emisor={nombre(grupo.emisor)} muestra={muestra}/>
+      <button type="button" className="j-cerrar-globo" aria-label="Cerrar señas" onClick={cerrar}>×</button>
     </section>
   </div>;
   return { boton, contenido };

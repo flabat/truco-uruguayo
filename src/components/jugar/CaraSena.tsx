@@ -2,13 +2,13 @@ import { useId } from "react";
 import type { GestoPie } from "../../motor/senas-pie";
 
 // Las coordenadas siempre miran al emisor de frente. Su lado derecho queda a nuestra izquierda.
-export function CaraSena({ gesto, animar }: { gesto: GestoPie; animar: boolean }) {
+export function CaraSena({ gesto }: { gesto: GestoPie }) {
   const degradado = useId();
   const besito = gesto === "beso" || gesto.startsWith("labios-");
   const lengua = gesto === "lengua";
   const mordida = gesto === "labio-inferior";
   const abrir = gesto === "boca" || lengua || mordida;
-  return <svg className="j-cara-sena" data-gesto={gesto} data-animar={animar || undefined}
+  return <svg className="j-cara-sena" data-gesto={gesto}
     viewBox="0 0 64 64" aria-hidden="true" focusable="false">
     <defs><radialGradient id={degradado} cx=".36" cy=".28" r=".79">
       <stop stopColor="#ffe884"/><stop offset=".7" stopColor="#ffcc35"/><stop offset="1" stopColor="#f2a81c"/>

@@ -10,16 +10,18 @@
 .j-cara-sena .j-cara-lengua { transform-origin: 32px 46px; }
 .j-cara-sena .j-cara-neutra { opacity: 0; }
 @media (prefers-reduced-motion: no-preference) {
-  .j-cara-sena[data-animar] :is(.j-cara-cejas,.j-cara-boca,.j-cara-nariz,.j-cara-guino) {
-    animation: j-hacer-sena .7s cubic-bezier(.37,0,.2,1) both;
-  }
-  .j-cara-sena[data-animar] .j-cara-neutra { animation: j-neutra .7s ease-out both; }
-  .j-cara-sena[data-animar] .j-cara-pliegue { animation: j-fruncir .7s ease-out both; }
-  .j-cara-sena[data-animar] :is(.j-cara-apertura,.j-cara-lengua) { animation: j-abrir-boca .7s ease-out both; }
+  .j-cara-sena { --ciclo-sena: 1s ease-in-out infinite alternate; }
+  .j-cara-sena[data-gesto="cejas"] .j-cara-cejas,
+  .j-cara-sena[data-gesto="nariz"] .j-cara-nariz,
+  .j-cara-sena:is([data-gesto="beso"], [data-gesto^="labios-"]) .j-cara-boca,
+  .j-cara-sena .j-cara-guino { animation: j-hacer-sena var(--ciclo-sena); }
+  .j-cara-sena .j-cara-neutra { animation: j-neutra var(--ciclo-sena); }
+  .j-cara-sena .j-cara-pliegue { animation: j-fruncir var(--ciclo-sena); }
+  .j-cara-sena :is(.j-cara-apertura, .j-cara-lengua) { animation: j-abrir-boca var(--ciclo-sena); }
 }
 @keyframes j-hacer-sena { 0%,15% { transform: none; } }
-@keyframes j-fruncir { 0%,15% { opacity: 0; } 100% { opacity: 1; } }
-@keyframes j-abrir-boca { 0%,15% { transform: scaleY(.14); } 100% { transform: scaleY(1); } }
+@keyframes j-fruncir { 0%,15% { opacity: 0; } 75%,100% { opacity: 1; } }
+@keyframes j-abrir-boca { 0%,15% { transform: scaleY(.14); } 75%,100% { transform: scaleY(1); } }
 @keyframes j-neutra { 0%,15% { opacity: 1; } 75%,100% { opacity: 0; } }
 .j-tapete--jugador > .j-puestos:is(.j-parejas, .j-puestos-seis).j-con-senas {
   grid-template-columns: repeat(3,minmax(0,1fr));
@@ -58,18 +60,14 @@
   padding:.2rem .5rem; border:1px solid #b6c5a2; border-radius:1rem; background:#274b3b; color:#fff5da; font:600 .8rem var(--sans,system-ui); }
 .j-boton-senas span { background:#f9e8b8; color:#254632; border-radius:50%; min-width:1.25em; }
 .j-franja-globo { grid-area:globo; width:100%; position:relative; }
-.j-globo-senas { position:relative; text-align:left; isolation:isolate; border:1px solid #d6c49d; border-radius:.8rem;
-  padding:.35rem .55rem .55rem; width:max-content; max-width:100%; background:#fff9eb; color:#282d24; box-shadow:0 3px 10px #182e2733; }
+.j-globo-senas { position:relative; display:flex; align-items:center; gap:.25rem; isolation:isolate; border:1px solid #d6c49d; border-radius:.8rem;
+  padding:.3rem .35rem .3rem .5rem; width:max-content; max-width:100%; background:#fff9eb; color:#282d24; box-shadow:0 3px 10px #182e2733; }
 .j-globo-senas::before {content:"";position:absolute;top:-.32rem;left:var(--punta,50%);width:.6rem;height:.6rem;
   background:#fff9eb; border-left:1px solid #d6c49d; border-top:1px solid #d6c49d;transform:translateX(-50%) rotate(45deg);z-index:-1;}
-.j-globo-cabecera {display:flex;gap:.3rem;align-items:center;font-size:.78rem;line-height:1.1;}
-.j-globo-cabecera b {overflow-wrap:anywhere;}
-.j-globo-cabecera > div {display:grid;gap:.18rem;}
-.j-globo-cabecera small {font-size:.68rem;color:#615f51;}
-.j-cerrar-globo { margin-left:auto; padding:0; border:none; background:transparent; color:#555d4f;
+.j-cerrar-globo { padding:0; border:none; background:transparent; color:#555d4f;
   font-size:1.25rem;line-height:1;min-width:1.7rem;height:1.7rem; }
-.j-globo-senas ul {display:flex;align-items:start;justify-content:center;gap:.45rem;list-style:none;margin:.25rem 0 0;padding:0;}
-.j-globo-senas li {width:3.9rem;min-width:0;text-align:center;font-size:.73rem;font-weight:650;line-height:1.15;}
+.j-gestos { display:flex; flex-wrap:wrap; align-items:center; gap:.35rem; list-style:none; margin:0; padding:0; }
+.j-senas-enviadas .j-gestos { margin-top:.3rem; }
 .j-indicaciones-pie {display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;}
 .j-indicaciones-pie .j-cantos {justify-content:flex-start;}
 .j-indicaciones-pie fieldset {min-width:0;margin:.4rem 0;padding:.35rem 0;border:0;}
