@@ -48,13 +48,13 @@ interface ManoAnterior {
   puntos_inicio: [number, number];
 }
 
-function jugadasDeMano(mano: ManoReporte): string[] {
+function jugadasDeMano(mano: ManoReporte, indicaciones: readonly IndicacionPie[]): string[] {
   const cantidad = { "1v1": 2, "2v2": 4, "3v3": 6 }[mano.modo];
   let dueloAnterior: number | null = null;
   let cartasJugadas = 0;
   const entradas: string[] = [];
   function agregarPalabras(indice: number) {
-    for (const i of mano.indicaciones.filter(i => i.indiceAccion === indice)) {
+    for (const i of indicaciones.filter(i => i.indiceAccion === indice)) {
       entradas.push(`V${i.vuelta} · A${i.emisor} le dijo a A${i.destinatario} «${textoFrasePie[i.frase]}»`);
     }
   }
@@ -143,7 +143,7 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
   const visibles = cursor.indicaciones ?? anterioresAlCursor;
   if (visibles < anterioresAlCursor || visibles > mano.indicaciones.length
     || (visibles && mano.indicaciones[visibles - 1].indiceAccion > cursor.posicion)) return null;
-  mano.indicaciones = mano.indicaciones.slice(0, visibles);
+  const indicaciones = mano.indicaciones.slice(0, visibles);
   const secuencia = mano.secuencia === null ? null : Number(mano.secuencia) + visibles - anterioresAlCursor;
   const confirmados = cursor.posicion === 0 ? mano.puntos_inicio : mano.puntos;
   const antesDeJugar = cursor.posicion === 1 ? mano.puntos_inicio : mano.puntos_anteriores;
@@ -170,5 +170,5 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
     `- Motor del evento: ${mano.build ?? "sin registro"} · cliente: ${cursor.cliente || "sin versión"}`,
     "[Cómo reproducir la posición](https://github.com/flabat/truco-uruguayo/blob/main/docs/multijugador/replay-chico.md)", "",
   ].join("\n");
-  return { secuencia, url: enlaceBorrador(titulo, cabecera, historial, omitidas, jugadasDeMano(mano)) };
+  return { secuencia, url: enlaceBorrador(titulo, cabecera, historial, omitidas, jugadasDeMano(mano, indicaciones)) };
 }
