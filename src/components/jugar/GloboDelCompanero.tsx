@@ -17,6 +17,12 @@ function significado(gesto: GestoPie, muestra: CardId) {
   return catalogoGestosPie[gesto].significado.replace("de la muestra", "de " + muestra.split("-")[0]);
 }
 
+const ayudaFrase = {
+  veni: "Jugá una baja. El pie puede cubrir la vuelta.",
+  juga: "Salí con algo. El pie te pide una carta fuerte.",
+  "voy-a-vos": "El pie juega antes que vos y te pide una carta fuerte.",
+} satisfies Record<FrasePie, string>;
+
 export function AccionesDelPie({ pie, nombre, bloqueada, decir }: {
   pie: VistaPie; nombre: Nombre; bloqueada: boolean; decir: DecirAlCompanero;
 }) {
@@ -26,6 +32,7 @@ export function AccionesDelPie({ pie, nombre, bloqueada, decir }: {
       <legend>Decirle a {nombre(destinatario)} en voz alta</legend>
       <div className="j-cantos">
         {frases.map(frase => <button type="button" className="j-sec" key={frase}
+          title={ayudaFrase[frase]} aria-description={ayudaFrase[frase]}
           onClick={() => decir(destinatario, frase, pie.vuelta)}>
           {textoFrasePie[frase]}
         </button>)}
