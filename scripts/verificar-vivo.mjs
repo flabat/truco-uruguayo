@@ -4,6 +4,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
 import WebSocket from "ws";
+import { normalizarPartida } from "../src/motor/partida-jugador.ts";
 import { reproducirChico } from "../src/motor/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -122,12 +123,16 @@ async function verificarPartidaAnterior(sesiones) {
   const rival = (emisor + 1) % 4;
   const id = randomUUID();
   const orden = { id, version, operacion:"siguiente" };
-  const recibo = {...despues[rival], turnos:despues[emisor].turnos};
+  const { contexto, lance, ...anterior } = despues[rival];
+  assert.deepEqual(contexto, { versionVista: 1, fase: "en-juego" });
+  assert.deepEqual(lance, { tipo: "simple", duelo: null, activos: [0, 1, 2, 3] });
+  const recibo = {...anterior, turnos:despues[emisor].turnos};
   await pool.query(`INSERT INTO juego.comandos (mesa,jugador,id,peticion,respuesta)
     SELECT $1,jugador,$3,$4,$5 FROM juego.asientos WHERE mesa=$1 AND asiento=$2`,
     [mesa.id, rival, id, orden, recibo]);
   const recuperada = await http(sesiones[rival], ruta + "/siguiente", {id, version});
-  assert.deepEqual(recuperada, despues[rival]);
+  assert.deepEqual(recuperada, anterior);
+  assert.deepEqual(normalizarPartida(recuperada), despues[rival]);
 }
 
 async function iniciar(sesiones, ajena) {

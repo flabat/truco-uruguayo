@@ -235,7 +235,8 @@ function MesaAbierta({
   avisoInicial?: string;
   recienCreada?: boolean;
 }) {
-  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
+  const { ruta, mesa, partida: lectura, conectada, error, refrescar } = useMesa(id);
+  const recibida = lectura?.vista ? lectura : undefined;
   const encabezadoEspera = useRef<HTMLHeadingElement>(null);
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
