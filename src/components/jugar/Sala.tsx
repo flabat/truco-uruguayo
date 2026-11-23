@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ErrorMesa,
+  esperaIndicacionDelPie,
   idComando,
   mensajeDe,
   pedir,
@@ -252,7 +253,7 @@ function MesaAbierta({
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
   const esTerceto = recibida?.formato === "triples";
   const { tablero, partida: presentada, mostrandoCartas, voz } = usePresentacionVueltas(
-    esTerceto ? undefined : recibida, presencioReparto,
+    esTerceto ? undefined : recibida, presencioReparto, esperaIndicacionDelPie(mesa, recibida),
   );
   const partida = esTerceto ? recibida : presentada;
   const [ocupado, ocupar] = useState(false);
@@ -294,9 +295,9 @@ function MesaAbierta({
     });
   }
 
-  function indicar(destinatario:number, frase:FrasePie, vuelta:number) {
+  function indicar(destinatario: number, frase: FrasePie, vuelta: number) {
     if (ocupado || !conectada || !partida || mostrandoCartas || !esPie) return;
-    void enviar("/indicaciones", {id:idComando(), version:partida.version, indicacion:{destinatario,frase,vuelta}});
+    void enviar("/indicaciones", { id: idComando(), version: partida.version, indicacion: { destinatario, frase, vuelta } });
   }
 
   if (error?.status === 401) return <Ingreso volver={"/jugar/?mesa=" + encodeURIComponent(id)} />;

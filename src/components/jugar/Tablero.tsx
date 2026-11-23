@@ -166,7 +166,7 @@ export function EnJuego({
     mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
   const nombre = (a: number) => mesa.asientos[a].nombre!;
   const pie = indicar ? partida.pie : undefined;
-  const frase = useVozDelPie(partida.manoNumero, partida.indicaciones, v.acciones.length);
+  const frase = useVozDelPie(partida.manoNumero, partida.indicaciones, v.acciones.length, partida);
   const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;

@@ -44,6 +44,7 @@ interface Marcador {
   indicaciones?: readonly IndicacionPie[];
   /** Sólo de presentación. Se fija al observar la apertura de esta vuelta en vivo. */
   llegadaEnVivo?: boolean;
+  reconexion?: number;
   version: number;
   manoNumero: number;
   puntos: [number, number];
@@ -62,6 +63,14 @@ export interface PartidaTercetos extends Marcador {
   vista: VistaTercetos;
 }
 type PartidaRecibida = Partida | PartidaTercetos;
+/** La pausa del bot ya corre en el servidor. El pie necesita ver el turno en cuanto llega. */
+export function esperaIndicacionDelPie(mesa?: Mesa, partida?: PartidaRecibida) {
+  const turno = partida?.vista?.turno;
+  if (!mesa || !partida?.pie || turno == null || partida.vista?.pendiente
+      || partida.vista?.porDeclararFlor != null || partida.pie.pie !== mesa.miAsiento) return false;
+  return mesa.asientos[turno]?.tipo === "computadora" && partida.pie.opciones.some(o => o.destinatario === turno);
+}
+
 export type Tipo = VistaOnline["legales"][number];
 export type Eleccion = { tipo: Exclude<Tipo, "carta"> } | { tipo: "carta"; carta: CardId };
 
@@ -116,6 +125,7 @@ export function useMesa(id: string, recienCreada = false) {
     let faltaLeer = false;
     let primeraLectura = true;
     let recuperando = false;
+    let reconexiones = 0;
     let ultimaApertura: string | undefined;
     let animar = false;
 
@@ -138,6 +148,7 @@ export function useMesa(id: string, recienCreada = false) {
             ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
             : undefined;
           if (cancel.signal.aborted) return;
+          if (mano?.indicaciones) mano.reconexion = reconexiones;
           if (mano?.pie) {
             const apertura = mano.manoNumero + "." + mano.pie.vuelta;
             if (ultimaApertura !== apertura) {
@@ -197,6 +208,7 @@ export function useMesa(id: string, recienCreada = false) {
         if (cancel.signal.aborted) return;
         socket = undefined;
         recuperando = true;
+        reconexiones++;
         setConectada(false);
         clearTimeout(timer);
         timer = setTimeout(leer, demora);

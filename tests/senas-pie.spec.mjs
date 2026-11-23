@@ -139,7 +139,24 @@ for (const modo of ["2v2", "3v3"]) {
       expect(paso.ok).toBe(true);
       estado = paso.estado;
     }
+    // El bot Ana dispone de cuatro segundos. Las cartas y los cantos agrupados
+    // en esta notificación no deben retrasar el turno que ya recibió el pie.
+    asientos[0].tipo = "computadora";
+    for (const accion of [
+      { asiento:pie, tipo:"carta", carta:seis ? "bastos-07" : "bastos-02" },
+      { asiento:pie+1, tipo:"truco" },
+      { asiento:0, tipo:"quiero" },
+      { asiento:pie+1, tipo:"carta", carta:seis ? "bastos-12" : "bastos-04" },
+    ]) {
+      const paso = aplicarOnline(estado, accion);
+      expect(paso.ok, JSON.stringify(accion)).toBe(true);
+      estado = paso.estado;
+    }
+    const lecturaRecibida = page.waitForResponse(res => res.url().endsWith("/partida"));
     sockets.at(-1).send(JSON.stringify({tipo:"actualizar"}));
+    await lecturaRecibida;
+    await expect(page.getByRole("group",{name:"Decirle a Ana en voz alta"}).getByRole("button",{name:"Voy a vos"}))
+      .toBeEnabled({timeout:900});
     await expect(globo.getByRole("listitem")).toHaveText(["2 de copas","As bravo"]);
     await expect(globo.locator("[data-animar]")).toHaveCount(2);
     const destinatario = seis ? "Mateo" : "Ana";
@@ -161,6 +178,7 @@ for (const modo of ["2v2", "3v3"]) {
     await expect(tapete.getByRole("status",{name:"Clara dice"})).toHaveText(destinatario+", voy a vos");
     await expect(page.locator(".j-globo-senas")).toBeVisible();
 
+    asientos[0].tipo = "humano";
     asiento = 0;
     await page.reload();
     await expect(page.getByText("Tus señas a Clara · 2")).toBeVisible();
@@ -174,3 +192,38 @@ for (const modo of ["2v2", "3v3"]) {
     }
   });
 }
+
+test("dos pies que hablan al reparto se oyen en orden, también cuando se vuelve a la mesa", async ({ page }) => {
+  const nombres = ["Ana", "Beto", "Clara", "Diego"];
+  const asientos = nombres.map((nombre, asiento) => ({ nombre, asiento, equipo: asiento % 2, tipo: "humano" }));
+  const formato = "pairs-private-senas";
+  const estado = iniciarOnline({ versionReparto:"online-1", mano:0, dador:3, muestra:"copas-06", manos:manos.slice(0,4) });
+  const indicaciones = [
+    crearIndicacionPie(estado,2,0,"veni",1,[]),
+    crearIndicacionPie(estado,3,1,"juga",1,[]),
+  ];
+  await page.routeWebSocket("**/vivo", () => {});
+  await page.route("**/api/**", route => {
+    const ruta = new URL(route.request().url()).pathname;
+    let json;
+    if (ruta === "/api/jugador") json = { id:"a",nombre:"Ana",salonHabilitado:true };
+    if (ruta === "/api/salon/mesas") json = {mesas:[]};
+    if (ruta === "/api/modalidades") json = {modos:["1v1","2v2"],senasPie:["2v2"]};
+    if (ruta === "/api/mesas" || ruta.endsWith("/"+id)) json = { id,modo:"2v2",formato,versionSenas:versionSenasPie,
+      lista:true,miAsiento:0,creadorId:"a",asientos };
+    if (ruta.endsWith("/partida")) json = { version:1,manoNumero:1,meta:40,puntos:[0,0],ganadorPartida:null,formato,
+      versionSenas:versionSenasPie,vista:vistaOnline(estado,0),pie:vistaDelPie(estado,0,indicaciones),indicaciones };
+    return route.fulfill({json});
+  });
+  await page.goto("jugar/");
+  await page.getByRole("button",{name:"Crear mi mesa"}).click();
+  await page.getByRole("checkbox",{name:/Señas automáticas al pie/}).check();
+  await page.getByRole("button",{name:"Crear mesa",exact:true}).click();
+  const primera = page.getByRole("status",{name:"Clara dice"});
+  const ultima = page.getByRole("status",{name:"Diego dice"});
+  await expect(primera).toHaveText("Ana, vení");
+  await expect(ultima).toHaveText("Beto, jugá");
+  await page.reload();
+  await expect(ultima).toHaveText("Beto, jugá");
+  await expect(primera).toHaveCount(0);
+});

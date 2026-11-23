@@ -8,7 +8,7 @@ import { Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
 import { AccionesDelPie, SenasEnviadas, type DecirAlCompanero } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
-import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
+import { esperaIndicacionDelPie, type Eleccion, type Mesa, type PartidaTercetos } from "./cliente";
 import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo } from "./Voz";
 import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
@@ -80,7 +80,7 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
 }
 
 export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, indicar, presencioReparto }: Props) {
-  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
+  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto, esperaIndicacionDelPie(mesa, recibida));
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
   const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
@@ -93,7 +93,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const esPico = lance.tipo === "pico-a-pico";
   const pie = !esPico && indicar ? partida.pie : undefined;
   const indicaciones = esPico ? undefined : partida.indicaciones;
-  const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length);
+  const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length, partida);
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
   const rivales = esPico && lance.activos.map(a => `${mesa.asientos[a].nombre} (equipo ${mesa.asientos[a].equipo + 1})`).join(" y ");
   const jugando = vista.estado === "jugando" ? vista : null;
