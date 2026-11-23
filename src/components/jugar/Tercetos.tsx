@@ -6,9 +6,10 @@ import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mes
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
+import { AccionesDelPie, SenasEnviadas, type DecirAlCompanero } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
-import { GloboDeVoz, vocesEnReposo } from "./Voz";
+import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo } from "./Voz";
 import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
 
@@ -22,6 +23,7 @@ type Props = {
   aviso?: string;
   jugar: (accion?: Eleccion) => void;
   presencioReparto: boolean;
+  indicar?: DecirAlCompanero;
 };
 
 const nombreDelLance = (lance: LanceTercetos) =>
@@ -77,7 +79,7 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
   </details>;
 }
 
-export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, presencioReparto }: Props) {
+export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, indicar, presencioReparto }: Props) {
   const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
@@ -89,6 +91,9 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const numeroVuelta = vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
+  const pie = !esPico && indicar ? partida.pie : undefined;
+  const indicaciones = esPico ? undefined : partida.indicaciones;
+  const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length);
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
   const rivales = esPico && lance.activos.map(a => `${mesa.asientos[a].nombre} (equipo ${mesa.asientos[a].equipo + 1})`).join(" y ");
   const jugando = vista.estado === "jugando" ? vista : null;
@@ -122,10 +127,12 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             contenido: prueba
               ? <PruebaEnMesa prueba={prueba} base={base} jugada={carta} ganadora={ganadora}
                   acciones={historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />
-              : <GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />,
+              : <><GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />
+                <PalabraDelPie indicacion={frase} asiento={asiento} nombre={nombre}/></>,
             reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
           };
         }}
+        pie={pie && {vista:pie, mano:partida.manoNumero, llegadaEnVivo:Boolean(partida.llegadaEnVivo)}}
         zonaJugador={<ZonaJugador titulo={estadoRed ?? titulo ?? "Esperando la jugada"} bloqueada={bloqueada}
           detalle={<>
             {aviso && <p className="j-aviso">{aviso}</p>}
@@ -146,6 +153,9 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
               <p className="j-seis-falta">Falta envido · Si gana tu equipo, cobra {tantos(vista.faltaPorEquipo[propio])}. Si ganan los rivales, cobran {tantos(vista.faltaPorEquipo[1 - propio])}.</p>
             )}
           </>}
+          sena={pie && indicar && (pie.pie === mesa.miAsiento
+            ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} decir={indicar}/>
+            : <SenasEnviadas pie={pie} muestra={vista.muestra} nombre={nombre}/>)}
           mano={jugando && <ManoJugador cartas={jugando.cartas} habilitada={!bloqueada && jugando.legales.includes("carta")} base={base} jugar={jugar} />}
           cantos={opciones.length > 0 && <div className="j-cantos" role="group" aria-label="Cantos y respuestas">
             {opciones.map(tipo => <button key={tipo} className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"} disabled={bloqueada}
@@ -160,7 +170,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
           titulo="Tantos de este reparto" detalle={false} />}
         {ultimoCobro && <p>Último cobro · Equipo {ultimoCobro.equipo + 1}, {tantos(ultimoCobro.tantos)} por {ultimoCobro.motivo}.</p>}
         <HistorialDeMano key={`${partida.manoNumero}-${lance.duelo}`} acciones={vista.acciones} cobros={vista.cobros}
-          nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"}>
+          nombre={nombre} indicaciones={indicaciones} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"}>
           {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
             presentando={presentando} voz={voz?.indice} />}
         </HistorialDeMano>

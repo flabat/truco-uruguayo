@@ -1,3 +1,4 @@
+import { versionSenasPie } from "../../motor/senas-pie";
 import type { Partida, PartidaTercetos } from "./cliente";
 
 export function ReporteDeJugada({ mesaId, partida, vuelta, presentando, voz }: {
@@ -22,6 +23,7 @@ export function ReporteDeJugada({ mesaId, partida, vuelta, presentando, voz }: {
   return <form action={"/api/mesas/" + encodeURIComponent(mesaId) + "/reportes"} method="post" target="_blank" rel="noopener">
     <input type="hidden" name="mano" value={partida.manoNumero} />
     <input type="hidden" name="posicion" value={posicion} />
+    {partida.versionSenas === versionSenasPie && <input type="hidden" name="indicaciones" value={partida.indicaciones?.length ?? 0} />}
     <input type="hidden" name="vuelta" value={vuelta} />
     <input type="hidden" name="puntos" value={partida.puntos.join("-")} />
     <input type="hidden" name="fase" value={fase} />

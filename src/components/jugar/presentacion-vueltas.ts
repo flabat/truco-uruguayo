@@ -56,6 +56,9 @@ function pasosNuevos(
     }
     const parcial = {
       ...actual,
+      // Las señas y palabras deben corresponder al prefijo que está en pantalla.
+      pie: previa && anterior?.pie?.vuelta === cerradas + 1 && !completa ? anterior.pie : undefined,
+      indicaciones: actual.indicaciones?.filter(d => d.indiceAccion <= i),
       puntos,
       ganadorPartida: null,
       turnos: actual.turnos?.slice(0, i + 1),
@@ -102,7 +105,11 @@ export function usePresentacionVueltas(actual: Partida | undefined, presencioRep
   const [secuencia, mostrar] = useState(() => ({
     recibida: actual, pasos: pasosNuevos(undefined, actual, presencioReparto),
   }));
-  if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero) {
+  if (secuencia.recibida?.llegadaEnVivo && actual?.llegadaEnVivo === false) {
+    // Una reconexión recupera el tapete de ahora, incluidos los gestos en su pose final.
+    mostrar({ recibida: actual, pasos: [{ partida: actual, espera: 0 }] });
+  } else if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero
+      || actual?.indicaciones?.length !== secuencia.recibida?.indicaciones?.length) {
     mostrar({ recibida: actual, pasos: pasosNuevos(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
   }
   const paso = secuencia.pasos[0];

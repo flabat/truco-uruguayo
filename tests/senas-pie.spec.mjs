@@ -1,0 +1,176 @@
+import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { proyectarTercetos } from "../api/partidas-tercetos.ts";
+import { aplicarOnline, iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { crearIndicacionPie, versionSenasPie, vistaDelPie } from "../src/motor/senas-pie.ts";
+
+const id = "294dda42-c1f9-404f-b0fd-f7956d9b50b1";
+const pico = JSON.parse(readFileSync(new URL("./fixtures/pico-tercetos-v2.json", import.meta.url), "utf8"));
+const manos = [
+  ["copas-02", "bastos-01", "oros-03"], ["bastos-06", "copas-07", "espadas-05"],
+  ["copas-04", "bastos-02", "oros-07"], ["oros-12", "copas-03", "bastos-04"],
+  ["copas-05", "bastos-07", "oros-05"], ["oros-06", "espadas-11", "bastos-12"],
+];
+
+for (const modo of ["2v2", "3v3"]) {
+  test(modo + " muestra los gestos en el asiento y publica la indicación con destinatario", async ({ page, isMobile }) => {
+    const seis = modo === "3v3";
+    const nombres = seis ? ["Ana","Beto","Mateo","Diego","Clara","Luis"] : ["Ana","Beto","Clara","Diego"];
+    const pie = nombres.length - 2;
+    const formato = seis ? "triples" : "pairs-private-senas";
+    const asientos = nombres.map((nombre, asiento) => ({ nombre, asiento, equipo: asiento % 2, tipo: "humano" }));
+    const meta = seis ? 50 : 40;
+    const categorias = seis ? ["2 de copas","As bravo","Tres"] : ["2 de copas","As bravo"];
+    const reparto = manos.slice(0,nombres.length);
+    if (!seis) reparto[0] = ["copas-02", "bastos-01", "oros-04"];
+    let asiento = pie;
+    let estado = iniciarOnline({ versionReparto: seis ? "online-2" : "online-1", mano: 0, dador: nombres.length - 1,
+      muestra: "copas-06", manos: reparto }, [0,0], meta);
+    const mesa = () => ({ id, modo, formato, versionSenas: versionSenasPie, meta, miAsiento: asiento, creadorId: "jugador-"+pie,
+      asientos, lista: true, invitacion: "/jugar/?invitacion=amigos" });
+    const indicaciones = [];
+    const sockets = [];
+    await page.routeWebSocket("**/vivo", socket => sockets.push(socket));
+    await page.route("**/api/**", async route => {
+      const req = route.request(), ruta = new URL(req.url()).pathname;
+      let json;
+      if (ruta === "/api/jugador") json = { id: "jugador-"+asiento, nombre: nombres[asiento], salonHabilitado: true };
+      if (ruta === "/api/modalidades") json = { modos: ["1v1","2v2","3v3"], senasPie: ["2v2","3v3"] };
+      if (ruta === "/api/salon/mesas") json = { mesas: [] };
+      if (ruta === "/api/mesas") {
+        expect(req.postDataJSON()).toEqual({modo, formato, publica: !seis, versionSenas: versionSenasPie});
+        json = mesa();
+      }
+      if (ruta.endsWith("/"+id)) json = mesa();
+      if (ruta.endsWith("/indicaciones")) {
+        const {id: comando, version, indicacion} = req.postDataJSON();
+        expect(comando).toBeTruthy();
+        expect(version).toBe(1 + estado.acciones.length);
+        expect(indicacion).toEqual(indicaciones.length ? {destinatario: seis ? 2 : 0, frase: "voy-a-vos", vuelta: 2} :
+          {destinatario: 0, frase: "veni", vuelta: 1});
+        const palabra = crearIndicacionPie(estado, asiento, indicacion.destinatario, indicacion.frase, indicacion.vuelta, indicaciones);
+        expect(palabra).toBeDefined();
+        indicaciones.push(palabra);
+        json = {};
+      }
+      if (ruta.endsWith("/partida")) {
+        const version = 1 + estado.acciones.length;
+        const lectura = seis ? proyectarTercetos(estado, estado.lance.tipo === "redondilla" ? 1 : 2, version, asiento) :
+          { version, manoNumero: 1, meta, puntos:[0,0], ganadorPartida: null, formato, vista: vistaOnline(estado,asiento) };
+        json = {...lectura, versionSenas: versionSenasPie, indicaciones, pie: vistaDelPie(estado,asiento,indicaciones)};
+      }
+      await route.fulfill({ json });
+    });
+    if (isMobile) await page.setViewportSize({width:320,height:780});
+    await page.goto("jugar/");
+    await page.getByRole("button", {name:"Crear mi mesa"}).click();
+    if (seis) await page.getByRole("radio",{name:/3 contra 3/}).check();
+    await page.getByRole("checkbox",{name:/Señas automáticas al pie/}).check();
+    await page.getByRole("button",{name:"Crear mesa",exact:true}).click();
+    const tapete = page.getByRole("region",{name:"Tapete"});
+    const globo = page.getByRole("region",{name:"Señas privadas de Ana"});
+    const boton = page.getByRole("button",{name:"Señas de Ana ("+categorias.length+")"});
+    await expect(globo.getByRole("listitem")).toHaveText(categorias);
+    await expect(globo.locator("[data-animar]")).toHaveCount(categorias.length);
+    await expect(globo.getByRole("listitem").first()).toHaveAccessibleName("Ana · alza ambas cejas · 2 de copas");
+    await expect(boton).toHaveAttribute("aria-expanded","true");
+    await expect(page.getByRole("combobox",{name:"Seña para esta jugada"})).toHaveCount(0);
+    if (isMobile) expect((await boton.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await page.emulateMedia({reducedMotion:"reduce"});
+    await expect(globo.locator(".j-cara-cejas").first()).toHaveCSS("animation-name","none");
+    await expect(tapete.locator(".j-globo-senas")).toHaveCount(1);
+    const punto = await globo.evaluate(el => {
+      const b = el.getBoundingClientRect();
+      const tip = parseFloat(getComputedStyle(el, "::before").left);
+      return { x:b.left + tip, y:b.top };
+    });
+    const r = await boton.boundingBox();
+    expect(Math.abs(punto.x - (r.x + r.width/2))).toBeLessThan(2);
+    expect(punto.y - (r.y + r.height)).toBeLessThan(18);
+    for (const btn of await tapete.locator(".j-boton-senas").all()) {
+      const asiento = btn.locator("..");
+      const persona = await asiento.locator(".j-persona").boundingBox();
+      expect(persona.y + persona.height).toBeLessThanOrEqual((await btn.boundingBox()).y);
+    }
+    if (process.env.CAPTURAS_PIE && (seis === isMobile)) {
+      const archivo = seis ? "pie-redondilla.png" : "pie-parejas.png";
+      await tapete.screenshot({path:process.env.CAPTURAS_PIE+"/"+archivo});
+    }
+
+    await globo.getByRole("button",{name:"Cerrar señas"}).press("Escape");
+    await expect(boton).toBeFocused();
+    await expect(globo).toHaveCount(0);
+    if (seis) {
+      const otro = page.getByRole("button",{name:"Señas de Mateo (3)"});
+      if (isMobile) await otro.tap(); else await otro.press("Enter");
+      const segunda = page.getByRole("region",{name:"Señas privadas de Mateo"});
+      await expect(segunda.getByRole("listitem")).toHaveText(["4 de copas","Siete bravo","Dos común"]);
+      await expect(segunda.locator("[data-animar]")).toHaveCount(3);
+    }
+    if (isMobile) await boton.tap(); else await boton.press("Enter");
+    await expect(globo).toBeVisible();
+    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    await expect(page.locator(".j-globo-senas")).toHaveCount(1);
+    const ocupados = await tapete.evaluate(el => {
+      const b = el.querySelector(".j-globo-senas").getBoundingClientRect();
+      return [...el.querySelectorAll(".j-persona,.j-boton-senas,.j-jugada,.j-muestra,.j-mano,.j-zona-tapete")].filter(other => {
+        const r = other.getBoundingClientRect();
+        return r.width && r.height && r.left < b.right && b.left < r.right && r.top < b.bottom && b.top < r.bottom;
+      }).map(other => other.className);
+    });
+    expect(ocupados).toEqual([]);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const hablar = page.getByRole("group",{name:"Decirle a Ana en voz alta"});
+    await hablar.getByRole("button",{name:"Vení"}).click();
+    const historia = page.getByRole("region",{name: seis ? "Historial de la redondilla" : "Historial de la mano"});
+    await expect(historia.getByRole("listitem")).toHaveText(["Clara le dijo a Ana «Vení»."]);
+    await expect(tapete.getByRole("status",{name:"Clara dice"})).toHaveText("Ana, vení");
+    await expect(hablar).toHaveCount(0);
+    await page.reload();
+    await expect(globo).toBeVisible();
+    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    await expect(historia.getByRole("listitem")).toHaveCount(1);
+
+    await globo.getByRole("button",{name:"Cerrar señas"}).click();
+    const primeraVuelta = seis ? ["oros-03","bastos-06","bastos-02","oros-12","copas-05","oros-06"] :
+      ["oros-04","bastos-06","copas-04","oros-12"];
+    for (const [asiento, carta] of primeraVuelta.entries()) {
+      const paso = aplicarOnline(estado, { asiento, tipo:"carta", carta });
+      expect(paso.ok).toBe(true);
+      estado = paso.estado;
+    }
+    sockets.at(-1).send(JSON.stringify({tipo:"actualizar"}));
+    await expect(globo.getByRole("listitem")).toHaveText(["2 de copas","As bravo"]);
+    await expect(globo.locator("[data-animar]")).toHaveCount(2);
+    const destinatario = seis ? "Mateo" : "Ana";
+    const hablarDespues = page.getByRole("group",{name:"Decirle a "+destinatario+" en voz alta"});
+    await expect(hablarDespues.getByRole("button")).toHaveText(["Voy a vos"]);
+    const cantidadSockets = sockets.length;
+    sockets.at(-1).close({code:1001});
+    await expect.poll(() => sockets.length).toBeGreaterThan(cantidadSockets);
+    await expect(globo.locator("[data-animar]")).toHaveCount(0);
+    if (seis) {
+      await page.getByRole("button",{name:"Señas de Mateo (2)"}).click();
+      const segunda = page.getByRole("region",{name:"Señas privadas de Mateo"});
+      await expect(segunda.getByRole("listitem")).toHaveText(["4 de copas","Siete bravo"]);
+      await expect(segunda.locator("[data-animar]")).toHaveCount(0);
+    }
+    await hablarDespues.getByRole("button",{name:"Voy a vos"}).click();
+    const publica = "Clara le dijo a "+destinatario+" «Voy a vos».";
+    await expect(historia.getByRole("listitem").last()).toHaveText(publica);
+    await expect(tapete.getByRole("status",{name:"Clara dice"})).toHaveText(destinatario+", voy a vos");
+    await expect(page.locator(".j-globo-senas")).toBeVisible();
+
+    asiento = 0;
+    await page.reload();
+    await expect(page.getByText("Tus señas a Clara · 2")).toBeVisible();
+    await expect(page.locator(".j-globo-senas,.j-boton-senas,.j-indicaciones-pie")).toHaveCount(0);
+    await expect(historia.getByRole("listitem").last()).toHaveText(publica);
+    if (seis) {
+      estado = iniciarOnline(pico.reparto,pico.puntosInicio,pico.meta,pico.numero);
+      await page.reload();
+      await expect(page.getByRole("region",{name:"Historial del duelo"})).toBeVisible();
+      await expect(page.locator(".j-globo-senas,.j-boton-senas,.j-indicaciones-pie,.j-senas-enviadas")).toHaveCount(0);
+    }
+  });
+}

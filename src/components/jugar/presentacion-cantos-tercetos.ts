@@ -49,7 +49,10 @@ function antesDelCobro(actual: PartidaTercetos, lance: LanceTercetos, registro: 
   // Una referencia al resumen completo también expondría su resultado y el resto de sus acciones.
   const { tipo, duelo, activos } = lance;
   const visible: LanceTercetos = tipo === "redondilla" ? { tipo, duelo: null, activos } : { tipo, duelo, activos };
-  return { ...actual, lance: visible, vista, historialLances, puntos, ganadorPartida: null };
+  return { ...actual, lance: visible, vista, historialLances, puntos, ganadorPartida: null,
+    pie: previa?.pie?.vuelta === cerradas+1 ? previa.pie : undefined,
+    indicaciones: actual.indicaciones?.filter(d => d.indiceAccion <= indice),
+  };
 }
 
 function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercetos,
@@ -88,7 +91,10 @@ export function useCantosDeTercetos(actual: PartidaTercetos, presencioReparto: b
   const [secuencia, mostrar] = useState(() => ({
     recibida: actual, pasos: siguientes(undefined, actual, presencioReparto),
   }));
-  if (actual.version !== secuencia.recibida.version || actual.manoNumero !== secuencia.recibida.manoNumero) {
+  if (secuencia.recibida.llegadaEnVivo && actual.llegadaEnVivo === false) {
+    mostrar({ recibida: actual, pasos: [] });
+  } else if (actual.version !== secuencia.recibida.version || actual.manoNumero !== secuencia.recibida.manoNumero
+      || actual.indicaciones?.length !== secuencia.recibida.indicaciones?.length) {
     mostrar({ recibida: actual, pasos: siguientes(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
   }
   const paso = secuencia.pasos[0];

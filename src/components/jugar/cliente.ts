@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "../../motor/mesa-online";
+import type { IndicacionPie, VistaPie } from "../../motor/senas-pie";
 import type { CardId } from "../../motor/cartas";
 import type { EdicionModelo } from "../../lib/modelos";
 
@@ -24,6 +25,7 @@ export interface VersionesMesa {
   edicionModelo?: EdicionModelo;
 }
 export interface Mesa extends VersionesMesa {
+  versionSenas?: string | null;
   publica: boolean;
   id: string;
   modo: Modo;
@@ -37,6 +39,11 @@ export interface Mesa extends VersionesMesa {
   asientos: Asiento[];
 }
 interface Marcador {
+  versionSenas?: string | null;
+  pie?: VistaPie;
+  indicaciones?: readonly IndicacionPie[];
+  /** Sólo de presentación. Se fija al observar la apertura de esta vuelta en vivo. */
+  llegadaEnVivo?: boolean;
   version: number;
   manoNumero: number;
   puntos: [number, number];
@@ -45,7 +52,6 @@ interface Marcador {
 }
 export interface Partida extends Marcador {
   formato?: Format;
-  versionSenas?: string;
   turnos?: readonly PublicTurn[];
   vista: VistaOnline | null;
 }
@@ -93,7 +99,7 @@ export function idComando() {
   return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
 }
 
-export function useMesa(id: string) {
+export function useMesa(id: string, recienCreada = false) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
   const [partida, setPartida] = useState<PartidaRecibida>();
@@ -108,6 +114,10 @@ export function useMesa(id: string) {
     let demora = 400;
     let lectura: Promise<void> | undefined;
     let faltaLeer = false;
+    let primeraLectura = true;
+    let recuperando = false;
+    let ultimaApertura: string | undefined;
+    let animar = false;
 
     function leer(): Promise<void> {
       faltaLeer = true;
@@ -128,6 +138,19 @@ export function useMesa(id: string) {
             ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
             : undefined;
           if (cancel.signal.aborted) return;
+          if (mano?.pie) {
+            const apertura = mano.manoNumero + "." + mano.pie.vuelta;
+            if (ultimaApertura !== apertura) {
+              const esRepartoInicial = recienCreada && mano.manoNumero === 1 && mano.pie.vuelta === 1
+                && mano.vista?.acciones.length === 0;
+              animar = !recuperando && (!primeraLectura || esRepartoInicial);
+              ultimaApertura = apertura;
+            }
+            if (recuperando) animar = false;
+            mano.llegadaEnVivo = animar;
+          }
+          if (canal && canal === socket && canal.readyState === WebSocket.OPEN) recuperando = false;
+          primeraLectura = false;
           setMesa(sala);
           setPartida(mano);
           setError(null);
@@ -173,6 +196,7 @@ export function useMesa(id: string) {
       actual.onclose = () => {
         if (cancel.signal.aborted) return;
         socket = undefined;
+        recuperando = true;
         setConectada(false);
         clearTimeout(timer);
         timer = setTimeout(leer, demora);
@@ -197,7 +221,7 @@ export function useMesa(id: string) {
       window.removeEventListener("offline", sinRed);
       window.removeEventListener("pageshow", leer);
     };
-  }, [ruta]);
+  }, [ruta, recienCreada]);
 
   return { ruta, mesa, partida, conectada, error, refrescar };
 }

@@ -1,0 +1,79 @@
+.j-cara-sena { display: block; width: 2.75rem; height: 2.75rem; margin: 0 auto; }
+.j-cara-sena [class^="j-cara-"] { transform-box: view-box; }
+.j-cara-sena[data-gesto="cejas"] .j-cara-cejas { transform: translateY(-6px); }
+.j-cara-sena[data-gesto="labios-derecha"] .j-cara-boca { transform: translateX(-10px); }
+.j-cara-sena[data-gesto="labios-izquierda"] .j-cara-boca { transform: translateX(10px); }
+.j-cara-sena[data-gesto="beso"] .j-cara-boca { transform-origin: 32px 45px; transform: scale(1.16); }
+.j-cara-sena[data-gesto="nariz"] .j-cara-nariz { transform: translateY(-2.5px); }
+.j-cara-sena .j-cara-guino { transform: scaleY(.04); }
+.j-cara-sena .j-cara-apertura { transform-origin: 32px 43px; }
+.j-cara-sena .j-cara-lengua { transform-origin: 32px 46px; }
+.j-cara-sena .j-cara-neutra { opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .j-cara-sena[data-animar] :is(.j-cara-cejas,.j-cara-boca,.j-cara-nariz,.j-cara-guino) {
+    animation: j-hacer-sena .7s cubic-bezier(.37,0,.2,1) both;
+  }
+  .j-cara-sena[data-animar] .j-cara-neutra { animation: j-neutra .7s ease-out both; }
+  .j-cara-sena[data-animar] .j-cara-pliegue { animation: j-fruncir .7s ease-out both; }
+  .j-cara-sena[data-animar] :is(.j-cara-apertura,.j-cara-lengua) { animation: j-abrir-boca .7s ease-out both; }
+}
+@keyframes j-hacer-sena { 0%,15% { transform: none; } }
+@keyframes j-fruncir { 0%,15% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes j-abrir-boca { 0%,15% { transform: scaleY(.14); } 100% { transform: scaleY(1); } }
+@keyframes j-neutra { 0%,15% { opacity: 1; } 75%,100% { opacity: 0; } }
+.j-tapete--jugador > .j-puestos:is(.j-parejas, .j-puestos-seis).j-con-senas {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  grid-template-rows: auto auto auto auto;
+  grid-template-areas: "frente frente frente" "globo globo globo" "izquierda . derecha" "vos vos vos";
+  align-items: start; gap: .4rem 0; padding-block: .45rem;
+}
+.j-tapete--jugador > .j-puestos.j-puestos-seis.j-con-senas {
+  grid-template-areas: "frente frente frente" "lejos-izquierda . lejos-derecha" "globo globo globo" "cerca-izquierda . cerca-derecha" "vos vos vos";
+  grid-template-rows: auto auto auto auto auto;
+}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-puesto {
+  grid-template-rows: auto; align-self: end;
+}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-izquierda {grid-area:izquierda;}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-derecha {grid-area:derecha;}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-lejos-izquierda {grid-area:lejos-izquierda;}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-lejos-derecha {grid-area:lejos-derecha;}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-cerca-izquierda {grid-area:cerca-izquierda;}
+.j-tapete--jugador .j-puestos.j-con-senas > .j-cerca-derecha {grid-area:cerca-derecha;}
+/* Los flancos del tapete tradicional comparten filas mediante subgrid. Con señas
+   cada asiento conserva juntos el nombre, las cartas y su propio botón. */
+.j-tapete--jugador > .j-puestos.j-con-senas > .j-puesto:not(.j-frente, .j-vos) {
+  display: flex; flex-direction: column; align-items: center; align-self: end;
+}
+.j-tapete--jugador .j-con-senas :is(.j-derecha, .j-lejos-derecha, .j-cerca-derecha) > .j-muestra { order: -1; }
+@media (min-width: 601px) and (min-height: 501px) {
+  .j-tapete--jugador > .j-puestos.j-parejas.j-con-senas {
+    grid-template-columns: 1fr minmax(15.5rem, 1.45fr) 1fr;
+    grid-template-areas: "izquierda frente derecha" "izquierda globo derecha" "izquierda vos derecha";
+    grid-template-rows: auto auto auto;
+  }
+  .j-tapete--jugador > .j-puestos.j-parejas.j-con-senas > .j-puesto:not(.j-frente, .j-vos) { align-self: center; }
+}
+.j-boton-senas { grid-column: 1/-1; display:inline-flex; gap:.25rem; align-items:center; justify-self:center; margin-top:.22rem;
+  padding:.2rem .5rem; border:1px solid #b6c5a2; border-radius:1rem; background:#274b3b; color:#fff5da; font:600 .8rem var(--sans,system-ui); }
+.j-boton-senas span { background:#f9e8b8; color:#254632; border-radius:50%; min-width:1.25em; }
+.j-franja-globo { grid-area:globo; width:100%; position:relative; }
+.j-globo-senas { position:relative; text-align:left; isolation:isolate; border:1px solid #d6c49d; border-radius:.8rem;
+  padding:.35rem .55rem .55rem; width:max-content; max-width:100%; background:#fff9eb; color:#282d24; box-shadow:0 3px 10px #182e2733; }
+.j-globo-senas::before {content:"";position:absolute;top:-.32rem;left:var(--punta,50%);width:.6rem;height:.6rem;
+  background:#fff9eb; border-left:1px solid #d6c49d; border-top:1px solid #d6c49d;transform:translateX(-50%) rotate(45deg);z-index:-1;}
+.j-globo-cabecera {display:flex;gap:.3rem;align-items:center;font-size:.78rem;line-height:1.1;}
+.j-globo-cabecera b {overflow-wrap:anywhere;}
+.j-globo-cabecera > div {display:grid;gap:.18rem;}
+.j-globo-cabecera small {font-size:.68rem;color:#615f51;}
+.j-cerrar-globo { margin-left:auto; padding:0; border:none; background:transparent; color:#555d4f;
+  font-size:1.25rem;line-height:1;min-width:1.7rem;height:1.7rem; }
+.j-globo-senas ul {display:flex;align-items:start;justify-content:center;gap:.45rem;list-style:none;margin:.25rem 0 0;padding:0;}
+.j-globo-senas li {width:3.9rem;min-width:0;text-align:center;font-size:.73rem;font-weight:650;line-height:1.15;}
+.j-indicaciones-pie {display:flex;flex-wrap:wrap;gap:.25rem 1.25rem;}
+.j-indicaciones-pie .j-cantos {justify-content:flex-start;}
+.j-indicaciones-pie fieldset {min-width:0;margin:.4rem 0;padding:.35rem 0;border:0;}
+.j-indicaciones-pie legend {font-size:.85rem;font-weight:650;}
+.j-senas-enviadas {font-size:.82rem;}
+@media(max-width:600px){.j-indicaciones-pie{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,7.5rem),1fr));gap:.35rem;} .j-indicaciones-pie legend{font-size:.78rem;}}
+@media(pointer:coarse){.j-boton-senas,.j-cerrar-globo{min-height:44px;}.j-cerrar-globo{min-width:44px;}}

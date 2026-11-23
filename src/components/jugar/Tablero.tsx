@@ -8,8 +8,9 @@ import type { CardId } from "../../motor/cartas";
 import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
-import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
+import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo, type Voz } from "./Voz";
 import { Naipe, Tapete } from "./Tapete";
+import { AccionesDelPie, SenasEnviadas, type DecirAlCompanero } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 
 type Canto = Exclude<Tipo, "carta">;
@@ -141,6 +142,7 @@ export function EnJuego({
   estadoRed,
   aviso,
   sena,
+  indicar,
   voz,
   base,
   jugar,
@@ -153,6 +155,7 @@ export function EnJuego({
   estadoRed?: string;
   aviso?: string;
   sena?: ReactNode;
+  indicar?: DecirAlCompanero;
   voz?: Voz;
   base: string;
   jugar: (a?: Eleccion) => void;
@@ -162,6 +165,8 @@ export function EnJuego({
   const equipo = (e: number) =>
     mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
   const nombre = (a: number) => mesa.asientos[a].nombre!;
+  const pie = indicar ? partida.pie : undefined;
+  const frase = useVozDelPie(partida.manoNumero, partida.indicaciones, v.acciones.length);
   const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;
@@ -216,11 +221,13 @@ export function EnJuego({
             return {
               contenido: prueba
                 ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
-                : <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />,
+                : <><GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />
+                  <PalabraDelPie indicacion={frase} asiento={asiento} nombre={nombre} /></>,
               ocultaDorsos: Boolean(prueba),
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
             };
           }}
+          pie={pie && {vista:pie, mano:partida.manoNumero, llegadaEnVivo:Boolean(partida.llegadaEnVivo)}}
           zonaJugador={<ZonaJugador
             titulo={estadoRed ?? titulo}
             bloqueada={bloqueada}
@@ -237,7 +244,9 @@ export function EnJuego({
                 </p>
               )}
             </>}
-            sena={sena}
+            sena={pie && indicar ? (pie.pie === mesa.miAsiento
+              ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} decir={indicar}/>
+              : <SenasEnviadas pie={pie} muestra={v.muestra} nombre={nombre}/>) : sena}
             mano={cartas.length > 0 && <ManoJugador cartas={cartas} habilitada={!bloqueada && v.legales.includes("carta")} base={base} jugar={jugar} />}
             cantos={disponibles.length > 0 && disponibles.map((grupo) => (
               <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
@@ -263,7 +272,7 @@ export function EnJuego({
           {resultado && v.resumenTantos && <ResumenDeTantos resumen={v.resumenTantos} propio={propio}
             equipo={e => mesa.modo === "1v1" ? `${equipo(e)} (${nombre(e)})` : equipo(e)}
             acciones={v.acciones} resultado={resultado} nombre={nombre} />}
-          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre}>
+          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} indicaciones={partida.indicaciones}>
             {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
               presentando={mostrandoCartas} voz={voz?.indice} />}
           </HistorialDeMano>

@@ -21,6 +21,7 @@ import { EnJuego } from "./Tablero";
 import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
 import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
+import { versionSenasPie, type FrasePie } from "../../motor/senas-pie";
 import { MesaConSenas } from "./Senas";
 import { usePresentacionVueltas } from "./presentacion-vueltas";
 import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
@@ -68,11 +69,17 @@ function AbrirMesa({
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
   const [tercetos, habilitarTercetos] = useState(false);
+  const [modosPie, ofrecerPie] = useState<Modo[] | null>();
+  const modoPie = modosPie?.includes(modo) === true;
+  const senasDisponibles = modoPie || (modosPie === null && modo === "2v2");
   useEffect(() => {
     const cancel = new AbortController();
-    pedir<{ modos: Modo[] }>("/api/modalidades", undefined, cancel.signal)
-      .then(({ modos }) => habilitarTercetos(Array.isArray(modos) && modos.includes("3v3")))
-      .catch(() => { /* Un servidor anterior sigue ofreciendo duelo y parejas. */ });
+    pedir<{ modos: Modo[]; senasPie?: Modo[] }>("/api/modalidades", undefined, cancel.signal)
+      .then(({ modos, senasPie }) => {
+        habilitarTercetos(Array.isArray(modos) && modos.includes("3v3"));
+        ofrecerPie(senasPie ?? null);
+      })
+      .catch(() => { if (!cancel.signal.aborted) ofrecerPie(null); });
     return () => cancel.abort();
   }, []);
   const [puntaje, cambiarPuntaje] = useState(String(metaPorModalidad[modo]));
@@ -88,7 +95,10 @@ function AbrirMesa({
     avisar("");
     try {
       const mesa = await pedir<Mesa>("/api/mesas", {
-        modo, publica: salonHabilitado && modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
+        modo, publica: salonHabilitado && modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(senasDisponibles && senas && {
+          formato: modo === "3v3" ? "triples" : "pairs-private-senas",
+          ...(modoPie && {versionSenas:versionSenasPie}),
+        }),
       });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
@@ -135,10 +145,11 @@ function AbrirMesa({
               </label>
             ))}
           </div>
-          {modo === "2v2" && (
+          {senasDisponibles && (
             <label className="j-habilitar-senas">
               <input type="checkbox" checked={senas} onChange={e => habilitarSenas(e.target.checked)} />
-              Permitir señas entre compañeros
+              {modoPie ? "Señas automáticas al pie" : "Permitir señas entre compañeros"}
+              {modoPie && <small>El pie ve los gestos en privado. Toda la mesa oye sus indicaciones.{modo === "3v3" && " Sólo durante las redondillas."}</small>}
             </label>
           )}
           {salonHabilitado && modo !== "3v3" && <label className="j-habilitar-senas">
@@ -235,7 +246,7 @@ function MesaAbierta({
   avisoInicial?: string;
   recienCreada?: boolean;
 }) {
-  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
+  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id, recienCreada);
   const encabezadoEspera = useRef<HTMLHeadingElement>(null);
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
@@ -283,6 +294,11 @@ function MesaAbierta({
     });
   }
 
+  function indicar(destinatario:number, frase:FrasePie, vuelta:number) {
+    if (ocupado || !conectada || !partida || mostrandoCartas || !esPie) return;
+    void enviar("/indicaciones", {id:idComando(), version:partida.version, indicacion:{destinatario,frase,vuelta}});
+  }
+
   if (error?.status === 401) return <Ingreso volver={"/jugar/?mesa=" + encodeURIComponent(id)} />;
   if (error)
     return (
@@ -295,8 +311,13 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
-  const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
+  const versionLegada = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
+  const versionSenas = mesa.versionSenas ?? versionLegada;
+  const esPie = versionSenas === versionSenasPie && partida?.versionSenas === versionSenasPie;
+  const versionDesconocida = Boolean(partida?.vista && (
+    (versionSenas && partida.versionSenas !== versionSenas) ||
+    (versionSenas && versionSenas !== versionSenasPie && versionSenas !== versionLegada)
+  ));
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
   const enJuego = mesa.lista && partida?.vista;
   let estadoRed: string | undefined;
@@ -309,7 +330,7 @@ function MesaAbierta({
       <PieMesa mesa={mesa} />
       <div className="j-barra">
         <span>
-          {versionSenas ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
+          {versionSenas ? (mesa.modo === "3v3" ? "Tercetos con señas" : "Parejas con señas") : modalidades[mesa.modo][1]} · {jugador.nombre}
         </span>
         <a className="j-link" href={base + "jugar/"}>
           Volver al salón
@@ -328,16 +349,17 @@ function MesaAbierta({
       {enJuego && partida ? (
         partida.formato === "triples" ? (
           <MesaDeTercetos base={base} mesa={mesa} partida={partida} {...estadoZona}
-            jugar={jugada} presencioReparto={presencioReparto} />
-        ) : versionSenas && !versionDesconocida ? (
+            jugar={jugada} indicar={esPie ? indicar : undefined} presencioReparto={presencioReparto} />
+        ) : versionLegada && !esPie && !versionDesconocida ? (
           <MesaConSenas base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
-        ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} indicar={esPie ? indicar : undefined} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">
             <h2 ref={encabezadoEspera} tabIndex={-1}>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
             <Visibilidad publica={mesa.publica} />
             <p>Chico a {mesa.meta} tantos.</p>
+            {versionSenas === versionSenasPie && <p>Señas automáticas al pie. Toda la mesa oye sus indicaciones.{mesa.modo === "3v3" && " Sólo en redondilla."}</p>}
             <p>
               {faltan === 1
                 ? "Falta un jugador para repartir."
