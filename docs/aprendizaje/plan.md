@@ -42,7 +42,7 @@ Un issue abierto está disponible para reserva cuando se hayan integrado sus dep
 | 1 · Reglas y reparto | Los ejemplos publicados dan la jerarquía y los tantos esperados. El rey sustituye donde corresponde. Una semilla de referencia produce exactamente las doce cartas y la muestra acordadas. |
 | 2 · Mano reproducible | Desde la terminal, jugar, guardar y reproducir una mano de parejas con idénticos turnos, vueltas y resultado. Cubrir cierres en dos y en tres vueltas, incluidas pardas. Cambiar las cartas ocultas no cambia la decisión de un bot con la misma vista. |
 | 3 · Motor didáctico | Las familias se generan de forma reproducible. Tras una pista se repite el caso y después se reparte otro. Solo el acierto independiente de una situación fresca acredita progreso. Comprobar recarga y práctica por tema y mixta. |
-| 4 · Ruta disponible | En móvil y escritorio, completar comparación y flor, practicar tantos, jugar la mano guiada y volver a repartir. Una lección adicional del mismo tipo reutiliza los controles existentes. Verificar ambas rutas base de Pages. |
+| 4 · Ruta disponible | En móvil y escritorio, completar comparación y flor, practicar tantos, jugar la mano guiada y volver a repartir. Una lección adicional del mismo tipo reutiliza los controles existentes. Probar el recorrido desde la portada de la aplicación. |
 
 Cada PR ejecuta las comprobaciones de contribución. Las pruebas unitarias utilizan ejemplos calculados a mano además de invariantes del motor. Las pruebas de navegador cubren los pasos que dependen del DOM, el teclado y la persistencia. El cierre del seguimiento general requiere una mano reproducible desde terminal y un nuevo reparto desde el flujo guiado integrado en la ruta.
 

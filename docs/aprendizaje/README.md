@@ -1,6 +1,6 @@
 # Diseño de la ruta de aprendizaje
 
-La guía y la práctica individual están disponibles como invitado desde la portada de la aplicación completa. Los planes originales documentan las dos rutas que se verificaban cuando se publicaba en GitHub Pages. La verificación actual usa la raíz del sitio. [Entorno local](../entorno-local.md) · [Verificación del proyecto](../../CONTRIBUTING.md#verificación-local)
+La guía y la práctica individual están disponibles como invitado desde la portada de la aplicación completa. La aplicación se sirve y se verifica en la raíz del sitio. [Entorno local](../entorno-local.md) · [Verificación del proyecto](../../CONTRIBUTING.md#verificación-local)
 
 La ruta está pensada para quien practica a solas y quizá conoce la conga, pero recién empieza a jugar al truco con muestra. En los primeros cinco minutos debería poder comparar dos cartas y reconocer flor en una mano nueva. Al terminar el primer tramo debería saber qué cartas contar, cuánto vale una pieza y cómo elegir su primera carta en una mesa de parejas.
 
