@@ -4,7 +4,7 @@ import { catalogoGestosPie, textoFrasePie, type FrasePie, type GestoPie, type Vi
 import { CaraSena } from "./CaraSena";
 import "./senas-pie.css";
 
-export type DecirAlCompanero = (destinatario: number, frase: FrasePie, vuelta: number) => void;
+export type ElegirIndicacion = (destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number) => void;
 type Nombre = (asiento: number) => string;
 
 export interface PieEnTapete {
@@ -22,19 +22,29 @@ const ayudaFrase = {
   "voy-a-vos": "El pie juega antes que vos y te pide una carta fuerte.",
 } satisfies Record<FrasePie, string>;
 
-export function AccionesDelPie({ pie, nombre, bloqueada, decir }: {
-  pie: VistaPie; nombre: Nombre; bloqueada: boolean; decir: DecirAlCompanero;
+export function esperaDelCompanero(pie: VistaPie | undefined, nombre: Nombre) {
+  if (pie?.esperando == null) return undefined;
+  return {
+    titulo: nombre(pie.esperando) + " espera tu indicación",
+    indicacion: "Hablale en voz alta o dejá que elija su carta en silencio.",
+  };
+}
+
+export function AccionesDelPie({ pie, nombre, bloqueada, elegir }: {
+  pie: VistaPie; nombre: Nombre; bloqueada: boolean; elegir: ElegirIndicacion;
 }) {
   if (!pie.opciones.length) return null;
   return <div className="j-indicaciones-pie">
     {pie.opciones.map(({ destinatario, frases }) => <fieldset key={destinatario} disabled={bloqueada}>
-      <legend>Decirle a {nombre(destinatario)} en voz alta</legend>
+      <legend>{pie.esperando === destinatario ? "Para " + nombre(destinatario) : "Decirle a " + nombre(destinatario) + " en voz alta"}</legend>
       <div className="j-cantos">
         {frases.map(frase => <button type="button" className="j-sec" key={frase}
           title={ayudaFrase[frase]} aria-description={ayudaFrase[frase]}
-          onClick={() => decir(destinatario, frase, pie.vuelta)}>
+          onClick={() => elegir(destinatario, frase, pie.vuelta)}>
           {textoFrasePie[frase]}
         </button>)}
+        {pie.esperando === destinatario && <button type="button" className="j-sec"
+          onClick={() => elegir(destinatario, "sin-indicacion", pie.vuelta)}>Dejar jugar</button>}
       </div>
     </fieldset>)}
   </div>;

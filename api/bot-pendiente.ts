@@ -7,7 +7,7 @@ import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
 import { accionesPie, elegirAccionConPie, observacionPie, politicaPie } from "../src/motor/bot-pie.ts";
 import { versionSenasPie, vistaDelPie } from "../src/motor/senas-pie.ts";
-import { confirmarJugadaPieDB } from "./partidas-pie.ts";
+import { confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
 import { elegirAccionTercetos } from "../src/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
@@ -42,7 +42,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     if (fila.politica !== politicaPie) throw new Error("La política no admite el contrato de señas al pie.");
     const indicaciones = fila.indicaciones ?? [];
     const mano: ManoPublicable = fila.modo === "3v3"
-      ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones }
+      ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
       : restaurar(fila, "pairs-private-senas", fila.meta, fila.humanos);
     const asiento = actor(mano, fila.humanos);
     if (asiento === undefined) return null;
@@ -53,7 +53,8 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     if (!accion) throw new Error("La computadora al pie no encontró una acción legal.");
     const bot: DecisionBotV1 = { solicitada: politicaPie, aplicada: politicaPie, observacion: observacionPie,
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
-    return { asiento, bot, actorActual: (humanos: Asiento[]) => actor(mano, humanos),
+    return { asiento, bot, espera: (humanos: Asiento[]) => esperaDelPie(mano, humanos, accion) !== undefined,
+      actorActual: (humanos: Asiento[]) => actor(mano, humanos),
       aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarJugadaPieDB(db, fila, mano, accion, humanos, bot) };
   }
   if (fila.modo === "3v3") {
@@ -125,11 +126,17 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
     await db.query("SELECT id FROM juego.mesas WHERE id=$1 FOR UPDATE", [fila.mesa]);
     const actual = await snapshot(db, fila.mesa);
     if (!actual || actual.numero !== fila.numero || actual.version !== fila.version || actual.politica !== fila.politica
-      || actual.indicaciones?.length !== fila.indicaciones?.length || turno.actorActual(actual.humanos) !== turno.asiento) {
+      || actual.indicaciones?.length !== fila.indicaciones?.length || actual.pases_pie?.length !== fila.pases_pie?.length
+      || turno.actorActual(actual.humanos) !== turno.asiento) {
       await db.query("ROLLBACK");
       return false;
     }
-    await aplicarInferencia(db, actual, turno);
+    // Un trabajo creado antes de la espera explícita puede haber quedado programado con el plazo anterior.
+    if (turno.espera?.(actual.humanos)) {
+      await db.query("UPDATE juego.turnos_bot SET disponible_desde='infinity' WHERE mesa=$1", [fila.mesa]);
+    } else {
+      await aplicarInferencia(db, actual, turno);
+    }
     await db.query("COMMIT");
   } catch (error) {
     await db.query("ROLLBACK");

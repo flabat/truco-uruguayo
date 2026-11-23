@@ -1,4 +1,4 @@
-import { versionSenasPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
+import { versionSenasPie, type DestinoPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
 import { esCardId } from "../src/motor/cartas.ts";
 import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaParaPolitica,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../src/motor/mesa-online.ts";
@@ -9,10 +9,16 @@ import type { FormatoMesa } from "./mesas.ts";
 import { ErrorPeticion } from "./http.ts";
 
 export type Confirmada = AccionOnline & { sena?: Signal };
-export interface ManoPublicable { estado: EstadoOnline; turnos: PublicTurn[]; indicaciones?: IndicacionPie[] }
+export interface ManoPublicable {
+  estado: EstadoOnline;
+  turnos: PublicTurn[];
+  indicaciones?: IndicacionPie[];
+  pasesPie?: DestinoPie[];
+}
 export interface Registro {
   numero: number; version: number; version_reglas: number; version_senas: string | null;
   indicaciones?: IndicacionPie[];
+  pases_pie?: DestinoPie[];
   reparto: RepartoOnline; puntos_inicio: [number, number]; acciones: Confirmada[];
 }
 
@@ -82,7 +88,10 @@ export function restaurar(fila: Registro, formato: Format, meta?: number, humano
     const enTurno = aDecidir(previa.estado).includes(accion.asiento);
     return confirmar(enTurno ? previa : prepararTurno(previa, []), formato, accion);
   }, inicial);
-  if (alPie) mano.indicaciones = fila.indicaciones ?? [];
+  if (alPie) {
+    mano.indicaciones = fila.indicaciones ?? [];
+    mano.pasesPie = fila.pases_pie ?? [];
+  }
   return humanos ? prepararTurno(mano, humanos) : mano;
 }
 

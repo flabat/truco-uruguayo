@@ -1,12 +1,11 @@
 import type { PoolClient } from "pg";
-import { elegirIndicacionesPie } from "../src/motor/bot-pie.ts";
-import { legalesOnline } from "../src/motor/cantos-online.ts";
-import { aDecidir, aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "../src/motor/mesa-online.ts";
+import { elegirAccionConPie, elegirIndicacionesPie } from "../src/motor/bot-pie.ts";
+import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
 import { crearIndicacionPie, vistaDelPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
 import { ErrorPeticion } from "./http.ts";
-import type { RegistroTercetos } from "./partidas-tercetos.ts";
+import { asientoBotTercetos, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { decisionReplay, decisionTercetos, guardarDecisionesReplayDB, guardarIndicacionReplayDB, type DecisionReplay } from "./replay-db.ts";
 import { confirmar, identificador, type ManoPublicable } from "./turnos.ts";
 
@@ -17,19 +16,42 @@ export async function guardarPalabraPie(db: PoolClient, mesa: string, numero: nu
   await guardarIndicacionReplayDB(db, mesa, palabra);
 }
 
-async function programarBotPie(db: PoolClient, mesa: string, estado: EstadoOnline, humanos: readonly number[]) {
-  const posibles = aDecidir(estado);
-  const asiento = posibles[0];
-  if (asiento === undefined || posibles.some(a => humanos.includes(a))) {
+export function destinosAtendidos(mano: ManoPublicable) {
+  return [...(mano.indicaciones ?? []), ...(mano.pasesPie ?? [])];
+}
+
+/** Sólo se espera cuando la siguiente decisión real del bot es una carta. Los cantos siguen su curso. */
+export function esperaDelPie(mano: ManoPublicable, humanos: readonly number[], accion?: AccionOnline): Asiento | undefined {
+  if (!mano.indicaciones || !humanos.length) return;
+  const { estado, indicaciones } = mano;
+  const asiento = asientoBotTercetos(estado, humanos);
+  if (asiento === undefined) return;
+  const companero = vistaDelPie(estado, asiento, indicaciones);
+  if (!companero || companero.pie === asiento || !humanos.includes(companero.pie)) return;
+  const pie = vistaDelPie(estado, companero.pie, destinosAtendidos(mano));
+  if (!pie?.opciones.some(o => o.destinatario === asiento)) return;
+  const jugada = accion ?? elegirAccionConPie(vistaOnline(estado, asiento), companero, indicaciones);
+  return jugada?.tipo === "carta" ? asiento : undefined;
+}
+
+export function vistaPiePrivada(mano: ManoPublicable, asiento: Asiento, humanos: readonly number[]) {
+  const vista = vistaDelPie(mano.estado, asiento, destinosAtendidos(mano));
+  if (vista?.pie === asiento) {
+    const esperando = esperaDelPie(mano, humanos);
+    if (vista.opciones.some(o => o.destinatario === esperando)) return { ...vista, esperando };
+  }
+  return vista;
+}
+
+/** El trabajo bloqueado persiste y no compite con otras mesas en la cola del trabajador. */
+export async function programarBotPie(db: PoolClient, mesa: string, mano: ManoPublicable, humanos: readonly number[]) {
+  if (asientoBotTercetos(mano.estado, humanos) === undefined) {
     await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
     return;
   }
-  // La ventana depende de quién juega, incluso si ya se pronunció una indicación.
-  const pie = vistaDelPie(estado, asiento, [])?.pie;
-  const espera = pie !== undefined && pie !== asiento && humanos.includes(pie) && legalesOnline(estado, asiento).includes("carta");
-  await db.query(`INSERT INTO juego.turnos_bot (mesa, disponible_desde)
-    VALUES ($1, clock_timestamp() + CASE WHEN $2::boolean THEN interval '4 seconds' ELSE interval '0 seconds' END)
-    ON CONFLICT (mesa) DO UPDATE SET disponible_desde=EXCLUDED.disponible_desde`, [mesa, espera]);
+  const disponible = esperaDelPie(mano, humanos) === undefined ? "-infinity" : "infinity";
+  await db.query(`INSERT INTO juego.turnos_bot (mesa, disponible_desde) VALUES ($1, $2)
+    ON CONFLICT (mesa) DO UPDATE SET disponible_desde=EXCLUDED.disponible_desde`, [mesa, disponible]);
 }
 
 /** Se llama al abrir el reparto o después de persistir exactamente una jugada y su replay. */
@@ -52,8 +74,9 @@ export async function continuarAlPie(db: PoolClient, mesa: string, numero: numbe
       }
     }
   }
-  await programarBotPie(db, mesa, estado, humanos);
-  return { ...mano, indicaciones };
+  const actual = { ...mano, indicaciones };
+  await programarBotPie(db, mesa, actual, humanos);
+  return actual;
 }
 
 export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTercetos, "mesa" | "numero" | "version">,
@@ -80,5 +103,6 @@ export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTe
     WHERE mesa=$1 AND numero=$2 AND version=$3`, [fila.mesa, fila.numero, fila.version, JSON.stringify([entrada])]);
   if (escrita.rowCount !== 1) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
   await guardarDecisionesReplayDB(db, fila.mesa, [decision], mano.estado.meta);
+  nueva.pasesPie = mano.pasesPie;
   return continuarAlPie(db, fila.mesa, fila.numero, nueva, humanos, mano.indicaciones ?? [], mano.estado);
 }

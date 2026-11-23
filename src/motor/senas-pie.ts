@@ -37,9 +37,12 @@ export interface IndicacionPie {
   /** Cuántas acciones de juego se habían confirmado al hablar. Los empates conservan el orden de registro. */
   indiceAccion: number;
 }
+export type DestinoPie = Pick<IndicacionPie, "destinatario" | "vuelta">;
 export interface VistaPie {
   pie: Asiento;
   vuelta: number;
+  /** Sólo el pie humano recibe el asiento de la computadora que espera para tirar su carta. */
+  esperando?: Asiento;
   /** El pie recibe un grupo por compañero en el orden de esta vuelta; el emisor ve sólo su propio grupo. */
   grupos: { emisor: Asiento; gestos: GestoPie[] }[];
   opciones: { destinatario: Asiento; frases: FrasePie[] }[];
@@ -63,7 +66,7 @@ export function gestosDeCartas(cartas: readonly CardId[], muestra: CardId): Gest
   return gestos.length || !cartas.length ? gestos : ["ojos-cerrados"];
 }
 
-export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, indicaciones: readonly IndicacionPie[]): VistaPie | undefined {
+export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, atendidos: readonly DestinoPie[]): VistaPie | undefined {
   const { mano } = estado;
   const vueltaActual = mano.vueltaActual;
   if (estado.resultado || !vueltaActual) return undefined;
@@ -86,7 +89,7 @@ export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, indicaciones
   if (asiento === pie && estado.retiro === undefined && !estado.rechazoTruco) {
     for (const destinatario of companeros) {
       if (vueltaActual.jugadas.some(j => j.asiento === destinatario)
-        || indicaciones.some(i => i.vuelta === vuelta && i.destinatario === destinatario)) continue;
+        || atendidos.some(i => i.vuelta === vuelta && i.destinatario === destinatario)) continue;
       const frases: FrasePie[] = orden.indexOf(destinatario) < orden.indexOf(pie) ? ["veni", "juga"] : ["voy-a-vos"];
       opciones.push({ destinatario, frases });
     }
@@ -96,9 +99,9 @@ export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, indicaciones
 
 /** El árbitro fija emisor e índice. La API proporciona estado e indicaciones de la misma mano bajo el bloqueo de mesa. */
 export function crearIndicacionPie(estado: EstadoOnline, asiento: Asiento, destinatario: unknown, frase: unknown,
-  vuelta: unknown, indicaciones: readonly IndicacionPie[]): IndicacionPie | undefined {
+  vuelta: unknown, atendidos: readonly DestinoPie[]): IndicacionPie | undefined {
   if (!esAsientoOnline(destinatario) || typeof frase !== "string" || !Object.hasOwn(textoFrasePie, frase)) return undefined;
-  const vista = vistaDelPie(estado, asiento, indicaciones);
+  const vista = vistaDelPie(estado, asiento, atendidos);
   const valida = frase as FrasePie;
   if (!vista || vista.vuelta !== vuelta || !vista.opciones.some(o => o.destinatario === destinatario && o.frases.includes(valida))) return undefined;
   return { emisor: asiento, destinatario, frase: valida, vuelta: vista.vuelta, indiceAccion: estado.acciones.length };

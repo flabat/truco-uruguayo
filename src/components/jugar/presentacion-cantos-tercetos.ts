@@ -87,12 +87,11 @@ function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercet
   return pasos;
 }
 
-export function useCantosDeTercetos(actual: PartidaTercetos, presencioReparto: boolean, priorizarPie: boolean) {
+export function useCantosDeTercetos(actual: PartidaTercetos, presencioReparto: boolean) {
   const [secuencia, mostrar] = useState(() => ({
     recibida: actual, pasos: siguientes(undefined, actual, presencioReparto),
   }));
-  const saltarAlTurno = priorizarPie && (actual !== secuencia.recibida || secuencia.pasos.length > 0);
-  if (saltarAlTurno || actual.reconexion !== secuencia.recibida.reconexion) {
+  if (actual.reconexion !== secuencia.recibida.reconexion) {
     mostrar({ recibida: actual, pasos: [] });
   } else if (actual.version !== secuencia.recibida.version || actual.manoNumero !== secuencia.recibida.manoNumero
       || actual.indicaciones?.length !== secuencia.recibida.indicaciones?.length) {

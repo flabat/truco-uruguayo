@@ -10,7 +10,7 @@ import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo, type Voz } from "./Voz";
 import { Naipe, Tapete } from "./Tapete";
-import { AccionesDelPie, SenasEnviadas, type DecirAlCompanero } from "./GloboDelCompanero";
+import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 
 type Canto = Exclude<Tipo, "carta">;
@@ -155,7 +155,7 @@ export function EnJuego({
   estadoRed?: string;
   aviso?: string;
   sena?: ReactNode;
-  indicar?: DecirAlCompanero;
+  indicar?: ElegirIndicacion;
   voz?: Voz;
   base: string;
   jugar: (a?: Eleccion) => void;
@@ -190,7 +190,7 @@ export function EnJuego({
   const relato = voz
     ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
     : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };
-  const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : estadoDelTurno(mesa, partida, v);
+  const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : esperaDelCompanero(pie, nombre) ?? estadoDelTurno(mesa, partida, v);
   const pruebaPropia = resultado && v.pruebasDeTantos?.find(p => p.asiento === mesa.miAsiento);
   const cartas = v.cartas.filter(carta => !pruebaPropia || !pruebaPropia.cartas.includes(carta));
   const disponibles = grupos
@@ -245,7 +245,7 @@ export function EnJuego({
               )}
             </>}
             sena={pie && indicar ? (pie.pie === mesa.miAsiento
-              ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} decir={indicar}/>
+              ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} elegir={indicar}/>
               : <SenasEnviadas pie={pie} muestra={v.muestra} nombre={nombre}/>) : sena}
             mano={cartas.length > 0 && <ManoJugador cartas={cartas} habilitada={!bloqueada && v.legales.includes("carta")} base={base} jugar={jugar} />}
             cantos={disponibles.length > 0 && disponibles.map((grupo) => (

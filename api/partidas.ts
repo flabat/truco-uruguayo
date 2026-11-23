@@ -4,8 +4,8 @@ import type { Asiento } from "../src/motor/reparto.ts";
 import {
   iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
 } from "../src/motor/mesa-online.ts";
-import { crearIndicacionPie, textoFrasePie, versionSenasPie, vistaDelPie } from "../src/motor/senas-pie.ts";
-import { confirmarJugadaPieDB, continuarAlPie, guardarPalabraPie } from "./partidas-pie.ts";
+import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "../src/motor/senas-pie.ts";
+import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, guardarPalabraPie, programarBotPie, vistaPiePrivada } from "./partidas-pie.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
@@ -46,7 +46,7 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
       || Object.keys(dato).length !== 3
       || !("destinatario" in dato) || typeof dato.destinatario !== "number" || !Number.isInteger(dato.destinatario)
       || !("vuelta" in dato) || typeof dato.vuelta !== "number" || !Number.isInteger(dato.vuelta)
-      || !("frase" in dato) || typeof dato.frase !== "string" || !Object.hasOwn(textoFrasePie, dato.frase)) {
+      || !("frase" in dato) || typeof dato.frase !== "string" || (dato.frase !== "sin-indicacion" && !Object.hasOwn(textoFrasePie, dato.frase))) {
       throw new ErrorPeticion(400, "Se esperaba una indicación del pie para un compañero de esta vuelta.");
     }
     comando.indicacion = { destinatario: dato.destinatario, frase: dato.frase, vuelta: dato.vuelta };
@@ -66,9 +66,9 @@ function ganador(puntos: Tanteador, meta: number) {
   return null;
 }
 
-function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, version: number, asiento: Asiento) {
+function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, version: number, asiento: Asiento, humanos: readonly number[]) {
   const pie = mano.indicaciones && { versionSenas: versionSenasPie, indicaciones: mano.indicaciones,
-    pie: vistaDelPie(mano.estado, asiento, mano.indicaciones) };
+    pie: vistaPiePrivada(mano, asiento, humanos) };
   if (formato === "triples") return { ...proyectarTercetos(mano.estado, numero, version, asiento), ...pie };
   const puntos = marcadorOnline(mano.estado);
   const { meta } = mano.estado;
@@ -118,7 +118,7 @@ function recuperar(fila: RegistroTercetos, formato: FormatoMesa, meta: number, h
   if (formato === "triples") {
     const estado = restaurarTercetosDB(fila);
     if (estado.meta !== meta) throw new Error("La meta del reparto difiere de la pactada.");
-    return { estado, turnos: [], ...(fila.version_senas === versionSenasPie && { indicaciones: fila.indicaciones ?? [] }) };
+    return { estado, turnos: [], ...(fila.version_senas === versionSenasPie && { indicaciones: fila.indicaciones ?? [], pasesPie: fila.pases_pie ?? [] }) };
   }
   return restaurar(fila, formato, meta, humanos);
 }
@@ -203,13 +203,13 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         return { cambio: false, partida };
       }
     }
+    const humanos = asientosHumanos(mesa);
     const fila = await ultimaMano(db, id);
     if (!fila) {
       if (comando) throw new ErrorPeticion(409, "Actualizá la mesa para recibir tu mano.");
-      const mano = await repartir(db, id, mesa.formato, asientosHumanos(mesa), 1, 1, [0, 0], mesa.meta, undefined, diferida, alPie);
-      return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento) };
+      const mano = await repartir(db, id, mesa.formato, humanos, 1, 1, [0, 0], mesa.meta, undefined, diferida, alPie);
+      return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento, humanos) };
     }
-    const humanos = asientosHumanos(mesa);
     if ((fila.version_senas ?? undefined) !== mesa.versionSenas) throw new ErrorPeticion(503, "La mano y la mesa tienen versiones de señas diferentes.");
     const mano = recuperar(fila, mesa.formato, mesa.meta, humanos);
     const estado = mano.estado;
@@ -223,37 +223,50 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
           await db.query("UPDATE juego.manos SET version=version+1, acciones=$3 WHERE mesa=$1 AND numero=$2",
             [id, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
           await guardarDecisionesReplayDB(db, id, decisiones, mesa.meta);
-          return { cambio: true, partida: vista(nueva, mesa.formato, fila.numero, fila.version + 1, asiento) };
+          return { cambio: true, partida: vista(nueva, mesa.formato, fila.numero, fila.version + 1, asiento, humanos) };
         }
       }
-      return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento) };
+      return { cambio: false, partida: vista(mano, mesa.formato, fila.numero, fila.version, asiento, humanos) };
     }
     // Hablar no depende de cartas o cantos simultáneos de otros asientos. La versión
     // de apertura y la vuelta impiden que una petición vieja se aplique a otro reparto.
-    const desde = comando.operacion === "indicaciones" ? fila.version - fila.acciones.length : fila.version;
+    const pase = comando.indicacion?.frase === "sin-indicacion";
+    const desde = comando.operacion === "indicaciones" && !pase ? fila.version - fila.acciones.length : fila.version;
     if (comando.version < desde || comando.version > fila.version) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
     const version = fila.version + 1;
     let partida;
     if (comando.operacion === "indicaciones") {
       const { destinatario, frase, vuelta } = comando.indicacion!;
-      const anteriores = mano.indicaciones!;
-      const palabra = crearIndicacionPie(estado, asiento, destinatario, frase, vuelta, anteriores);
-      if (!palabra) {
-        const enVuelta = estado.mano.vueltas[vuelta - 1] ?? (vuelta === estado.mano.vueltas.length + 1 ? estado.mano.vueltaActual : null);
-        if (enVuelta?.jugadas.some(j => j.asiento === destinatario)) throw new ErrorPeticion(409, "El compañero ya jugó su carta.");
-        throw new ErrorPeticion(409, "No podés dar esa indicación en esta vuelta.");
+      if (pase) {
+        const pie = vistaPiePrivada(mano, asiento, humanos);
+        if (pie?.esperando === undefined || pie.esperando !== destinatario || pie.vuelta !== vuelta) {
+          throw new ErrorPeticion(409, "El compañero no está esperando tu indicación en esta vuelta.");
+        }
+        const permiso = { vuelta, destinatario: pie.esperando };
+        await db.query("UPDATE juego.manos SET pases_pie=pases_pie || $3::jsonb WHERE mesa=$1 AND numero=$2",
+          [id, fila.numero, JSON.stringify([permiso])]);
+        mano.pasesPie = [...(mano.pasesPie ?? []), permiso];
+      } else {
+        const palabra = crearIndicacionPie(estado, asiento, destinatario, frase, vuelta, destinosAtendidos(mano));
+        if (!palabra) {
+          const enVuelta = estado.mano.vueltas[vuelta - 1] ?? (vuelta === estado.mano.vueltas.length + 1 ? estado.mano.vueltaActual : null);
+          if (enVuelta?.jugadas.some(j => j.asiento === destinatario)) throw new ErrorPeticion(409, "El compañero ya jugó su carta.");
+          throw new ErrorPeticion(409, "No podés dar esa indicación en esta vuelta.");
+        }
+        await guardarPalabraPie(db, id, fila.numero, palabra);
+        mano.indicaciones!.push(palabra);
       }
-      await guardarPalabraPie(db, id, fila.numero, palabra);
-      partida = vista({ ...mano, indicaciones: [...anteriores, palabra] }, mesa.formato, fila.numero, fila.version, asiento);
+      await programarBotPie(db, id, mano, humanos);
+      partida = vista(mano, mesa.formato, fila.numero, fila.version, asiento, humanos);
     } else if (comando.operacion === "siguiente") {
       const puntos = marcadorOnline(estado);
       if (!estado.resultado || ganador(puntos, mesa.meta) !== null) throw new ErrorPeticion(409, "No corresponde repartir otra mano.");
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
-      const nueva = await repartir(db, id, mesa.formato, asientosHumanos(mesa), fila.numero + 1, version, puntos, mesa.meta, dador, diferida, alPie);
-      partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento);
+      const nueva = await repartir(db, id, mesa.formato, humanos, fila.numero + 1, version, puntos, mesa.meta, dador, diferida, alPie);
+      partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento, humanos);
     } else if (alPie) {
       const nueva = await confirmarJugadaPieDB(db, fila, mano, comando.accion!, humanos);
-      partida = vista(nueva, mesa.formato, fila.numero, version, asiento);
+      partida = vista(nueva, mesa.formato, fila.numero, version, asiento, humanos);
     } else if (mesa.formato === "triples") {
       const nuevo = await confirmarTurnoTercetosDB(db, fila, estado, comando.accion!, asientosHumanos(mesa));
       partida = proyectarTercetos(nuevo, fila.numero, version, asiento);
@@ -271,11 +284,11 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
         [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
       await guardarDecisionesReplayDB(db, id, decisiones, mesa.meta);
-      partida = vista(siguiente, mesa.formato, fila.numero, version, asiento);
+      partida = vista(siguiente, mesa.formato, fila.numero, version, asiento, humanos);
     }
     await db.query("INSERT INTO juego.comandos (mesa,jugador,id,peticion,respuesta) VALUES ($1,$2,$3,$4,$5)",
       [id, jugador, comando.id, comando, partida]);
-    return { cambio: true, partida };
+    return { cambio: !pase, partida };
   }
 
   async function transaccion(id: string, jugador: string, op?: Operacion, datos?: Record<string, unknown>) {

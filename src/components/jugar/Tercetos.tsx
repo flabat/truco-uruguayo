@@ -6,9 +6,9 @@ import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mes
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
-import { AccionesDelPie, SenasEnviadas, type DecirAlCompanero } from "./GloboDelCompanero";
+import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
-import { esperaIndicacionDelPie, type Eleccion, type Mesa, type PartidaTercetos } from "./cliente";
+import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo } from "./Voz";
 import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
@@ -23,7 +23,7 @@ type Props = {
   aviso?: string;
   jugar: (accion?: Eleccion) => void;
   presencioReparto: boolean;
-  indicar?: DecirAlCompanero;
+  indicar?: ElegirIndicacion;
 };
 
 const nombreDelLance = (lance: LanceTercetos) =>
@@ -80,18 +80,19 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
 }
 
 export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, indicar, presencioReparto }: Props) {
-  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto, esperaIndicacionDelPie(mesa, recibida));
+  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
   const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const titulo = presentando && voz ? mesa.asientos[voz.asiento].nombre : palabra(mesa, partida);
   const ultimaVuelta = vista.vueltas.at(-1);
   const vuelta = vista.vueltaActual?.jugadas.length ? vista.vueltaActual : ultimaVuelta;
   const numeroVuelta = vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
   const pie = !esPico && indicar ? partida.pie : undefined;
+  const espera = presentando ? undefined : esperaDelCompanero(pie, nombre);
+  const titulo = presentando && voz ? nombre(voz.asiento) : espera?.titulo ?? palabra(mesa, partida);
   const indicaciones = esPico ? undefined : partida.indicaciones;
   const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length, partida);
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
@@ -139,6 +140,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             <strong className="j-seis-lance">{nombreDelLance(lance)}{esPico && ` · ${rivales}`}</strong>
             <AvisoFlor pendiente={vista.pendiente} porDeclararFlor={vista.porDeclararFlor} nombre={nombre} />
             {presentando && voz && <p>{voz.texto}</p>}
+            {espera && <p>{espera.indicacion}</p>}
             {!presentando && vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
               ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
             {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
@@ -154,7 +156,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             )}
           </>}
           sena={pie && indicar && (pie.pie === mesa.miAsiento
-            ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} decir={indicar}/>
+            ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} elegir={indicar}/>
             : <SenasEnviadas pie={pie} muestra={vista.muestra} nombre={nombre}/>)}
           mano={jugando && <ManoJugador cartas={jugando.cartas} habilitada={!bloqueada && jugando.legales.includes("carta")} base={base} jugar={jugar} />}
           cantos={opciones.length > 0 && <div className="j-cantos" role="group" aria-label="Cantos y respuestas">

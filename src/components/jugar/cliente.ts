@@ -63,13 +63,6 @@ export interface PartidaTercetos extends Marcador {
   vista: VistaTercetos;
 }
 type PartidaRecibida = Partida | PartidaTercetos;
-/** La pausa del bot ya corre en el servidor. El pie necesita ver el turno en cuanto llega. */
-export function esperaIndicacionDelPie(mesa?: Mesa, partida?: PartidaRecibida) {
-  const turno = partida?.vista?.turno;
-  if (!mesa || !partida?.pie || turno == null || partida.vista?.pendiente
-      || partida.vista?.porDeclararFlor != null || partida.pie.pie !== mesa.miAsiento) return false;
-  return mesa.asientos[turno]?.tipo === "computadora" && partida.pie.opciones.some(o => o.destinatario === turno);
-}
 
 export type Tipo = VistaOnline["legales"][number];
 export type Eleccion = { tipo: Exclude<Tipo, "carta"> } | { tipo: "carta"; carta: CardId };

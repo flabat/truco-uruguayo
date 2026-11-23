@@ -1,7 +1,8 @@
-// Sólo se fija el reparto. Las lecturas, indicaciones y jugadas pasan por la API real.
+// Las lecturas, indicaciones y jugadas pasan por la API real.
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import { on } from "node:events";
+import { setTimeout as esperar } from "node:timers/promises";
 import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
@@ -37,22 +38,27 @@ async function json(asiento, ruta, datos, esperado = 200) {
   return cuerpo;
 }
 
-async function mesa(cantidad, alternativa = false) {
+async function mesa(cantidad, { alternativa = false, computadoras = [] } = {}) {
   const tercetos = cantidad === 6;
   const formato = tercetos ? "triples" : "pairs-private-senas";
   const m = await json(0, "/mesas", { modo: tercetos ? "3v3" : "2v2", meta: 50, formato, versionSenas, publica: !tercetos }, 201);
   assert.equal(m.versionSenas, versionSenas);
   const token = new URL(m.invitacion).searchParams.get("invitacion");
-  for (let i = 1; i < cantidad; i++) await json(i, "/invitaciones/" + token + "/unirse", {});
+  for (let i = 1; i < cantidad; i++) {
+    if (computadoras.includes(i)) await json(0, "/mesas/" + m.id + "/computadoras", { asiento: i });
+    else await json(i, "/invitaciones/" + token + "/unirse", {});
+  }
   const manos = cartas.slice(0, cantidad);
   if (alternativa) manos[0] = ["copas-11", "espadas-01", "oros-04"];
-  const reparto = { versionReparto: tercetos ? "online-2" : "online-1", reglaFlor: "inmediata-v2", mano: 0, dador: cantidad - 1, muestra: "copas-06", manos };
+  const reparto = { versionReparto: tercetos ? "online-2" : "online-1", reglaFlor: "inmediata-v2", mano: 0, dador: cantidad - 1, muestra: "copas-06", manos,
+    ...(computadoras.length && { respondenSinFlor: computadoras }) };
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
     await db.query(`INSERT INTO juego.manos(mesa,numero,version,version_reglas,version_senas,reparto,puntos_inicio,acciones,meta_tercetos,tipo_reparto)
       VALUES ($1,1,1,$2,$3,$4,ARRAY[0,0],'[]',$5,$6)`, [m.id, tercetos ? 2 : 1, versionSenas, reparto, tercetos ? 50 : null, tercetos ? "redondilla" : null]);
-    await iniciarReplayDB(db, m.id, formato, manos.map((_, i) => i), iniciarOnline(reparto, [0, 0], 50), 1);
+    const humanos = manos.map((_, i) => i).filter(i => !computadoras.includes(i));
+    await iniciarReplayDB(db, m.id, formato, humanos, iniciarOnline(reparto, [0, 0], 50), 1);
     await db.query("COMMIT");
   } catch (e) { await db.query("ROLLBACK"); throw e; } finally { db.release(); }
   return m.id;
@@ -127,7 +133,7 @@ async function guardarParaReinicio(id, cantidad, orden, recibo) {
 async function reconectar() {
   const { rows } = await pool.query("SELECT * FROM juego.prueba_reinicio_pie ORDER BY cantidad");
   assert.deepEqual(rows.map(f => f.cantidad), [4, 6]);
-  for (const { cantidad, mesa, orden, recibo, vistas, replay } of rows) {
+  for (const { cantidad, mesa, mesa_con_bots, orden, recibo, vistas, replay } of rows) {
     const personas = await pool.query(`SELECT j.sujeto FROM juego.asientos a JOIN juego.jugadores j ON j.id=a.jugador
       WHERE mesa=$1 ORDER BY a.asiento`, [mesa]);
     jugadores.splice(0, jugadores.length, ...personas.rows.map(j => ({ cookie: "truco_sesion=" + j.sujeto })));
@@ -136,13 +142,14 @@ async function reconectar() {
     assert.deepEqual(await json(cantidad - 2, ruta + "/indicaciones", orden), recibo);
     const actual = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa]);
     assert.deepEqual(actual.rows[0].replay, replay);
+    await continuarEspera(cantidad, mesa_con_bots);
   }
   await json(0, "/mesas", { modo: "2v2", formato: "pairs-private-senas", versionSenas }, 409);
 }
 
 async function verificar(cantidad) {
   const id = await mesa(cantidad);
-  const otra = await mesa(cantidad, true);
+  const otra = await mesa(cantidad, { alternativa: true });
   const ruta = "/mesas/" + id;
   const par = cantidad - 2, impar = cantidad - 1;
   const asientos = Array.from({ length: cantidad }, (_, i) => i);
@@ -253,17 +260,101 @@ async function verificar(cantidad) {
   await guardarParaReinicio(id, cantidad, orden, primera);
 }
 
+const jugarCarta = (ruta, asiento, version, carta) => json(asiento, ruta + "/acciones",
+  { id: randomUUID(), version, accion: { tipo: "carta", carta } });
+const indicacion = (version, destinatario, frase, vuelta = 1) => ({
+  id: randomUUID(), version, indicacion: { destinatario, frase, vuelta },
+});
+
+async function prepararEspera(cantidad) {
+  const id = await mesa(cantidad, { computadoras: cantidad === 6 ? [1, 3] : [1] });
+  const ruta = "/mesas/" + id;
+  const pie = cantidad - 1;
+  // A0 abre la vuelta. A1 debe decidir entre sus dos seises y el tres.
+  const rival = await jugarCarta(ruta, 0, 1, "oros-04");
+  assert.equal(rival.pie.esperando, undefined);
+  const primera = await json(pie, ruta + "/partida");
+  assert.equal(primera.pie.esperando, 1);
+  assert.equal(primera.version, 2);
+  await json(0, ruta + "/indicaciones", indicacion(2, 1, "sin-indicacion"), 409);
+  await json(pie, ruta + "/indicaciones", indicacion(2, 1, "sin-indicacion", 2), 409);
+  if (cantidad === 6) {
+    await json(pie, ruta + "/indicaciones", indicacion(2, 3, "sin-indicacion"), 409);
+    const otro = await json(pie, ruta + "/indicaciones", indicacion(2, 3, "juga"));
+    assert.equal(otro.pie.esperando, 1, "Hablarle a A3 no autoriza la carta de A1.");
+  } else {
+    // Una mesa abierta antes de actualizar el servidor puede tener un trabajo cuyo plazo ya venció.
+    await pool.query("UPDATE juego.turnos_bot SET disponible_desde=clock_timestamp() WHERE mesa=$1", [id]);
+  }
+  await esperar(4800); // El plazo anterior era de cuatro segundos.
+  const sigue = await json(pie, ruta + "/partida");
+  assert.equal(sigue.pie.esperando, 1);
+  assert.equal(sigue.version, 2);
+  assert.equal(sigue.vista.turno, 1);
+  await pool.query("UPDATE juego.prueba_reinicio_pie SET mesa_con_bots=$2 WHERE cantidad=$1", [cantidad, id]);
+}
+
+async function esperarJugada(ruta, pie, version) {
+  const hasta = Date.now() + 10000;
+  for (;;) {
+    const actual = await json(pie, ruta + "/partida");
+    if (actual.version > version) return actual;
+    assert.ok(Date.now() < hasta, "La computadora no continuó el turno autorizado.");
+    await esperar(80);
+  }
+}
+
+async function continuarEspera(cantidad, id) {
+  const ruta = "/mesas/" + id;
+  const pie = cantidad - 1;
+  const antes = await json(pie, ruta + "/partida");
+  assert.equal(antes.version, 2);
+  assert.equal(antes.pie.esperando, 1, "La misma computadora debe seguir esperando tras el reinicio.");
+  const orden = indicacion(antes.version, 1, cantidad === 6 ? "sin-indicacion" : "juga");
+  const recibo = await json(pie, ruta + "/indicaciones", orden);
+  assert.equal(recibo.pie.esperando, undefined);
+  assert.equal(recibo.version, antes.version);
+  const siguiente = await esperarJugada(ruta, pie, antes.version);
+  assert.equal(siguiente.version, 3);
+  assert.equal(siguiente.vista.vueltaActual.jugadas.at(-1).asiento, 1);
+  assert.deepEqual(await json(pie, ruta + "/indicaciones", orden), recibo);
+  if (cantidad === 6) {
+    assert.deepEqual(recibo.indicaciones, antes.indicaciones);
+    assert.deepEqual((await json(0, ruta + "/partida")).indicaciones, antes.indicaciones);
+    const { rows: [{ replay }] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [id]);
+    assert.deepEqual(replay.eventos.map(e => e.tipo), ["reparto", "decision", "indicacion", "decision"]);
+    assert.doesNotMatch(JSON.stringify(replay), /sin-indicacion/);
+    const turnoA3 = await jugarCarta(ruta, 2, siguiente.version, "espadas-06");
+    const turnoA4 = await esperarJugada(ruta, pie, turnoA3.version);
+    assert.equal(turnoA4.vista.turno, 4, "A3 ya había recibido su propia indicación.");
+  } else {
+    assert.equal(siguiente.vista.vueltaActual.jugadas.at(-1).carta, "copas-03", "A1 debe salir fuerte al oír «Jugá».");
+    const turnoPie = await jugarCarta(ruta, 2, siguiente.version, "espadas-06");
+    const ganaPie = await jugarCarta(ruta, pie, turnoPie.version, "espadas-07");
+    assert.equal(ganaPie.vista.turno, pie);
+    const turnoA0 = await jugarCarta(ruta, pie, ganaPie.version, "oros-12");
+    const turnoA1 = await jugarCarta(ruta, 0, turnoA0.version, "bastos-01");
+    const segunda = await json(pie, ruta + "/partida");
+    assert.equal(segunda.pie.esperando, 1, "La indicación anterior no autoriza una nueva vuelta.");
+    assert.deepEqual(segunda.pie.opciones, [{ destinatario: 1, frases: ["voy-a-vos"] }]);
+    await json(pie, ruta + "/indicaciones", indicacion(turnoA1.version, 1, "voy-a-vos", 2));
+    const turnoA2 = await esperarJugada(ruta, pie, turnoA1.version);
+    assert.equal(turnoA2.vista.turno, 2);
+  }
+}
+
 try {
   if (process.argv[2] === "reconectar") {
     await reconectar();
     console.log("Parejas y tercetos recuperaron las mismas vistas, recibos y prefijos tras reiniciar con las altas cerradas.");
   } else {
     await pool.query(`CREATE TABLE IF NOT EXISTS juego.prueba_reinicio_pie (
-      cantidad integer PRIMARY KEY, mesa uuid, orden jsonb, recibo jsonb, vistas jsonb, replay jsonb)`);
+      cantidad integer PRIMARY KEY, mesa uuid, mesa_con_bots uuid, orden jsonb, recibo jsonb, vistas jsonb, replay jsonb)`);
     for (let i = 0; i < 7; i++) jugadores.push(await cuenta(i));
     await pool.query("INSERT INTO juego.reporteros(jugador) VALUES ($1)", [jugadores[0].id]);
     await verificar(4);
     await verificar(6);
-    console.log("Señas al pie verificadas en parejas y tercetos: privacidad por asiento, indicaciones públicas, carrera, replay, reporte y salón.");
+    await Promise.all([prepararEspera(4), prepararEspera(6)]);
+    console.log("Verificadas las señas, las indicaciones públicas y la espera del compañero hasta que decida el pie en parejas y redondillas.");
   }
 } finally { await pool.end(); }

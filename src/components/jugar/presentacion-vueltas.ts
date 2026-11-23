@@ -100,14 +100,13 @@ function pasosNuevos(
 }
 
 // Un aviso puede contener varias jugadas o llegar mientras el tapete muestra una vuelta anterior.
-export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean, priorizarPie: boolean) {
+export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean) {
   const tablero = useRef<HTMLDivElement>(null);
   const [secuencia, mostrar] = useState(() => ({
     recibida: actual, pasos: pasosNuevos(undefined, actual, presencioReparto),
   }));
-  const saltarAlTurno = priorizarPie && (actual !== secuencia.recibida || secuencia.pasos[0].espera > 0);
-  if (saltarAlTurno || secuencia.recibida && actual?.reconexion !== secuencia.recibida.reconexion) {
-    // Una reconexión recupera el tapete de ahora, incluidos los gestos en su pose final.
+  if (secuencia.recibida && actual?.reconexion !== secuencia.recibida.reconexion) {
+    // Al reconectar se recupera la mesa actual, sin repetir las jugadas anteriores.
     mostrar({ recibida: actual, pasos: [{ partida: actual, espera: 0 }] });
   } else if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero
       || actual?.indicaciones?.length !== secuencia.recibida?.indicaciones?.length) {
