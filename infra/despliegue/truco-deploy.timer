@@ -1,5 +1,5 @@
 [Unit]
-Description=Comprobar despliegues de main de Truco Oriental
+Description=Comprobar despliegues de main de El Truco
 
 [Timer]
 OnBootSec=1min

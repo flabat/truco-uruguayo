@@ -2,7 +2,7 @@
 
 Al elegir **Ingresar al juego**, el jugador llega a **Entrá a jugar** en Keycloak. En eltru.co puede elegir **Continuar con Google** o **Continuar con Discord**. La pantalla muestra solo los proveedores habilitados. Quien ya tiene una contraseña puede desplegar **Ya tengo una cuenta con contraseña**. Si el entorno habilitó el registro por correo, también aparece el enlace para crear una cuenta. En producción, se habilita al [configurar el correo saliente](produccion.md#registro-con-correo-y-contraseña).
 
-![Ejemplo de ingreso en un entorno de pruebas con Facebook y Google habilitados](ingreso-social.png)
+![Pantalla de ingreso de El Truco con Google y Discord habilitados](ingreso-social.png)
 
 Podés habilitar uno de los proveedores y agregar el otro más adelante. Si todavía no habilitaste ninguno, Keycloak muestra el formulario de contraseña. La API recibe la identidad de Keycloak y emite su propia cookie de sesión.
 
@@ -22,13 +22,13 @@ En pruebas compartidas y producción, sustituí el dominio y el realm del ejempl
 
 ### Google
 
-1. En el proyecto de Google Cloud, abrí **Google Auth Platform → Branding**. Si es nuevo, elegí **Get started**, cargá el nombre del juego, el correo de soporte y el de contacto. Elegí la audiencia **External** para que puedan ingresar jugadores con cuentas personales. Usá proyectos separados para pruebas y producción. [Configurar Google Auth Platform](https://developers.google.com/workspace/guides/configure-oauth-consent)
+1. En el proyecto de Google Cloud, abrí **Google Auth Platform → Branding**. Si es nuevo, elegí **Get started**, cargá **El Truco** como nombre del juego, el correo de soporte y el de contacto. Elegí la audiencia **External** para que puedan ingresar jugadores con cuentas personales. Usá proyectos separados para pruebas y producción. [Configurar Google Auth Platform](https://developers.google.com/workspace/guides/configure-oauth-consent)
 2. En **Data Access**, usá solo `openid`, `email` y `profile`. En **Clients → Create client → Web application**, añadí el retorno de Google de la tabla en **Authorized redirect URIs**. Keycloak realiza el canje en el servidor y el campo **Authorized JavaScript origins** puede quedar vacío. Google admite HTTP en localhost para desarrollo. [Crear el cliente web](https://developers.google.com/identity/protocols/oauth2/web-server)
 3. Guardá **Client ID** y **Client secret** como `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en tu gestor de secretos. Para el lanzamiento, cambiá **Audience → Publishing status** a **In production** y completá los requisitos de marca que indique la consola. Con estos tres permisos Google permite probar sin cargar una lista de usuarios de prueba. [Audiencia y publicación](https://support.google.com/cloud/answer/15549945?hl=en)
 
 ### Discord
 
-1. Creá una aplicación en el [portal de desarrolladores de Discord](https://discord.com/developers/applications) y agregá el retorno de la tabla en **OAuth2 → Redirects**. Usá aplicaciones separadas para pruebas y producción.
+1. Creá la aplicación **El Truco** en el [portal de desarrolladores de Discord](https://discord.com/developers/applications) y agregá el retorno de la tabla en **OAuth2 → Redirects**. Usá aplicaciones separadas para pruebas y producción.
 2. Guardá el **Client ID** y el **Client Secret** como `DISCORD_CLIENT_ID` y `DISCORD_CLIENT_SECRET`. El ingreso solicita únicamente `identify` y `email`; no necesita permisos de bot ni acceso a servidores. El nombre o correo pueden requerir que el jugador complete su perfil. [OAuth2 de Discord](https://docs.discord.com/developers/topics/oauth2)
 3. Configurá el proveedor después de desplegar la versión de Keycloak incluida aquí. El alias `discord` usa OAuth v2 y el ID estable de Discord; mantené **Trust email** desactivado y verificá el vínculo a cuentas existentes mediante el método original.
 
@@ -36,7 +36,7 @@ En pruebas compartidas y producción, sustituí el dominio y el realm del ejempl
 
 El ingreso con Facebook está pausado en eltru.co. El comando de configuración habilita el proveedor, así que durante la pausa usalo solo en entornos de prueba.
 
-1. En **Create App** de Meta, ingresá el nombre y el correo de contacto y elegí **Authenticate and request data from users with Facebook Login**. En **Use cases → Customize** habilitá `email` junto al `public_profile` incluido. El correo puede faltar si la persona no lo comparte o Facebook no tiene uno confirmado. [Crear la app en Meta](https://developers.facebook.com/documentation/development/create-an-app)
+1. En **Create App** de Meta, ingresá **El Truco** como nombre y el correo de contacto y elegí **Authenticate and request data from users with Facebook Login**. En **Use cases → Customize** habilitá `email` junto al `public_profile` incluido. El correo puede faltar si la persona no lo comparte o Facebook no tiene uno confirmado. [Crear la app en Meta](https://developers.facebook.com/documentation/development/create-an-app)
 2. En los ajustes de **Facebook Login**, activá **Client OAuth Login** y **Web OAuth Login**. En **Valid OAuth Redirect URIs** cargá el retorno HTTPS de Facebook de la tabla con tu dominio y realm reales. Si Meta indica que ya admite `http://localhost` automáticamente en modo de desarrollo, probá el retorno local con una cuenta que tenga un rol en la app. Si lo rechaza, usá el entorno HTTPS de pruebas. [Ajustes del flujo web](https://developers.facebook.com/documentation/facebook-login/guides/advanced/manual-flow)
 3. Copiá **App ID** y **App Secret** de **App settings → Basic** a `FACEBOOK_APP_ID` y `FACEBOOK_APP_SECRET` en tu gestor de secretos. Para probar antes de publicar, agregá al jugador como tester de la app y pedile que acepte la invitación. Para abrir el ingreso al público, cargá los enlaces de privacidad y eliminación de datos, completá la revisión y la verificación que indique el panel y elegí **Publish → Go live**. [Publicar la app](https://developers.facebook.com/documentation/development/release)
 
@@ -80,19 +80,22 @@ node scripts/configurar-ingreso-social.mjs google
 node scripts/configurar-ingreso-social.mjs discord
 ```
 
-## Activar la pantalla de Truco Oriental
+## Activar la pantalla de El Truco
 
-Con un volumen nuevo, Compose ya selecciona el tema `truco-oriental` para el realm `mesa-local`, con español e inglés y español como idioma predeterminado. Si el realm existe, Keycloak conserva su configuración al arrancar. Para actualizar la instalación local y elegir el tema sobre ese mismo volumen, ejecutá estos comandos. Reemplazá `admin-social-local` por tu administrador de `master` y escribí su contraseña cuando Keycloak la pida. [Importación al arrancar Keycloak](https://www.keycloak.org/server/importExport#_importing_a_realm_during_startup)
+Con un volumen nuevo, Compose ya selecciona el nombre **El Truco** y el tema `truco-oriental` para el ingreso y la cuenta. El realm `mesa-local` ofrece español e inglés y usa español por defecto. Si el realm existe, Keycloak conserva su configuración al arrancar. Para actualizar la instalación local y elegir el tema sobre ese mismo volumen, ejecutá estos comandos. Reemplazá `admin-social-local` por tu administrador de `master` y escribí su contraseña cuando Keycloak la pida. [Importación al arrancar Keycloak](https://www.keycloak.org/server/importExport#_importing_a_realm_during_startup)
 
 ```sh
 docker compose up -d --build --wait identidad
 docker compose exec identidad /opt/keycloak/bin/kcadm.sh update realms/mesa-local -n \
   --no-config --server http://localhost:8080 --realm master --user admin-social-local \
-  -s loginTheme=truco-oriental -s internationalizationEnabled=true \
+  -s 'displayName=El Truco' -s loginTheme=truco-oriental -s accountTheme=truco-oriental \
+  -s internationalizationEnabled=true \
   -s 'supportedLocales=["es","en"]' -s defaultLocale=es
 ```
 
-En una instalación propia de Keycloak, incluí la carpeta `infra/keycloak/truco-oriental` en el directorio `themes` de cada servidor. En la consola administrativa, seleccioná el realm del juego, abrí **Realm settings → Themes**, elegí **truco-oriental** en **Login theme** y guardá. En **Realm settings → Localization**, activá **Internationalization**, agregá español e inglés a los idiomas disponibles y guardá español como predeterminado. El selector de idioma permite pasar de **Entrá a jugar** a **Sign in to play**. [Temas de Keycloak](https://www.keycloak.org/ui-customization/themes)
+En la imagen de Compose ya se incluyen el tema y su icono. Si instalás el tema por separado, copiá `infra/keycloak/truco-oriental` al directorio `themes` de cada servidor y `public/favicon.svg` a `login/resources/img/favicon.svg` y `account/resources/img/favicon.svg` dentro del tema.
+
+En la consola administrativa, seleccioná el realm `mesa` en producción o `mesa-local` para el juego local. En **Realm settings → General**, guardá **El Truco** en **Display name** y dejá vacío **HTML Display name** para que el ingreso muestre ese mismo nombre. En **Realm settings → Themes**, elegí **truco-oriental** en **Login theme** y **Account theme**. En **Clients → truco-web → Settings**, guardá **El Truco** en **Name**. Si usás la cuenta de prueba del realm `truco-local`, actualizá también su nombre y sus temas. En **Realm settings → Localization**, activá **Internationalization**, agregá español e inglés a los idiomas disponibles y guardá español como predeterminado. El selector de idioma permite pasar de **Entrá a jugar** a **Sign in to play**. [Temas de Keycloak](https://www.keycloak.org/ui-customization/themes)
 
 ## Comprobar el ingreso y la vinculación
 

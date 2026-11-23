@@ -1,5 +1,5 @@
 [Unit]
-Description=Publicar main verificado de Truco Oriental
+Description=Publicar main verificado de El Truco
 After=docker.service network-online.target
 Wants=network-online.target
 Requires=docker.service

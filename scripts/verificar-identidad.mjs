@@ -9,6 +9,9 @@ try {
   await page.locator("#password").fill("truco-local");
   await page.locator("#kc-login").click();
   await expect(page.getByRole("textbox", { name: /Email/ })).toHaveValue("prueba@example.test");
+  await expect(page).toHaveTitle("El Truco");
+  const icono = await page.locator('link[rel="icon"]').getAttribute("href");
+  await expect(page.getByRole("img", { name: "El Truco" })).toHaveAttribute("src", icono);
 } finally {
   await browser.close();
 }

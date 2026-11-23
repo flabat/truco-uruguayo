@@ -1,7 +1,9 @@
 {
   "realm": "truco-local",
   "enabled": true,
-  "displayName": "Truco Oriental (local)",
+  "displayName": "El Truco",
+  "loginTheme": "truco-oriental",
+  "accountTheme": "truco-oriental",
   "sslRequired": "none",
   "registrationAllowed": false,
   "users": [
