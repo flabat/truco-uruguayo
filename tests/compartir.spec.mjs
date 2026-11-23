@@ -7,6 +7,7 @@ test('comparte la página pública sin parámetros y expone una vista previa', a
   await page.goto('/aprender/?invitacion=privada');
   await page.getByRole('button', { name: /Compartir esta página/ }).click();
   const datos = await page.evaluate(() => window.compartido);
+  expect(datos.title).toBe('Aprender con las cartas · El Truco');
   expect(datos.url).toMatch(/\/aprender\/$/);
   expect(datos.url).not.toContain('privada');
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', /mesa-social\.jpg$/);
@@ -43,7 +44,9 @@ test('comparte la invitación de mesa y conserva el enlace privado solo en la ac
   });
   await page.goto('/jugar/?mesa=' + id);
   await page.getByRole('button', { name: 'Compartir invitación' }).click();
-  expect(await page.evaluate(() => window.compartido)).toMatchObject({ url: enlace, text: expect.stringContaining('Sumate a mi mesa') });
+  expect(await page.evaluate(() => window.compartido)).toMatchObject({
+    title: 'El Truco', url: enlace, text: expect.stringContaining('Sumate a mi mesa'),
+  });
   await expect(page.locator('meta[property="og:url"]')).not.toHaveAttribute('content', /mesa=/);
 });
 

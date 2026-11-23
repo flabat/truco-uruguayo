@@ -1,6 +1,6 @@
 # Una mesa jugable de tres contra tres
 
-**Diseño propuesto para Truco Oriental.** Una persona crea una mesa, elige el puntaje, invita hasta cinco personas y puede completar los lugares libres con computadoras. Se juega un chico entero. Cada terceto lleva su propia cuenta. La meta acordada para el producto es **50 tantos, 25 malas y 25 buenas**, editable antes de crear la mesa. La configuración del puntaje se entrega en el [PR #170](https://github.com/flabat/truco-uruguayo/pull/170). Este documento especifica el modo de juego que se implementará después. [Issue de diseño](https://github.com/flabat/truco-uruguayo/issues/171)
+**Diseño propuesto para El Truco.** Una persona crea una mesa, elige el puntaje, invita hasta cinco personas y puede completar los lugares libres con computadoras. Se juega un chico entero. Cada terceto lleva su propia cuenta. La meta acordada para el producto es **50 tantos, 25 malas y 25 buenas**, editable antes de crear la mesa. La configuración del puntaje se entrega en el [PR #170](https://github.com/flabat/truco-uruguayo/pull/170). Este documento especifica el modo de juego que se implementará después. [Issue de diseño](https://github.com/flabat/truco-uruguayo/issues/171)
 
 ## Recorrido desde la invitación hasta la victoria
 

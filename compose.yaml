@@ -62,7 +62,7 @@ services:
       retries: 20
 
   identidad:
-    build: ./infra/keycloak
+    build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start-dev", "--import-realm"]
     environment:
       - KC_HOSTNAME=http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}

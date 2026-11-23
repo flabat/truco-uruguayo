@@ -156,7 +156,7 @@
     padding-block: 0; gap: 0 .5rem; flex-wrap: wrap;
   }
   body:has(.j-partida--jugador) .masthead .brand { gap: .4rem; }
-  body:has(.j-partida--jugador) .masthead .brand svg { width: 21px; height: 24px; }
+  body:has(.j-partida--jugador) .masthead .brand img { width: 26px; }
   body:has(.j-partida--jugador) .masthead .brand span { font-size: 1.2rem; }
   body:has(.j-partida--jugador) .menu-partida {
     display: inline-flex; align-items: center; justify-content: center; gap: .4rem; margin-left: auto;

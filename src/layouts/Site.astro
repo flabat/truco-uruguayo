@@ -5,6 +5,7 @@ import { discordComunidad } from "../lib/comunidad";
 import FichaModelo from "../components/FichaModelo";
 import Search from "../components/Search.astro";
 import { url } from "../lib/guide";
+import { nombreSitio } from "../lib/marca";
 import { versionModeloPractica, versionMotorPractica } from "../probabilidad/perfil";
 import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
@@ -19,6 +20,7 @@ interface Props {
   active?: "inicio" | "jugar" | "aprender" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
+const tituloPagina = title === nombreSitio ? nombreSitio : `${title} · ${nombreSitio}`;
 const commit = import.meta.env.INTERFAZ_COMMIT;
 const enSalon = active === "jugar";
 // Las vistas previas son públicas y nunca contienen parámetros de invitación.
@@ -39,20 +41,22 @@ const pages = [
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
+    <meta name="application-name" content={nombreSitio} />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Truco Oriental" />
-    <meta property="og:title" content={`${title} · Truco Oriental`} />
+    <meta property="og:site_name" content={nombreSitio} />
+    <meta property="og:title" content={tituloPagina} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonica.href} />
     <meta property="og:image" content={imagenSocial.href} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={`${title} · Truco Oriental`} />
+    <meta name="twitter:title" content={tituloPagina} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imagenSocial.href} />
     <meta name="theme-color" content="#f8f5eb" />
     <link rel="icon" type="image/svg+xml" href={url("favicon.svg")} />
+    <link rel="apple-touch-icon" href={url("apple-touch-icon.png")} />
     {Astro.site && <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />}
-    <title>{title} · Truco Oriental</title>
+    <title>{tituloPagina}</title>
   </head>
   <body>
     <a class="skip" href="#contenido">
@@ -74,7 +78,7 @@ const pages = [
     </header>
     <main id="contenido">
       <slot />
-      {(active === "inicio" || active === "aprender") && <div class="shell"><Compartir title={title + " · Truco Oriental"} description={description} /></div>}
+      {(active === "inicio" || active === "aprender") && <div class="shell"><Compartir title={tituloPagina} description={description} /></div>}
     </main>
     <footer>
       <div class="shell footer-inner">

@@ -27,7 +27,7 @@ url() { echo "http://$("${compose[@]}" port "$1" "$2")"; }
 up
 web=$(url web 80)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
-curl -fsS "$web/" | grep -F 'Truco uruguayo' >/dev/null
+curl -fsS "$web/" | grep -F '<title>El Truco</title>' >/dev/null
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));

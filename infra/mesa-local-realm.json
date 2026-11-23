@@ -1,8 +1,9 @@
 {
   "realm": "mesa-local",
   "enabled": true,
-  "displayName": "Truco Oriental",
+  "displayName": "El Truco",
   "loginTheme": "truco-oriental",
+  "accountTheme": "truco-oriental",
   "internationalizationEnabled": true,
   "supportedLocales": ["es", "en"],
   "defaultLocale": "es",
@@ -14,7 +15,7 @@
   "clients": [
     {
       "clientId": "truco-web",
-      "name": "Truco Oriental",
+      "name": "El Truco",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": true,

@@ -8,7 +8,7 @@ TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
 
 | Servicio | Cómo probarlo |
 | --- | --- |
-| Web Astro | Abrí [Truco Oriental](http://localhost:8081/). Desde la portada podés acceder a las mesas, leer la guía de reglas o practicar como invitado. Nginx sirve la interfaz y reenvía las peticiones de juego a la API. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
+| Web Astro | Abrí [El Truco](http://localhost:8081/). Desde la portada podés acceder a las mesas, leer la guía de reglas o practicar como invitado. Nginx sirve la interfaz y reenvía las peticiones de juego a la API. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
 | API Node/TypeScript | Abrí [el estado de la API](http://localhost:3001/health). Devuelve HTTP 200 con `api` y `postgres` en `ok`. Si la API responde y la base está caída, devuelve 503. |
 | PostgreSQL | Ejecutá `docker compose exec db psql -U truco -d truco`. El puerto de la base queda dentro de la red de Compose. |
 | Identidad de prueba | Abrí [la cuenta de Keycloak](http://localhost:8080/realms/truco-local/account/) con el usuario `prueba` y la contraseña `truco-local`. El [documento de descubrimiento OIDC](http://localhost:8080/realms/truco-local/.well-known/openid-configuration) publica el emisor y las URLs de autorización, tokens y claves. |

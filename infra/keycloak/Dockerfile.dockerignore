@@ -1,0 +1,6 @@
+**
+!infra/
+!infra/keycloak/
+!infra/keycloak/**
+!public/
+!public/favicon.svg

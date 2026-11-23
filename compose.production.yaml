@@ -77,7 +77,7 @@ services:
 
   identidad:
     <<: *servicio
-    build: ./infra/keycloak
+    build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start", "--import-realm"]
     mem_limit: 1200m
     environment:

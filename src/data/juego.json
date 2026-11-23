@@ -119,7 +119,7 @@
   {
     "id": "puntaje",
     "title": "El tanteador",
-    "intro": "En Truco Oriental el chico es a 40 tantos en duelo y en parejas, y a 50 de a seis. Podés acordar otro total par antes de jugar. La primera mitad son las malas y la segunda, las buenas. Gana quien llega primero al total elegido.",
+    "intro": "En El Truco, el chico es a 40 tantos en duelo y en parejas, y a 50 de a seis. Podés acordar otro total par antes de jugar. La primera mitad son las malas y la segunda, las buenas. Gana quien llega primero al total elegido.",
     "blocks": [
       {
         "heading": "Pasar a buenas",
@@ -168,7 +168,7 @@
         "text": "La casa propone 50 tantos, con 25 malas y 25 buenas. Si pactan otra meta, la mitad marca la entrada en buenas. Si un equipo entra en buenas durante un duelo, se completan los duelos de ese reparto y la redondilla vuelve en el siguiente. En cuanto un cobro alcanza la meta, gana ese equipo y se cierran los cobros y los duelos pendientes. Irse al mazo en turno de carta concede al rival el valor vigente del truco. Primero se liquidan las flores obligatorias.",
         "sources": [
           {"title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
-          {"title": "Truco Oriental · Decisiones para los tercetos en línea", "url": "https://github.com/flabat/truco-uruguayo/pull/173"}
+          {"title": "El Truco · Decisiones para los tercetos en línea", "url": "https://github.com/flabat/truco-uruguayo/pull/173"}
         ]
       },
       {

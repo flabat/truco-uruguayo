@@ -6,9 +6,23 @@ const [web, ...habilitados] = process.argv.slice(2);
 const browser = await chromium.launch();
 const ingreso = new URL("/api/auth/login", web).href;
 
+async function verificarMarca(page) {
+  await expect(page).toHaveTitle(/El Truco/);
+  await expect(page.locator("#kc-header-wrapper")).toHaveText("El Truco");
+  const icono = await page.locator('link[rel="icon"]').evaluate(link => link.href);
+  const [iconoIngreso, iconoSitio] = await Promise.all([
+    page.request.get(icono),
+    page.request.get(new URL("/favicon.svg", web).href),
+  ]);
+  assert.ok(iconoIngreso.ok() && iconoSitio.ok());
+  assert.equal(iconoIngreso.headers()["content-type"], "image/svg+xml");
+  assert.deepEqual(await iconoIngreso.body(), await iconoSitio.body());
+}
+
 async function verificarOrdenYClaveLocal(viewport, locale) {
   const page = await browser.newPage({ viewport, locale });
   await page.goto(ingreso);
+  await verificarMarca(page);
   const proveedores = page.locator("#kc-social-providers a[id^='social-']");
   const introduccion = page.locator("#truco-social-intro");
   const cuentaLocal = page.locator("#truco-existing-account");
@@ -100,6 +114,7 @@ try {
     assert.equal((await page.request.get(new URL("/api/perfil", web).href)).status(), 401);
     await page.getByRole("button", { name: "Ingresar al juego", exact: true }).click();
     await page.locator("#kc-registration a").click();
+    await verificarMarca(page);
     await expect(page.locator("#username")).toHaveCount(0);
     await page.locator("#firstName").fill("Alicia");
     await page.locator("#lastName").fill("Prueba");
