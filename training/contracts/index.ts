@@ -46,6 +46,7 @@ export interface PublicTurn {
   readonly awards: readonly Cobro[];
 }
 export interface SeatObservation {
+  readonly rivalCounts?: readonly number[];
   readonly schema: typeof versions.observation;
   readonly format: Format;
   readonly seats: 2 | 4;
