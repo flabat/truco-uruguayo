@@ -56,6 +56,7 @@ function pasosNuevos(
     }
     const parcial = {
       ...actual,
+      contexto: { versionVista: 1, fase: "en-juego" } as const,
       puntos,
       ganadorPartida: null,
       turnos: actual.turnos?.slice(0, i + 1),
