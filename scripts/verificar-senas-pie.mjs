@@ -1,6 +1,8 @@
 // Sólo se fija el reparto. Las lecturas, indicaciones y jugadas pasan por la API real.
 import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
+import { on } from "node:events";
+import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
 import { iniciarOnline } from "../src/motor/mesa-online.ts";
@@ -61,6 +63,37 @@ async function reporte(id, palabras) {
   const r = await pedir(0, "/mesas/" + id + "/reportes", datos, { "content-type": "application/x-www-form-urlencoded" });
   assert.equal(r.status, 303, await r.text());
   return new URL(r.headers.get("location")).searchParams.get("body");
+}
+
+async function indicacionEnVivo(id, pie, orden) {
+  function conectar(asiento) {
+    const ws = new WebSocket("ws://127.0.0.1:3001/api/mesas/" + id + "/vivo", "truco.v1", {
+      headers: { cookie: jugadores[asiento].cookie, origin: process.env.WEB_ORIGIN },
+    });
+    const mensajes = on(ws, "message", { signal: AbortSignal.timeout(8000) });
+    return { ws, async recibir() { return JSON.parse((await mensajes.next()).value[0].toString()); } };
+  }
+  const autor = conectar(pie);
+  const rival = conectar(1);
+  try {
+    const aviso = { tipo: "actualizar" };
+    assert.deepEqual(await autor.recibir(), aviso);
+    assert.deepEqual(await rival.recibir(), aviso);
+    autor.ws.send(JSON.stringify({ tipo: "indicacion", ...orden }));
+    assert.deepEqual(await rival.recibir(), aviso);
+    assert.deepEqual(await autor.recibir(), aviso);
+    const recibo = await autor.recibir();
+    assert.equal(recibo.tipo, "confirmacion");
+    assert.equal(recibo.id, orden.id);
+    const refresco = await json(1, "/mesas/" + id + "/partida");
+    assert.deepEqual(refresco.indicaciones, recibo.partida.indicaciones);
+    assert.deepEqual(recibo.partida.pie.grupos.map(g => g.emisor), [0]);
+    assert.deepEqual(refresco.pie.grupos.map(g => g.emisor), [1]);
+    return recibo.partida;
+  } finally {
+    autor.ws.close();
+    rival.ws.close();
+  }
 }
 
 async function intentoSinCommit(id, pie, orden) {
@@ -152,7 +185,7 @@ async function verificar(cantidad) {
     orden.id = "00000000-0000-4000-8000-000000000314";
     await intentoSinCommit(id, par, orden);
   }
-  const primera = await hablar(par, orden);
+  const primera = cantidad === 4 ? await indicacionEnVivo(id, par, orden) : await hablar(par, orden);
   assert.deepEqual(await hablar(par, orden), primera);
   await hablar(par, { ...orden, indicacion: { ...orden.indicacion, frase: "juga" } }, 409);
   await hablar(par, indicacion(0, "juga"), 409);
