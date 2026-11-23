@@ -4,12 +4,13 @@ import { canto, respuestaConFlor } from "../../lib/cantos";
 import { ZonaJugador } from "./ZonaJugador";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
-import { Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
+import { controlesDeCantos, Continuacion, ManoJugador, PruebaEnMesa, Tanteador, tituloDeRespuesta } from "./Tablero";
 import { Tapete } from "./Tapete";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import { GloboDeVoz, vocesEnReposo } from "./Voz";
-import { useCantosDeTercetos } from "./presentacion-cantos-tercetos";
+import { vueltaEnMesa } from "./vuelta-en-mesa";
+import { usePresentacionTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
   aviso?: string;
   jugar: (accion?: Eleccion) => void;
   presencioReparto: boolean;
+  reconexion: number;
 };
 
 const nombreDelLance = (lance: LanceTercetos) =>
@@ -37,14 +39,7 @@ function palabra(mesa: Mesa, partida: PartidaTercetos) {
   if (vista.porDeclararFlor != null) {
     return vista.porDeclararFlor === mesa.miAsiento ? "Te toca declarar" : `Declara ${nombre(vista.porDeclararFlor)}`;
   }
-  if (vista.pendiente) {
-    const { asiento } = vista.pendiente;
-    if (vista.estado === "jugando" && vista.legales.length) return "Podés responder";
-    if (lance.tipo === "pico-a-pico") {
-      return `Responde ${nombre(lance.activos.find(a => a !== asiento)!)}`;
-    }
-    return `Responde el equipo ${mesa.asientos[asiento].equipo === 0 ? 2 : 1}`;
-  }
+  if (vista.pendiente) return tituloDeRespuesta(mesa, vista, lance.activos);
   if (vista.turno === mesa.miAsiento) return "Tu turno";
   return vista.turno == null ? "Esperando la jugada" : "Turno de " + nombre(vista.turno);
 }
@@ -77,16 +72,16 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
   </details>;
 }
 
-export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, presencioReparto }: Props) {
-  const { partida, voz, presentando } = useCantosDeTercetos(recibida, presencioReparto);
+export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, presencioReparto, reconexion }: Props) {
+  const { partida, voz, tablero, mostrandoCartas: presentando } = usePresentacionTercetos(recibida, presencioReparto, reconexion);
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
   const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const titulo = presentando && voz ? mesa.asientos[voz.asiento].nombre : palabra(mesa, partida);
-  const ultimaVuelta = vista.vueltas.at(-1);
-  const vuelta = vista.vueltaActual?.jugadas.length ? vista.vueltaActual : ultimaVuelta;
-  const numeroVuelta = vista.vueltas.length + (vuelta === ultimaVuelta && ultimaVuelta ? 0 : 1);
+  const { cerrada, vuelta, numeroVuelta, jugadaVisible, detalleVuelta } = vueltaEnMesa(vista, lance.activos.length, nombre);
+  const titulo = presentando && !vista.resultado
+    ? voz ? nombre(voz.asiento) : "Vuelta " + numeroVuelta
+    : palabra(mesa, partida);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
   const dueloPropio = 1 + ((mesa.miAsiento - vista.mano + 6) % 3);
@@ -100,7 +95,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const finalEnHistorial = cerrados && esLanceActual(cerrados);
   return <>
     <Tanteador meta={partida.meta} puntos={partida.puntos} propio={propio} equipo={e => e === propio ? "Tu equipo" : "Rivales"} />
-    <div className="j-partida j-partida--jugador j-seis">
+    <div className="j-partida j-partida--jugador j-seis" ref={tablero}>
       <Tapete
         base={base}
         asientos={mesa.asientos.map(a => {
@@ -113,6 +108,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
         muestra={vista.muestra}
         titulo={"Reparto " + partida.manoNumero}
         estado={esPico ? "Pico a pico" : "Redondilla"}
+        terminada={Boolean(vista.resultado && !cerrada)}
         numeroVuelta={numeroVuelta}
         vuelta={vuelta}
         participantes={lance.activos}
@@ -131,7 +127,8 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             {aviso && <p className="j-aviso">{aviso}</p>}
             <strong className="j-seis-lance">{nombreDelLance(lance)}{esPico && ` · ${rivales}`}</strong>
             <AvisoFlor pendiente={vista.pendiente} porDeclararFlor={vista.porDeclararFlor} nombre={nombre} />
-            {presentando && voz && <p>{voz.texto}</p>}
+            {presentando && <p>{voz?.texto || detalleVuelta || jugadaVisible}</p>}
+            {vista.resultado && <p>El cierre fue por {motivoDelCierre[vista.resultado.motivo]}.</p>}
             {!presentando && vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
               ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
             {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
@@ -147,10 +144,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             )}
           </>}
           mano={jugando && <ManoJugador cartas={jugando.cartas} habilitada={!bloqueada && jugando.legales.includes("carta")} base={base} jugar={jugar} />}
-          cantos={opciones.length > 0 && <div className="j-cantos" role="group" aria-label="Cantos y respuestas">
-            {opciones.map(tipo => <button key={tipo} className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"} disabled={bloqueada}
-              onClick={() => jugar({ tipo })}>{canto[tipo]}</button>)}
-          </div>}
+          cantos={controlesDeCantos(opciones, bloqueada, jugar)}
           continuacion={(esFin || vista.estado === "terminado") && <Continuacion fin={esFin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
         />}
       />

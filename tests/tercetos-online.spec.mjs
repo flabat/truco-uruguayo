@@ -284,6 +284,108 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await expect(page.getByRole("region", { name: "Tantos de este reparto" })).toContainText("Tu equipo · +14 tantos");
 });
 
+async function abrirPresentacion(page, leer) {
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  let canal;
+  await page.routeWebSocket("**/vivo", s => { canal = s; });
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    const json = pathname === "/api/jugador" ? jugadores[0] : pathname.endsWith("/partida") ? leer() : crearSala(0);
+    return route.fulfill({ json });
+  });
+  await page.goto("jugar/?mesa=" + id);
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  await expect(tapete).toBeVisible();
+  await expect(page.getByText("Reconectando con tu mesa…")).toHaveCount(0);
+  return { tapete, actualizar: () => canal.send(JSON.stringify({ tipo: "actualizar" })),
+    desconectar: () => canal.close({ code: 1001, reason: "Corte de prueba" }) };
+}
+
+test("la parda que cierra un duelo precede al cobro y a la mano privada del siguiente", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  const reparto = structuredClone(ejemplo.reparto);
+  reparto.manos[2][2] = "copas-04";
+  reparto.manos[5][2] = "espadas-04";
+  let estado = iniciarOnline(reparto, [0, 0], 50, 2);
+  let version = 1;
+  function tirar(asiento, carta) {
+    const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta });
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  tirar(5, "bastos-01");
+  tirar(2, "oros-02");
+  tirar(2, "copas-04");
+  const descarga = Promise.withResolvers();
+  await page.route("**/img/cartas/tatu/espadas-04.webp", async route => {
+    await descarga.promise;
+    await route.continue();
+  });
+  const { tapete, actualizar } = await abrirPresentacion(page, () => lectura(estado, 0, version));
+  const mano = tapete.getByRole("group", { name: "Tus cartas" });
+  await expect(tapete.getByText(/Duelo 1 de 3 ·/)).toBeVisible();
+  tirar(5, "espadas-04");
+  actualizar();
+  await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
+  await page.clock.runFor(3000);
+  await expect(tapete.getByText("Parda", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "0"]);
+  await expect(mano).toHaveCount(0);
+
+  descarga.resolve();
+  await expect(tapete.getByText("Parda", { exact: true })).toBeVisible();
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["1", "0"]);
+  await expect(tapete.getByRole("status")).toContainText("La vuelta fue parda.");
+  await capturarTapete(page, "parda-del-pico");
+  await page.clock.runFor(1999);
+  await expect(mano).toHaveCount(0);
+  await expect(tapete.getByText(/Duelo 1 de 3 ·/)).toBeVisible();
+  await page.clock.runFor(1);
+  await expect(tapete.getByText(/Duelo 2 de 3 ·/)).toBeVisible();
+  await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
+  await expect(mano.getByRole("button")).toHaveCount(3);
+  await expect(tapete.getByRole("button", { name: "Flor", exact: true })).toBeEnabled();
+});
+
+test("la redondilla presenta las seis cartas y recupera directamente el retiro tras un corte", async ({ page }) => {
+  const reparto = structuredClone(ejemplo.reparto);
+  [reparto.manos[0][2], reparto.manos[3][2]] = [reparto.manos[3][2], reparto.manos[0][2]];
+  let estado = iniciarOnline(reparto, [0, 0], 50, 1);
+  let version = 1;
+  const { tapete, actualizar, desconectar } = await abrirPresentacion(page, () => lectura(estado, 0, version));
+  for (let n = 0; n < 6; n++) {
+    const asiento = estado.mano.turno;
+    const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta: reparto.manos[asiento][0] });
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  actualizar();
+  const naipes = tapete.locator(".j-jugada img");
+  for (let n = 1; n < 6; n++) {
+    await expect(naipes).toHaveCount(n);
+    await expect.poll(() => naipes.evaluateAll(cartas => cartas.every(img => img.complete))).toBe(true);
+    await expect(tapete.getByText("Ganó Clara", { exact: true })).toHaveCount(0);
+    await page.clock.runFor(450);
+  }
+  await expect(naipes).toHaveCount(6);
+  await expect(tapete.getByText("Ganó Clara", { exact: true })).toBeVisible();
+  desconectar();
+  await expect(tapete.getByRole("heading", { name: /Reconectando/ })).toBeVisible();
+  const cierre = aplicarOnline(estado, { tipo: "mazo", asiento: estado.mano.turno });
+  expect(cierre.ok).toBe(true);
+  estado = cierre.estado;
+  version++;
+  await page.clock.runFor(400);
+  await expect(tapete.getByRole("heading", { name: "Reparto terminado" })).toBeVisible();
+  await expect(tapete.getByRole("status")).toContainText("El cierre fue por el retiro al mazo.");
+  await expect(naipes).toHaveCount(0);
+  await expect(tapete.getByText("Ganó Clara", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "1"]);
+});
+
 test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ page, isMobile }) => {
   if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
   let estado = iniciarOnline(ejemplo.reparto, [0, 0], 50, ejemplo.numero);

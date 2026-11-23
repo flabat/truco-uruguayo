@@ -1,16 +1,13 @@
-import { useEffect, useState } from "react";
 import type { LanceTercetos, VistaTercetos } from "../../motor/mesa-online";
 import { faltaDelGanador } from "../../motor/reglas-tercetos";
 import type { PartidaTercetos } from "./cliente";
-import { pausaDeVoz, vocesEnAccion, type Voz } from "./Voz";
+import { pausaDeVoz, vocesEnAccion } from "./Voz";
+
+import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type Paso } from "./secuencia-de-mesa";
 
 type Registro = Pick<VistaTercetos, "acciones" | "vueltas" | "cobros" | "indiceCobroLateral">;
-interface Paso {
-  partida: PartidaTercetos;
-  voz: Voz;
-}
 
-function antesDelCobro(actual: PartidaTercetos, lance: LanceTercetos, registro: Registro,
+function hastaLaAccion(actual: PartidaTercetos, lance: LanceTercetos, registro: Registro,
     numero: number, indice: number, previa?: PartidaTercetos): PartidaTercetos {
   const { asiento, mano, dador, muestra, equipoPorAsiento } = actual.vista;
   const historialLances = actual.historialLances.slice(0, numero);
@@ -35,7 +32,7 @@ function antesDelCobro(actual: PartidaTercetos, lance: LanceTercetos, registro: 
     faltaPorEquipo: inicio.map(p => faltaDelGanador(p, actual.meta)) as [number, number],
     turno: null, equipoGanador: null, resultado: null, pendiente: null,
     trucoPendiente: null, porDeclararFlor: null, apuesta: "sin-canto" as const,
-    valorTruco: previa?.vista.valorTruco ?? 1, legales: [] as [],
+    valorTruco: 1 + acciones.filter(a => ["truco", "retruco", "vale-cuatro"].includes(a.tipo)).length, legales: [] as [],
   };
   // Un asiento puede recibir sus cartas al abrir su duelo. Nunca usarlas para un duelo anterior.
   const propia = previa?.vista.estado === "jugando" ? previa.vista
@@ -53,7 +50,7 @@ function antesDelCobro(actual: PartidaTercetos, lance: LanceTercetos, registro: 
 }
 
 function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercetos,
-    presencioReparto: boolean, pendientes: readonly Paso[] = []): Paso[] {
+    presencioReparto: boolean, pendientes: Paso<PartidaTercetos>[] = []): Paso<PartidaTercetos>[] {
   const misma = anterior?.manoNumero === actual.manoNumero ? anterior : undefined;
   const desdeElReparto = (!anterior && presencioReparto && actual.manoNumero === 1)
     || (anterior?.vista.resultado && actual.manoNumero === anterior.manoNumero + 1);
@@ -68,37 +65,38 @@ function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercet
     const { lance, registro } = lances[n];
     const previa = misma?.lance.duelo === lance.duelo ? misma : undefined;
     for (let i = previa?.vista.acciones.length ?? 0; i < registro.acciones.length; i++) {
+      const ultima = i === registro.acciones.length - 1;
+      const esActual = n === lances.length - 1;
+      const parcial = hastaLaAccion(actual, lance, registro, n, i, previa);
+      if (registro.acciones[i].tipo === "carta") {
+        const completa = !parcial.vista.vueltaActual;
+        const cerrada = completa ? parcial.vista.vueltas.at(-1) : undefined;
+        let partida = esActual && ultima ? actual : parcial;
+        // Un duelo puede cerrar por cartas en el mismo aviso que ya abre el siguiente.
+        const archivo = actual.historialLances[n];
+        if (!esActual && ultima && archivo) {
+          partida = { ...parcial, puntos: [...archivo.puntos], historialLances: actual.historialLances.slice(0, n + 1),
+            vista: { ...parcial.vista, cobros: archivo.cobros } };
+        }
+        const antesDelResultado = cerrada && { ...parcial, vista: { ...parcial.vista,
+          vueltaActual: { salida: cerrada.salida, jugadas: cerrada.jugadas }, vueltas: parcial.vista.vueltas.slice(0, -1) } };
+        pasos.push({ partida, antesDelResultado, espera: completa ? vueltaCompleta : entreCartas });
+        continue;
+      }
       const voces = vocesEnAccion(registro, i);
-      if (!voces.length) continue;
       // La respuesta del propio jugador indica que ya vio el canto que le permitió responder.
-      if (voces[0].asiento === actual.vista.asiento && pasos[0]?.partida === anterior) pasos.shift();
-      const enVivo = !actual.vista.resultado && n === lances.length - 1
-        && i === registro.acciones.length - 1 && voces.length === 1;
-      const partida = enVivo ? actual : antesDelCobro(actual, lance, registro, n, i, previa);
+      if (voces[0].asiento === actual.vista.asiento && pasos[0]?.voz && pasos[0].partida === anterior) pasos.shift();
+      const enVivo = !actual.vista.resultado && esActual && ultima && voces.length === 1;
+      const partida = enVivo ? actual : parcial;
       for (const [j, voz] of voces.entries()) {
         if (j === 0 && voz.asiento === actual.vista.asiento) continue;
-        pasos.push({ partida, voz });
+        pasos.push({ partida, voz, espera: pausaDeVoz });
       }
     }
   }
   return pasos;
 }
 
-export function useCantosDeTercetos(actual: PartidaTercetos, presencioReparto: boolean) {
-  const [secuencia, mostrar] = useState(() => ({
-    recibida: actual, pasos: siguientes(undefined, actual, presencioReparto),
-  }));
-  if (actual.version !== secuencia.recibida.version || actual.manoNumero !== secuencia.recibida.manoNumero) {
-    mostrar({ recibida: actual, pasos: siguientes(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
-  }
-  const paso = secuencia.pasos[0];
-  useEffect(() => {
-    if (!paso) return;
-    const timer = window.setTimeout(() => {
-      mostrar(s => s.pasos[0] === paso ? { ...s, pasos: s.pasos.slice(1) } : s);
-    }, pausaDeVoz);
-    return () => window.clearTimeout(timer);
-  }, [paso]);
-  const presentando = Boolean(paso && paso.partida !== secuencia.recibida);
-  return { partida: presentando ? paso.partida : actual, voz: paso?.voz, presentando };
+export function usePresentacionTercetos(actual: PartidaTercetos, presencioReparto: boolean, reconexion: number) {
+  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, siguientes);
 }

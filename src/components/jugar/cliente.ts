@@ -97,6 +97,7 @@ export function useMesa(id: string) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
   const [partida, setPartida] = useState<PartidaRecibida>();
+  const [reconexion, setReconexion] = useState(0);
   const [conectada, setConectada] = useState(false);
   const [error, setError] = useState<ErrorMesa | null>(null);
   const refrescar = useRef<() => Promise<void>>(async () => {});
@@ -108,6 +109,7 @@ export function useMesa(id: string) {
     let demora = 400;
     let lectura: Promise<void> | undefined;
     let faltaLeer = false;
+    let generacion = 0;
 
     function leer(): Promise<void> {
       faltaLeer = true;
@@ -122,12 +124,19 @@ export function useMesa(id: string) {
         // Si llega una novedad durante la lectura, consultar de nuevo en orden.
         while (faltaLeer && !cancel.signal.aborted) {
           faltaLeer = false;
+          const alComenzar = generacion;
           const canal = socket?.readyState === WebSocket.OPEN ? socket : undefined;
           const sala = await pedir<Mesa>(ruta, undefined, cancel.signal);
           const mano = sala.lista
             ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
             : undefined;
           if (cancel.signal.aborted) return;
+          // Un corte durante la lectura exige una instantánea del nuevo período de conexión.
+          if (alComenzar !== generacion) {
+            faltaLeer = true;
+            continue;
+          }
+          setReconexion(generacion);
           setMesa(sala);
           setPartida(mano);
           setError(null);
@@ -138,6 +147,7 @@ export function useMesa(id: string) {
         }
       } catch (e) {
         if (cancel.signal.aborted) return;
+        generacion++;
         setConectada(false);
         if (e instanceof ErrorMesa && [401, 403, 404].includes(e.status)) {
           setError(e);
@@ -173,6 +183,7 @@ export function useMesa(id: string) {
       actual.onclose = () => {
         if (cancel.signal.aborted) return;
         socket = undefined;
+        generacion++;
         setConectada(false);
         clearTimeout(timer);
         timer = setTimeout(leer, demora);
@@ -199,5 +210,5 @@ export function useMesa(id: string) {
     };
   }, [ruta]);
 
-  return { ruta, mesa, partida, conectada, error, refrescar };
+  return { ruta, mesa, partida, conectada, reconexion, error, refrescar };
 }
