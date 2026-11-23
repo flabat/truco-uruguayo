@@ -16,11 +16,11 @@ La entrevista fija las reglas de la casa. El catálogo se apoya en la sección �
 
 ## Una mano que muestra por qué importa
 
-**Parejas.** El orden inicial es Ana (A), Beto (B), Clara (A), Diego (B). Clara es pie de A y Diego de B. Con el 6 de copas de muestra, Ana tiene el 2 de copas, el as de basto y el 4 de oro. Antes de que Ana juegue, Clara ve en la fila de Ana las cejas alzadas y los labios a la derecha. Sabe que Ana tiene el 2 de copas y uno de los dos ases bravos. Ana ve qué le señaló a Clara. Beto y Diego sólo ven los hechos públicos y sus propios intercambios autorizados.
+**Parejas.** El orden inicial es Ana (A), Beto (B), Clara (A), Diego (B). Clara es pie de A y Diego de B. Con el 6 de copas de muestra, Ana tiene el 2 de copas, el as de basto y el 4 de oro. Antes de que Ana juegue, Clara ve que Ana alza las cejas y lleva los labios a su derecha. Sabe que Ana tiene el 2 de copas y uno de los dos ases bravos. Ana ve qué le señaló a Clara. Beto y Diego sólo ven los hechos públicos y sus propios intercambios autorizados.
 
 Clara dice **«Ana, vení»**. Los cuatro ven la frase junto al asiento de Clara. Ana tira el 4 de oro, Beto el 6 de basto, Clara el 4 de copas y Diego el rey de oro. Clara gana con la pieza. En la segunda vuelta el orden es Clara, Diego, Ana, Beto. **Clara sigue siendo pie.** Vuelve a ver las dos señas de Ana, que conservó ambas cartas fuertes. Clara abre con una baja y dice **«Ana, voy a vos»**. Diego conoce el pedido cuando le toca jugar. Ana decide si le conviene gastar la pieza o el as. [Motor de vueltas](../../src/motor/mano.ts)
 
-**Tercetos.** En una redondilla que abre el asiento 0, el pie 4 recibe las señas de 0 y 2, cada uno en su fila. El pie 5 recibe las de 1 y 3. Si 4 le dice «Vení» al 0, los seis ven que se dirige al 0. Si 4 gana y abre la segunda, puede decirle «Voy a vos» al 2. El 0 también oye el pedido, pero sigue sin ver qué le señaló el 2 al pie. Al pasar al pico a pico se limpia el panel de los seis. Quien espera un duelo recibe sus propias cartas cuando lo abre el motor. [Reglas de tercetos](tercetos/README.md)
+**Tercetos.** En una redondilla que abre el asiento 0, el pie 4 recibe las señas de 0 y 2, identificadas por emisor. El pie 5 recibe las de 1 y 3. Si 4 le dice «Vení» al 0, los seis ven que se dirige al 0. Si 4 gana y abre la segunda, puede decirle «Voy a vos» al 2. El 0 también oye el pedido, pero sigue sin ver qué le señaló el 2 al pie. Al pasar al pico a pico se limpia el panel de los seis. Quien espera un duelo recibe sus propias cartas cuando lo abre el motor. [Reglas de tercetos](tercetos/README.md)
 
 ## Qué ve el pie
 
@@ -39,11 +39,26 @@ En la vista privada alcanza con el asiento del emisor y los identificadores de g
 ## Cómo se juega en la interfaz
 
 - **Al crear la mesa**, ofrecer «Señas automáticas al pie» en parejas y en tercetos habilitados. La sala explica que las señas de cartas llegan en privado al pie y que toda la mesa oye sus indicaciones. Las partidas sin señas se juegan como hasta ahora.
-- **Al repartir**, identificar al pie en el tapete. Aunque un compañero tenga el primer turno o una flor pendiente, el pie ya ve una fila por emisor, con su nombre, el gesto y su significado. Cada emisor tiene un resumen discreto de lo que pasó. En la segunda vuelta, cambiar la salida y actualizar las señas conservando la insignia del pie.
+- **Al repartir**, identificar al pie en el tapete. Aunque un compañero tenga el primer turno o una flor pendiente, el pie ya puede reconocer las señas de cada emisor por su nombre y por las expresiones de la cara. Cada emisor tiene un resumen discreto de lo que pasó. En la segunda vuelta, cambiar la salida y actualizar las señas conservando la insignia del pie.
 - **Al orientar**, dirigir la frase a un compañero que todavía debe tirar carta. En parejas el nombre viene dado. En tercetos, elegir por nombre entre los destinatarios habilitados. Cuando el compañero juega antes que el pie, ofrecer «Vení» y «Jugá», con la ayuda «salí con algo». En el caso confirmado del pie que abre la segunda, ofrecer «Voy a vos» para el compañero posterior. Para que el rival siguiente pueda oírlo a tiempo, el pie puede decir «Voy a vos» antes de confirmar su salida. También puede indicarlo después de tirar, mientras el destinatario conserve su jugada. Como extensión propuesta, usar esa misma frase cuando en otra vuelta el pie también juega por delante del destinatario. Conservar el silencio como opción natural.
 - **Al hablar**, todos ven un globo sobre **el asiento del pie**, con el destinatario y la frase, por ejemplo «Ana, voy a vos». El historial conserva «Clara le dijo a Ana “Voy a vos”» en el lugar en que se aceptó. Reutilizar la presentación textual y el anuncio accesible de «Truco» y de los tantos del envido. Las vistas espectadoras que ya existen muestran la frase pública con sus etiquetas habituales de asiento. El micrófono y Discord siguen siendo opcionales. [Presentación de cantos y tantos](../../src/components/jugar/Voz.tsx) · [Historial de la mano](../../src/components/jugar/HistorialDeMano.tsx)
 - **Al jugar**, el consejo es optativo. No requiere «Quiero», no consume el turno, no altera apuestas o puntaje y no elimina cartas legales. Para acotar la interacción, se propone admitir una frase por pie, destinatario y vuelta. La frase oída queda en la historia, y la carta del destinatario o el cierre del lance extingue la oportunidad de hablarle. Un canto pendiente conserva su propia prioridad.
 - **Con teclado o en móvil**, mantener visibles nombre, gesto y sentido a 320 px, con los botones alcanzables incluso cuando el pie no tiene turno de carta. Anunciar una frase pública una vez con emisor y destinatario. Las señas privadas sólo se anuncian en la vista autorizada. Recibir una actualización conserva el foco en el control activo. [Selector actual](../../src/components/jugar/Senas.tsx) · [Diseño del tapete en curso, PR #287](https://github.com/flabat/truco-uruguayo/pull/287)
+
+### Tres opciones para el aviso privado
+
+Las tres propuestas muestran la primera vuelta desde el lugar de Clara. Ana levanta las dos cejas por el 2 de copas y lleva los labios a su derecha por un as bravo. Las caras estilo emoji reproducen la expresión del compañero de frente. Un rótulo breve da el significado del gesto y conserva la ambigüedad de los dos ases. La elección visual queda abierta.
+
+| Globo del compañero | Tira sobre la mano | Visor de gestos |
+| --- | --- | --- |
+| [![Dos caras en el aviso anclado al asiento de Ana](senas-al-pie/globo.png)](senas-al-pie/globo.png) | [![Dos caras en una franja junto a la mano de Clara](senas-al-pie/tira.png)](senas-al-pie/tira.png) | [![Una cara ampliada con controles para pasar a la siguiente](senas-al-pie/visor.png)](senas-al-pie/visor.png) |
+| El aviso anclado al asiento de Ana reúne las dos caras. Clara reconoce de inmediato quién le hizo las señas. | Una franja baja junto a las cartas propias muestra el nombre de Ana y ambas caras a la vez. El centro del tapete queda libre. | Una cara más grande permite distinguir la posición de cejas y labios. Un contador y los controles anterior y siguiente permiten recorrer las señas de Ana de a una. |
+
+En la prueba táctil de parejas a 320 px, el aviso abierto ocupa aproximadamente el 12 % de la vista de juego con el globo, el 14 % con la tira y el 15 % con el visor. La referencia es la superficie de 320 × 498 px que contiene el tanteador, el tapete y la mano de Clara.
+
+Al abrirse la vuelta, presentar el aviso en la vista del pie. Clara puede cerrarlo y volver a consultar las señas durante la misma vuelta. En una redondilla cada grupo lleva el nombre de su emisor y se consulta en el mismo espacio. El aviso debe dejar a la vista la muestra, las cartas jugadas y las cartas propias, con sus acciones al alcance. Una marca de privacidad y las caras identifican las señas. Las frases públicas como «Vení» conservan el globo de voz del asiento del pie.
+
+Verificar las tres alternativas a 320 px y en escritorio. Dar a cada gesto un equivalente accesible que comunique emisor, expresión y significado, por ejemplo «Ana, labios a su derecha, as de espada o as de basto». Al cerrar con el botón o con Escape, devolver el foco al control que permite reabrir.
 
 ## Contrato del árbitro y recuperación
 
