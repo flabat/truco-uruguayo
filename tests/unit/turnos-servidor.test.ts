@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
+import { continuarAlPie } from "../../api/partidas-pie.ts";
+import { versionSenasPie, type IndicacionPie } from "../../src/motor/senas-pie.ts";
 import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
 import { iniciarOnline, marcadorOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
 import { dueloFlor } from "../fixtures/duelo-mazo.ts";
@@ -59,4 +61,37 @@ test("al reanudar el duelo se registra sólo la decisión nueva con la propuesta
   });
   assert.equal(decisiones, 1);
   jugarComputadoras(fin, "duel", [0], false, () => assert.fail("La mano ya terminó."));
+});
+
+test("las parejas con pie restauran las palabras aparte de las acciones y rechazan el gesto manual", () => {
+  const indicaciones: IndicacionPie[] = [{ emisor: 2, destinatario: 0, vuelta: 1, frase: "veni", indiceAccion: 0 }];
+  const fila: Registro = { numero: 1, version: 1, version_reglas: 1, version_senas: versionSenasPie,
+    reparto: parejas, puntos_inicio: [0, 0], acciones: [], indicaciones };
+  const mano = restaurar(fila, "pairs-private-senas");
+  assert.deepEqual(mano.indicaciones, indicaciones);
+  assert.deepEqual(mano.estado.acciones, []);
+  assert.throws(() => restaurar(fila, "pairs-senas"), { status: 503 });
+  const manual = { tipo: "flor", sena: "cejas" } as const;
+  assert.throws(() => leerAccion(manual, 0, "pairs-private-senas", true), { status: 400 });
+  assert.throws(() => restaurar({ ...fila, acciones: [{ ...manual, asiento: 0 }] }, "pairs-private-senas"), /manual/);
+  assert.deepEqual(leerAccion(manual, 0, "pairs-private-senas"), { ...manual, asiento: 0 });
+});
+
+test("la ventana de una carta de bot depende del pie humano y conserva el mismo plazo con o sin palabra", async () => {
+  const reparto: RepartoOnline = { ...parejas, reglaFlor: "inmediata-v2", manos: [
+    ["bastos-06", "oros-03", "espadas-05"], ["copas-05", "bastos-07", "oros-06"],
+    ["oros-12", "bastos-03", "espadas-07"], ["espadas-03", "copas-07", "bastos-04"],
+  ] };
+  const mano = { estado: iniciarOnline(reparto), turnos: [] };
+  async function programacion(humanos: number[], anteriores: IndicacionPie[]) {
+    const actividad: unknown[][] = [];
+    const db = { async query(_sql: string, args: unknown[]) { actividad.push(args); } };
+    await continuarAlPie(db as Parameters<typeof continuarAlPie>[0], "mesa", 1, mano, humanos, anteriores, mano.estado);
+    return actividad;
+  }
+  const consejo: IndicacionPie = { emisor: 2, destinatario: 0, vuelta: 1, frase: "veni", indiceAccion: 0 };
+  assert.deepEqual(await programacion([2], []), [["mesa", true]]);
+  assert.deepEqual(await programacion([2], [consejo]), [["mesa", true]]);
+  assert.deepEqual(await programacion([], []), [["mesa", false]]);
+  assert.deepEqual(await programacion([0], []), [["mesa"]]);
 });

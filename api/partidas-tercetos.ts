@@ -5,6 +5,7 @@ import {
 } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
+import { versionSenasPie } from "../src/motor/senas-pie.ts";
 import { ErrorPeticion } from "./http.ts";
 import { decisionTercetos, guardarDecisionesReplayDB } from "./replay-db.ts";
 import type { Registro } from "./turnos.ts";
@@ -18,7 +19,7 @@ export type RegistroTercetos = Omit<Registro, "acciones"> & {
 };
 
 export function restaurarTercetosDB(fila: RegistroTercetos): EstadoOnline {
-  if (fila.version_reglas !== versionReglasTercetos || fila.version_senas !== null
+  if (fila.version_reglas !== versionReglasTercetos || (fila.version_senas !== null && fila.version_senas !== versionSenasPie)
       || fila.reparto.versionReparto !== "online-2" || fila.meta_tercetos === null) {
     throw new ErrorPeticion(503, "Esta mesa requiere otra versión del árbitro de tercetos.");
   }
@@ -63,13 +64,13 @@ export async function confirmarTurnoTercetosDB(db: PoolClient, fila: RegistroTer
 }
 
 export async function repartirTercetosDB(db: PoolClient, mesa: string, numero: number, version: number,
-    puntos: [number, number], meta: number, humanos: readonly number[], reparto: RepartoOnline) {
+    puntos: [number, number], meta: number, humanos: readonly number[], reparto: RepartoOnline, alPie = false) {
   const estado = iniciarOnline(reparto, puntos, meta, numero);
   await db.query(`INSERT INTO juego.manos
-    (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, meta_tercetos, tipo_reparto)
-    VALUES ($1,$2,$3,$4,$5,$6,'[]',$7,$8)`, [mesa, numero, version, versionReglasTercetos,
-    reparto, puntos, meta, estado.lance!.tipo]);
-  await registrarPendienteTercetos(db, mesa, estado, humanos);
+    (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, meta_tercetos, tipo_reparto, version_senas)
+    VALUES ($1,$2,$3,$4,$5,$6,'[]',$7,$8,$9)`, [mesa, numero, version, versionReglasTercetos,
+    reparto, puntos, meta, estado.lance!.tipo, alPie ? versionSenasPie : null]);
+  if (!alPie) await registrarPendienteTercetos(db, mesa, estado, humanos);
   return estado;
 }
 

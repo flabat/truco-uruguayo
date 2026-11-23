@@ -115,8 +115,8 @@ test("se puede hablar sin tener la palabra, una vez por destinatario y vuelta", 
     [4,0,"sarasa",1],[4,0,"__proto__",1],[4,0,"veni",2],[4,"0","veni",1]] as const) {
     assert.equal(crearIndicacionPie(e,quien,a,frase,vuelta,[]), undefined);
   }
-  const flor = aplicar(e,{tipo:"envido",asiento:0});
-  assert.equal(crearIndicacionPie(flor,4,0,"veni",1,[])?.indiceAccion,1);
+  const envido = aplicar(e,{tipo:"envido",asiento:0});
+  assert.equal(crearIndicacionPie(envido,4,0,"veni",1,[])?.indiceAccion,1);
   const despues = tirar(e,["oros-04"]);
   assert.equal(crearIndicacionPie(despues,4,0,"veni",1,[]),undefined);
   assert.equal(crearIndicacionPie(despues,4,2,"juga",1,[])?.indiceAccion,1);

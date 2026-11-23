@@ -8,21 +8,22 @@ const ruta = /^\/api\/mesas\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0
 interface ServiciosVivo {
   autenticar(req: IncomingMessage): Promise<string | null>;
   leerMesa(mesa: string, jugador: string): Promise<unknown>;
-  ejecutar(mesa: string, jugador: string, operacion: "acciones" | "siguiente", datos: Record<string, unknown>): Promise<unknown>;
+  ejecutar(mesa: string, jugador: string, operacion: "acciones" | "siguiente" | "indicaciones", datos: Record<string, unknown>): Promise<unknown>;
 }
 
 interface Comando {
-  tipo: "accion" | "siguiente";
+  tipo: "accion" | "siguiente" | "indicacion";
   id: string;
   version: number;
   accion?: unknown;
+  indicacion?: unknown;
 }
 
 function esComando(valor: unknown): valor is Comando {
   if (!valor || typeof valor !== "object") return false;
   const { tipo, id, version } = valor as Partial<Comando>;
-  return (tipo === "accion" || tipo === "siguiente") && typeof id === "string" && id.length <= 64
-    && Number.isSafeInteger(version) && (tipo !== "accion" || "accion" in valor);
+  return (tipo === "accion" || tipo === "siguiente" || tipo === "indicacion") && typeof id === "string" && id.length <= 64
+    && Number.isSafeInteger(version) && (tipo !== "accion" || "accion" in valor) && (tipo !== "indicacion" || "indicacion" in valor);
 }
 
 interface Conexion {
@@ -73,7 +74,7 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
       if (!await sigueEnLaMesa(conexion)) return;
       // HTTP y WebSocket pasan por la misma clave idempotente y el mismo control de versión.
       const { tipo, ...solicitud } = datos;
-      const partida = await servicios.ejecutar(mesa, jugador, tipo === "accion" ? "acciones" : "siguiente", solicitud);
+      const partida = await servicios.ejecutar(mesa, jugador, tipo === "indicacion" ? "indicaciones" : tipo === "accion" ? "acciones" : "siguiente", solicitud);
       if (await sigueEnLaMesa(conexion)) enviar(ws, { tipo: "confirmacion", id: datos.id, partida });
     } catch (error) {
       const { status, mensaje } = fallo(error);

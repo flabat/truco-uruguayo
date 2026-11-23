@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
-export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0
+export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
 unset KEYCLOAK_ADMIN_TOKEN
@@ -52,6 +52,7 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-senas-pie.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-persistencia-tercetos.mjs
@@ -79,10 +80,11 @@ migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-jueg
 "${compose[@]}" stop db
 [[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
-export TERCETOS_HABILITADOS=0 SALON_HABILITADO=0
+export TERCETOS_HABILITADOS=0 SALON_HABILITADO=0 SENAS_PIE_PAREJAS=0 SENAS_PIE_TERCETOS=0
 up
 "${compose[@]}" exec -T api node --input-type=module - cerrar-altas < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-persistencia-tercetos.mjs
+"${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-senas-pie.mjs
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
 "${compose[@]}" exec -T api node --input-type=module - reinicio < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-vivo.mjs
