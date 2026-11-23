@@ -13,6 +13,7 @@ import {
 import PieMesa from "./PieMesa";
 import Comunidad from "./Comunidad";
 import { contar } from "../../lib/eventos";
+import { nombreSitio } from "../../lib/marca";
 import SalonEnVivo from "./SalonEnVivo";
 import VisorEspectador from "./VisorEspectador";
 import { VozDiscord } from "./VozDiscord";
@@ -200,7 +201,7 @@ function Invitacion({ enlace }: { enlace: string }) {
     contar("compartir-mesa");
     if (!navigator.share) return copiar();
     try {
-      await navigator.share({ title: "Truco Oriental", text: "¡Te invité a jugar al truco! Sumate a mi mesa:", url: enlace });
+      await navigator.share({ title: nombreSitio, text: "¡Te invité a jugar al truco! Sumate a mi mesa:", url: enlace });
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
       await copiar();

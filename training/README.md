@@ -1,4 +1,4 @@
-# Entrenamiento local de Truco Oriental
+# Entrenamiento local de El Truco
 
 La arena juega chicos a 40 usando el mismo reductor que el servidor. Cada asiento decide a partir de su mano y de los hechos públicos y, cuando se habilitan señas, de los gestos del propio equipo. Los tres formatos activos son, `duel`, `pairs` y `pairs-private-senas`. Todos los participantes en entrenamiento y evaluación son computadoras.
 

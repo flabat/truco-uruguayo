@@ -1,4 +1,4 @@
-# Contribuir a Truco Oriental
+# Contribuir a El Truco
 
 ## Issues y coordinación
 

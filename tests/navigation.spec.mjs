@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { readdirSync } from "node:fs";
 import { versionModeloPractica, versionMotorPractica } from "../src/probabilidad/perfil.ts";
 
 test("la portada carga una imagen principal WebP según el ancho de pantalla", async ({ page, isMobile }) => {
@@ -56,6 +57,37 @@ test("abre una variante de mesa y vuelve al capítulo que la explica", async ({ 
 test.describe("sin JavaScript", () => {
   test.use({ javaScriptEnabled: false });
 
+  test("todas las páginas identifican a El Truco en el sitio y en sus vistas previas", async ({ page }) => {
+    const paginas = readdirSync("dist", { recursive: true }).filter(ruta => ruta.endsWith("index.html"));
+    expect(paginas).toContain("index.html");
+    for (const archivo of paginas) {
+      const ruta = "/" + archivo.replace(/index\.html$/, "");
+      await test.step(ruta, async () => {
+        await page.goto(ruta, { waitUntil: "domcontentloaded" });
+        const titulo = await page.title();
+        if (ruta === "/") {
+          expect(titulo).toBe("El Truco");
+          await expect(page.getByRole("heading", { level: 1 })).toHaveText("El Truco");
+        } else {
+          expect(titulo).toMatch(/^.+ · El Truco$/);
+        }
+        await expect(page.locator('meta[name="application-name"]')).toHaveAttribute("content", "El Truco");
+        await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute("content", "El Truco");
+        await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", titulo);
+        await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute("content", titulo);
+        await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.svg");
+        await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute("href", "/apple-touch-icon.png");
+        for (const zona of ["banner", "contentinfo"]) {
+          const inicio = page.getByRole(zona).getByRole("link", { name: "El Truco, inicio" });
+          await expect(inicio).toHaveText("El Truco");
+          await expect(inicio).toHaveAttribute("href", "/");
+          await expect(inicio.locator("img")).toHaveAttribute("src", "/favicon.svg");
+        }
+        await expect(page.locator("body")).not.toContainText("Truco Oriental");
+      });
+    }
+  });
+
   test("las páginas de privacidad y eliminación se consultan sin cuenta", async ({ page }) => {
     await page.goto("./");
     const pie = page.getByRole("contentinfo").getByRole("navigation", { name: "Privacidad y datos" });
@@ -68,7 +100,7 @@ test.describe("sin JavaScript", () => {
     await contenido.getByRole("link", { name: "pedir la eliminación de tus datos" }).click();
     await expect(page).toHaveURL("eliminacion-de-datos/");
     await expect(contenido.getByRole("heading", { level: 1 })).toHaveText("Eliminación de datos");
-    await expect(contenido).toContainText("Si ya quitaste Truco Oriental de tus aplicaciones en Facebook");
+    await expect(contenido).toContainText("Si ya quitaste El Truco de tus aplicaciones en Facebook");
     await expect(contenido.getByRole("link", { name: "flabat@flabat.com" })).toHaveAttribute("href", "mailto:flabat@flabat.com");
     await expect(pie.getByRole("link", { name: "Eliminación de datos" })).toHaveAttribute("href", "/eliminacion-de-datos/");
   });

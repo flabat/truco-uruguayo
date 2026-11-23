@@ -1,4 +1,4 @@
-# Truco Oriental en un VPS de 4 GB
+# El Truco en un VPS de 4 GB
 
 El despliegue usa una máquina Linux de dos CPU con Docker Engine y Compose v2. Caddy sirve el sitio estático, termina HTTPS y pasa las conexiones WebSocket a la API. Keycloak arranca en modo producción. PostgreSQL guarda las cuentas y las partidas en esquemas con propietarios distintos. Restic envía una copia cifrada a un destino independiente del VPS.
 
@@ -128,7 +128,7 @@ install -d -m 700 /etc/truco-oriental
 
 Para recuperar una instalación que aún consulta el repositorio de forma anónima, instalá el ejecutor y la unidad desde la revisión verificada siguiendo los comandos de instalación de abajo. Iniciá `truco-deploy.service` y comprobá que el SHA en `current` coincida con el push aprobado de `main`.
 
-En el VPS de Truco Oriental, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
+En el VPS de El Truco, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
 
 ```sh
 systemctl stop truco-deploy.timer

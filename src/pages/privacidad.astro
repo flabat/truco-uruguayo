@@ -3,14 +3,14 @@ import Privacidad from "../layouts/Privacidad.astro";
 import { url } from "../lib/guide";
 ---
 
-<Privacidad title="Política de privacidad" description="Conocé qué datos usa Truco Oriental en eltru.co, quién puede verlos y cómo contactarnos.">
-  <Fragment slot="introduccion">Truco Oriental opera eltru.co. Usamos tus datos para reconocerte cuando volvés, mantener tu lugar en la mesa y mostrarte las partidas que jugaste.</Fragment>
+<Privacidad title="Política de privacidad" description="Conocé qué datos usa El Truco en eltru.co, quién puede verlos y cómo contactarnos.">
+  <Fragment slot="introduccion">El Truco opera eltru.co. Usamos tus datos para reconocerte cuando volvés, mantener tu lugar en la mesa y mostrarte las partidas que jugaste.</Fragment>
 
   <section class="rule-block">
     <h2>Tu cuenta</h2>
     <p>Si entrás con Google o Discord, recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio.</p>
-    <p>El ingreso con Facebook está pausado. Si lo usaste, Facebook pudo compartir con Truco Oriental tu identificador para esta aplicación, tu nombre y el correo que autorizaste.</p>
-    <p>Keycloak, el sistema de cuentas de Truco Oriental, gestiona el acceso y la vinculación con el proveedor. Si te registrás directamente con un correo y una contraseña, también gestiona su verificación y recuperación. El juego guarda tu identificador de jugador, la referencia a tu cuenta y el nombre que se muestra a los demás participantes de tu mesa.</p>
+    <p>El ingreso con Facebook está pausado. Si lo usaste, Facebook pudo compartir con El Truco tu identificador para esta aplicación, tu nombre y el correo que autorizaste.</p>
+    <p>Keycloak, el sistema de cuentas de El Truco, gestiona el acceso y la vinculación con el proveedor. Si te registrás directamente con un correo y una contraseña, también gestiona su verificación y recuperación. El juego guarda tu identificador de jugador, la referencia a tu cuenta y el nombre que se muestra a los demás participantes de tu mesa.</p>
   </section>
 
   <section class="rule-block">
@@ -27,14 +27,14 @@ import { url } from "../lib/guide";
 
   <section class="rule-block">
     <h2>Servicios y registros</h2>
-    <p>Cuando elegís un proveedor de ingreso, le llega la solicitud para autenticarte. Si abrís la comunidad o un canal de voz, Discord gestiona esa conexión y el audio. Truco Oriental no recibe ni graba las conversaciones de voz.</p>
-    <p>Si tu cuenta tiene habilitado «Reportar esta jugada», al pulsarlo guardamos la posición y el asiento de tu vista. GitHub recibe un borrador con la referencia de la mesa, el historial público hasta esa jugada y las versiones del juego. Podés editarlo antes de enviarlo al repositorio privado de Truco Oriental.</p>
+    <p>Cuando elegís un proveedor de ingreso, le llega la solicitud para autenticarte. Si abrís la comunidad o un canal de voz, Discord gestiona esa conexión y el audio. El Truco no recibe ni graba las conversaciones de voz.</p>
+    <p>Si tu cuenta tiene habilitado «Reportar esta jugada», al pulsarlo guardamos la posición y el asiento de tu vista. GitHub recibe un borrador con la referencia de la mesa, el historial público hasta esa jugada y las versiones del juego. Podés editarlo antes de enviarlo al repositorio privado de El Truco.</p>
     <p>Al usar los controles de compartir, de acceso a Discord o de ingreso a una mesa por invitación, el sitio envía un aviso a eltru.co para contar esa acción. El aviso contiene el tipo de acción y omite tu nombre, tu identificador y el enlace de invitación. Los servidores pueden registrar errores para diagnosticar problemas de acceso y funcionamiento.</p>
   </section>
 
   <section class="rule-block">
     <h2>Conservación y contacto</h2>
     <p>La cuenta y el historial permanecen disponibles entre visitas. Cerrar sesión o borrar las cookies conserva esos registros en el servidor. Las copias de seguridad que se hayan generado pueden conservar datos anteriores hasta su rotación.</p>
-    <p>Para consultar por tus datos, escribile a Truco Oriental a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>. También podés <a href={url("eliminacion-de-datos/")}>pedir la eliminación de tus datos</a>, incluso si perdiste acceso a la cuenta.</p>
+    <p>Para consultar por tus datos en El Truco, escribinos a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>. También podés <a href={url("eliminacion-de-datos/")}>pedir la eliminación de tus datos</a>, incluso si perdiste acceso a la cuenta.</p>
   </section>
 </Privacidad>
