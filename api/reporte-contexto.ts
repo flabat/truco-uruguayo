@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { textoFrasePie, type IndicacionPie } from "../src/motor/senas-pie.ts";
 import { canto } from "../src/lib/cantos.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import { esCardId, type CardId } from "../src/motor/cartas.ts";
@@ -15,6 +16,7 @@ export interface CursorReporte {
   cliente: string;
   duelo?: number;
   voz?: number;
+  indicaciones?: number;
 }
 
 interface ManoReporte {
@@ -37,6 +39,7 @@ interface ManoReporte {
   puntos: [number, number] | null;
   build: string | null;
   secuencia: string | null;
+  indicaciones: IndicacionPie[];
   acciones: (AccionOnline & { duelo: number | null })[];
 }
 
@@ -49,8 +52,15 @@ function jugadasDeMano(mano: ManoReporte): string[] {
   const cantidad = { "1v1": 2, "2v2": 4, "3v3": 6 }[mano.modo];
   let dueloAnterior: number | null = null;
   let cartasJugadas = 0;
-  return mano.acciones.flatMap((accion, indice) => {
-    if (!esAccionPublica(accion, mano.responden_sin_flor)) return [];
+  const entradas: string[] = [];
+  function agregarPalabras(indice: number) {
+    for (const i of mano.indicaciones.filter(i => i.indiceAccion === indice)) {
+      entradas.push(`V${i.vuelta} · A${i.emisor} le dijo a A${i.destinatario} «${textoFrasePie[i.frase]}»`);
+    }
+  }
+  mano.acciones.forEach((accion, indice) => {
+    agregarPalabras(indice);
+    if (!esAccionPublica(accion, mano.responden_sin_flor)) return;
     if (accion.duelo !== dueloAnterior) {
       dueloAnterior = accion.duelo;
       cartasJugadas = 0;
@@ -64,8 +74,10 @@ function jugadasDeMano(mano: ManoReporte): string[] {
     } else if (Object.hasOwn(canto, accion.tipo)) {
       jugada = canto[accion.tipo as keyof typeof canto];
     }
-    return `${indice + 1}. ${lance}V${vuelta} · A${accion.asiento} · ${jugada}`;
+    entradas.push(`${indice + 1}. ${lance}V${vuelta} · A${accion.asiento} · ${jugada}`);
   });
+  agregarPalabras(mano.acciones.length);
+  return entradas;
 }
 
 const limiteUrl = 3500;
@@ -98,7 +110,7 @@ function enlaceBorrador(titulo: string, cabecera: string, manos: string[], omiti
 export async function prepararReporte(db: PoolClient, mesa: string, asiento: number, cursor: CursorReporte, web: URL, reporteId: string) {
   const { rows: [mano] } = await db.query<ManoReporte>(`
     SELECT m.modo, m.meta, m.politica, coalesce(r.cabecera->>'perfil', m.perfil_tercetos, h.version_senas) AS perfil,
-      h.version_reglas, h.reparto->>'versionReparto' AS version_reparto, h.reparto->>'reglaFlor' AS regla_flor,
+      h.indicaciones, h.version_reglas, h.reparto->>'versionReparto' AS version_reparto, h.reparto->>'reglaFlor' AS regla_flor,
       h.reparto->'respondenSinFlor' AS responden_sin_flor,
       h.reparto->>'muestra' AS muestra, h.tipo_reparto, h.puntos_inicio, e.build, e.secuencia,
       (h.reparto->>'mano')::integer AS mano, (h.reparto->>'dador')::integer AS dador,
@@ -127,7 +139,12 @@ export async function prepararReporte(db: PoolClient, mesa: string, asiento: num
     const cierre = anteriores[i + 1]?.puntos_inicio ?? mano.puntos_inicio;
     return `- Mano ${anterior.numero}: ${anterior.puntos_inicio.join("-")} → ${cierre.join("-")}`;
   });
-  const secuencia = mano.secuencia === null ? null : Number(mano.secuencia);
+  const anterioresAlCursor = mano.indicaciones.filter(i => i.indiceAccion < cursor.posicion).length;
+  const visibles = cursor.indicaciones ?? anterioresAlCursor;
+  if (visibles < anterioresAlCursor || visibles > mano.indicaciones.length
+    || (visibles && mano.indicaciones[visibles - 1].indiceAccion > cursor.posicion)) return null;
+  mano.indicaciones = mano.indicaciones.slice(0, visibles);
+  const secuencia = mano.secuencia === null ? null : Number(mano.secuencia) + visibles - anterioresAlCursor;
   const confirmados = cursor.posicion === 0 ? mano.puntos_inicio : mano.puntos;
   const antesDeJugar = cursor.posicion === 1 ? mano.puntos_inicio : mano.puntos_anteriores;
   const cobros = antesDeJugar ? resumirTantos(mano.cobros, antesDeJugar, mano.meta).cobros.map(c =>

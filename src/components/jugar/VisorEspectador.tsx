@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
+import { PalabraDelPie, useVozDelPie } from "./Voz";
 import { VozDiscord } from "./VozDiscord";
 import type { tableroEspectador } from "../../../api/tablero-espectador";
-import { descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
+import { descripcionDeIndicacion, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
 import type { VersionesMesa } from "./cliente";
@@ -35,6 +36,10 @@ function resumenDeLaMano(mesa: MesaEspectadora) {
     return "Ganó el equipo " + ganador + ".";
   }
   if (mesa.tablero.resultado) return "El equipo " + (mesa.tablero.resultado.equipo + 1) + " ganó la mano.";
+  const ultimaPalabra = mesa.tablero.indicaciones?.at(-1);
+  if (ultimaPalabra?.indiceAccion === mesa.tablero.acciones.length) {
+    return descripcionDeIndicacion(ultimaPalabra, n => mesa.asientos[n].nombre);
+  }
   const ultima = mesa.tablero.acciones.at(-1);
   return ultima ? descripcionDeJugada(ultima, n => mesa.asientos[n].nombre) : "Se repartieron las cartas.";
 }
@@ -48,6 +53,7 @@ const titulos = {
 function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
   const { tablero, asientos } = mesa;
   const nombre = (n: number) => asientos[n].nombre;
+  const palabra = useVozDelPie(mesa.manoNumero, tablero.indicaciones, tablero.acciones.length);
   const ultimaVuelta = tablero.vueltas.at(-1);
   // Conservar la vuelta cerrada hasta que aparezca la primera carta de la siguiente.
   const actual = tablero.vueltaActual;
@@ -70,16 +76,17 @@ function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
         numeroVuelta={numeroVuelta}
         vuelta={cerrada ?? actual}
         manosOcultas={{ jugadas: tablero.acciones.filter(a => a.tipo === "carta") }}
+        detalle={asiento => ({ contenido: <PalabraDelPie indicacion={palabra} asiento={asiento} nombre={nombre} /> })}
         terminada={Boolean(resultado && !cerrada)}
       />
       <section className="j-jugada-panel" aria-label="Desarrollo de la mano">
         <h3>{titulos[mesa.estado]}</h3>
-        <div role="status">{resumenDeLaMano(mesa)}</div>
+        <div role="status" aria-live={palabra ? "off" : "polite"}>{resumenDeLaMano(mesa)}</div>
         {mesa.estado === "en-juego" && !resultado && <p>
           La mano vale {tantos(tablero.valorTruco)}.
           {turno != null && " La próxima carta le corresponde a " + nombre(turno) + "."}
         </p>}
-        <HistorialDeMano key={mesa.manoNumero} acciones={tablero.acciones} cobros={tablero.cobros} nombre={nombre} />
+        <HistorialDeMano key={mesa.manoNumero} acciones={tablero.acciones} indicaciones={tablero.indicaciones} cobros={tablero.cobros} nombre={nombre} />
         {tablero.cobros.length > 0 && <section className="j-lances">
           <h3>Tantos cobrados</h3>
           <ul>{tablero.cobros.map((c, i) => <li key={i}>

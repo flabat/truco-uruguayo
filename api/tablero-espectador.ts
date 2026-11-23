@@ -1,3 +1,4 @@
+import type { IndicacionPie } from "../src/motor/senas-pie.ts";
 import type { Vuelta, VueltaCerrada } from "../src/motor/mano.ts";
 import type { AccionOnline, EstadoOnline } from "../src/motor/mesa-online.ts";
 
@@ -11,9 +12,15 @@ function vueltaPublica(vuelta: Vuelta): Vuelta {
 }
 
 /** El tablero se arma campo a campo, sin elegir un jugador como punto de vista. */
-export function tableroEspectador(estado: EstadoOnline) {
+export function tableroEspectador(estado: EstadoOnline, indicaciones?: readonly IndicacionPie[]) {
   const { mano, resultado } = estado;
+  // El visor oculta ciertas consultas de flor. Traducir el ancla al índice que el espectador ve.
+  const esPublica = (accion: AccionOnline) => esAccionPublica(accion, mano.reparto.respondenSinFlor);
+  const palabras = indicaciones?.map(({ emisor, destinatario, frase, vuelta, indiceAccion }) => ({
+    emisor, destinatario, frase, vuelta, indiceAccion: estado.acciones.slice(0, indiceAccion).filter(esPublica).length,
+  }));
   return {
+    ...(palabras && { indicaciones: palabras }),
     dador: mano.reparto.dador, mano: mano.reparto.mano, muestra: mano.reparto.muestra,
     vueltas: mano.vueltas.map((v): VueltaCerrada => ({
       ...vueltaPublica(v), resultado: v.resultado.tipo === "parda" ? { tipo: "parda" } :
@@ -22,7 +29,7 @@ export function tableroEspectador(estado: EstadoOnline) {
     vueltaActual: mano.vueltaActual ? vueltaPublica(mano.vueltaActual) : null,
     // Orden de cartas del tapete. La palabra para flor o una respuesta puede ser privada.
     turnoDeCartas: resultado ? null : mano.turno, valorTruco: estado.valorTruco,
-    acciones: estado.acciones.filter(a => esAccionPublica(a, mano.reparto.respondenSinFlor)).map(a => a.tipo === "carta"
+    acciones: estado.acciones.filter(esPublica).map(a => a.tipo === "carta"
       ? { tipo: a.tipo, asiento: a.asiento, carta: a.carta } : { tipo: a.tipo, asiento: a.asiento }),
     cobros: estado.cobros.map(({ equipo, tantos, motivo, asiento, tantoGanador }) =>
       ({ equipo, tantos, motivo, asiento, tantoGanador })),

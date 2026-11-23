@@ -5,7 +5,7 @@ import { ErrorPeticion, leerCuerpo } from "./http.ts";
 import { prepararReporte, type CursorReporte } from "./reporte-contexto.ts";
 
 export const rutaReporte = /^\/api\/mesas\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/reportes$/i;
-const campos = new Set(["mano", "posicion", "vuelta", "puntos", "fase", "cliente", "voz", "duelo"]);
+const campos = new Set(["mano", "posicion", "vuelta", "puntos", "fase", "cliente", "voz", "duelo", "indicaciones"]);
 const maxEntero = 2_147_483_647;
 
 function numero(texto: string | null, minimo: number, maximo: number) {
@@ -38,6 +38,7 @@ async function leerCursor(req: IncomingMessage): Promise<CursorReporte> {
     posicion: numero(datos.get("posicion"), 0, maxEntero),
     vuelta: numero(datos.get("vuelta"), 1, 3),
     puntos, fase, cliente,
+    indicaciones: datos.has("indicaciones") ? numero(datos.get("indicaciones"), 0, 12) : undefined,
     voz: datos.get("voz") ? numero(datos.get("voz"), 0, 6) : undefined,
     duelo: datos.get("duelo") ? numero(datos.get("duelo"), 1, 3) : undefined,
   };
@@ -51,14 +52,14 @@ async function guardar(db: PoolClient, web: URL, jugador: string, mesa: string, 
   );
   if (!propio) throw new ErrorPeticion(404, "No se encontró tu mesa.");
 
-  const { mano, posicion, vuelta, puntos, fase, cliente, voz, duelo } = cursor;
+  const { mano, posicion, vuelta, puntos, fase, cliente, voz, duelo, indicaciones } = cursor;
   // Reintentos simultáneos del mismo formulario reciben la misma referencia, aun sin eventos históricos.
   const { rows: [reporte] } = await db.query(`
-    INSERT INTO juego.reportes (mesa, mano, posicion, asiento, vuelta, puntos, fase, cliente, voz, duelo)
-      SELECT mesa, numero, $3, $4, $5, $6, $7, $8, $9, $10 FROM juego.manos WHERE mesa = $1 AND numero = $2
+    INSERT INTO juego.reportes (mesa, mano, posicion, asiento, vuelta, puntos, fase, cliente, voz, duelo, indicaciones)
+      SELECT mesa, numero, $3, $4, $5, $6, $7, $8, $9, $10, $11 FROM juego.manos WHERE mesa = $1 AND numero = $2
       ON CONFLICT ON CONSTRAINT reportes_pantalla DO UPDATE SET id = reportes.id
       RETURNING id
-  `, [mesa, mano, posicion, propio.asiento, vuelta, puntos, fase, cliente, voz, duelo]);
+  `, [mesa, mano, posicion, propio.asiento, vuelta, puntos, fase, cliente, voz, duelo, indicaciones]);
   const contexto = reporte && await prepararReporte(db, mesa, propio.asiento, cursor, web, reporte.id);
   if (!contexto) throw new ErrorPeticion(409, "No se encontró esa posición de la mano.");
   if (contexto.secuencia !== null) {
