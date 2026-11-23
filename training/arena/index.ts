@@ -8,6 +8,8 @@ import { requireTrainingFormat, hasSignals, seatsFor, versions, type ActionId, t
 import { observe } from "../seat/index.ts";
 import { commitTurn, signalRules as defaultSignals } from "../signals/index.ts";
 
+import { countPublicHand } from "../contracts/duel-memory.ts";
+
 export const streamVersion = "sha256-counter-u32be-v1";
 
 function natural(value: number, name: string) {
@@ -143,6 +145,7 @@ function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionI
   const sampling = Array.from({length: seats}, (_, s) => stream("policy", format, seed, pair, leg, s));
   const hands: RefereeHand[] = [];
   let score: Score = [0, 0];
+  const counts = [Array(12).fill(0), Array(12).fill(0)];
   while (Math.max(...score) < 40) {
     const hand = hands.length, startScore = score;
     if (hand >= 79) throw new Error("El chico no avanzó.");
@@ -152,7 +155,8 @@ function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionI
     while (!state.resultado) {
       if (turns.length >= 64) throw new Error("La mano no avanzó.");
       const seat = aDecidir(state)[0];
-      const observation = viewFor(state, seat, format, turns, signalRules);
+      const view = viewFor(state, seat, format, turns, signalRules);
+      const observation = format==="duel" ? {...view,rivalCounts:counts[1-seat].slice()} : view;
       const legal = [...observation.legalActions];
       const id = yield {seat, hand, state, observation, uniform: sampling[seat]() / 0x100000000};
       if (!legal.includes(id)) throw new Error("El actor devolvió una acción ilegal.");
@@ -160,6 +164,7 @@ function* matchSteps(options: Schedule): Generator<Request, MatchRecord, ActionI
       turns.push(step.turn);
       state = step.state;
     }
+    if(format==="duel") countPublicHand(counts, turns.map(turn=>turn.action));
     score = scoreOf(state);
     hands.push({schema: versions.replay, format, hand, deal, startScore, turns, endScore: score});
   }

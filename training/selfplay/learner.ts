@@ -22,6 +22,7 @@ const bounded = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x))
 const slot = (row: number, bin: number) => slots * row + bounded(Math.floor(bin), 0, slots - 1);
 
 export interface SelfplayActor {
+  memory?: "sequence" | "opponent";
   kind: SelfplayKind;
   format: CycleFormat;
   anchor: AnchoredActor;
@@ -183,6 +184,27 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
   const [prefix,body]=preferred.split("/"), preferredMove=(body??prefix) as Move;
   const c=context(obs), moves:MoveOption[]=[];
   const odds = actor.kind !== selfplayKind ? duelCardOdds(obs) : undefined;
+  const extra:number[]=[];
+  if(actor.memory){
+    let hash=2166136261;
+    for(const {action} of obs.history){
+      const token=(action.asiento===obs.view.asiento?"s":"r")+(action.tipo==="carta"?action.carta:action.tipo)+"|";
+      for(const ch of token)hash=Math.imul(hash^ch.charCodeAt(0),16777619);
+    }
+    extra.push(hash>>>0 & 255);
+    if(actor.memory==="opponent"){
+      const counts=obs.rivalCounts;
+      if(!counts || counts.length!==12 || counts.some(n=>!Number.isSafeInteger(n)||n<0))throw Error("Missing chico history");
+      let feature=256;
+      for(const group of [0,2,5,8]){
+        const n=counts[group];
+        extra.push(feature+Math.min(7,Math.floor(Math.log2(1+n))));feature+=8;
+        for(const column of group===0?[1]:[1,2]){
+          extra.push(feature+Math.min(7,Math.floor(8*(1+counts[group+column])/(n+2))));feature+=8;
+        }
+      }
+    }
+  }
   const best = c.cards.at(-1);
   if (odds && best) c.features.push(oddsSlot(oddsStart + 2, odds.get(best)!.higher));
   const byId=new Map(legal.map((id,i)=>[id,i]));
@@ -219,6 +241,10 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
       const offset = table - move.index;
       move.features = [...f, offset + oddsBin(higher), offset + slots + oddsBin(tiedBest)];
     }
+    if(actor.memory){
+      const offset=length+interactionLength+group*(actor.memory==="sequence"?256:344)-move.index;
+      move.features=[...move.features,...extra.map(i=>offset+i)];
+    }
     moves.push({id,move,gestures});
   }
   const wanted=moves.findIndex(m=>m.id===preferredMove);
@@ -229,7 +255,8 @@ function calculate(actor: SelfplayActor, anchor: Policy, obs: SeatObservation, l
   return {moves,features:c.features,distribution};
 }
 function validate(actor: SelfplayActor) {
-  const expectedLength = actor.kind === duelInteractionsKind ? length + interactionLength : length;
+  if(actor.memory!==undefined && (actor.kind!==duelInteractionsKind || !["sequence","opponent"].includes(actor.memory))) throw Error("Invalid duel memory");
+  const expectedLength = actor.kind === duelInteractionsKind ? length + interactionLength + (actor.memory ? gestureOffset*(actor.memory==="sequence"?256:344) : 0) : length;
   if (!isSelfplayKind(actor.kind) || (actor.kind!==selfplayKind && actor.format!=="duel")
       || actor.anchor?.format!==actor.format || !Number.isSafeInteger(actor.updates)
       || actor.updates<0 || !Array.isArray(actor.weights) || actor.weights.length!==expectedLength
