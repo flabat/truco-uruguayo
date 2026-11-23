@@ -602,7 +602,7 @@ def group(phase, epoch, clock):
     children = {}
     next_launch = {}
     last_event = last_resource = 0
-    last_attention = None
+    last_attention = ()
     while True:
         now = time.time()
         states = {}
@@ -659,6 +659,9 @@ def group(phase, epoch, clock):
                 "attention",
             )
             last_attention = tuple(missing)
+        elif last_attention and not missing:
+            note(stage, info, epoch)
+            last_attention = ()
         if now - last_event >= 60:
             event(
                 stage,

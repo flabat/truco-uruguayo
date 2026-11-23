@@ -24,6 +24,8 @@ def main():
         help="Node 24 executable",
     )
     parser.add_argument("--port", type=int, default=8776)
+    parser.add_argument("--until-finished", action="store_true",
+                        help="Close the dashboard service after writing the final HTML")
     parser.add_argument("--timezone", help="Dashboard time zone (default: local time)")
     args = parser.parse_args()
     if sys.platform != "darwin":
@@ -41,6 +43,8 @@ def main():
     domain = f"gui/{os.getuid()}"
     run_key = hashlib.sha256(os.fsencode(run)).hexdigest()[:14]
     monitor = [str(scripts / "monitor.py"), str(run), "--port", str(args.port)]
+    if args.until_finished:
+        monitor.append("--until-finished")
     if args.timezone:
         monitor.extend(["--timezone", args.timezone])
     supervisor = [
