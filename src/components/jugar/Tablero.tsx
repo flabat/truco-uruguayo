@@ -81,7 +81,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   const { resultado, pendiente, porDeclararFlor, turno, legales } = vista;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   if (resultado) {
-    const fin = partida.ganadorPartida !== null;
+    const fin = partida.contexto.fase === "chico-terminado";
     const victoria = resultado.equipo === propio;
     const motivos = { mazo: "el retiro al mazo", vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
     return {
@@ -197,8 +197,8 @@ export function EnJuego({
   const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;
-  const fin = partida.ganadorPartida !== null;
-  const { cerrada, vuelta, numeroVuelta, detalleVuelta, jugadaVisible } = vueltaEnMesa(v, mesa.asientos.length, nombre);
+  const fin = partida.contexto.fase === "chico-terminado";
+  const { cerrada, vuelta, numeroVuelta, detalleVuelta, jugadaVisible } = vueltaEnMesa(v, partida.lance.activos.length, nombre);
   const relato = voz
     ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
     : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };

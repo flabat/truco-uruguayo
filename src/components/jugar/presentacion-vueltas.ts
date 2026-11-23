@@ -31,7 +31,7 @@ function pasosNuevos(
       jugadas = [...jugadas, { asiento: accion.asiento, carta: accion.carta }];
       if (accion.asiento === vista.asiento) cartas = cartas.filter(c => c !== accion.carta);
     }
-    const completa = esCarta && jugadas.length === vista.equipoPorAsiento.length;
+    const completa = esCarta && jugadas.length === actual.lance.activos.length;
     if (completa) cerradas++;
     const ultimaAccion = i + 1 === vista.acciones.length;
     const acciones = vista.acciones.slice(0, i + 1);

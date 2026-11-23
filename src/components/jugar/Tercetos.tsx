@@ -31,11 +31,11 @@ const nombreDelLance = (lance: LanceTercetos) =>
 const motivoDelCierre = { vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor", mazo: "el retiro al mazo" };
 
 function palabra(mesa: Mesa, partida: PartidaTercetos) {
-  const { vista, lance, ganadorPartida } = partida;
+  const { vista, lance, contexto, ganadorPartida } = partida;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   const nombre = (a: number) => mesa.asientos[a].nombre;
-  if (ganadorPartida !== null) return ganadorPartida === propio ? "Tu equipo ganó el chico" : "El rival ganó el chico";
-  if (vista.estado === "terminado") return "Reparto terminado";
+  if (contexto.fase === "chico-terminado") return ganadorPartida === propio ? "Tu equipo ganó el chico" : "El rival ganó el chico";
+  if (contexto.fase === "reparto-cerrado") return "Reparto terminado";
   if (vista.porDeclararFlor != null) {
     return vista.porDeclararFlor === mesa.miAsiento ? "Te toca declarar" : `Declara ${nombre(vista.porDeclararFlor)}`;
   }
@@ -97,7 +97,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const rivales = esPico && lance.activos.map(a => `${mesa.asientos[a].nombre} (equipo ${mesa.asientos[a].equipo + 1})`).join(" y ");
   const jugando = vista.estado === "jugando" ? vista : null;
   const opciones = jugando?.legales.filter(tipo => tipo !== "carta") ?? [];
-  const esFin = partida.ganadorPartida !== null;
+  const esFin = partida.contexto.fase === "chico-terminado";
   const cerrados = historialLances.at(-1);
   const ultimoCobro = vista.cobros.at(-1) ?? cerrados?.cobros.at(-1);
   const esLanceActual = (l: LanceTercetos) => l.duelo === lance.duelo && l.tipo === lance.tipo;
