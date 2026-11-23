@@ -10,6 +10,7 @@ import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
 import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
 import { Naipe, Tapete } from "./Tapete";
+import { vueltaEnMesa } from "./vuelta-en-mesa";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 
 type Canto = Exclude<Tipo, "carta">;
@@ -22,6 +23,29 @@ const grupos: { nombre: string; opciones: Canto[] }[] = [
   },
   { nombre: "Retiro", opciones: ["mazo"] },
 ];
+
+export function controlesDeCantos(legales: readonly Tipo[], bloqueada: boolean, jugar: (a: Eleccion) => void) {
+  const disponibles = grupos
+    .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => legales.includes(tipo)) }))
+    .filter((g) => g.opciones.length);
+  return disponibles.length > 0 && disponibles.map((grupo) => (
+    <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
+      {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
+      <div className="j-cantos">
+        {grupo.opciones.map((tipo) => (
+          <button
+            key={tipo}
+            className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"}
+            disabled={bloqueada}
+            onClick={() => jugar({ tipo })}
+          >
+            {canto[tipo]}
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  ));
+}
 
 export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
   prueba: PruebaDeTantos; acciones: VistaOnline["acciones"]; base: string; jugada?: CardId; ganadora?: boolean;
@@ -42,11 +66,22 @@ export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
   </figure>;
 }
 
+export function tituloDeRespuesta(mesa: Mesa, vista: Pick<VistaOnline, "pendiente" | "legales">, participantes: readonly number[]) {
+  if (vista.legales.length) return "Podés responder";
+  const cantor = vista.pendiente!.asiento;
+  if (participantes.length === 2) {
+    const rival = participantes.find(asiento => asiento !== cantor)!;
+    return "Responde " + mesa.asientos[rival].nombre;
+  }
+  return mesa.asientos[cantor].equipo === mesa.asientos[mesa.miAsiento].equipo
+    ? "Responde el equipo rival" : "Responde tu equipo";
+}
+
 function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   const { resultado, pendiente, porDeclararFlor, turno, legales } = vista;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   if (resultado) {
-    const fin = partida.ganadorPartida !== null;
+    const fin = partida.contexto.fase === "chico-terminado";
     const victoria = resultado.equipo === propio;
     const motivos = { mazo: "el retiro al mazo", vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
     return {
@@ -74,12 +109,9 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   }
   if (pendiente) {
     const cantor = mesa.asientos[pendiente.asiento];
-    const titulo = canto[pendiente.tipo];
-    let respuesta = mesa.modo === "1v1" ? "Tu rival responde." : "Responde el equipo rival.";
-    if (cantor.equipo !== propio) respuesta = "Responde tu equipo.";
-    if (legales.length)
-      respuesta = legales.includes("flor") ? "Cantá tu flor para responder." : "Podés responder.";
-    return { titulo, indicacion: `${cantor.nombre} cantó ${titulo.toLowerCase()}. ${respuesta}` };
+    const indicacion = cantor.nombre + " cantó " + canto[pendiente.tipo].toLowerCase() + ".";
+    return { titulo: tituloDeRespuesta(mesa, vista, mesa.asientos.map(a => a.asiento)),
+      indicacion: legales.includes("flor") ? indicacion + " Cantá tu flor para responder." : indicacion };
   }
   if (turno === mesa.miAsiento) {
     let indicacion = "Elegí una carta en el tapete.";
@@ -165,32 +197,14 @@ export function EnJuego({
   const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;
-  const fin = partida.ganadorPartida !== null;
-  const cerrada = !v.vueltaActual && (!resultado || resultado.motivo === "vueltas")
-    ? v.vueltas.at(-1)
-    : undefined;
-  const numeroVuelta = v.vueltas.length + (cerrada ? 0 : 1);
-  const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : undefined;
-  const ganadora = cerrada?.jugadas.find(j => j.asiento === ganador);
-  // La presentación mantiene la vuelta completa abierta mientras carga su último naipe.
-  const cargandoCierre = v.vueltaActual?.jugadas.length === mesa.asientos.length;
-  const ultima = cargandoCierre ? undefined : (v.vueltaActual ?? cerrada)?.jugadas.at(-1);
-  const jugadaVisible = ultima ? nombre(ultima.asiento) + " jugó " + nombrar(ultima.carta).toLowerCase() + "." : "";
-  const detalleVuelta = cerrada && [
-    ultima?.asiento !== ganador ? jugadaVisible : "",
-    ganadora
-      ? nombre(ganadora.asiento) + " ganó la vuelta con su " + nombrar(ganadora.carta).toLowerCase() + "."
-      : "La vuelta fue parda.",
-  ].filter(Boolean).join(" ");
+  const fin = partida.contexto.fase === "chico-terminado";
+  const { cerrada, vuelta, numeroVuelta, detalleVuelta, jugadaVisible } = vueltaEnMesa(v, partida.lance.activos.length, nombre);
   const relato = voz
     ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
     : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };
   const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : estadoDelTurno(mesa, partida, v);
   const pruebaPropia = resultado && v.pruebasDeTantos?.find(p => p.asiento === mesa.miAsiento);
   const cartas = v.cartas.filter(carta => !pruebaPropia || !pruebaPropia.cartas.includes(carta));
-  const disponibles = grupos
-    .map((g) => ({ ...g, opciones: g.opciones.filter((tipo) => v.legales.includes(tipo)) }))
-    .filter((g) => g.opciones.length);
   const cobrados = v.resumenTantos?.cobros ?? v.cobros;
   return (
     <>
@@ -208,7 +222,7 @@ export function EnJuego({
           muestra={v.muestra}
           titulo={"Mano " + partida.manoNumero}
           numeroVuelta={numeroVuelta}
-          vuelta={v.vueltaActual ?? cerrada}
+          vuelta={vuelta}
           terminada={Boolean(resultado && !cerrada)}
           manosOcultas={{ jugadas: v.acciones.filter(a => a.tipo === "carta"), asientoVisible: mesa.miAsiento }}
           detalle={(asiento, carta, ganadora) => {
@@ -239,24 +253,8 @@ export function EnJuego({
             </>}
             sena={sena}
             mano={cartas.length > 0 && <ManoJugador cartas={cartas} habilitada={!bloqueada && v.legales.includes("carta")} base={base} jugar={jugar} />}
-            cantos={disponibles.length > 0 && disponibles.map((grupo) => (
-              <fieldset className="j-opciones" key={grupo.nombre} aria-label={grupo.nombre}>
-                {disponibles.length > 1 && <legend>{grupo.nombre}</legend>}
-                <div className="j-cantos">
-                  {grupo.opciones.map((tipo) => (
-                    <button
-                      key={tipo}
-                      className={tipo === "quiero" || tipo === "paso-flor" || tipo === "flor" ? "button" : "j-sec"}
-                      disabled={bloqueada}
-                      onClick={() => jugar({ tipo })}
-                    >
-                      {canto[tipo]}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
-            continuacion={(fin || resultado) && <Continuacion fin={fin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
+            cantos={controlesDeCantos(v.legales, bloqueada, jugar)}
+          continuacion={(fin || resultado) && <Continuacion fin={fin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
           />}
         />
         <section className="j-jugada-panel">

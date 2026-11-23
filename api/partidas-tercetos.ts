@@ -3,6 +3,7 @@ import {
   aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, versionReglasTercetos, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline,
 } from "../src/motor/mesa-online.ts";
+import { normalizarPartida } from "../src/motor/partida-jugador.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
 import { ErrorPeticion } from "./http.ts";
@@ -76,6 +77,7 @@ export async function repartirTercetosDB(db: PoolClient, mesa: string, numero: n
 export function proyectarTercetos(estado: EstadoOnline, numero: number, version: number, asiento: Asiento) {
   const puntos = marcadorOnline(estado);
   const ganadorPartida = puntos[0] >= estado.meta ? 0 : puntos[1] >= estado.meta ? 1 : null;
-  return { formato: "triples", version, manoNumero: numero, meta: estado.meta, puntos, ganadorPartida, lance: estado.lance, historialLances: estado.historialLances,
-    vista: vistaTercetos(estado, asiento) };
+  if (!estado.lance || !estado.historialLances) throw new RangeError("Se necesita una mesa de tercetos.");
+  return normalizarPartida({ formato: "triples", version, manoNumero: numero, meta: estado.meta, puntos, ganadorPartida,
+    lance: estado.lance, historialLances: estado.historialLances, vista: vistaTercetos(estado, asiento) });
 }

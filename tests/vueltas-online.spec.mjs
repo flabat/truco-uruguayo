@@ -208,10 +208,11 @@ for (const formato of ["pairs-senas", "pairs-private-senas"]) {
     await page.clock.runFor(1);
     await expect(sena).toBeEnabled();
     await expect(seis).toBeEnabled();
-    await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
     await sena.selectOption("cejas");
     await seis.press("Enter");
     await expect(cartaEn(tapete, "Vos · Ana", "6 de espadas")).toBeVisible();
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(1);
     await expect(page.getByRole("region", { name: "Señas de esta mano" })).toContainText(/Alzar ambas cejas/);
 
     await esperarNaipes(tapete);

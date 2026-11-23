@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "../../motor/mesa-online";
+import type { VistaOnline } from "../../motor/mesa-online";
+import { normalizarPartida, type PartidaJugador, type RespuestaPartida } from "../../motor/partida-jugador";
+export type { Partida, PartidaTercetos } from "../../motor/partida-jugador";
 import type { CardId } from "../../motor/cartas";
 import type { EdicionModelo } from "../../lib/modelos";
 
-import type { Format, PublicTurn } from "../../../training/contracts/index";
+import type { Format } from "../../../training/contracts/index";
 
 export type Modo = "1v1" | "2v2" | "3v3";
 export interface Jugador {
@@ -36,26 +38,6 @@ export interface Mesa extends VersionesMesa {
   lista: boolean;
   asientos: Asiento[];
 }
-interface Marcador {
-  version: number;
-  manoNumero: number;
-  puntos: [number, number];
-  meta: number;
-  ganadorPartida: 0 | 1 | null;
-}
-export interface Partida extends Marcador {
-  formato?: Format;
-  versionSenas?: string;
-  turnos?: readonly PublicTurn[];
-  vista: VistaOnline | null;
-}
-export interface PartidaTercetos extends Marcador {
-  formato: "triples";
-  lance: LanceTercetos;
-  historialLances: readonly ResumenLance[];
-  vista: VistaTercetos;
-}
-type PartidaRecibida = Partida | PartidaTercetos;
 export type Tipo = VistaOnline["legales"][number];
 export type Eleccion = { tipo: Exclude<Tipo, "carta"> } | { tipo: "carta"; carta: CardId };
 
@@ -96,7 +78,8 @@ export function idComando() {
 export function useMesa(id: string) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
-  const [partida, setPartida] = useState<PartidaRecibida>();
+  const [partida, setPartida] = useState<PartidaJugador>();
+  const [reconexion, setReconexion] = useState(0);
   const [conectada, setConectada] = useState(false);
   const [error, setError] = useState<ErrorMesa | null>(null);
   const refrescar = useRef<() => Promise<void>>(async () => {});
@@ -108,6 +91,7 @@ export function useMesa(id: string) {
     let demora = 400;
     let lectura: Promise<void> | undefined;
     let faltaLeer = false;
+    let generacion = 0;
 
     function leer(): Promise<void> {
       faltaLeer = true;
@@ -122,12 +106,19 @@ export function useMesa(id: string) {
         // Si llega una novedad durante la lectura, consultar de nuevo en orden.
         while (faltaLeer && !cancel.signal.aborted) {
           faltaLeer = false;
+          const alComenzar = generacion;
           const canal = socket?.readyState === WebSocket.OPEN ? socket : undefined;
           const sala = await pedir<Mesa>(ruta, undefined, cancel.signal);
           const mano = sala.lista
-            ? await pedir<PartidaRecibida>(ruta + "/partida", undefined, cancel.signal)
+            ? normalizarPartida(await pedir<RespuestaPartida>(ruta + "/partida", undefined, cancel.signal))
             : undefined;
           if (cancel.signal.aborted) return;
+          // Un corte durante la lectura exige una instantánea del nuevo período de conexión.
+          if (alComenzar !== generacion) {
+            faltaLeer = true;
+            continue;
+          }
+          setReconexion(generacion);
           setMesa(sala);
           setPartida(mano);
           setError(null);
@@ -138,6 +129,7 @@ export function useMesa(id: string) {
         }
       } catch (e) {
         if (cancel.signal.aborted) return;
+        generacion++;
         setConectada(false);
         if (e instanceof ErrorMesa && [401, 403, 404].includes(e.status)) {
           setError(e);
@@ -173,6 +165,7 @@ export function useMesa(id: string) {
       actual.onclose = () => {
         if (cancel.signal.aborted) return;
         socket = undefined;
+        generacion++;
         setConectada(false);
         clearTimeout(timer);
         timer = setTimeout(leer, demora);
@@ -199,5 +192,5 @@ export function useMesa(id: string) {
     };
   }, [ruta]);
 
-  return { ruta, mesa, partida, conectada, error, refrescar };
+  return { ruta, mesa, partida, conectada, reconexion, error, refrescar };
 }
