@@ -7,6 +7,7 @@ import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
 import { iniciarOnline } from "../src/motor/mesa-online.ts";
+import { normalizarPartida } from "../src/motor/partida-jugador.ts";
 import { reproducirChico } from "../src/motor/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -129,12 +130,19 @@ async function intentoSinCommit(id, pie, orden) {
 }
 
 async function guardarParaReinicio(id, cantidad, orden, recibo) {
+  // Antes del contexto, sólo los recibos de tercetos ya incluían el lance.
+  const anterior = { ...orden, id: randomUUID() };
+  const camposNuevos = cantidad === 4 ? ["contexto", "lance"] : ["contexto"];
+  const { rowCount } = await pool.query(`INSERT INTO juego.comandos(mesa,jugador,id,peticion,respuesta)
+    SELECT mesa,jugador,$3,jsonb_set(peticion,'{id}',to_jsonb($3::uuid)),respuesta - $4::text[]
+    FROM juego.comandos WHERE mesa=$1 AND id=$2`, [id, orden.id, anterior.id, camposNuevos]);
+  assert.equal(rowCount, 1);
   const vistas = [];
   for (let i = 0; i < cantidad; i++) vistas.push(await json(i, "/mesas/" + id + "/partida"));
   const { rows: [{ replay }] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [id]);
   await pool.query(`INSERT INTO juego.prueba_reinicio_pie(cantidad,mesa,orden,recibo,vistas,replay) VALUES ($1,$2,$3,$4,$5,$6)
     ON CONFLICT(cantidad) DO UPDATE SET mesa=excluded.mesa, orden=excluded.orden, recibo=excluded.recibo, vistas=excluded.vistas, replay=excluded.replay`,
-    [cantidad, id, orden, recibo, JSON.stringify(vistas), replay]);
+    [cantidad, id, { vigente: orden, anterior }, recibo, JSON.stringify(vistas), replay]);
 }
 
 async function reconectar() {
@@ -146,7 +154,9 @@ async function reconectar() {
     jugadores.splice(0, jugadores.length, ...personas.rows.map(j => ({ cookie: "truco_sesion=" + j.sujeto })));
     const ruta = "/mesas/" + mesa;
     for (let i = 0; i < cantidad; i++) assert.deepEqual(await json(i, ruta + "/partida"), vistas[i]);
-    assert.deepEqual(await json(cantidad - 2, ruta + "/indicaciones", orden), recibo);
+    assert.deepEqual(await json(cantidad - 2, ruta + "/indicaciones", orden.vigente), recibo);
+    const historico = await json(cantidad - 2, ruta + "/indicaciones", orden.anterior);
+    assert.deepEqual(normalizarPartida(historico), recibo);
     const actual = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [mesa]);
     assert.deepEqual(actual.rows[0].replay, replay);
     await continuarEspera(cantidad, mesa_con_bots);
