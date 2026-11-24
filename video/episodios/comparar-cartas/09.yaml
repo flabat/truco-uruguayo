@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "09"
+muestra: copas-11
+gancho: "¿Y si el caballo sale de muestra?"
+vueltas:
+  - [copas-12, copas-10]      # el rey ocupa el lugar del caballo
+  - [espadas-07, copas-10]    # la sota es pieza y le gana a una mata
+  - [espadas-11, oros-11]     # dos caballos comunes: parda

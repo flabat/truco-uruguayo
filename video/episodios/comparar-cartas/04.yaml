@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "04"
+muestra: espadas-10
+gancho: "¿Gana el número más alto?"
+vueltas:
+  - [oros-12, copas-03]       # el 3 le gana al rey
+  - [bastos-11, oros-02]      # el 2 le gana al caballo
+  - [copas-06, bastos-06]     # mismo puesto: parda

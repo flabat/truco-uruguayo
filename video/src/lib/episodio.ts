@@ -5,19 +5,41 @@ import { z } from "zod";
 import { cartasDeFamilia } from "../../../src/aprendizaje/generadores/index.ts";
 import { esFamiliaDe, familiasPorHabilidad, type Familia } from "../../../src/aprendizaje/generadores/familias.ts";
 import { esCardId, type CardId } from "../../../src/motor/cartas.ts";
+import { compararCartas } from "../../../src/motor/jerarquia.ts";
 import { crearAzar } from "../../../src/motor/reparto.ts";
 import { evaluarTantos, type ResultadoTantos } from "../../../src/motor/tantos.ts";
 
 type Modalidad = "envido" | "flor";
 export type ManoSpec = CardId[] | { cambio: { de: CardId; a: CardId } } | { familia: string; semilla: number };
-export interface Episodio {
+export interface EpisodioTantos {
   plantilla: "contar-tantos"; serie: string; id: string; modalidad: Modalidad;
   muestra: CardId; manos: ManoSpec[]; gancho: string; lineas?: Record<string, string | null>;
 }
+export type VueltaSpec = [CardId, CardId] | { familia: string; semilla: number };
+export interface EpisodioComparar {
+  plantilla: "comparar-cartas"; serie: string; id: string;
+  muestra: CardId; vueltas: VueltaSpec[]; gancho: string; lineas?: Record<string, string | null>;
+}
+export type Episodio = EpisodioTantos | EpisodioComparar;
 export interface Mano { cartas: CardId[]; tantos: ResultadoTantos; cambio?: { de: CardId; a: CardId } }
+/** Dos cartas de una vuelta y la que gana según el motor; null si es parda. */
+export interface Vuelta { cartas: [CardId, CardId]; ganadora: CardId | null }
 
 const carta = z.string().refine(esCardId, { message: "carta desconocida" }) as unknown as z.ZodType<CardId>;
-const esquema = z.strictObject({
+const generada = z.strictObject({ familia: z.string(), semilla: z.number().int().min(0).max(0xffffffff) });
+const comunes = {
+  serie: z.string().min(1),
+  id: z.string().min(1),
+  muestra: carta,
+  gancho: z.string().min(1),
+  lineas: z.record(z.string(), z.string().nullable()).optional(),
+};
+const esquemaComparar = z.strictObject({
+  plantilla: z.literal("comparar-cartas"),
+  ...comunes,
+  vueltas: z.array(z.union([z.tuple([carta, carta]), generada])).min(2).max(4),
+});
+const esquemaTantos = z.strictObject({
   plantilla: z.literal("contar-tantos"),
   serie: z.string().min(1),
   id: z.string().min(1),
@@ -27,10 +49,11 @@ const esquema = z.strictObject({
   manos: z.array(z.union([
     z.array(carta).length(3),
     z.strictObject({ cambio: z.strictObject({ de: carta, a: carta }) }),
-    z.strictObject({ familia: z.string(), semilla: z.number().int().min(0).max(0xffffffff) }),
+    generada,
   ])),
   lineas: z.record(z.string(), z.string().nullable()).optional(),
 });
+const esquema = z.discriminatedUnion("plantilla", [esquemaTantos, esquemaComparar]);
 
 type Problema = { path: PropertyKey[]; message: string; errors?: Problema[][] };
 
@@ -67,7 +90,7 @@ export function generarMano(familia: string, muestra: CardId, semilla: number, m
   return { cartas, tantos: evaluarTantos(cartas, muestra) };
 }
 
-export function resolverManos(ep: Episodio): Mano[] {
+export function resolverManos(ep: EpisodioTantos): Mano[] {
   if (ep.manos.length !== 3) throw new Error("contar-tantos necesita exactamente tres manos.");
   const manos: Mano[] = [];
   ep.manos.forEach((spec, n) => {
@@ -92,4 +115,24 @@ export function resolverManos(ep: Episodio): Mano[] {
     manos.push(mano);
   });
   return manos;
+}
+
+/** La vuelta con su ganadora según `compararCartas`. */
+export function vueltaDe(cartas: [CardId, CardId], muestra: CardId): Vuelta {
+  const [a, b] = cartas;
+  if (a === b) throw new Error(`Una vuelta necesita dos cartas distintas: ${a}.`);
+  if (a === muestra || b === muestra) throw new Error(`La muestra ${muestra} no puede jugarse en una vuelta.`);
+  const orden = compararCartas(a, b, muestra);
+  return { cartas, ganadora: orden === 0 ? null : orden > 0 ? a : b };
+}
+
+export function resolverVueltas(ep: EpisodioComparar): Vuelta[] {
+  return ep.vueltas.map((spec) => {
+    if (Array.isArray(spec)) return vueltaDe(spec, ep.muestra);
+    if (!esFamiliaDe("comparar-cartas", spec.familia)) {
+      throw new Error(`La familia ${spec.familia} no sirve para comparar cartas. Usá una de: ${familiasPorHabilidad["comparar-cartas"].join(", ")}.`);
+    }
+    const [a, b] = cartasDeFamilia(spec.familia as Familia, ep.muestra, 2, crearAzar(spec.semilla));
+    return vueltaDe([a, b], ep.muestra);
+  });
 }

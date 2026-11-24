@@ -5,10 +5,8 @@ import "@fontsource/dm-sans/latin-700.css";
 import "@fontsource/dm-serif-text/latin-400.css";
 import "@site/styles/site.css";
 import "../../piezas/piezas.css";
-import { createTikTokStyleCaptions, serializeSrt } from "@remotion/captions";
-import { Audio } from "@remotion/media";
 import { useMemo } from "react";
-import { AbsoluteFill, Artifact, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { pieza, type CardId } from "@site/motor/cartas";
 import type { Mano } from "../../lib/episodio.ts";
 import { cartasQueCuentan, momentosDeCartas } from "../../lib/escena.ts";
@@ -19,8 +17,8 @@ import { BandaPano } from "../../piezas/BandaPano";
 import { Cabecera } from "../../piezas/Cabecera";
 import { Cierre } from "../../piezas/Cierre";
 import { ManoGrande, type EstadoCarta } from "../../piezas/ManoGrande";
+import { Narracion } from "../../piezas/Narracion";
 import { PieGrabado } from "../../piezas/PieGrabado";
-import { Subtitulos } from "../../piezas/Subtitulos";
 import { TablaValores } from "../../piezas/TablaValores";
 import { Titulo } from "../../piezas/Titulo";
 
@@ -64,7 +62,6 @@ export const Lamina = ({ modalidad, muestra, gancho, manos, lineas, voz }: Props
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const t = frame / fps;
-  const ms = t * 1000;
   const L = useMemo(() => armarLinea(lineas, voz.palabras), [lineas, voz]);
   const hay = (id: string) => lineas.some((l) => l.id === id);
   const desde = (id: string) => (hay(id) ? L.inicio(id) : Infinity);
@@ -118,19 +115,8 @@ export const Lamina = ({ modalidad, muestra, gancho, manos, lineas, voz }: Props
     : t >= desde("cambio") ? (t >= giro ? (pieza(a, muestra) !== null ? "Ahora, con pieza." : "Cambió una carta.") : "Cambiá una carta.")
     : gancho;
 
-  const paginas = useMemo(() => createTikTokStyleCaptions({ captions: L.subtitulos, combineTokensWithinMilliseconds: 4000 }).pages, [L]);
-  const pagina = paginas.findLast((p) => p.startMs <= ms);
-  const srt = useMemo(() => serializeSrt({ lines: paginas.map((p) => p.tokens.map((k) => ({
-    text: k.text, startMs: k.fromMs, endMs: k.toMs, timestampMs: null, confidence: null }))) }), [paginas]);
-
   return (
     <AbsoluteFill className="lamina">
-      {frame === 0 && <Artifact filename="subtitulos.es.srt" content={srt} />}
-      {voz.archivo && L.tramos.map((tr) => (
-        <Sequence key={tr.id} from={Math.round(tr.inicio * fps)} durationInFrames={Math.max(1, Math.ceil((tr.hasta - tr.desde) * fps))}>
-          <Audio src={staticFile(voz.archivo)} trimBefore={Math.round(tr.desde * fps)} trimAfter={Math.round(tr.hasta * fps)} />
-        </Sequence>
-      ))}
       <Cabecera />
       {titulo === null
         ? <Titulo largo={(izquierda + total).length}>{izquierda}<span style={{ color: "var(--accent)" }}>{total}</span></Titulo>
@@ -141,7 +127,7 @@ export const Lamina = ({ modalidad, muestra, gancho, manos, lineas, voz }: Props
         derecha={pausa ? `Tu turno ${Math.ceil(pausa.hasta - t)}` : enValores || enCierre ? "" : "Tu mano"}>
         {enValores ? <TablaValores muestra={muestra} modalidad={modalidad} /> : enCierre ? <Cierre /> : <ManoGrande cartas={cartas} />}
       </BandaPano>
-      <Subtitulos pagina={pagina} ms={ms} />
+      <Narracion L={L} voz={voz} />
       <PieGrabado />
     </AbsoluteFill>
   );
