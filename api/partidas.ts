@@ -8,6 +8,7 @@ import {
 import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, guardarPalabraPie, programarBotPie, vistaPiePrivada } from "./partidas-pie.ts";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, turnosDeEquipo,
@@ -323,7 +324,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         return;
       }
       if (op === "partida" || req.method !== "POST") throw new ErrorPeticion(405, "Método no permitido.");
-      if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
       responderJson(res, 200, await transaccion(id, jugador.id, op as Operacion, await leerJson(req)));
     } catch (error) {
       if (!(error instanceof ErrorPeticion)) throw error;

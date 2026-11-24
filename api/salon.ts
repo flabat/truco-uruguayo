@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { tableroEspectador } from "./tablero-espectador.ts";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, responderJson } from "./http.ts";
 import { FalloDiscord } from "./discord.ts";
 import type { crearVoz } from "./voz-discord.ts";
@@ -101,7 +102,7 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
     const id = destino?.[1];
     if (!id) return ausente();
     if (pideVoz) {
-      if (req.headers.origin !== web.origin) return responderJson(res, 403, { error: "El origen no corresponde al juego." });
+      if (!origenValido(req, web)) return responderJson(res, 403, { error: "El origen no corresponde al juego." });
       const { rows: [mesa] } = await pool.query<Pick<Fila, "modo">>(
         `SELECT m.modo FROM juego.mesas m WHERE m.id=$1 AND ${disponibleParaVoz}`, [id]);
       if (!mesa) return ausente();

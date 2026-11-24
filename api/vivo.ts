@@ -1,6 +1,7 @@
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocket, WebSocketServer } from "ws";
+import { origenValido } from "./sesion.ts";
 
 const protocolo = "truco.v1";
 const ruta = /^\/api\/mesas\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/vivo$/i;
@@ -113,7 +114,7 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     socket.on("error", destruir);
     const mesa = ruta.exec(req.url ?? "")?.[1].toLowerCase();
     if (!mesa) return httpError(socket, 404);
-    if (req.headers.origin !== web.origin) return httpError(socket, 403);
+    if (!origenValido(req, web)) return httpError(socket, 403);
     if (!req.headers["sec-websocket-protocol"]?.split(",").some(p => p.trim() === protocolo)) return httpError(socket, 400);
     void (async () => {
       const jugador = await servicios.autenticar(req);
@@ -142,6 +143,13 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     for (const { ws } of mesas.get(mesa.toLowerCase()) ?? []) enviar(ws, { tipo: "actualizar" });
   }
 
+  /** Cierra todas las conexiones de un jugador, por ejemplo al cerrar sesión o pedir la baja. */
+  function cerrarJugador(jugador: string) {
+    for (const grupo of mesas.values()) for (const conexion of grupo) {
+      if (conexion.jugador === jugador) conexion.ws.close(1008, "La sesión se cerró.");
+    }
+  }
+
   function cerrar() {
     cerrado = true;
     clearInterval(latidos);
@@ -149,5 +157,5 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     for (const grupo of mesas.values()) for (const { ws } of grupo) ws.terminate();
     wss.close();
   }
-  return { alCambiar, cerrar };
+  return { alCambiar, cerrar, cerrarJugador };
 }

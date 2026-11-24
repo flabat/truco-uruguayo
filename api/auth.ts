@@ -1,29 +1,33 @@
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import * as oidc from "openid-client";
+import { cookieDe, hash, nombreSesion, origenValido, sesionDe } from "./sesion.ts";
+
+export { origenValido, sesionDe };
 
 const clientId = "truco-web";
 const flujo = "truco_ingreso";
-const sesion = "truco_sesion";
+const sesion = nombreSesion;
 const minutosDiez = 600;
 const diasSiete = 604800;
-const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const secreto = () => randomBytes(32).toString("base64url");
 
-function cookieDe(req: IncomingMessage, name: string) {
-  return req.headers.cookie?.split(";").map(part => part.trim())
-    .find(part => part.startsWith(name + "="))?.slice(name.length + 1) ?? "";
-}
-
 export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
-  const handle = cookieDe(req, sesion);
+  const handle = sesionDe(req)?.handle;
   if (!handle) return null;
+  const clave = hash(handle);
   const { rows: [player] } = await pool.query(`
-    SELECT j.id, j.nombre FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
-    WHERE s.clave = $1 AND s.vence > now()
-  `, [hash(handle)]);
-  return player ?? null;
+    SELECT j.id, j.nombre, s.tipo = 'app' AND s.vence < now() + interval '15 days' AS renovar
+      FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
+     WHERE s.clave = $1 AND s.vence > now()
+  `, [clave]);
+  if (!player) return null;
+  // La sesión de la app se extiende con el uso, sin escribir en cada pedido.
+  if (player.renovar) {
+    await pool.query("UPDATE juego.sesiones SET vence = now() + interval '30 days' WHERE clave = $1 AND tipo = 'app'", [clave]);
+  }
+  return { id: player.id, nombre: player.nombre };
 }
 
 function regresoPermitido(valor: string | null) {
@@ -41,9 +45,10 @@ interface OpcionesOIDC {
   backend: URL;
   local: boolean;
   salonHabilitado?: boolean;
+  cerrarConexiones?: (jugador: string) => void;
 }
 
-export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false }: OpcionesOIDC) {
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false, cerrarConexiones = () => {} }: OpcionesOIDC) {
   const protocol = "/protocol/openid-connect";
   const config = new oidc.Configuration({
     issuer: issuer.href,
@@ -66,7 +71,8 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
     const url = new URL(req.url!, callback);
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("Referrer-Policy", "no-referrer");
-    const sessionKey = hash(cookieDe(req, sesion));
+    const actual = sesionDe(req);
+    const sessionKey = hash(actual?.handle ?? "");
 
     if (req.method === "GET" && url.pathname === "/api/auth/login") {
       const regreso = regresoPermitido(url.searchParams.get("volver"));
@@ -146,8 +152,10 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
     }
 
     if (req.method === "POST" && url.pathname === "/api/auth/logout") {
-      if (req.headers.origin !== web.origin) { res.writeHead(403).end(); return; }
-      await pool.query("DELETE FROM juego.sesiones WHERE clave = $1", [sessionKey]);
+      if (!origenValido(req, web)) { res.writeHead(403).end(); return; }
+      const { rows: [cerrada] } = await pool.query("DELETE FROM juego.sesiones WHERE clave = $1 RETURNING jugador", [sessionKey]);
+      if (cerrada) cerrarConexiones(cerrada.jugador);
+      if (actual?.via === "encabezado") { res.writeHead(204).end(); return; }
       res.writeHead(303, { Location: inicio.href, "Set-Cookie": cookie(sesion, "", 0) }).end();
       return;
     }

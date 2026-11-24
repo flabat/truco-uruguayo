@@ -10,6 +10,7 @@ import { versionReglasOnline, versionReglasTercetos } from "@eltruco/motor/mesa-
 import { FalloDiscord } from "./discord.ts";
 import type { crearVoz } from "./voz-discord.ts";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
 type Modo = "1v1" | "2v2" | "3v3";
@@ -210,7 +211,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         return;
       }
       if (req.method !== "POST" || (mesa && !mesa[2])) throw new ErrorPeticion(405, "Método no permitido.");
-      if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
       if (mesa?.[2] === "/voz") {
         const vista = await leerMesa(pool, mesa[1], jugador.id, web);
         if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");

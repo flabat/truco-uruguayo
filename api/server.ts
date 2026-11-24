@@ -28,6 +28,7 @@ const auth = crearAuth(pool, {
   issuer: new URL(process.env.OIDC_ISSUER!),
   backend: new URL(process.env.OIDC_BACKEND!),
   local: process.env.LOCAL_OIDC === "1",
+  cerrarConexiones: jugador => vivo.cerrarJugador(jugador),
 });
 
 const server = createServer(async (request, response) => {
