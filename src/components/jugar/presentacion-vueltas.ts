@@ -45,6 +45,9 @@ function pasosNuevos(
     }
     const parcial = {
       ...actual,
+      // Las señas y palabras deben corresponder al prefijo que está en pantalla.
+      pie: previa && anterior?.pie?.vuelta === cerradas + 1 && !completa ? anterior.pie : undefined,
+      indicaciones: actual.indicaciones?.filter(d => d.indiceAccion <= i),
       contexto: { versionVista: 1, fase: "en-juego" } as const,
       puntos,
       ganadorPartida: null,

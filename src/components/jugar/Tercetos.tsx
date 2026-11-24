@@ -6,9 +6,10 @@ import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mes
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { controlesDeCantos, Continuacion, ManoJugador, PruebaEnMesa, Tanteador, tituloDeRespuesta } from "./Tablero";
 import { Tapete } from "./Tapete";
+import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
-import { GloboDeVoz, vocesEnReposo } from "./Voz";
+import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo } from "./Voz";
 import { vueltaEnMesa } from "./vuelta-en-mesa";
 import { usePresentacionTercetos } from "./presentacion-cantos-tercetos";
 import "./tercetos.css";
@@ -23,6 +24,7 @@ type Props = {
   aviso?: string;
   jugar: (accion?: Eleccion) => void;
   presencioReparto: boolean;
+  indicar?: ElegirIndicacion;
   reconexion: number;
 };
 
@@ -72,18 +74,22 @@ function LanceCerrado({ lance, nombre, esActual }: { lance: ResumenLance; nombre
   </details>;
 }
 
-export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, presencioReparto, reconexion }: Props) {
+export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupada, estadoRed, aviso, puedeReportar, jugar, indicar, presencioReparto, reconexion }: Props) {
   const { partida, voz, tablero, mostrandoCartas: presentando } = usePresentacionTercetos(recibida, presencioReparto, reconexion);
   const bloqueada = ocupada || presentando;
   const { vista, lance, historialLances } = partida;
   const nombre = (asiento: number) => mesa.asientos[asiento].nombre!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   const { cerrada, vuelta, numeroVuelta, jugadaVisible, detalleVuelta } = vueltaEnMesa(vista, lance.activos.length, nombre);
-  const titulo = presentando && !vista.resultado
-    ? voz ? nombre(voz.asiento) : "Vuelta " + numeroVuelta
-    : palabra(mesa, partida);
   const voces = voz ? [voz] : vocesEnReposo(vista);
   const esPico = lance.tipo === "pico-a-pico";
+  const pie = !esPico && indicar ? partida.pie : undefined;
+  const espera = presentando ? undefined : esperaDelCompanero(pie, nombre);
+  const titulo = presentando && !vista.resultado
+    ? voz ? nombre(voz.asiento) : "Vuelta " + numeroVuelta
+    : espera?.titulo ?? palabra(mesa, partida);
+  const indicaciones = esPico ? undefined : partida.indicaciones;
+  const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length, partida);
   const numeroDeDuelo = (asiento: number) => 1 + ((asiento - vista.mano + 6) % 3);
   const dueloPropio = numeroDeDuelo(mesa.miAsiento);
   const yaJugaron = new Set<number>(historialLances.flatMap(l => l.activos));
@@ -130,10 +136,12 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             contenido: prueba
               ? <PruebaEnMesa prueba={prueba} base={base} jugada={carta} ganadora={ganadora}
                   acciones={historialLances.find(l => l.duelo === prueba.duelo)?.acciones ?? vista.acciones} />
-              : <GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />,
+              : <><GloboDeVoz voz={voces.find(v => v.asiento === asiento)} />
+                <PalabraDelPie indicacion={frase} asiento={asiento} nombre={nombre}/></>,
             reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
           };
         }}
+        pie={pie && {vista:pie, mano:partida.manoNumero}}
         zonaJugador={<ZonaJugador titulo={estadoRed ?? titulo ?? "Esperando la jugada"} bloqueada={bloqueada}
           detalle={<>
             {aviso && <p className="j-aviso">{aviso}</p>}
@@ -141,6 +149,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             <AvisoFlor pendiente={vista.pendiente} porDeclararFlor={vista.porDeclararFlor} nombre={nombre} />
             {presentando && <p>{voz?.texto || detalleVuelta || jugadaVisible}</p>}
             {vista.resultado && <p>El cierre fue por {motivoDelCierre[vista.resultado.motivo]}.</p>}
+            {espera && <p>{espera.indicacion}</p>}
             {!presentando && vista.estado === "esperando" && <p>{dueloPropio > (lance.duelo ?? 0)
               ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto."}</p>}
             {jugando?.legales.length === 1 && jugando.legales[0] === "flor" &&
@@ -155,6 +164,9 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
               <p className="j-seis-falta">Falta envido · Si gana tu equipo, cobra {tantos(vista.faltaPorEquipo[propio])}. Si ganan los rivales, cobran {tantos(vista.faltaPorEquipo[1 - propio])}.</p>
             )}
           </>}
+          sena={pie && indicar && (pie.pie === mesa.miAsiento
+            ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} elegir={indicar}/>
+            : <SenasEnviadas pie={pie} muestra={vista.muestra} nombre={nombre}/>)}
           mano={jugando && <ManoJugador cartas={jugando.cartas} habilitada={!bloqueada && jugando.legales.includes("carta")} base={base} jugar={jugar} />}
           cantos={controlesDeCantos(opciones, bloqueada, jugar)}
           continuacion={(esFin || vista.estado === "terminado") && <Continuacion fin={esFin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
@@ -166,7 +178,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
           titulo="Tantos de este reparto" detalle={false} />}
         {ultimoCobro && <p>Último cobro · Equipo {ultimoCobro.equipo + 1}, {tantos(ultimoCobro.tantos)} por {ultimoCobro.motivo}.</p>}
         <HistorialDeMano key={`${partida.manoNumero}-${lance.duelo}`} acciones={vista.acciones} cobros={vista.cobros}
-          nombre={nombre} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"}>
+          nombre={nombre} indicaciones={indicaciones} titulo={esPico ? "Historial del duelo" : "Historial de la redondilla"}>
           {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
             presentando={presentando} voz={voz?.indice} />}
         </HistorialDeMano>

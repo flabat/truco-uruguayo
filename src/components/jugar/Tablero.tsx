@@ -8,8 +8,9 @@ import type { CardId } from "../../motor/cartas";
 import type { PruebaDeTantos, VistaOnline } from "../../motor/mesa-online";
 import { cuentaDelChico, mitadesDelChico } from "../../motor/chico";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
-import { GloboDeVoz, vocesEnReposo, type Voz } from "./Voz";
+import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo, type Voz } from "./Voz";
 import { Naipe, Tapete } from "./Tapete";
+import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
 import { vueltaEnMesa } from "./vuelta-en-mesa";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 
@@ -173,6 +174,7 @@ export function EnJuego({
   estadoRed,
   aviso,
   sena,
+  indicar,
   voz,
   base,
   jugar,
@@ -185,6 +187,7 @@ export function EnJuego({
   estadoRed?: string;
   aviso?: string;
   sena?: ReactNode;
+  indicar?: ElegirIndicacion;
   voz?: Voz;
   base: string;
   jugar: (a?: Eleccion) => void;
@@ -194,6 +197,8 @@ export function EnJuego({
   const equipo = (e: number) =>
     mesa.modo === "1v1" ? (e === propio ? "Vos" : "Tu rival") : e === propio ? "Tu equipo" : "Rivales";
   const nombre = (a: number) => mesa.asientos[a].nombre!;
+  const pie = indicar ? partida.pie : undefined;
+  const frase = useVozDelPie(partida.manoNumero, partida.indicaciones, v.acciones.length, partida);
   const voces = voz ? [voz] : vocesEnReposo(v);
   const pendientes = v.pendiente;
   const resultado = v.resultado;
@@ -202,7 +207,7 @@ export function EnJuego({
   const relato = voz
     ? { titulo: nombre(voz.asiento), indicacion: voz.texto }
     : { titulo: "Vuelta " + numeroVuelta, indicacion: detalleVuelta || jugadaVisible };
-  const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : estadoDelTurno(mesa, partida, v);
+  const { titulo, indicacion } = mostrandoCartas && !resultado ? relato : esperaDelCompanero(pie, nombre) ?? estadoDelTurno(mesa, partida, v);
   const pruebaPropia = resultado && v.pruebasDeTantos?.find(p => p.asiento === mesa.miAsiento);
   const cartas = v.cartas.filter(carta => !pruebaPropia || !pruebaPropia.cartas.includes(carta));
   const cobrados = v.resumenTantos?.cobros ?? v.cobros;
@@ -230,11 +235,13 @@ export function EnJuego({
             return {
               contenido: prueba
                 ? <PruebaEnMesa prueba={prueba} acciones={v.acciones} base={base} jugada={carta} ganadora={ganadora} />
-                : <GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />,
+                : <><GloboDeVoz voz={voces.find(dicho => dicho.asiento === asiento)} />
+                  <PalabraDelPie indicacion={frase} asiento={asiento} nombre={nombre} /></>,
               ocultaDorsos: Boolean(prueba),
               reemplazaJugada: Boolean(carta && prueba?.cartas.includes(carta)),
             };
           }}
+          pie={pie && {vista:pie, mano:partida.manoNumero}}
           zonaJugador={<ZonaJugador
             titulo={estadoRed ?? titulo}
             bloqueada={bloqueada}
@@ -251,7 +258,9 @@ export function EnJuego({
                 </p>
               )}
             </>}
-            sena={sena}
+            sena={pie && indicar ? (pie.pie === mesa.miAsiento
+              ? <AccionesDelPie pie={pie} nombre={nombre} bloqueada={bloqueada} elegir={indicar}/>
+              : <SenasEnviadas pie={pie} muestra={v.muestra} nombre={nombre}/>) : sena}
             mano={cartas.length > 0 && <ManoJugador cartas={cartas} habilitada={!bloqueada && v.legales.includes("carta")} base={base} jugar={jugar} />}
             cantos={controlesDeCantos(v.legales, bloqueada, jugar)}
           continuacion={(fin || resultado) && <Continuacion fin={fin} bloqueada={bloqueada} base={base} repartir={() => jugar()} />}
@@ -261,7 +270,7 @@ export function EnJuego({
           {resultado && v.resumenTantos && <ResumenDeTantos resumen={v.resumenTantos} propio={propio}
             equipo={e => mesa.modo === "1v1" ? `${equipo(e)} (${nombre(e)})` : equipo(e)}
             acciones={v.acciones} resultado={resultado} nombre={nombre} />}
-          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre}>
+          <HistorialDeMano key={partida.manoNumero} acciones={v.acciones} cobros={v.cobros} nombre={nombre} indicaciones={partida.indicaciones}>
             {puedeReportar && <ReporteDeJugada mesaId={mesa.id} partida={partida} vuelta={numeroVuelta}
               presentando={mostrandoCartas} voz={voz?.indice} />}
           </HistorialDeMano>

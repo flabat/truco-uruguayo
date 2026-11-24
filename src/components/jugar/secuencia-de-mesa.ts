@@ -11,7 +11,7 @@ export interface Paso<T> {
   espera: number;
 }
 
-type Versionada = { version: number; manoNumero: number } | undefined;
+type Versionada = { version: number; manoNumero: number; indicaciones?: readonly unknown[] } | undefined;
 
 export function useSecuenciaDeMesa<T extends Versionada>(actual: T, presencioReparto: boolean, reconexion: number,
     pasosNuevos: (anterior: T | undefined, actual: T, presencio: boolean, pendientes?: Paso<T>[]) => Paso<T>[]) {
@@ -21,7 +21,8 @@ export function useSecuenciaDeMesa<T extends Versionada>(actual: T, presencioRep
   }));
   if (reconexion !== secuencia.reconexion) {
     mostrar({ recibida: actual, reconexion, pasos: [] });
-  } else if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero) {
+  } else if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero
+      || actual?.indicaciones?.length !== secuencia.recibida?.indicaciones?.length) {
     mostrar({ recibida: actual, reconexion, pasos: pasosNuevos(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
   }
   const paso = secuencia.pasos[0];

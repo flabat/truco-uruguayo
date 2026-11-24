@@ -1,0 +1,21 @@
+# Paridad con «Contar envido 03» de Codex: mismas manos y mismas líneas, para usar su voz importada.
+# npm run reel -- video/episodios/contar-envido/03.yaml --importar "$HOME/Downloads/El Truco - Codex fuentes/envido/03"
+plantilla: contar-tantos
+serie: contar-envido
+id: "03"
+modalidad: envido
+muestra: espadas-03
+gancho: "¿Cuánto cantás?"
+manos:
+  - [oros-05, oros-07, copas-02]
+  - cambio: { de: oros-05, a: espadas-05 }
+  - [copas-01, oros-06, bastos-11]
+lineas:
+  pregunta: "¿Cuánto envido cantás con el tres de espadas de muestra?"
+  cartas: "Cinco y siete de oros, y dos de copas. ¿Cuánto te da?"
+  respuesta1: "Treinta y dos. Son veinte por los oros, más cinco, más siete. El dos de copas queda afuera."
+  cambio: "Cambiá el cinco de oros por el cinco de espadas. Ahora es pieza. ¿Cuánto cantás?"
+  respuesta2: "Treinta y cinco. El cinco de espadas vale veintiocho. Sumale el siete, que vale más que el dos. Los veinte ya están incluidos."
+  tercera: "As de copas, seis de oros y caballo de bastos. Tres palos distintos. Te quedás con el seis. El caballo común vale cero."
+  valores: null
+  cierre: "Probá otra mano en El Truco."
