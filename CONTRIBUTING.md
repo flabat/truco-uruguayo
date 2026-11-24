@@ -10,13 +10,13 @@ Ejemplo desde un checkout cuyo `origin` apunta al repositorio principal y con Gi
 
 ```sh
 issue=42
-branch="codex/issue-$issue"
+branch="codex/issue-${issue}"
 git fetch origin main &&
   gh api --method POST 'repos/{owner}/{repo}/git/refs' \
-    -f "ref=refs/heads/$branch" \
+    -f "ref=refs/heads/${branch}" \
     -f "sha=$(git rev-parse origin/main)" &&
-  git fetch origin "$branch:refs/remotes/origin/$branch" &&
-  git worktree add --track -b "$branch" "../truco-issue-$issue" "origin/$branch"
+  git fetch origin "${branch}:refs/remotes/origin/${branch}" &&
+  git worktree add --track -b "${branch}" "../truco-issue-${issue}" "origin/${branch}"
 ```
 
 También podés crear la referencia mediante la [API de GitHub](https://docs.github.com/en/rest/git/refs#create-a-reference) y usar un checkout aislado de esa rama. Si la reserva falla, averiguá si ya existe la rama o si falló el acceso. Si la creación remota tuvo éxito y solo falló el paso local, retomá desde la referencia creada.
