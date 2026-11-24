@@ -50,16 +50,18 @@ async function tokenAdministrativo(base) {
 
 async function configurar() {
   const [, , proveedor] = process.argv;
-  if (process.argv.length !== 3 || !["google", "facebook", "discord"].includes(proveedor)) {
-    throw new ErrorDeConfiguracion("Uso: node scripts/configurar-ingreso-social.mjs google|facebook|discord");
+  if (process.argv.length !== 3 || !["google", "facebook", "discord", "apple"].includes(proveedor)) {
+    throw new ErrorDeConfiguracion("Uso: node scripts/configurar-ingreso-social.mjs google|facebook|discord|apple");
   }
   const base = baseAdministrativa();
   const realm = requerida("KEYCLOAK_REALM");
   if (realm === "." || realm === ".." || /[\\/]/.test(realm)) {
     throw new ErrorDeConfiguracion("KEYCLOAK_REALM debe ser el nombre del realm.");
   }
-  const clientId = requerida({ google: "GOOGLE_CLIENT_ID", facebook: "FACEBOOK_APP_ID", discord: "DISCORD_CLIENT_ID" }[proveedor]);
-  const clientSecret = requerida({ google: "GOOGLE_CLIENT_SECRET", facebook: "FACEBOOK_APP_SECRET", discord: "DISCORD_CLIENT_SECRET" }[proveedor]);
+  const clientId = requerida({ google: "GOOGLE_CLIENT_ID", facebook: "FACEBOOK_APP_ID", discord: "DISCORD_CLIENT_ID", apple: "APPLE_CLIENT_ID" }[proveedor]);
+  // La extensión de Apple firma su secreto con la clave .p8 en cada ingreso: el secreto configurado es la clave.
+  const clientSecret = requerida({ google: "GOOGLE_CLIENT_SECRET", facebook: "FACEBOOK_APP_SECRET", discord: "DISCORD_CLIENT_SECRET", apple: "APPLE_PRIVATE_KEY" }[proveedor]);
+  const apple = proveedor === "apple" && { teamId: requerida("APPLE_TEAM_ID"), keyId: requerida("APPLE_KEY_ID") };
   const providerId = proveedor === "discord" ? "oauth2" : proveedor;
   const token = await tokenAdministrativo(base);
   const coleccion = `${base}/admin/realms/${encodeURIComponent(realm)}/identity-provider/instances`;
@@ -78,7 +80,7 @@ async function configurar() {
   }
 
   function representacion(actual) {
-    const config = { ...actual?.config, clientId, clientSecret };
+    const config = { ...actual?.config, clientId, clientSecret, ...apple };
     if (proveedor === "discord" && !actual) Object.assign(config, {
       authorizationUrl: "https://discord.com/oauth2/authorize",
       tokenUrl: "https://discord.com/api/oauth2/token",
@@ -94,14 +96,15 @@ async function configurar() {
     return JSON.stringify({
       firstBrokerLoginFlowAlias: "first broker login",
       ...actual,
-      displayName: actual?.displayName || ({ google: "Google", facebook: "Facebook", discord: "Discord" }[proveedor]),
+      displayName: actual?.displayName || ({ google: "Google", facebook: "Facebook", discord: "Discord", apple: "Apple" }[proveedor]),
       alias: proveedor,
       providerId,
       enabled: true,
       linkOnly: false,
       hideOnLogin: false,
       trustEmail: false,
-      storeToken: false,
+      // Los tokens de Apple se guardan para revocarlos al eliminar la cuenta, como exige Apple.
+      storeToken: proveedor === "apple",
       config,
     });
   }

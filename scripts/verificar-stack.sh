@@ -44,6 +44,11 @@ COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
 COMPOSE_PROJECT_NAME="$project" npm run auth:discord
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
+# Clave EC P-256 descartable en el formato .p8 que entrega Apple.
+APPLE_PRIVATE_KEY=$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 2>/dev/null)
+export APPLE_CLIENT_ID=co.eltru.prueba APPLE_TEAM_ID=EQUIPO1234 APPLE_KEY_ID=CLAVE12345 APPLE_PRIVATE_KEY
+COMPOSE_PROJECT_NAME="$project" npm run auth:apple
+node scripts/verificar-ingreso-social.mjs "$web" google facebook discord apple
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
