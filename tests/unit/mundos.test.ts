@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { esCardId, mazo } from "../../src/motor/cartas.ts";
-import { elegirJugada } from "../../src/motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../../src/motor/mano.ts";
-import { crearAzar, repartir, type Asiento } from "../../src/motor/reparto.ts";
+import { esCardId, mazo } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";
+import { crearAzar, repartir, type Asiento } from "@eltruco/motor/reparto.ts";
 import { clavePosicion, posicionPublica, type PosicionPublicaV1 } from "../../src/probabilidad/informacion.ts";
 import { prepararMundos } from "../../src/probabilidad/mundos.ts";
 

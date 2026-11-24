@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "04a2a60c-500f-4dc5-aca4-a0abb48d3dcc";
 const conFlores = {

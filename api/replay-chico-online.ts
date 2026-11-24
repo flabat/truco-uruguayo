@@ -1,12 +1,12 @@
-import { turnosDeEquipo } from "../../api/turnos.ts";
-import { signals, type PublicTurn, type Signal } from "../../training/contracts/index.ts";
-import { vistaDelPie, type IndicacionPie } from "./senas-pie.ts";
-import { esCardId } from "./cartas.ts";
+import { turnosDeEquipo } from "./turnos.ts";
+import { signals, type PublicTurn, type Signal } from "../training/contracts/index.ts";
+import { vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { esCardId } from "@eltruco/motor/cartas.ts";
 import {
   anticiparAnteFlor, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos,
   type AccionOnline, type Cobro, type EstadoOnline,
-} from "./mesa-online.ts";
-import { esAsientoOnline, esRepartoOnline } from "./reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { esAsientoOnline, esRepartoOnline } from "@eltruco/motor/reparto.ts";
 
 export type PerfilChicoOnline = "duel" | "pairs" | "pairs-private-senas" | "tercetos-v1";
 

@@ -1,6 +1,6 @@
 # Replay privado de un chico
 
-Un chico empieza en 0–0. Su registro JSON contiene una cabecera y una lista ordenada de eventos. La pareja `(id, secuencia)` identifica la posición que puede guardar un reporte de error. El lector aplica las decisiones confirmadas a las cartas efectivamente repartidas, reconstruye los cobros y devuelve la vista de un solo asiento. [Contrato TypeScript y lector](../../src/motor/replay-chico.ts) · [Diseño del historial en PostgreSQL](https://github.com/flabat/truco-uruguayo/issues/195)
+Un chico empieza en 0–0. Su registro JSON contiene una cabecera y una lista ordenada de eventos. La pareja `(id, secuencia)` identifica la posición que puede guardar un reporte de error. El lector aplica las decisiones confirmadas a las cartas efectivamente repartidas, reconstruye los cobros y devuelve la vista de un solo asiento. [Contrato TypeScript y lector](../../api/replay-chico.ts) · [Diseño del historial en PostgreSQL](https://github.com/flabat/truco-uruguayo/issues/195)
 
 ## Cabecera
 
@@ -39,7 +39,7 @@ Desde la raíz del repositorio con Node 24, este ejemplo muestra lo que ve el as
 ```sh
 node --input-type=module <<'JS'
 import { readFileSync } from "node:fs";
-import { reproducirChico } from "./src/motor/replay-chico.ts";
+import { reproducirChico } from "./api/replay-chico.ts";
 const juego = readFileSync("tests/fixtures/replay-chico/tercetos.json", "utf8");
 console.log(reproducirChico(juego, 0, 11));
 JS

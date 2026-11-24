@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import casos from "../fixtures/reglas-tercetos-v2.json" with { type: "json" };
-import { faltaDelGanador, restoQuerido, tantosAcreditados, tipoDeReparto, type TipoLance } from "../../src/motor/reglas-tercetos.ts";
+import { faltaDelGanador, restoQuerido, tantosAcreditados, tipoDeReparto, type TipoLance } from "@eltruco/motor/reglas-tercetos.ts";
 
 test("la falta usa la cuenta inicial de quien gana el lance", () => {
   for (const { meta, puntos, ganador, tantos } of casos.falta) {

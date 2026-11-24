@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import type { IndicacionPie } from "../../motor/senas-pie";
+import type { IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { vozDeIndicacion } from "./HistorialDeMano";
 import { canto } from "../../lib/cantos";
-import type { VistaOnline } from "../../motor/mesa-online";
+import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 export interface Voz {
   asiento: number;

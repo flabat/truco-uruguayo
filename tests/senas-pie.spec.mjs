@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { proyectarTercetos } from "../api/partidas-tercetos.ts";
-import { aplicarOnline, iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
-import { crearIndicacionPie, versionSenasPie, vistaDelPie } from "../src/motor/senas-pie.ts";
+import { aplicarOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { crearIndicacionPie, versionSenasPie, vistaDelPie } from "@eltruco/motor/senas-pie.ts";
 
 const id = "294dda42-c1f9-404f-b0fd-f7956d9b50b1";
 const pico = JSON.parse(readFileSync(new URL("./fixtures/pico-tercetos-v2.json", import.meta.url), "utf8"));

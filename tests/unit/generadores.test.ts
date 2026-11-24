@@ -6,9 +6,9 @@ import {
 import { crearFuenteProgreso } from "../../src/aprendizaje/progreso.ts";
 import { generarSesion, iniciarSesion } from "../../src/aprendizaje/sesion.ts";
 import type { Leccion, Paso, SituacionVisible } from "../../src/aprendizaje/tipos.ts";
-import { cartaId, esCardId, paloDe, pieza, rangoDe, type CardId } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
+import { cartaId, esCardId, paloDe, pieza, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 
 const consigna = { id: "paso", consigna: "Elegí tu respuesta.", pista: "Mirá la muestra." };
 const seleccion: Paso = { ...consigna, tipo: "elegir-cartas", minimo: 0, maximo: 3 };

@@ -6,7 +6,7 @@ import test from "node:test";
 import { explicarSituacion } from "../../src/aprendizaje/generadores/evaluacion.ts";
 import { familiasPorHabilidad } from "../../src/aprendizaje/generadores/familias.ts";
 import { cartasPorId } from "../../src/lib/cartas.ts";
-import { mazo, rangoDe, type CardId } from "../../src/motor/cartas.ts";
+import { mazo, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
 import { leerEpisodio, resolverVueltas, vueltaDe, type EpisodioComparar } from "../src/lib/episodio.ts";
 import { guionCompararCartas, idsCompararCartas, veredicto } from "../src/plantillas/comparar-cartas/guion.ts";
 

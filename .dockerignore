@@ -13,6 +13,11 @@
 !scripts/tatu/**
 !infra/
 !infra/web.conf
+!paquetes/
+!paquetes/motor/
+!paquetes/motor/package.json
+!paquetes/motor/src/
+!paquetes/motor/src/*.ts
 !training/
 !training/contracts/
 !training/contracts/index.ts

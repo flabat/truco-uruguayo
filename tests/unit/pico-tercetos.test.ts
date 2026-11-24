@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import fixture from "../fixtures/pico-tercetos-v2.json" with { type: "json" };
 import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos, versionReglasTercetos,
-  type AccionOnline, type EstadoOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
-import { esRepartoOnline, type Asiento } from "../../src/motor/reparto.ts";
+  type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import { esRepartoOnline, type Asiento } from "@eltruco/motor/reparto.ts";
 
 const guardado: unknown = fixture.reparto;
 assert.ok(esRepartoOnline(guardado));

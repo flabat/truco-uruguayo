@@ -4,10 +4,10 @@ import { parse } from "yaml";
 import { z } from "zod";
 import { cartasDeFamilia } from "../../../src/aprendizaje/generadores/index.ts";
 import { esFamiliaDe, familiasPorHabilidad, type Familia } from "../../../src/aprendizaje/generadores/familias.ts";
-import { esCardId, type CardId } from "../../../src/motor/cartas.ts";
-import { compararCartas } from "../../../src/motor/jerarquia.ts";
-import { crearAzar } from "../../../src/motor/reparto.ts";
-import { evaluarTantos, type ResultadoTantos } from "../../../src/motor/tantos.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { crearAzar } from "@eltruco/motor/reparto.ts";
+import { evaluarTantos, type ResultadoTantos } from "@eltruco/motor/tantos.ts";
 
 type Modalidad = "envido" | "flor";
 export type ManoSpec = CardId[] | { cambio: { de: CardId; a: CardId } } | { familia: string; semilla: number };

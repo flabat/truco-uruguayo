@@ -1,9 +1,9 @@
 import { isDeepStrictEqual } from "node:util";
-import { esCardId } from "../../src/motor/cartas.ts";
+import { esCardId } from "@eltruco/motor/cartas.ts";
 import {
   elegirAccionOnline, vistaOnlineV1, type AccionOnlineV1, type EstadoOnline, type VistaOnlineV1,
-} from "../../src/motor/mesa-online.ts";
-import type { Asiento, AsientoV1 } from "../../src/motor/reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, AsientoV1 } from "@eltruco/motor/reparto.ts";
 import {
   canSeeSignal, hasSignals, supportedFormats, seatsFor, signals, versions, type ActionId, type Format, type Move,
   type Policy, type PublicTurn, type SeatObservation,

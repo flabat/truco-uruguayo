@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aplicarOnline, iniciarOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { signals, type ActionId, type Move, type PublicTurn } from "../../training/contracts/index.ts";
 import { observe } from "../../training/seat/index.ts";
 import { commitTurn, signalRules } from "../../training/signals/index.ts";

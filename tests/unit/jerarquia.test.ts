@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mazo, type CardId } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
+import { mazo, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 
 test("con el 6 de copas de muestra se respeta cada puesto y cada empate de la guía", () => {
   const muestra = "copas-06";

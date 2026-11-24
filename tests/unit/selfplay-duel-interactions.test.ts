@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {openActor} from "../../api/actor-registry.ts";
-import {aDecidir, iniciarOnline} from "../../src/motor/mesa-online.ts";
-import type {RepartoOnline} from "../../src/motor/reparto.ts";
+import {aDecidir, iniciarOnline} from "@eltruco/motor/mesa-online.ts";
+import type {RepartoOnline} from "@eltruco/motor/reparto.ts";
 import {initial} from "../../training/anchored/actor.ts";
 import type {Move, PublicTurn, SeatObservation} from "../../training/contracts/index.ts";
 import {observe} from "../../training/seat/index.ts";

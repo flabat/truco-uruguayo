@@ -1,4 +1,4 @@
-import { paloDe, rangoDe, type CardId, type Rango } from "../../../src/motor/cartas.ts";
+import { paloDe, rangoDe, type CardId, type Rango } from "@eltruco/motor/cartas.ts";
 
 const unidades = ["cero", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
   "diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve",

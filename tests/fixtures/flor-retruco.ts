@@ -1,4 +1,4 @@
-import { aplicarOnline, iniciarOnline, type AccionOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, type AccionOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 
 // Sintético: mismas cartas y acciones públicas que el reporte #249.
 export const reparto: RepartoOnline = {

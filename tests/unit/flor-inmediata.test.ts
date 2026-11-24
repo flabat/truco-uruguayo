@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, repartirOnline, vistaOnline, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline,
-} from "../../src/motor/mesa-online.ts";
-import { esRepartoOnline, type Asiento, type TresCartas } from "../../src/motor/reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { esRepartoOnline, type Asiento, type TresCartas } from "@eltruco/motor/reparto.ts";
 
 import { mesaFabian } from "../fixtures/mesa-flor-fabian.ts";
 

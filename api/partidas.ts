@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
-import { normalizarPartida } from "../src/motor/partida-jugador.ts";
-import type { Asiento } from "../src/motor/reparto.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import {
   iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
-} from "../src/motor/mesa-online.ts";
-import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "../src/motor/senas-pie.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, guardarPalabraPie, programarBotPie, vistaPiePrivada } from "./partidas-pie.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";

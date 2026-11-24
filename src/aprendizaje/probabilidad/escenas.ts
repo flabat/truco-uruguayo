@@ -1,5 +1,5 @@
-import type { Jugada } from "../../motor/mano.ts";
-import { versionReparto, type RepartoV1 } from "../../motor/reparto.ts";
+import type { Jugada } from "@eltruco/motor/mano.ts";
+import { versionReparto, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 
 export type Escena = "salida" | "segunda" | "practica";
 

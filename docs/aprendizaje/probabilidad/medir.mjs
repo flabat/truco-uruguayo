@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { gzipSync } from "node:zlib";
 import { chromium } from "playwright";
-import { iniciarMano } from "../../../src/motor/mano.ts";
-import { repartir } from "../../../src/motor/reparto.ts";
-import { capturarReplay } from "../../../src/motor/replay.ts";
+import { iniciarMano } from "@eltruco/motor/mano.ts";
+import { repartir } from "@eltruco/motor/reparto.ts";
+import { capturarReplay } from "@eltruco/motor/replay.ts";
 
 const base = new URL(process.argv[2] ?? "http://127.0.0.1:4322/");
 const repeticiones = 10;

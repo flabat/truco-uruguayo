@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { randomBytes, createHash } from "node:crypto";
 import pg from "pg";
-import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
+import { versionReglasOnline, versionReglasTercetos } from "@eltruco/motor/mesa-online.ts";
 import { initial } from "../training/anchored/actor.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });

@@ -1,11 +1,11 @@
 import { isDeepStrictEqual } from "node:util";
-import { versionSenasPie, crearIndicacionPie, type IndicacionPie } from "./senas-pie.ts";
-import { esAsientoOnline } from "./reparto.ts";
-import { esMetaDeChico } from "./chico.ts";
-import type { Cobro, RepartoOnline } from "./mesa-online.ts";
-import type { Confirmada } from "../../api/turnos.ts";
+import { versionSenasPie, crearIndicacionPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { esAsientoOnline } from "@eltruco/motor/reparto.ts";
+import { esMetaDeChico } from "@eltruco/motor/chico.ts";
+import type { Cobro, RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Confirmada } from "./turnos.ts";
 import { decidirChicoOnline, iniciarChicoOnline, vistaChicoOnline, type EstadoChicoOnline, type PerfilChicoOnline } from "./replay-chico-online.ts";
-import { decidirGallo, iniciarGallo, vistaGallo, type AccionGallo, type EstadoGallo, type RepartoGallo } from "./replay-gallo.ts";
+import { decidirGallo, iniciarGallo, vistaGallo, type AccionGallo, type EstadoGallo, type RepartoGallo } from "@eltruco/motor/replay-gallo.ts";
 
 type Puntos = readonly [number, number];
 type Controlador = { tipo: "humano" } | { tipo: "computadora"; politica: string };

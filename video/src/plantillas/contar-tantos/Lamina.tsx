@@ -7,7 +7,7 @@ import "@site/styles/site.css";
 import "../../piezas/piezas.css";
 import { useMemo } from "react";
 import { AbsoluteFill, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { pieza, type CardId } from "@site/motor/cartas";
+import { pieza, type CardId } from "@eltruco/motor/cartas.ts";
 import type { Mano } from "../../lib/episodio.ts";
 import { cartasQueCuentan, momentosDeCartas } from "../../lib/escena.ts";
 import { armarLinea, type LineaGuion } from "../../lib/linea.ts";

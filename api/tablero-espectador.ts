@@ -1,6 +1,6 @@
-import type { IndicacionPie } from "../src/motor/senas-pie.ts";
-import type { Vuelta, VueltaCerrada } from "../src/motor/mano.ts";
-import type { AccionOnline, EstadoOnline } from "../src/motor/mesa-online.ts";
+import type { IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import type { Vuelta, VueltaCerrada } from "@eltruco/motor/mano.ts";
+import type { AccionOnline, EstadoOnline } from "@eltruco/motor/mesa-online.ts";
 
 /** Los pases anteriores a la respuesta pública de las computadoras eran consultas privadas. */
 export function esAccionPublica(accion: AccionOnline, respondenSinFlor: readonly number[] | null | undefined) {

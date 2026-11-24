@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mazo } from "../../src/motor/cartas.ts";
-import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento, Equipo, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
+import { mazo } from "@eltruco/motor/cartas.ts";
+import { aDecidir, iniciarOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, Equipo, RepartoOnline, TresCartas } from "@eltruco/motor/reparto.ts";
 import { requireTrainingFormat, hasSignals, seatsFor, versions, type ActionId, type Format, type Move, type Policy, type PublicTurn,
   type RefereeHand, type Score, type SeatObservation, type Signal } from "../contracts/index.ts";
 import { observe } from "../seat/index.ts";

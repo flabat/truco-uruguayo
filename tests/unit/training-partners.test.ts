@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { iniciarOnline } from "../../src/motor/mesa-online.ts";
+import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 import { scheduledDeal } from "../../training/arena/index.ts";
 import { observe } from "../../training/seat/index.ts";
 import { signalRules } from "../../training/signals/index.ts";

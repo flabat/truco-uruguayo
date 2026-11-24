@@ -6,9 +6,9 @@ import { setTimeout as esperar } from "node:timers/promises";
 import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
-import { iniciarOnline } from "../src/motor/mesa-online.ts";
-import { normalizarPartida } from "../src/motor/partida-jugador.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:3001/api";

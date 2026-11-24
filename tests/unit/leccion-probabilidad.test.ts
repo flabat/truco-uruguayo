@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { crearLeccionProbabilidad } from "../../src/aprendizaje/probabilidad/leccion.ts";
-import { type CardId } from "../../src/motor/cartas.ts";
-import type { VistaAsiento } from "../../src/motor/mano.ts";
+import { type CardId } from "@eltruco/motor/cartas.ts";
+import type { VistaAsiento } from "@eltruco/motor/mano.ts";
 
 const prefijo = [
   [0, "bastos-03"], [1, "copas-11"], [2, "espadas-04"], [3, "oros-04"],

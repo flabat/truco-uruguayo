@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aplicarOnline, iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { hastaLaSubida, reparto } from "./fixtures/flor-querida.ts";
 
 test("la comparación de flor queda entre su Quiero y el del truco, también al recargar", async ({ page }) => {

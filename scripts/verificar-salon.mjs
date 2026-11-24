@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import pg from "pg";
 import { crearPartidas } from "./partidas.ts";
 import { iniciarReplayDB } from "./replay-db.ts";
-import { iniciarOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const partidas = crearPartidas(pool, new URL(process.env.WEB_ORIGIN));

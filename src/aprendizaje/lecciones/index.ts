@@ -1,6 +1,6 @@
 import { familiasPorHabilidad, type Habilidad } from "../generadores/familias.ts";
 import type { Leccion, Paso } from "../tipos.ts";
-import type { CardId } from "../../motor/cartas.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 export interface Ejemplo {
   id: string;

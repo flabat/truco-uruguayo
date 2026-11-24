@@ -1,9 +1,9 @@
 import type { PoolClient } from "pg";
-import { elegirAccionConPie, elegirIndicacionesPie } from "../src/motor/bot-pie.ts";
-import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "../src/motor/mesa-online.ts";
-import type { Asiento } from "../src/motor/reparto.ts";
-import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
-import { crearIndicacionPie, vistaDelPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
+import { elegirAccionConPie, elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
+import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
+import type { DecisionBotV1 } from "./replay-chico.ts";
+import { crearIndicacionPie, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { ErrorPeticion } from "./http.ts";
 import { asientoBotTercetos, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { decisionReplay, decisionTercetos, guardarDecisionesReplayDB, guardarIndicacionReplayDB, type DecisionReplay } from "./replay-db.ts";

@@ -1,5 +1,5 @@
-import type { ResumenTantos } from "../../motor/resumen-tantos";
-import type { AccionOnline, EstadoOnline } from "../../motor/cantos-online";
+import type { ResumenTantos } from "@eltruco/motor/resumen-tantos.ts";
+import type { AccionOnline, EstadoOnline } from "@eltruco/motor/cantos-online.ts";
 import { motivoDelCobro } from "../../lib/cobros";
 import { tantos } from "./HistorialDeMano";
 

@@ -1,5 +1,5 @@
 import { resumirTantos, type ResumenTantos } from "./resumen-tantos.ts";
-import { randomInt } from "node:crypto";
+import { enteroAleatorio } from "./azar.ts";
 import { esMetaDeChico, metaPorModalidad } from "./chico.ts";
 import { esCardId, mazo, pieza, type CardId } from "./cartas.ts";
 import { evaluarTantos, type Desglose } from "./tantos.ts";
@@ -23,13 +23,13 @@ export const versionReglasOnline = 1;
 export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number, computadoras: readonly Asiento[] = []): RepartoOnline {
   if (cantidad !== 2 && cantidad !== 4 && cantidad !== 6) throw new RangeError("La mesa requiere dos, cuatro o seis asientos.");
   if (!sonAsientosDeMesa(computadoras, cantidad)) throw new RangeError("Las computadoras deben ocupar asientos distintos de la mesa.");
-  dador ??= randomInt(cantidad);
+  dador ??= enteroAleatorio(cantidad);
   if (!esAsientoOnline(dador) || dador >= cantidad) throw new RangeError("El dador debe ocupar un asiento de la mesa.");
   const mano = ((dador + 1) % cantidad) as Asiento;
   const mazoMezclado = [...mazo];
   // Fisher–Yates parcial: solo se precisan las tres rondas y la muestra.
   for (let i = 0; i <= 3 * cantidad; i++) {
-    const j = randomInt(i, mazoMezclado.length);
+    const j = enteroAleatorio(i, mazoMezclado.length);
     [mazoMezclado[i], mazoMezclado[j]] = [mazoMezclado[j], mazoMezclado[i]];
   }
   const manos = Array.from({ length: cantidad }, (_, asiento): TresCartas => {

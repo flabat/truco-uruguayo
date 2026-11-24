@@ -1,4 +1,4 @@
-import type { AccionOnline, Cobro, EstadoOnline } from "../motor/cantos-online.ts";
+import type { AccionOnline, Cobro, EstadoOnline } from "@eltruco/motor/cantos-online.ts";
 
 /** La apuesta y el motivo del cierre son hechos distintos. */
 export function motivoDelCobro(cobro: Cobro, acciones: readonly AccionOnline[], resultado: EstadoOnline["resultado"]) {

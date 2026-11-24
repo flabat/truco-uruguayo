@@ -4,7 +4,7 @@
 
 ## Contexto
 
-El servidor puede detener el árbitro cuando hay un humano habilitado y avanzar las computadoras pendientes. La política básica decide desde la vista del asiento y sus acciones legales. Su selección de cartas hoy busca un solo compañero que ya haya jugado. Las políticas entrenadas, las observaciones y los manifiestos de la liga distinguen duelo y parejas y codifican sus capacidades. [Jugador básico](../../../../src/motor/jugadores.ts) · [Contratos de entrenamiento](../../../../training/contracts/index.ts) · [Trabajo de bot pendiente](../../../../api/bot-pendiente.ts)
+El servidor puede detener el árbitro cuando hay un humano habilitado y avanzar las computadoras pendientes. La política básica decide desde la vista del asiento y sus acciones legales. Su selección de cartas hoy busca un solo compañero que ya haya jugado. Las políticas entrenadas, las observaciones y los manifiestos de la liga distinguen duelo y parejas y codifican sus capacidades. [Jugador básico](../../../../paquetes/motor/src/jugadores.ts) · [Contratos de entrenamiento](../../../../training/contracts/index.ts) · [Trabajo de bot pendiente](../../../../api/bot-pendiente.ts)
 
 ## Decisión
 

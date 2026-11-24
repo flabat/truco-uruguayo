@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../../src/motor/mesa-online.ts";
-import { accionesPie, elegirAccionConPie, elegirIndicacionesPie, observacionPie, politicaPie } from "../../src/motor/bot-pie.ts";
-import { crearIndicacionPie, versionSenasPie, vistaDelPie, type IndicacionPie } from "../../src/motor/senas-pie.ts";
-import { equipoDelAsiento, type Asiento, type Equipo } from "../../src/motor/reparto.ts";
+import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { accionesPie, elegirAccionConPie, elegirIndicacionesPie, observacionPie, politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { crearIndicacionPie, versionSenasPie, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { equipoDelAsiento, type Asiento, type Equipo } from "@eltruco/motor/reparto.ts";
 import { scheduledDeal, streamVersion } from "../arena/index.ts";
 
 const formato = "pairs-private-senas";

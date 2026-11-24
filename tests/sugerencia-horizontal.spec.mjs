@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "153092fc-cb59-4556-833a-f8ec1547991b";
 const ruta = "jugar/?mesa=" + id;

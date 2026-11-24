@@ -16,12 +16,16 @@ from pathlib import Path
 
 CHECKOUT = Path(__file__).resolve().parents[2]
 RUNTIME_PATHS = (
-    "package.json", "api/package.json", "api/actor-registry.ts", "src/motor",
+    "package.json", "api/package.json", "api/actor-registry.ts", "paquetes/motor",
     "training/anchored", "training/arena", "training/baselines", "training/contracts",
     "training/duel/actor.ts", "training/duel/math.ts", "training/eval/statistics.ts",
     "training/partners/policy.ts", "training/seat", "training/selfplay", "training/signals",
 )
 MANIFEST = Path("ops/runtime-manifest.json")
+# Node resuelve @eltruco/motor por este enlace. Apunta fuera de node_modules para que
+# Node pueda quitar los tipos de los .ts del paquete.
+MOTOR_LINK = "node_modules/@eltruco/motor"
+MOTOR_TARGET = "../../paquetes/motor"
 
 
 def digest(path: Path) -> str:
@@ -40,7 +44,14 @@ def tree_hashes(directory: Path, relative_to: Path) -> dict:
     files = {}
     for path in directory.rglob("*"):
         if path.is_symlink():
-            raise ValueError(f"Enlace inesperado en los archivos congelados: {path}")
+            name = path.relative_to(relative_to).as_posix()
+            if name != MOTOR_LINK:
+                raise ValueError(f"Enlace inesperado en los archivos congelados: {path}")
+            target = os.readlink(path)
+            if target != MOTOR_TARGET:
+                raise ValueError(f"Cambió el enlace {name}: apunta a {target}")
+            files[name] = f"symlink:{target}"
+            continue
         # Finder can create this file when the operator opens a run directory.
         if path.is_dir() or path.name == ".DS_Store":
             continue
@@ -77,6 +88,10 @@ def freeze_runtime(runtime: Path) -> str:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 with members.extractfile(member) as source, target.open("xb") as output:
                     shutil.copyfileobj(source, output)
+    if (runtime / "paquetes/motor").is_dir():
+        link = runtime / MOTOR_LINK
+        link.parent.mkdir(parents=True)
+        link.symlink_to(MOTOR_TARGET, target_is_directory=True)
     return revision
 
 

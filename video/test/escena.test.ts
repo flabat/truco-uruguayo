@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { armarLinea, type LineaGuion, type Palabra } from "../src/lib/linea.ts";
 import { cartasQueCuentan, momentosDeCartas, valoresDePiezas, vozSilenciosa } from "../src/lib/escena.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import fixture from "./fixtures/envido-03.json" with { type: "json" };
 
 const linea = armarLinea(fixture.lineas as LineaGuion[], fixture.palabras as Palabra[]);

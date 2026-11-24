@@ -1,4 +1,4 @@
-import { crearAzar } from "../../src/motor/reparto.ts";
+import { crearAzar } from "@eltruco/motor/reparto.ts";
 
 export interface PairOutcome {
   pair: number;

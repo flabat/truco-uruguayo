@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { tableroEspectador } from "../../api/tablero-espectador.ts";
 import { restaurar, type Registro } from "../../api/turnos.ts";
-import { vistaOnline } from "../../src/motor/mesa-online.ts";
+import { vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { dueloFlor, dueloMazo } from "../fixtures/duelo-mazo.ts";
 
 test("el cierre por mazo conserva la flor pública sin revelar las cartas que prueban los tantos", () => {

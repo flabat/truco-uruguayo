@@ -1,9 +1,9 @@
 import { Composition } from "remotion";
-import type { CardId } from "@site/motor/cartas";
-import { evaluarTantos } from "@site/motor/tantos";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import { vozSilenciosa } from "./lib/escena.ts";
 import { armarLinea } from "./lib/linea.ts";
-import { compararCartas } from "@site/motor/jerarquia";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 import type { EpisodioComparar, EpisodioTantos, Vuelta } from "./lib/episodio.ts";
 import { guionCompararCartas } from "./plantillas/comparar-cartas/guion.ts";
 import { LaminaComparar, type PropsComparar } from "./plantillas/comparar-cartas/Lamina";

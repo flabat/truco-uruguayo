@@ -3,7 +3,7 @@ import {teamMixtureKind, openTeamMixture, type TeamMixtureActor} from "../traini
 import {isSelfplayKind, openSelfplay, type SelfplayActor} from "../training/selfplay/learner.ts";
 import {kind, openAnchored, type AnchoredActor} from "../training/anchored/actor.ts";
 import {createHash} from "node:crypto";
-import type { Asiento } from "../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { Format, Policy } from "../training/contracts/index.ts";
 import { asDuelActor, type DuelExport } from "../training/duel/actor.ts";
 import { loadPartnerPolicy, type Actor } from "../training/partners/policy.ts";

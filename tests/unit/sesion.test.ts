@@ -3,7 +3,7 @@ import test from "node:test";
 import { crearFuenteProgreso, progresoDe } from "../../src/aprendizaje/progreso.ts";
 import { generarSesion, iniciarSesion } from "../../src/aprendizaje/sesion.ts";
 import type { Leccion, ProveedorSituaciones, Respuesta, SituacionVisible } from "../../src/aprendizaje/tipos.ts";
-import type { CardId } from "../../src/motor/cartas.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 const envido: Leccion = {
   id: "envido-con-pieza", habilidad: "contar-envido", titulo: "Contar el envido",

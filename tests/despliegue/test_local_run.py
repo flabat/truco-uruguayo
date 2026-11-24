@@ -200,3 +200,38 @@ print(json.dumps([*sys.argv[1:], shutil.which(os.environ.get("TRUCO_NODE", "node
         with self.assertRaisesRegex(ValueError, "Node 24"):
             self.prepare()
         self.assertFalse(self.run.exists())
+
+    def test_frozen_runtime_links_the_rules_package(self):
+        package = local_run.CHECKOUT / "paquetes/motor"
+        (package / "src").mkdir(parents=True)
+        (package / "package.json").write_text('{"name": "@eltruco/motor"}')
+        (package / "src/cartas.ts").write_text("export const mazo = [];")
+        subprocess.run([*self.git, "add", "paquetes"], check=True)
+        subprocess.run([*self.git, "-c", "user.name=Test", "-c", "user.email=test@example.invalid",
+                        "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "package"], check=True)
+        with patch.object(local_run, "RUNTIME_PATHS", (*local_run.RUNTIME_PATHS, "paquetes/motor")):
+            protocol = self.prepare()
+        link = self.run / "runtime/node_modules/@eltruco/motor"
+        self.assertEqual(os.readlink(link), "../../paquetes/motor")
+        self.assertEqual((link / "src/cartas.ts").read_text(), "export const mazo = [];")
+        files = json.loads((self.run / local_run.MANIFEST).read_bytes())["files"]
+        self.assertEqual(files["node_modules/@eltruco/motor"], "symlink:../../paquetes/motor")
+        self.assertIn("paquetes/motor/src/cartas.ts", files)
+        self.assertFalse(any(name.startswith("node_modules/@eltruco/motor/") for name in files))
+        self.assertEqual(self.verify(), protocol)
+        link.unlink()
+        link.symlink_to("../../training")
+        with self.assertRaisesRegex(ValueError, "node_modules/@eltruco/motor"):
+            self.verify()
+        link.unlink()
+        link.symlink_to("../../paquetes/motor")
+        stray = self.run / "runtime/paquetes/otro"
+        stray.symlink_to("motor")
+        with self.assertRaisesRegex(ValueError, "Enlace inesperado"):
+            self.verify()
+
+
+class RuntimePathsTest(unittest.TestCase):
+    def test_runtime_freezes_the_package_instead_of_the_old_path(self):
+        self.assertIn("paquetes/motor", local_run.RUNTIME_PATHS)
+        self.assertNotIn("src/motor", local_run.RUNTIME_PATHS)

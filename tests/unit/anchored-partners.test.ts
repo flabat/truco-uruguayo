@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { iniciarOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento, RepartoOnline } from "../../src/motor/reparto.ts";
+import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, RepartoOnline } from "@eltruco/motor/reparto.ts";
 import { partnerAction, partnerVariants } from "../../training/anchored/partners.ts";
 import { playMatch, replayMatch } from "../../training/arena/index.ts";
 import { publicReplay } from "../../training/arena/runs.ts";

@@ -1,4 +1,4 @@
-import type { TipoAccionOnline } from "../motor/cantos-online";
+import type { TipoAccionOnline } from "@eltruco/motor/cantos-online.ts";
 
 export const canto = {
   truco: "Truco",

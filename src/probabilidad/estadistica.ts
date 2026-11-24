@@ -1,4 +1,4 @@
-import type { CardId } from "../motor/cartas.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 export type Metodo = "exacto" | "estimado";
 export interface Fila {

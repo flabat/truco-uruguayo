@@ -1,6 +1,6 @@
 // Ayudas puras para animar las escenas al ritmo de la narración.
-import { cartaId, paloDe, palos, rangoDe, type CardId, type Rango } from "../../../src/motor/cartas.ts";
-import { evaluarTantos, type ResultadoTantos } from "../../../src/motor/tantos.ts";
+import { cartaId, paloDe, palos, rangoDe, type CardId, type Rango } from "@eltruco/motor/cartas.ts";
+import { evaluarTantos, type ResultadoTantos } from "@eltruco/motor/tantos.ts";
 import type { Linea, LineaGuion } from "./linea.ts";
 import type { Voz } from "./voz.ts";
 import { palabraDeRango } from "./numeros.ts";

@@ -4,8 +4,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
 import WebSocket from "ws";
-import { normalizarPartida } from "../src/motor/partida-jugador.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const origin = new URL(process.env.WEB_ORIGIN).origin;

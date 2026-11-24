@@ -1,6 +1,6 @@
 # Reels de El Truco
 
-Este paquete genera los reels de las redes sociales (lecciones cortas de 9:16) a partir de un archivo de episodio. Usa [Remotion](https://www.remotion.dev/) e importa el motor, las cartas y los estilos del sitio desde `../src`. Tiene sus propias dependencias, así que no afecta `npm ci` ni `npm run check` del sitio.
+Este paquete genera los reels de las redes sociales (lecciones cortas de 9:16) a partir de un archivo de episodio. Usa [Remotion](https://www.remotion.dev/) e importa el motor desde el paquete `@eltruco/motor` (`paquetes/motor`) y las cartas y los estilos del sitio desde `../src`. Tiene sus propias dependencias, así que no afecta `npm ci` ni `npm run check` del sitio.
 
 El diseño y sus razones están en [`docs/superpowers/specs/2026-11-23-reels-programaticos-design.md`](../docs/superpowers/specs/2026-11-23-reels-programaticos-design.md).
 
@@ -76,7 +76,7 @@ vueltas:                                         # de dos a cuatro vueltas con l
   - { familia: empate, semilla: 3 }              # vuelta generada por el motor
 ```
 
-En cada vuelta la voz nombra las dos cartas y pregunta «¿Cuál gana?». Después de la pausa, la ganadora se resalta y la otra se apaga. En una parda las dos quedan resaltadas con el rótulo «Parda». La ganadora sale de `compararCartas` (`src/motor/jerarquia.ts`) y la explicación de una parda, de `explicarSituacion`. Las familias son `gana-el-mayor`, `gana-el-menor`, `empate` y `mismo-numero-distinta-fuerza`. Las líneas son `pregunta`, `vuelta1`, `respuesta1`, …, `escala` y `cierre`. Si una `respuesta*` reescrita no empieza con «Gana el …» o «Parda.» según el motor, el comando falla antes de pedir la voz.
+En cada vuelta la voz nombra las dos cartas y pregunta «¿Cuál gana?». Después de la pausa, la ganadora se resalta y la otra se apaga. En una parda las dos quedan resaltadas con el rótulo «Parda». La ganadora sale de `compararCartas` (`paquetes/motor/src/jerarquia.ts`) y la explicación de una parda, de `explicarSituacion`. Las familias son `gana-el-mayor`, `gana-el-menor`, `empate` y `mismo-numero-distinta-fuerza`. Las líneas son `pregunta`, `vuelta1`, `respuesta1`, …, `escala` y `cierre`. Si una `respuesta*` reescrita no empieza con «Gana el …» o «Parda.» según el motor, el comando falla antes de pedir la voz.
 
 ### Familias
 

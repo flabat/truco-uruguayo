@@ -4,7 +4,7 @@
 
 ## Contexto
 
-Hoy la sala crea mesas por invitación. Leer una mesa como jugador exige asiento, devuelve la invitación para jugar y la lectura de la partida puede disparar el primer reparto. La vista por asiento incluye cartas, acciones legales y hechos visibles para su equipo. El cierre puede mostrar cartas que prueban los tantos. Ocultar componentes en el navegador dejaría esos datos en la respuesta. Abrir el replay completo también entregaría información para reconstruir el reparto. [Lectura de mesa](../../../../api/mesas.ts) · [Partida](../../../../api/partidas.ts) · [Vista por asiento](../../../../src/motor/mesa-online.ts)
+Hoy la sala crea mesas por invitación. Leer una mesa como jugador exige asiento, devuelve la invitación para jugar y la lectura de la partida puede disparar el primer reparto. La vista por asiento incluye cartas, acciones legales y hechos visibles para su equipo. El cierre puede mostrar cartas que prueban los tantos. Ocultar componentes en el navegador dejaría esos datos en la respuesta. Abrir el replay completo también entregaría información para reconstruir el reparto. [Lectura de mesa](../../../../api/mesas.ts) · [Partida](../../../../api/partidas.ts) · [Vista por asiento](../../../../paquetes/motor/src/mesa-online.ts)
 
 ## Contrato
 

@@ -4,9 +4,9 @@ import { comparar, elegirApertura, reconocerFlor, temas, type Tema } from "../..
 import { claveSituacion, familiasPorHabilidad, generarSituacion } from "../../src/aprendizaje/generadores/index.ts";
 import { crearFuenteProgreso } from "../../src/aprendizaje/progreso.ts";
 import { generarPractica } from "../../src/aprendizaje/lecciones/practica.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
-import { esCardId, pieza } from "../../src/motor/cartas.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { esCardId, pieza } from "@eltruco/motor/cartas.ts";
 
 test("el catálogo cubre las familias y los ejemplos resueltos coinciden con las reglas", () => {
   assert.equal(new Set(temas.map((tema) => tema.id)).size, temas.length);

@@ -1,5 +1,5 @@
-import { esCardId } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
+import { esCardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 import type { ActionId, SeatObservation } from "../contracts/index.ts";
 
 interface BettingRules {

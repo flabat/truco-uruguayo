@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mazo } from "../../src/motor/cartas.ts";
-import { elegirJugada } from "../../src/motor/jugadores.ts";
-import { elegirAccionTercetos } from "../../src/motor/bot-tercetos.ts";
-import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaTercetos } from "../../src/motor/mesa-online.ts";
-import { crearAzar, type Asiento, type TresCartas } from "../../src/motor/reparto.ts";
+import { mazo } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
+import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaTercetos } from "@eltruco/motor/mesa-online.ts";
+import { crearAzar, type Asiento, type TresCartas } from "@eltruco/motor/reparto.ts";
 
 const asientos = [0, 1, 2, 3, 4, 5] as const;
 

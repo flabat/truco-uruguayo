@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { signalVersionFor } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
 

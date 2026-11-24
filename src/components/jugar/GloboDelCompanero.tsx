@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { CardId } from "../../motor/cartas";
-import { catalogoGestosPie, textoFrasePie, type FrasePie, type GestoPie, type VistaPie } from "../../motor/senas-pie";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { catalogoGestosPie, textoFrasePie, type FrasePie, type GestoPie, type VistaPie } from "@eltruco/motor/senas-pie.ts";
 import { CaraSena } from "./CaraSena";
 import "./senas-pie.css";
 

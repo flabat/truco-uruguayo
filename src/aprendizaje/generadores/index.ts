@@ -1,5 +1,5 @@
-import { mazo, pieza, type CardId } from "../../motor/cartas.ts";
-import { crearAzar, esSemilla } from "../../motor/reparto.ts";
+import { mazo, pieza, type CardId } from "@eltruco/motor/cartas.ts";
+import { crearAzar, esSemilla } from "@eltruco/motor/reparto.ts";
 import type { ProveedorSituaciones, SolicitudSituacion, Situacion } from "../tipos.ts";
 import { evaluarRespuesta, explicarSituacion } from "./evaluacion.ts";
 import { esFamiliaDe, muestrasDe, pertenece, type Familia } from "./familias.ts";

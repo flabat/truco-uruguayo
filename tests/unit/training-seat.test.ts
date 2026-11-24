@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline,
   type AccionOnline, type RepartoOnline,
-} from "../../src/motor/mesa-online.ts";
-import { repartir, type Asiento } from "../../src/motor/reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { repartir, type Asiento } from "@eltruco/motor/reparto.ts";
 import type { Format, Move, PublicTurn, Score, SeatObservation } from "../../training/contracts/index.ts";
 import { challenger, decodeMove, incumbent, observe } from "../../training/seat/index.ts";
 

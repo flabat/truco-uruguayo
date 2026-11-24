@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { tableroEspectador } from "../api/tablero-espectador.ts";
 import { turnosDeEquipo } from "../api/turnos.ts";
 import { commitTurn } from "../training/signals/index.ts";

@@ -1,6 +1,6 @@
 import { staticFile } from "remotion";
 import { Naipe } from "@site/components/jugar/Tapete";
-import type { CardId } from "@site/motor/cartas";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 import { valoresDePiezas } from "../lib/escena.ts";
 import { palabraDeRango } from "../lib/numeros.ts";
 

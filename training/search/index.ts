@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { aDecidir, type EstadoOnline } from "../../src/motor/mesa-online.ts";
-import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
+import { aDecidir, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import { crearAzar, type Asiento } from "@eltruco/motor/reparto.ts";
 import { sample } from "../arena/index.ts";
 import { seatsFor, type ActionId, type Policy, type SeatObservation } from "../contracts/index.ts";
 import { commitTurn } from "../signals/index.ts";
