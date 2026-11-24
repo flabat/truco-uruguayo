@@ -32,6 +32,8 @@ const redirect = await fetch(origin.replace("https:", "http:"), {redirect: "manu
 assert.equal(redirect.status, 308);
 assert.equal(redirect.headers.get("location"), origin + "/");
 assert.equal((await visitar("/")).status, 200);
+assert.equal((await visitar("/gestion/")).status, 200);
+assert.equal((await visitar("/api/gestion/vivo")).status, 401);
 assert.equal((await visitar("/admin/")).status, 404);
 assert.equal((await visitar("/realms/master/.well-known/openid-configuration")).status, 404);
 const discovery = await api("/realms/mesa/.well-known/openid-configuration");
@@ -50,6 +52,7 @@ assert.equal(callback.status, 303);
 const session = callback.headers.getSetCookie().find(s => s.startsWith("truco_sesion="));
 for (const attr of ["Secure", "HttpOnly", "SameSite=Lax"]) assert.ok(session?.includes(attr));
 const player = await api("/api/jugador");
+assert.equal((await visitar("/api/gestion/jugadores")).status, 403);
 const saved = process.env.TEST_SAVED ? JSON.parse(process.env.TEST_SAVED) : null;
 assert.equal(player.salonHabilitado, true);
 if (!saved) {

@@ -49,6 +49,10 @@ Las altas con señas automáticas tienen dos controles independientes. Activá `
 
 Compose habilita el alta de tercetos en desarrollo. Para desplegar por etapas, arrancá la API con `TERCETOS_HABILITADOS=0` y aplicá las migraciones con los lectores y el árbitro instalados. Cambiá a `1` y recreá la API para ofrecer la opción en la sala. Volver a `0` cierra la creación de mesas nuevas. Las invitaciones y las partidas de seis ya creadas siguen funcionando. Si conservás un volumen de Keycloak anterior, las cuentas nuevas del archivo de importación sólo se cargan al inicializar otro entorno. Las cuentas existentes pueden seguir jugando.
 
+### Panel personal de gestión
+
+Para probar el panel con la cuenta local de Ana, ejecutá `GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 docker compose up -d --build --wait` y abrí [Gestión](http://localhost:8081/gestion/). Usá el usuario y la contraseña de Ana indicados arriba. Otra cuenta puede jugar normalmente y recibe acceso denegado al panel. Con la variable vacía, ninguna cuenta puede consultar los datos. La [guía de producción](produccion.md#panel-personal-de-gestión) explica cómo habilitar la cuenta personal del propietario.
+
 ## Motor de contenedores
 
 Para macOS proponemos Colima con Docker Engine. Colima ejecuta los contenedores Linux en una VM local. El proyecto usa Dockerfiles y Compose estándar y también se puede arrancar con Docker Desktop o con Docker Engine y el plugin Compose en Linux. En un despliegue futuro se puede publicar la misma imagen de la API, apuntar `DATABASE_URL` a PostgreSQL administrado y servir la compilación de Astro en la raíz del sitio con las rutas de la API y de WebSocket bajo `/api/`. La identidad de prueba y sus credenciales son para desarrollo. [Colima](https://github.com/abiosoft/colima) · [Docker Compose](https://docs.docker.com/compose/)

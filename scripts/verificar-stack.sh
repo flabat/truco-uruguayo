@@ -7,6 +7,7 @@ project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
 export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
+export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
 unset KEYCLOAK_ADMIN_TOKEN
@@ -44,6 +45,7 @@ COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
 COMPOSE_PROJECT_NAME="$project" npm run auth:discord
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
+node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs

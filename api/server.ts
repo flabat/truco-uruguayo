@@ -4,6 +4,7 @@ import { configuracionExhibiciones, procesarExhibiciones } from "./exhibiciones.
 import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
+import { crearGestion } from "./gestion.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
@@ -35,7 +36,8 @@ const server = createServer(async (request, response) => {
     try {
       const ruta = request.url.split("?")[0];
       const reporte = rutaReporte.exec(ruta);
-      if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
+      if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
+      else if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
       else if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
       else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);
@@ -79,6 +81,7 @@ const vivo = crearVivo(server, web, {
   ejecutar: partidas.ejecutar,
 });
 
+const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados);
 const detenerExhibiciones = procesarExhibiciones(pool, configuracionExhibiciones(process.env), alCambiar);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");

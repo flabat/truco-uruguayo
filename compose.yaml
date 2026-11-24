@@ -38,6 +38,7 @@ services:
       OIDC_CALLBACK: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/api/auth/callback
       OIDC_ISSUER: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/realms/mesa-local
       OIDC_BACKEND: http://identidad:8080/realms/mesa-local
+      GESTION_SUJETO: ${GESTION_SUJETO:-}
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${API_PORT:-3001}:3001"
     depends_on:
