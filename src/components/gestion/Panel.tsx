@@ -1,9 +1,10 @@
+import { Funciones } from "./Funciones";
 import { useState } from "react";
 import { Historial, ListaMesas, Paginacion, EstadoConsulta } from "./Partidas";
 import { rutaGestion, useConsulta, type Acceso, type Consulta, type Jugador, type Pagina, type Vivo } from "./consultas";
 
 const login = "/api/auth/login?volver=%2Fgestion%2F";
-const secciones = { vivo: "En vivo", jugadores: "Jugadores", historial: "Historial" } as const;
+const secciones = { vivo: "En vivo", jugadores: "Jugadores", historial: "Historial", funciones: "Funciones" } as const;
 type Seccion = keyof typeof secciones;
 
 function EnVivo({ acceso, verSesiones }: Consulta & { verSesiones: () => void }) {
@@ -109,6 +110,7 @@ export default function Panel() {
     </div>}
     {seccion === "vivo" && <EnVivo acceso={cambiarAcceso} verSesiones={() => { cambiarSoloVigentes(true); abrir("jugadores"); }} />}
     {seccion === "jugadores" && <Jugadores key={String(soloVigentes)} acceso={cambiarAcceso} soloVigentes={soloVigentes} jugador={jugador} seleccionar={seleccionar} />}
+    {seccion === "funciones" && <Funciones acceso={cambiarAcceso} />}
     {seccion === "historial" && <Historial acceso={cambiarAcceso} />}
   </>;
 }

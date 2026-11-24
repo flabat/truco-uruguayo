@@ -82,6 +82,8 @@ Comprobá el nombre y copiá el valor de `id` en `GESTION_SUJETO`. En el VPS con
 
 **En vivo** distingue las personas con sesión vigente de las conectadas a una mesa. Los navegadores con más de una pestaña cuentan una vez por persona. **Jugadores** incluye las cuentas que ingresaron al juego al menos una vez. **Historial** muestra cada chico desde el primer reparto, con los equipos y el último tanteador conocido. Un chico terminado suma una partida a cada participante y una victoria a cada integrante del equipo ganador. Se incluyen rivales de computadora. Los chicos sin terminar quedan en el historial con su tanteador parcial, incluso después de una desconexión. Las fechas anteriores a su registro pueden figurar como desconocidas.
 
+**Funciones** administra el acceso a Tercetos y registra cada cambio. [Operación y reversión del piloto](gestion/funciones.md).
+
 ## Copias y recuperación
 
 El servicio `backup` guarda una copia al arrancar y vuelve a hacerlo cada 24 horas. `pg_dump` obtiene una vista consistente de los dos esquemas mientras se juega. Restic cifra el archivo y publica una instantánea sólo si el volcado terminó bien. Se guardan siete copias diarias, cuatro semanales y seis mensuales. Ante un error se reintenta tras cinco minutos. Revisá `dc ps`, `dc logs --tail=40 backup` y la fecha de la última instantánea. El servicio pasa a estado no saludable después de 26 horas sin una copia exitosa. Una copia diaria permite perder hasta un día de jugadas si se pierde el disco y las copias están al día.

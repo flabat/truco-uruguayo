@@ -42,7 +42,7 @@ async function ingresar(page, usuario) {
 }
 
 async function comprobarAcceso(page, estado) {
-  for (const vista of ["vivo", "jugadores", "historial"]) {
+  for (const vista of ["vivo", "jugadores", "historial", "funciones/tercetos"]) {
     const res = await page.request.get(gestion + vista);
     assert.equal(res.status(), estado, vista);
     assert.match(res.headers()["cache-control"] ?? "", /no-store/);
@@ -103,14 +103,59 @@ async function jugador(ana, persona) {
   return registro;
 }
 
+const funcion = gestion + "funciones/tercetos";
+async function configurar(page, data, status = 200, origin = web) {
+  const res = await page.request.put(funcion, { headers: { Origin: origin }, data });
+  assert.equal(res.status(), status, await res.text());
+  return res.json();
+}
+
+async function probarFunciones(ana, bruno, id) {
+  const inicial = await leer(ana, funcion);
+  assert.equal(inicial.audiencia, "desactivado");
+  assert.deepEqual(inicial.historial, []);
+  const seleccion = { audiencia: "seleccionados", jugadores: [id], version: inicial.version };
+  await configurar(bruno, seleccion, 403);
+  await configurar(ana, seleccion, 403, "https://otro.example");
+  await configurar(ana, { ...seleccion, jugadores: [randomUUID()] }, 400);
+  await enviar(ana, "/api/mesas", {modo: "3v3"}, 403);
+  const cambios = await Promise.all([1, 2].map(() => ana.request.put(funcion, { headers: { Origin: web }, data: seleccion })));
+  assert.deepEqual(cambios.map(r => r.status()).sort(), [200, 409]);
+  const beta = await leer(ana, funcion);
+  assert.equal(beta.version, inicial.version + 1);
+  assert.deepEqual(beta.historial[0].agregados, [id]);
+  assert.equal(beta.historial[0].anterior, "desactivado");
+  assert.equal(beta.historial.length, 1);
+  assert.equal((await configurar(ana, {...seleccion, version: beta.version})).version, beta.version);
+  assert.deepEqual((await leer(ana, "/api/modalidades")).modos, ["1v1","2v2","3v3"]);
+  assert.deepEqual((await leer(bruno, "/api/modalidades")).modos, ["1v1","2v2"]);
+  await enviar(bruno, "/api/mesas", {modo: "3v3"}, 403);
+  const mesa = await enviar(ana, "/api/mesas", {modo: "3v3"}, 201);
+  const invitacion = "/api/invitaciones/" + new URL(mesa.invitacion).searchParams.get("invitacion");
+  assert.equal((await bruno.request.get(invitacion)).status(), 403);
+  await enviar(bruno, invitacion + "/unirse", {}, 403);
+  const cerrado = await configurar(ana, {version: beta.version, audiencia: "desactivado", jugadores: []});
+  assert.deepEqual(cerrado.historial[0].retirados, [id]);
+  await enviar(ana, "/api/mesas", {modo: "3v3"}, 403);
+  assert.equal((await leer(ana, invitacion)).sentada, true);
+  assert.equal((await enviar(ana, invitacion + "/unirse", {})).miAsiento, 0);
+  assert.equal((await leer(ana, "/api/mesas/" + mesa.id)).id, mesa.id);
+  await configurar(ana, {version: cerrado.version, audiencia: "todos", jugadores: []});
+  assert.equal((await leer(bruno, invitacion)).sentada, false);
+  assert.equal((await enviar(bruno, invitacion + "/unirse", {})).miAsiento, 1);
+}
+
 try {
   const [ana, bruno] = await Promise.all([pagina(), pagina()]);
   await comprobarAcceso(ana, 401);
+  await configurar(ana, {}, 401);
+  assert.deepEqual((await leer(ana, "/api/modalidades")).modos, ["1v1","2v2"]);
   const personas = await Promise.all([ingresar(ana, "ana"), ingresar(bruno, "bruno")]);
   await comprobarAcceso(bruno, 403);
   await comprobarAcceso(ana, 200);
   assert.equal((await ana.request.post(gestion + "jugadores", { data: {} })).status(), 405);
 
+  await probarFunciones(ana, bruno, personas[0].id);
   const totalesPrevios = await Promise.all(personas.map(persona => jugador(ana, persona)));
   const antes = await leer(ana, gestion + "vivo");
   const otroNavegador = await pagina();

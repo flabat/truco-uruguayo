@@ -52,7 +52,6 @@ services:
       EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
       SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
       SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
-      TERCETOS_HABILITADOS: "${TERCETOS_HABILITADOS:-1}"
     depends_on:
       db: {condition: service_healthy}
     healthcheck:

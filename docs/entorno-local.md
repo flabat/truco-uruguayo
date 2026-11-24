@@ -45,9 +45,9 @@ En la primera redondilla juegan los seis. En el segundo reparto, si ambos equipo
 
 Si un equipo entra en buenas durante un duelo, se completan los duelos que quedan en ese reparto y desde el siguiente se juega en redondilla. Si un cobro alcanza la meta, el chico termina en ese instante. Por ejemplo, con una meta de 26, 13 ya son buenas y un cobro que lleva de 24 a 27 deja el tanteador en 26.
 
-Las altas con señas automáticas tienen dos controles independientes. Activá `SENAS_PIE_PAREJAS=1` para parejas y `SENAS_PIE_TERCETOS=1` junto con `TERCETOS_HABILITADOS=1` para redondillas. Con el valor `0` se deshabilitan nuevas altas de esa variante y las mesas abiertas pueden terminar el chico. Aplicá las migraciones antes de habilitar el perfil.
+La admisión a Tercetos empieza desactivada. Configurá la audiencia desde **Gestión → Funciones** con la cuenta del panel. [Operación del piloto](gestion/funciones.md). Si conservás un volumen de Keycloak anterior, las cuentas nuevas del archivo de importación sólo se cargan al inicializar otro entorno. Las cuentas existentes pueden seguir jugando.
 
-Compose habilita el alta de tercetos en desarrollo. Para desplegar por etapas, arrancá la API con `TERCETOS_HABILITADOS=0` y aplicá las migraciones con los lectores y el árbitro instalados. Cambiá a `1` y recreá la API para ofrecer la opción en la sala. Volver a `0` cierra la creación de mesas nuevas. Las invitaciones y las partidas de seis ya creadas siguen funcionando. Si conservás un volumen de Keycloak anterior, las cuentas nuevas del archivo de importación sólo se cargan al inicializar otro entorno. Las cuentas existentes pueden seguir jugando.
+Las altas con señas automáticas tienen dos controles independientes. Activá `SENAS_PIE_PAREJAS=1` para parejas y `SENAS_PIE_TERCETOS=1` para redondillas. En redondillas, la cuenta además necesita acceso a Tercetos desde **Gestión → Funciones**. Con el valor `0` se deshabilitan nuevas altas de esa variante y las mesas abiertas pueden terminar el chico. Aplicá las migraciones antes de habilitar el perfil.
 
 ### Panel personal de gestión
 
