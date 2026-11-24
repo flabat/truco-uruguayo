@@ -53,7 +53,7 @@ test("la comparación de flor queda entre su Quiero y el del truco, también al 
     "Ganó Diego con 36 de flor. El equipo 2 sumó 5 tantos al tanteador.";
   const flor = [...inicio, "Ana dijo «Quiero».", comparacion];
   await expect(entradas).toHaveText(flor.slice(-3));
-  await expect(page.getByRole("heading", { name: "Truco", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Podés responder", exact: true })).toBeVisible();
   await quiero.click();
   const completa = [...flor, "Ana dijo «Quiero»."];
   await expect(entradas).toHaveText(completa.slice(-3));

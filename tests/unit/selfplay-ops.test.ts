@@ -46,7 +46,7 @@ test("checkpoint-aware scheduler, retry, independent evaluation and final monito
       await writeFile(join(dir,"input",format,"champion-at-start.json"),JSON.stringify(model));
       await writeFile(join(dir,format,"champion.json"),JSON.stringify(model));
     }
-    monitor=run("monitor.py",[dir,"--port","0"]);
+    monitor=run("monitor.py",[dir,"--port","0","--until-finished"]);
     supervisor=run("supervise.py",[dir,"--node",process.execPath]);
     await until(async()=> (await json(join(dir,"ops/schedule.json"))).status==="waiting" && (await readFile(join(dir,"monitor.html"),"utf8")).includes("Training workers"));
     const urlFile=await readFile(join(dir,"ops/monitor-url.txt"),"utf8");
@@ -78,6 +78,8 @@ test("checkpoint-aware scheduler, retry, independent evaluation and final monito
       return page.includes("Starting champion retained") && formats.every(f=>page.includes(f+"/eval-final.json")) && !page.includes('http-equiv="refresh"');
     });
     await until(async()=>supervisor?.exitCode !== null || supervisor?.signalCode !== null);
+    await until(async()=>monitor?.exitCode === 0);
+    await assert.rejects(readFile(join(dir,"ops/monitor-url.txt")), {code:"ENOENT"});
     const html=await readFile(join(dir,"monitor.html"),"utf8");
     for(const f of formats)assert.ok(html.includes(f+"/eval-final.json"));
     assert.match(html,/Final candidate \/ reference/);

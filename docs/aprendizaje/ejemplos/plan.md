@@ -35,7 +35,7 @@ Al terminar #84, un navegador nuevo puede mostrar cualquiera de las dos apertura
 | Entrada guiada y mixta | Completar comparación y reconocimiento de flor en orden. En mixta, comprobar tanto el caso de una habilidad nueva como el de una ya practicada. |
 | Teclado y pantalla angosta | A 320 px y en escritorio, revisar que controles, muestra y mano sean legibles. Recorrer con Tab y Enter los dos controles, comprobar el foco tras cada acción y verificar los nombres accesibles de las cartas. |
 
-Usar pruebas unitarias para el catálogo y la rotación con azar controlado. En Playwright, recorrer las acciones visibles en `tests/aprender.spec.mjs` y adaptar los casos pertinentes de `tests/consulta-aprendizaje.spec.mjs` y `tests/muestra.spec.mjs`. Verificar las dos bases de publicación que ya cubre `npm run check`.
+Usar pruebas unitarias para el catálogo y la rotación con azar controlado. En Playwright, recorrer las acciones visibles en `tests/aprender.spec.mjs` y adaptar los casos pertinentes de `tests/consulta-aprendizaje.spec.mjs` y `tests/muestra.spec.mjs`. Ejecutar `npm run check` para verificar los recorridos en la aplicación servida en la raíz del sitio.
 
 ## Revisión y traspaso
 

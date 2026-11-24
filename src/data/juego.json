@@ -203,11 +203,11 @@
   {
     "id": "senas",
     "title": "Las señas",
-    "intro": "Las señas son gestos discretos que usás para contarle a tu compañero qué cartas tenés. Por ejemplo, si tenés el 2 del palo de la muestra, podés alzar ambas cejas. En la mesa en línea, solo vos y tu compañero ven la seña.",
+    "intro": "Las señas son gestos discretos que usás para contarle a tu compañero qué cartas tenés. Por ejemplo, si tenés el 2 del palo de la muestra, podés alzar ambas cejas. En las parejas y redondillas en línea con señas al pie, cada compañero le pasa sus gestos automáticamente al abrir la vuelta. Solo los ven quien los hace y el pie. El pie puede decir «Vení» para pedir una baja, o «Jugá» y «Voy a vos» para pedir una fuerte. Toda la mesa oye a quién se dirige.",
     "blocks": [
       {
         "heading": "Un código entre compañeros",
-        "text": "Estas son las convenciones recogidas en la guía de Wikipedia. Las señas de flor y de buen tanto son opcionales. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
+        "text": "Estas son las convenciones recogidas en la guía de Wikipedia. En la mesa física también se pueden acordar señas de flor y de buen tanto. La variante automática usa únicamente las señas de cartas. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
         "table": {
           "headers": ["Carta o jugada", "Gesto"],
           "rows": [

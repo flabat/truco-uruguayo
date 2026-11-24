@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
+import { esperaDelPie } from "../../api/partidas-pie.ts";
+import { versionSenasPie, type IndicacionPie } from "../../src/motor/senas-pie.ts";
 import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
-import { iniciarOnline, marcadorOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { iniciarOnline, marcadorOnline, vistaOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
 import { dueloFlor } from "../fixtures/duelo-mazo.ts";
 
 const parejas: RepartoOnline = {versionReparto: "online-1", mano: 0, dador: 3, muestra: "oros-01", manos: [
@@ -59,4 +61,43 @@ test("al reanudar el duelo se registra sólo la decisión nueva con la propuesta
   });
   assert.equal(decisiones, 1);
   jugarComputadoras(fin, "duel", [0], false, () => assert.fail("La mano ya terminó."));
+});
+
+test("las parejas con pie restauran las palabras aparte de las acciones y rechazan el gesto manual", () => {
+  const indicaciones: IndicacionPie[] = [{ emisor: 2, destinatario: 0, vuelta: 1, frase: "veni", indiceAccion: 0 }];
+  const fila: Registro = { numero: 1, version: 1, version_reglas: 1, version_senas: versionSenasPie,
+    reparto: parejas, puntos_inicio: [0, 0], acciones: [], indicaciones };
+  const mano = restaurar(fila, "pairs-private-senas");
+  assert.deepEqual(mano.indicaciones, indicaciones);
+  assert.deepEqual(mano.estado.acciones, []);
+  assert.throws(() => restaurar(fila, "pairs-senas"), { status: 503 });
+  const manual = { tipo: "flor", sena: "cejas" } as const;
+  assert.throws(() => leerAccion(manual, 0, "pairs-private-senas", true), { status: 400 });
+  assert.throws(() => restaurar({ ...fila, acciones: [{ ...manual, asiento: 0 }] }, "pairs-private-senas"), /manual/);
+  assert.deepEqual(leerAccion(manual, 0, "pairs-private-senas"), { ...manual, asiento: 0 });
+});
+
+test("solo la computadora que va a tirar una carta espera una decisión de su pie humano para esa vuelta", () => {
+  const reparto: RepartoOnline = { ...parejas, reglaFlor: "inmediata-v2", manos: [
+    ["bastos-06", "oros-03", "espadas-05"], ["copas-05", "bastos-07", "oros-06"],
+    ["oros-12", "bastos-03", "espadas-07"], ["espadas-03", "copas-07", "bastos-04"],
+  ] };
+  const mano = { estado: iniciarOnline(reparto), turnos: [], indicaciones: [] };
+  const consejo: IndicacionPie = { emisor: 2, destinatario: 0, vuelta: 1, frase: "veni", indiceAccion: 0 };
+  assert.equal(esperaDelPie(mano, [2]), 0);
+  assert.equal(esperaDelPie({ ...mano, indicaciones: [consejo] }, [2]), undefined);
+  assert.equal(esperaDelPie({ ...mano, pasesPie: [{ destinatario: 0, vuelta: 1 }] }, [2]), undefined);
+  assert.equal(esperaDelPie({ ...mano, pasesPie: [{ destinatario: 0, vuelta: 2 }] }, [2]), 0);
+  assert.equal(esperaDelPie(mano, []), undefined);
+  assert.equal(esperaDelPie(mano, [0, 2]), undefined);
+  const flor = iniciarOnline({ ...parejas, reglaFlor: "inmediata-v2" });
+  assert.equal(esperaDelPie({ ...mano, estado: flor }, [2]), undefined);
+  const canto = iniciarOnline({ ...reparto, manos: [
+    ["oros-02", "bastos-06", "espadas-10"], ...reparto.manos.slice(1),
+  ] });
+  assert.ok(vistaOnline(canto, 0).legales.includes("carta"));
+  assert.equal(esperaDelPie({ ...mano, estado: canto }, [2]), undefined);
+  const tercetos: RepartoOnline = { ...reparto, versionReparto: "online-2", dador: 5,
+    manos: [...reparto.manos, ["espadas-06", "oros-07", "bastos-02"], ["copas-02", "copas-03", "copas-04"]] };
+  assert.equal(esperaDelPie({ ...mano, estado: iniciarOnline(tercetos, [0, 0], 50, 2) }, [4]), undefined);
 });

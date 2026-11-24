@@ -72,3 +72,6 @@ export function generarSituacion({ habilidad, familia, semilla, recientes }: Sol
 }
 
 export const proveedorSituaciones: ProveedorSituaciones = { generar: generarSituacion, evaluar: evaluarRespuesta };
+
+/** Dos o tres cartas de una familia para una muestra fija. También las usa el generador de reels de video/. */
+export { cartasDe as cartasDeFamilia };

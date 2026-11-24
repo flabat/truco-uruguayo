@@ -13,6 +13,7 @@ import {createLearner} from "../../training/selfplay/learner.ts";
 import {qualificationFamilies} from "../../training/selfplay/evaluate.ts";
 import {prepareConfirmation} from "../../training/selfplay/confirm.ts";
 import {prepare} from "../../training/selfplay/prepare.ts";
+import {leagueBudget, pilotExtension, readLeagueResults, validateCompletedLeague} from "../../training/selfplay/results.ts";
 import {runSlice} from "../../training/selfplay/train.ts";
 
 // Fully deterministic final receipts let this fixture exercise both gate outcomes.
@@ -58,6 +59,15 @@ test("la siguiente noche hereda los ganadores confirmados, conserva los rivales 
       seed:"parent",finalPairs:4,finalResamples:1000,directLowerBound:0.5,familyDeltaLowerBound:-0.02,files});
     assert.throws(()=>prepare(next,source,"parent"),/fresh deals/);
     const protocol = prepare(next,source,"child");
+    const short=prepare(join(temp,"short"),source,"short-seed","local-pilot");
+    const oldPilot=prepare(join(temp,"legacy"),source,"pilot-seed","pilot");
+    assert.equal(short.externalTeamCandidate,false);
+    assert.equal(oldPilot.externalTeamCandidate,true);
+    assert.equal(short.epochs,3);
+    assert.equal(short.maxWallHours,2);
+    assert.equal(short.finalPairs,oldPilot.finalPairs);
+    assert.equal(short.sampler,oldPilot.sampler);
+    assert.throws(()=>readLeagueResults(join(temp,"short")),/completed run/);
     assert.equal(protocol.parent!.models.duel.improved,true);
     for (const format of activeFormats) {
       const path = format==="duel"?join(format,"final-candidate.json"):join("input",format,"champion-at-start.json");
@@ -109,4 +119,64 @@ test("la siguiente noche hereda los ganadores confirmados, conserva los rivales 
     write(join("duel","eval-final.json"),{...final,improved:false});
     assert.throws(()=>prepare(join(temp,"corrupt"),source,"other"));
   } finally { rmSync(temp,{recursive:true,force:true}); }
+});
+
+test("el piloto local exige mejora de las parejas sobre los repartos pareados para extenderse", () => {
+  const root = mkdtempSync(join(tmpdir(),"truco-extension-"));
+  const formats = ["pairs","pairs-private-senas"] as const;
+  const files:Record<string,string> = {};
+  const protocol = {profile:"local-pilot", seed:"holdout", files, finalPairs:100};
+  function comparison(format:typeof formats[number], change:number, directLower:number) {
+    const previous = initial(format), candidate = createLearner(previous).actor;
+    const archive = join("input",format,"archive","last-finalist.json");
+    mkdirSync(join(root,dirname(archive)),{recursive:true});
+    save(join(root,archive),previous);
+    files[archive]=createHash("sha256").update(readFileSync(join(root,archive))).digest("hex");
+    const priorPin=artifactPin(previous), pin=artifactPin(candidate);
+    const n=protocol.finalPairs;
+    const rows=Array.from({length:n}, (_,pair)=>({
+      pair, candidate:[Number(pair < n/2+Math.round(n*change)),Number(pair < n/2+Math.round(n*change))],
+      incumbent:[Number(pair<n/2),Number(pair<n/2)],
+    }));
+    const family = qualificationFamilies(format).indexOf("strong-cards");
+    const dir = join(root,format,"assessments","final");
+    mkdirSync(dir,{recursive:true});
+    save(join(dir,"family-"+family+".json"), {id:"strong-cards",pin,refPin:priorPin,priorPin,rows,
+      seed:dealSeed(protocol.seed,format,"gate","final"),priorWins:rows.map(r=>r.incumbent)});
+    return {format,pin,reference:priorPin,previousFinalist:priorPin,evaluation:{direct:{lower:directLower}},
+      versusPrevious:{"strong-cards":{estimate:change}}};
+  }
+  try {
+    const decide=(a:number,b:number,directLower=0.51)=>pilotExtension(root,protocol,[
+      comparison(formats[0],a,directLower), comparison(formats[1],b,0.6),
+    ])!.allowed;
+    assert.equal(decide(-0.02,0.01),true);
+    assert.equal(decide(-0.03,0.02),false);
+    assert.equal(decide(0,0),false);
+    assert.equal(decide(0.04,0.01,0.5),false);
+    const finals=[comparison(formats[0],0.02,0.6),comparison(formats[1],0,0.55)];
+    finals[0].versusPrevious["strong-cards"].estimate=0.1;
+    assert.throws(()=>pilotExtension(root,protocol,finals),/Changed strong-cards/);
+    assert.equal(pilotExtension(root,{...protocol,profile:"pilot"},finals),null);
+
+    const full = {...protocol,...leagueBudget("local-pilot"),schema:"continual-selfplay-league-v1",computerOnly:true,
+      signals:teamSignalsVersion,formats:activeFormats,workers:{duel:2,pairs:1,"pairs-private-senas":1},
+      sampler:"paired-regression-v1",externalTeamCandidate:false,directLowerBound:0.5,familyDeltaLowerBound:-0.02};
+    protocol.finalPairs=full.finalPairs;
+    const evaluations:Record<string,unknown>={};
+    for (const format of activeFormats) {
+      const result=format==="duel" ? {format,pin:artifactPin(initial(format))} : comparison(format,0,0.55);
+      const file=join(format,"eval-final.json"), games=4*full.finalPairs*qualificationFamilies(format).length;
+      mkdirSync(join(root,format),{recursive:true});
+      save(join(root,file),{...result,epoch:"final",improved:false,games});
+      evaluations[format]={file,sha256:createHash("sha256").update(readFileSync(join(root,file))).digest("hex"),
+        epoch:"final",format,pin:result.pin,improved:false,games};
+    }
+    mkdirSync(join(root,"ops"));
+    save(join(root,"ops","summary.json"),{state:"complete",completedEpochs:full.epochs,evaluations,
+      resources:Object.fromEntries(["duel-a","duel-b",...formats].map(lane=>[lane,{trainingSeconds:3600}]))});
+    save(join(root,"protocol.json"),full);
+    assert.throws(()=>prepare(join(root,"extended"),root,"child","extended",undefined,undefined,true),/Pilot falls short/);
+    assert.doesNotThrow(()=>validateCompletedLeague(root,full,"local-pilot"));
+  } finally { rmSync(root,{recursive:true,force:true}); }
 });

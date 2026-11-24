@@ -1,39 +1,28 @@
-import { useEffect, useRef, useState } from "react";
 import type { Partida } from "./cliente";
-import { pausaDeVoz, vocesEnAccion, type Voz } from "./Voz";
-
-const entreCartas = 450;
-const vueltaCompleta = 2000;
-
-interface Paso {
-  partida: Partida | undefined;
-  antesDelResultado?: Partida;
-  voz?: Voz;
-  espera: number;
-}
+import { pausaDeVoz, vocesEnAccion } from "./Voz";
+import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type Paso } from "./secuencia-de-mesa";
 
 function pasosNuevos(
   anterior: Partida | undefined,
   actual: Partida | undefined,
   presencioReparto: boolean,
-  pendientes: Paso[] = [],
-): Paso[] {
-  const enVivo = { partida: actual, espera: 0 };
+  pendientes: Paso<Partida | undefined>[] = [],
+): Paso<Partida | undefined>[] {
   const vista = actual?.vista;
-  if (!actual || !vista) return [enVivo];
+  if (!actual || !vista) return [];
 
   const previa = anterior?.manoNumero === actual.manoNumero ? anterior.vista : null;
   const primeraMano = presencioReparto && !anterior?.vista && actual.manoNumero === 1;
   const repartoSiguiente = anterior?.vista?.resultado && actual.manoNumero === anterior.manoNumero + 1;
   // Si se retomó una mano en curso o se perdió su reparto, ir directamente al estado recibido.
-  if (!previa && !primeraMano && !repartoSiguiente) return [enVivo];
+  if (!previa && !primeraMano && !repartoSiguiente) return [];
   const desde = previa?.acciones.length ?? 0;
   let jugadas = [...(previa?.vueltaActual?.jugadas ?? [])];
   let cerradas = previa?.vueltas.length ?? 0;
   // Son las cartas propias al comenzar esta actualización, incluidas las que se verán jugar.
   let cartas = previa?.cartas ?? [...vista.cartas, ...vista.acciones.flatMap(a =>
     a.tipo === "carta" && a.asiento === vista.asiento ? [a.carta] : [])];
-  const pasos = previa ? pendientes.filter(p => p.espera > 0) : [];
+  const pasos = previa ? [...pendientes] : [];
   const indiceCobro = vista.indiceCobroLateral ?? vista.cobros.find(c => c.comparacionFlor)?.comparacionFlor?.indiceAccion;
   for (let i = desde; i < vista.acciones.length; i++) {
     const accion = vista.acciones[i];
@@ -42,7 +31,7 @@ function pasosNuevos(
       jugadas = [...jugadas, { asiento: accion.asiento, carta: accion.carta }];
       if (accion.asiento === vista.asiento) cartas = cartas.filter(c => c !== accion.carta);
     }
-    const completa = esCarta && jugadas.length === vista.equipoPorAsiento.length;
+    const completa = esCarta && jugadas.length === actual.lance.activos.length;
     if (completa) cerradas++;
     const ultimaAccion = i + 1 === vista.acciones.length;
     const acciones = vista.acciones.slice(0, i + 1);
@@ -56,6 +45,9 @@ function pasosNuevos(
     }
     const parcial = {
       ...actual,
+      // Las señas y palabras deben corresponder al prefijo que está en pantalla.
+      pie: previa && anterior?.pie?.vuelta === cerradas + 1 && !completa ? anterior.pie : undefined,
+      indicaciones: actual.indicaciones?.filter(d => d.indiceAccion <= i),
       contexto: { versionVista: 1, fase: "en-juego" } as const,
       puntos,
       ganadorPartida: null,
@@ -94,48 +86,9 @@ function pasosNuevos(
     pasos.push({ partida, antesDelResultado, espera: completa ? vueltaCompleta : entreCartas });
     if (completa) jugadas = [];
   }
-  return [...pasos, enVivo];
+  return pasos;
 }
 
-// Un aviso puede contener varias jugadas o llegar mientras el tapete muestra una vuelta anterior.
-export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean) {
-  const tablero = useRef<HTMLDivElement>(null);
-  const [secuencia, mostrar] = useState(() => ({
-    recibida: actual, pasos: pasosNuevos(undefined, actual, presencioReparto),
-  }));
-  if (actual?.version !== secuencia.recibida?.version || actual?.manoNumero !== secuencia.recibida?.manoNumero) {
-    mostrar({ recibida: actual, pasos: pasosNuevos(secuencia.recibida, actual, presencioReparto, secuencia.pasos) });
-  }
-  const paso = secuencia.pasos[0];
-  const [pasoCargado, confirmarCarga] = useState<Paso>();
-  useEffect(() => {
-    if (!paso.espera) return;
-    // El tiempo de descarga de un naipe no debe descontarse de su tiempo en el tapete.
-    const naipes = paso.voz ? [] : Array.from(tablero.current?.querySelectorAll<HTMLImageElement>(".j-jugada img") ?? []);
-    let timer: number | undefined;
-    function alMostrarCartas() {
-      if (timer !== undefined || naipes.some(img => !img.complete)) return;
-      if (paso.antesDelResultado) confirmarCarga(paso);
-      timer = window.setTimeout(() => {
-        mostrar(s => s.pasos[0] === paso ? { ...s, pasos: s.pasos.slice(1) } : s);
-      }, paso.espera);
-    }
-    for (const img of naipes) {
-      img.addEventListener("load", alMostrarCartas);
-      img.addEventListener("error", alMostrarCartas);
-    }
-    alMostrarCartas();
-    return () => {
-      window.clearTimeout(timer);
-      for (const img of naipes) {
-        img.removeEventListener("load", alMostrarCartas);
-        img.removeEventListener("error", alMostrarCartas);
-      }
-    };
-  }, [paso]);
-
-  const mostrandoCartas = paso.espera > 0 &&
-    (paso.partida !== secuencia.recibida || paso.espera === vueltaCompleta);
-  const enPantalla = paso.antesDelResultado && paso !== pasoCargado ? paso.antesDelResultado : paso.partida;
-  return { tablero, partida: mostrandoCartas ? enPantalla : actual, mostrandoCartas, voz: paso.voz };
+export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean, reconexion: number) {
+  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, pasosNuevos);
 }

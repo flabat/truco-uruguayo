@@ -3,7 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import type { PoolClient } from "pg";
 import { marcadorOnline, type AccionOnline, type EstadoOnline } from "../src/motor/mesa-online.ts";
 import { cobrosDeDecision } from "../src/motor/replay-chico-online.ts";
-import type { DecisionBotV1, EventoChicoV1, ReplayChicoV1 } from "../src/motor/replay-chico.ts";
+import type { DecisionBotV1, EventoChicoV1, ReplayChicoPie, ReplayChicoV1 } from "../src/motor/replay-chico.ts";
+import { versionSenasPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
 import { versions, type ActionId } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import type { FormatoMesa } from "./mesas.ts";
@@ -40,9 +41,10 @@ export function decisionTercetos(antes: EstadoOnline, despues: EstadoOnline, acc
 /** Los escritores ya tienen el lock de la mesa. Los índices salen de las acciones confirmadas
  * en juego.manos, independientemente de la cantidad de pedidos HTTP, reintentos o turnos de bot. */
 async function posicionActual(db: PoolClient, mesa: string) {
-  const { rows: [fila] } = await db.query<{ mano: number; decisiones: number; inicio: string }>(`
+  const { rows: [fila] } = await db.query<{ mano: number; decisiones: number; palabras: number; inicio: string }>(`
     SELECT h.numero AS mano, jsonb_array_length(h.acciones) AS decisiones,
-      COALESCE(e.secuencia, (SELECT 1 + COALESCE(sum(1 + jsonb_array_length(p.acciones)), 0)
+      (SELECT count(*)::integer FROM juego.eventos_chico i WHERE i.mesa=h.mesa AND i.mano=h.numero AND i.posicion IS NULL) AS palabras,
+      COALESCE(e.secuencia, (SELECT 1 + COALESCE(sum(1 + jsonb_array_length(p.acciones) + jsonb_array_length(p.indicaciones)), 0)
         FROM juego.manos p WHERE p.mesa=h.mesa AND p.numero<h.numero)) AS inicio
     FROM juego.manos h
     LEFT JOIN juego.eventos_chico e ON e.mesa=h.mesa AND e.mano=h.numero AND e.posicion=0
@@ -56,10 +58,11 @@ export async function iniciarReplayDB(db: PoolClient, mesa: string, formato: For
     estado: EstadoOnline, numero: number) {
   const reparto = estado.mano.reparto;
   if (numero === 1 && formato !== "pairs-senas") {
-    const { rows: [datos] } = await db.query<{ id: string; politica: string; inicio: Date }>(
-      "SELECT id, politica, clock_timestamp() AS inicio FROM juego.mesas WHERE id=$1", [mesa]);
-    const cabecera: Omit<ReplayChicoV1, "eventos"> = {
-      version: "chico-v1", id: datos.id, origen: "mesa", inicio: datos.inicio.toISOString(), meta: estado.meta,
+    const { rows: [datos] } = await db.query<{ id: string; politica: string; version_senas: string | null; inicio: Date }>(
+      "SELECT id, politica, version_senas, clock_timestamp() AS inicio FROM juego.mesas WHERE id=$1", [mesa]);
+    const cabecera: Omit<ReplayChicoV1, "eventos"> | Omit<ReplayChicoPie, "eventos"> = {
+      ...(datos.version_senas === versionSenasPie ? { version: "chico-v2", versionSenas: versionSenasPie } as const : { version: "chico-v1" } as const),
+      id: datos.id, origen: "mesa", inicio: datos.inicio.toISOString(), meta: estado.meta,
       variante: formato === "triples" ? "tercetos" : formato === "duel" ? "duelo" : "parejas",
       perfil: formato === "triples" ? "tercetos-v1" : formato,
       motor: { version: reparto.versionReparto, build },
@@ -77,7 +80,7 @@ export async function iniciarReplayDB(db: PoolClient, mesa: string, formato: For
 /** Un lote incluye las decisiones automáticas disparadas por el comando. Un cierre pertenece a esa misma escritura. */
 export async function guardarDecisionesReplayDB(db: PoolClient, mesa: string, decisiones: readonly DecisionReplay[], meta: number) {
   if (!decisiones.length) return;
-  const { mano, inicio, decisiones: cantidad } = await posicionActual(db, mesa);
+  const { mano, inicio, palabras, decisiones: cantidad } = await posicionActual(db, mesa);
   const anterior = cantidad - decisiones.length;
   if (anterior < 0) throw new Error("El bloque de decisiones excede las acciones confirmadas de la mano.");
   const puntos = decisiones[decisiones.length - 1].puntos;
@@ -88,5 +91,13 @@ export async function guardarDecisionesReplayDB(db: PoolClient, mesa: string, de
       dato || jsonb_build_object('fecha', to_char(statement_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'))
       ELSE dato END, $6
     FROM jsonb_array_elements($5::jsonb) WITH ORDINALITY AS lote(dato, i)`,
-    [mesa, mano, anterior, inicio + anterior, JSON.stringify(eventos), build]);
+    [mesa, mano, anterior, inicio + anterior + palabras, JSON.stringify(eventos), build]);
+}
+
+/** Las palabras tienen secuencia de replay pero jamás ocupan una posición de carta/canto. */
+export async function guardarIndicacionReplayDB(db: PoolClient, mesa: string, indicacion: IndicacionPie) {
+  const { mano, inicio, palabras, decisiones } = await posicionActual(db, mesa);
+  if (indicacion.indiceAccion !== decisiones) throw new Error("El consejo no corresponde a la última jugada confirmada.");
+  await db.query("INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build) VALUES ($1,$2,NULL,$3,$4,$5)",
+    [mesa, mano, inicio + decisiones + palabras + 1, { tipo: "indicacion", indicacion }, build]);
 }

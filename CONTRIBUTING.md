@@ -4,19 +4,19 @@
 
 1. Buscá el tema en los [issues](https://github.com/flabat/truco-uruguayo/issues), [PR abiertos](https://github.com/flabat/truco-uruguayo/pulls) y [ramas](https://github.com/flabat/truco-uruguayo/branches). Leé los comentarios de los issues relacionados y revisá el alcance anunciado en los PR en curso. Si dos issues requieren cambios en las mismas reglas, datos o componentes, acordá qué sesión los modifica y en qué orden antes de editar.
 2. Reutilizá el issue existente o abrí uno. Para errores, incluí pasos o una mano reproducible, el resultado actual y el esperado. Para funciones y decisiones de diseño, describí el problema, las opciones, los criterios y la decisión. Si hace falta acordar el diseño, registrá la decisión en el issue antes de implementarla. Para cambios de reglas, citá el artículo o sección y especificá a qué variante se aplica.
-3. Reservá una rama por issue. Usá el nombre exacto `codex/issue-<número>` y la operación de creación de la referencia, que rechaza una rama existente. Una asignación o un comentario sirve para comunicar el estado, ya que varias sesiones pueden usar la misma cuenta. La rama indica que el trabajo está reservado.
+3. Reservá una rama por issue. Usá el nombre exacto `codex/issue-<número>` y la operación de creación de la referencia, que rechaza una rama existente. Una asignación o un comentario sirve para comunicar el estado, ya que varias sesiones pueden usar la misma cuenta. La rama indica que el trabajo está reservado. Codex y Claude Code siguen el mismo protocolo y el mismo prefijo: `AGENTS.md` tiene las reglas compartidas y `CLAUDE.md` las importa.
 
 Ejemplo desde un checkout cuyo `origin` apunta al repositorio principal y con GitHub CLI autenticado. Ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
 
 ```sh
 issue=42
-branch="codex/issue-$issue"
+branch="codex/issue-${issue}"
 git fetch origin main &&
   gh api --method POST 'repos/{owner}/{repo}/git/refs' \
-    -f "ref=refs/heads/$branch" \
+    -f "ref=refs/heads/${branch}" \
     -f "sha=$(git rev-parse origin/main)" &&
-  git fetch origin "$branch:refs/remotes/origin/$branch" &&
-  git worktree add --track -b "$branch" "../truco-issue-$issue" "origin/$branch"
+  git fetch origin "${branch}:refs/remotes/origin/${branch}" &&
+  git worktree add --track -b "${branch}" "../truco-issue-${issue}" "origin/${branch}"
 ```
 
 También podés crear la referencia mediante la [API de GitHub](https://docs.github.com/en/rest/git/refs#create-a-reference) y usar un checkout aislado de esa rama. Si la reserva falla, averiguá si ya existe la rama o si falló el acceso. Si la creación remota tuvo éxito y solo falló el paso local, retomá desde la referencia creada.

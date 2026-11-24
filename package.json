@@ -19,7 +19,11 @@
     "cartas:generar": "node scripts/tatu/generar.mjs",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
     "cartas:exportar": "node scripts/tatu/generar.mjs --exportar",
-    "train": "node training/cli.ts"
+    "train": "node training/cli.ts",
+    "league": "python3 -B training/selfplay/local.py",
+    "reel": "npm --prefix video run reel --",
+    "reel:studio": "npm --prefix video run studio --",
+    "reel:instalar": "npm ci --prefix video"
   },
   "engines": {
     "node": ">=22.23.4"

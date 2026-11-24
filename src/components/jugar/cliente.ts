@@ -26,6 +26,7 @@ export interface VersionesMesa {
   edicionModelo?: EdicionModelo;
 }
 export interface Mesa extends VersionesMesa {
+  versionSenas?: string | null;
   publica: boolean;
   id: string;
   modo: Modo;
@@ -75,10 +76,11 @@ export function idComando() {
   return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join("-");
 }
 
-export function useMesa(id: string) {
+export function useMesa(id: string, recienCreada = false) {
   const ruta = "/api/mesas/" + encodeURIComponent(id);
   const [mesa, setMesa] = useState<Mesa>();
   const [partida, setPartida] = useState<PartidaJugador>();
+  const [reconexion, setReconexion] = useState(0);
   const [conectada, setConectada] = useState(false);
   const [error, setError] = useState<ErrorMesa | null>(null);
   const refrescar = useRef<() => Promise<void>>(async () => {});
@@ -90,6 +92,11 @@ export function useMesa(id: string) {
     let demora = 400;
     let lectura: Promise<void> | undefined;
     let faltaLeer = false;
+    let primeraLectura = true;
+    let recuperando = false;
+    let ultimaApertura: string | undefined;
+    let animar = false;
+    let generacion = 0;
 
     function leer(): Promise<void> {
       faltaLeer = true;
@@ -104,12 +111,33 @@ export function useMesa(id: string) {
         // Si llega una novedad durante la lectura, consultar de nuevo en orden.
         while (faltaLeer && !cancel.signal.aborted) {
           faltaLeer = false;
+          const alComenzar = generacion;
           const canal = socket?.readyState === WebSocket.OPEN ? socket : undefined;
           const sala = await pedir<Mesa>(ruta, undefined, cancel.signal);
           const mano = sala.lista
             ? normalizarPartida(await pedir<RespuestaPartida>(ruta + "/partida", undefined, cancel.signal))
             : undefined;
           if (cancel.signal.aborted) return;
+          // Un corte durante la lectura exige una instantánea del nuevo período de conexión.
+          if (alComenzar !== generacion) {
+            faltaLeer = true;
+            continue;
+          }
+          setReconexion(generacion);
+          if (mano?.indicaciones) mano.reconexion = generacion;
+          if (mano?.pie) {
+            const apertura = mano.manoNumero + "." + mano.pie.vuelta;
+            if (ultimaApertura !== apertura) {
+              const esRepartoInicial = recienCreada && mano.manoNumero === 1 && mano.pie.vuelta === 1
+                && mano.vista?.acciones.length === 0;
+              animar = !recuperando && (!primeraLectura || esRepartoInicial);
+              ultimaApertura = apertura;
+            }
+            if (recuperando) animar = false;
+            mano.llegadaEnVivo = animar;
+          }
+          if (canal && canal === socket && canal.readyState === WebSocket.OPEN) recuperando = false;
+          primeraLectura = false;
           setMesa(sala);
           setPartida(mano);
           setError(null);
@@ -120,6 +148,8 @@ export function useMesa(id: string) {
         }
       } catch (e) {
         if (cancel.signal.aborted) return;
+        recuperando = true;
+        generacion++;
         setConectada(false);
         if (e instanceof ErrorMesa && [401, 403, 404].includes(e.status)) {
           setError(e);
@@ -155,6 +185,8 @@ export function useMesa(id: string) {
       actual.onclose = () => {
         if (cancel.signal.aborted) return;
         socket = undefined;
+        recuperando = true;
+        generacion++;
         setConectada(false);
         clearTimeout(timer);
         timer = setTimeout(leer, demora);
@@ -179,7 +211,7 @@ export function useMesa(id: string) {
       window.removeEventListener("offline", sinRed);
       window.removeEventListener("pageshow", leer);
     };
-  }, [ruta]);
+  }, [ruta, recienCreada]);
 
-  return { ruta, mesa, partida, conectada, error, refrescar };
+  return { ruta, mesa, partida, conectada, reconexion, error, refrescar };
 }
