@@ -1,5 +1,5 @@
 import type { Pool, PoolClient } from "pg";
-import { marcadorOnline } from "../src/motor/mesa-online.ts";
+import { marcadorOnline } from "@eltruco/motor/mesa-online.ts";
 import { ErrorPeticion } from "./http.ts";
 import { formatoMesa } from "./mesas.ts";
 import { restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";

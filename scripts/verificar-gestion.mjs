@@ -4,7 +4,7 @@ import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { promisify } from "node:util";
 import { chromium, expect } from "@playwright/test";
-import { elegirAccionOnline } from "../src/motor/mesa-online.ts";
+import { elegirAccionOnline } from "@eltruco/motor/mesa-online.ts";
 
 const [web, proyecto] = process.argv.slice(2);
 assert.match(proyecto, /^truco-check-\d+-\d+$/);
