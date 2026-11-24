@@ -14,3 +14,19 @@ export function momentosDePrueba(L: Linea): [string, number][] {
   if (hay("cierre")) lista.push(["cierre", L.inicio("cierre") + 0.6]);
   return lista.sort((a, b) => a[1] - b[1]).slice(0, 10);
 }
+
+/** Para comparar cartas: cada vuelta con sus cartas y su resultado, la escala y el cierre. */
+export function momentosDeComparar(L: Linea): [string, number][] {
+  const hay = (id: string) => L.tramos.some((t) => t.id === id);
+  const lista: [string, number][] = [];
+  if (hay("pregunta")) lista.push(["pregunta", L.inicio("pregunta") + 1]);
+  for (let n = 1; hay(`vuelta${n}`) || hay(`respuesta${n}`); n++) {
+    if (hay(`vuelta${n}`)) lista.push([`vuelta${n}`, L.fin(`vuelta${n}`) - 0.3]);
+    if (hay(`respuesta${n}`)) lista.push([`respuesta${n}`, L.inicio(`respuesta${n}`) + 1]);
+  }
+  const primera = L.pausas[0];
+  if (primera && lista.length < 9) lista.push([`pausa ${primera.id}`, primera.desde + 1.5]);
+  if (hay("escala")) lista.push(["escala", L.inicio("escala") + 1.5]);
+  if (hay("cierre")) lista.push(["cierre", L.inicio("cierre") + 0.6]);
+  return lista.sort((a, b) => a[1] - b[1]).slice(0, 10);
+}

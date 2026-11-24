@@ -25,6 +25,8 @@ Los reels se generan en `video/` con Remotion, a partir de un archivo de episodi
      - { familia: tres-palos-distintos, semilla: 7 }
    ```
 
+   Para enseñar qué carta gana una vuelta, usá `plantilla: comparar-cartas` con `vueltas:` de dos cartas en lugar de `modalidad` y `manos` (ejemplos en `video/episodios/comparar-cartas/`). Sus líneas son `pregunta`, `vuelta1`, `respuesta1`, …, `escala` y `cierre`.
+
    No escribas totales ni explicaciones: el guion sale del motor (`src/motor/tantos.ts`). Para reescribir una línea, usá `lineas: { <id>: "texto" }`; `null` la quita. Los ids son `pregunta`, `cartas`, `respuesta1`, `cambio`, `respuesta2`, `tercera`, (`respuesta3` en flor), `valores` y `cierre`. Si una `respuesta*` reescrita dice un total distinto del que calcula el motor, el comando falla antes de gastar voz.
 3. **Generá el reel** desde la raíz: `npm run reel -- video/episodios/<serie>/<id>.yaml`. La voz de ElevenLabs se pide una sola vez por texto y queda guardada. Hacen falta `ELEVENLABS_API_KEY` y `ELEVENLABS_VOICE_ID` en el `.env` de la raíz. Nunca muestres ni escribas sus valores.
 4. **Revisá `video/salida/<serie>/<id>/prueba.jpg`** (diez cuadros con su momento). Si algo no está bien, ajustá el YAML y volvé a generar. Mandale a la persona el MP4 y la hoja.
@@ -37,5 +39,5 @@ Para previsualizar y ajustar tiempos con Remotion Studio: `npm run reel -- <epis
 1. Copiá `video/src/plantillas/contar-tantos/` con otro nombre.
 2. Adaptá `guion.ts` (las líneas, sus ids y cuáles llevan `pausa: true`) con pruebas en `video/test/`: el texto tiene que salir del motor.
 3. Adaptá la composición. Usá las piezas de `video/src/piezas/` y los componentes del sitio con `@site/...`. Todo movimiento sale de `useCurrentFrame()` y de `linea.cuando(id, palabra)`, nunca de animaciones CSS. No pongas nada legible debajo de y = 512 (20 % inferior): ahí van los botones de la red.
-4. Registrala en `video/src/Root.tsx` y agregá su tipo al esquema de `video/src/lib/episodio.ts`.
+4. Registrala en `video/src/Root.tsx`, agregá su tipo al esquema de `video/src/lib/episodio.ts` y su preparación (guion, props, composición, momentos de la hoja y borrador de publicación) en `video/scripts/plantillas.ts`. `episodio.ts` lee archivos, así que el ejemplo de `Root.tsx` no lo importa.
 5. Probá con `npm run reel -- <episodio> --studio`, después `cd video && npm test && npm run typecheck`.

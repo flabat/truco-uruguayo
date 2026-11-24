@@ -31,7 +31,7 @@ npm run reel -- video/episodios/contar-envido/07.yaml
 
 El resultado queda en `video/salida/<serie>/<id>/`:
 
-- `Contar envido 07.mp4`: 1080 × 1920, 30 fps, H.264 y AAC.
+- `Contar envido 07.mp4` (o `Comparar cartas 01.mp4`): 1080 × 1920, 30 fps, H.264 y AAC.
 - `Contar envido 07.es.srt`: subtítulos en español.
 - `portada.jpg`: el cuadro del primer resultado.
 - `prueba.jpg`: diez cuadros en momentos con nombre, para revisar.
@@ -62,7 +62,25 @@ lineas:                                          # opcional
   valores: null                                  # quita una línea
 ```
 
-Las familias son las de las lecciones (`src/aprendizaje/generadores/familias.ts`): para envido, `dos-del-mismo-palo`, `tres-palos-distintos`, `una-pieza` y `selecciones-equivalentes`; para flor, `tres-del-mismo-palo`, `una-pieza-y-dos-del-mismo-palo`, `dos-piezas` y `tres-piezas`.
+### Comparar cartas
+
+```yaml
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "01"
+muestra: bastos-06
+gancho: "¿Cuál gana la vuelta?"
+vueltas:                                         # de dos a cuatro vueltas con la misma muestra
+  - [bastos-02, espadas-01]                      # vuelta escrita
+  - [espadas-07, copas-07]
+  - { familia: empate, semilla: 3 }              # vuelta generada por el motor
+```
+
+En cada vuelta la voz nombra las dos cartas y pregunta «¿Cuál gana?». Después de la pausa, la ganadora se resalta y la otra se apaga. En una parda las dos quedan resaltadas con el rótulo «Parda». La ganadora sale de `compararCartas` (`src/motor/jerarquia.ts`) y la explicación de una parda, de `explicarSituacion`. Las familias son `gana-el-mayor`, `gana-el-menor`, `empate` y `mismo-numero-distinta-fuerza`. Las líneas son `pregunta`, `vuelta1`, `respuesta1`, …, `escala` y `cierre`. Si una `respuesta*` reescrita no empieza con «Gana el …» o «Parda.» según el motor, el comando falla antes de pedir la voz.
+
+### Familias
+
+Las familias de contar tantos son las de las lecciones (`src/aprendizaje/generadores/familias.ts`): para envido, `dos-del-mismo-palo`, `tres-palos-distintos`, `una-pieza` y `selecciones-equivalentes`; para flor, `tres-del-mismo-palo`, `una-pieza-y-dos-del-mismo-palo`, `dos-piezas` y `tres-piezas`.
 
 El guion sale del motor. Si reescribís una línea de respuesta con un total distinto del que calcula el motor, el comando falla antes de pedir la voz.
 
@@ -70,7 +88,7 @@ El guion sale del motor. Si reescribís una línea de respuesta con un total dis
 
 ```sh
 cd video
-npm test          # lógica pura: números, línea de tiempo, episodios, guion, voz, controles
+npm test          # lógica pura: números, línea de tiempo, episodios, guiones, voz, controles
 npm run typecheck
 npm run studio    # Studio con un ejemplo sin audio
 ```

@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "02"
+muestra: oros-06
+gancho: "¿El as de espadas siempre gana?"
+vueltas:
+  - [espadas-01, oros-04]     # una pieza le gana al as de espadas
+  - [oros-04, bastos-04]      # mismo número: el palo de la muestra decide
+  - [copas-02, espadas-02]    # dos comunes del mismo puesto: parda

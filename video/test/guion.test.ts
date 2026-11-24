@@ -1,19 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { familiasPorHabilidad } from "../../src/aprendizaje/generadores/familias.ts";
-import { generarMano, resolverManos, type Episodio } from "../src/lib/episodio.ts";
+import { generarMano, resolverManos, type EpisodioTantos } from "../src/lib/episodio.ts";
 import { guionContarTantos, idsContarTantos } from "../src/plantillas/contar-tantos/guion.ts";
 
-const envido: Episodio = {
+const envido: EpisodioTantos = {
   plantilla: "contar-tantos", serie: "contar-envido", id: "03", modalidad: "envido", muestra: "espadas-03",
   gancho: "¿Cuánto tenés de envido?",
   manos: [["oros-05", "oros-07", "copas-02"], { cambio: { de: "oros-05", a: "espadas-05" } }, ["copas-01", "oros-06", "bastos-11"]],
 };
-const flor: Episodio = {
+const flor: EpisodioTantos = {
   ...envido, serie: "contar-flor", modalidad: "flor", gancho: "Contá esta flor.",
   manos: [["oros-07", "oros-04", "oros-12"], { cambio: { de: "oros-12", a: "espadas-11" } }, ["espadas-02", "espadas-05", "bastos-06"]],
 };
-const texto = (ep: Episodio, id: string) => guionContarTantos(ep, resolverManos(ep)).find((l) => l.id === id)?.texto;
+const texto = (ep: EpisodioTantos, id: string) => guionContarTantos(ep, resolverManos(ep)).find((l) => l.id === id)?.texto;
 
 test("el guion de envido 03 da los totales del motor", () => {
   assert.equal(texto(envido, "pregunta"), "¿Cuánto tenés de envido? La muestra es el tres de espadas.");
@@ -37,7 +37,7 @@ test("las líneas siguen el orden de la plantilla", () => {
 });
 
 test("las pausas caen en cartas y cambio", () => {
-  const pausas = (ep: Episodio) => guionContarTantos(ep, resolverManos(ep)).filter((l) => l.pausa).map((l) => l.id);
+  const pausas = (ep: EpisodioTantos) => guionContarTantos(ep, resolverManos(ep)).filter((l) => l.pausa).map((l) => l.id);
   assert.deepEqual(pausas(envido), ["cartas", "cambio"]);
   assert.deepEqual(pausas(flor), ["cartas", "cambio", "tercera"]);
 });
@@ -73,7 +73,7 @@ test("null quita la línea y un id desconocido falla", () => {
 });
 
 test("la flor con piezas nombra bien la sota y las cartas comunes", () => {
-  const conTercera = (cartas: string[]) => ({ ...flor, manos: [flor.manos[0], flor.manos[1], cartas] }) as Episodio;
+  const conTercera = (cartas: string[]) => ({ ...flor, manos: [flor.manos[0], flor.manos[1], cartas] }) as EpisodioTantos;
   assert.equal(texto(conTercera(["espadas-05", "espadas-02", "bastos-02"]), "respuesta3"),
     "Cuarenta. Contá veinte una sola vez. Sumale ocho del cinco, diez del dos y el dos de bastos.");
   assert.equal(texto(conTercera(["bastos-10", "espadas-10", "bastos-06"]), "respuesta3"),
@@ -81,7 +81,7 @@ test("la flor con piezas nombra bien la sota y las cartas comunes", () => {
 });
 
 test("la tercera mano de envido dice el total", () => {
-  const ep = { ...envido, manos: [envido.manos[0], envido.manos[1], ["copas-05", "copas-11", "oros-03"]] } as Episodio;
+  const ep = { ...envido, manos: [envido.manos[0], envido.manos[1], ["copas-05", "copas-11", "oros-03"]] } as EpisodioTantos;
   assert.equal(texto(ep, "tercera"),
     "Cinco y caballo de copas, y tres de oros. Veinte por el palo, más cinco. El caballo de copas vale cero. El tres de oros queda afuera. En total, veinticinco.");
 });

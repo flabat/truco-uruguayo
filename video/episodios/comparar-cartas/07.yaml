@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "07"
+muestra: espadas-06
+gancho: "¿Cuándo es parda?"
+vueltas:
+  - [copas-01, oros-01]       # dos ases comunes: parda
+  - [bastos-01, copas-01]     # el as de bastos es mata
+  - [copas-12, bastos-12]     # dos reyes comunes: parda

@@ -74,15 +74,20 @@ test("la clave cambia si cambia el texto", () => {
 });
 
 test("leerEntorno toma el .env y deja que el entorno del proceso mande", () => {
+  // Nombres propios de la prueba: una ELEVENLABS_VOICE_ID exportada en la terminal no la altera.
+  const [soloArchivo, ambos] = ["TRUCO_PRUEBA_SOLO_ARCHIVO", "TRUCO_PRUEBA_AMBOS"];
   const raiz = mkdtempSync(path.join(tmpdir(), "repo-"));
-  writeFileSync(path.join(raiz, ".env"), "# comentario\nELEVENLABS_VOICE_ID=\"de-archivo\"\nOTRA=1\n");
-  const antes = process.env.OTRA;
-  process.env.OTRA = "del-proceso";
+  writeFileSync(path.join(raiz, ".env"), `# comentario\n${soloArchivo}="de-archivo"\n${ambos}=1\n`);
+  const antes = { [soloArchivo]: process.env[soloArchivo], [ambos]: process.env[ambos] };
+  delete process.env[soloArchivo];
+  process.env[ambos] = "del-proceso";
   try {
     const e = leerEntorno(raiz);
-    assert.equal(e.ELEVENLABS_VOICE_ID, "de-archivo");
-    assert.equal(e.OTRA, "del-proceso");
+    assert.equal(e[soloArchivo], "de-archivo");
+    assert.equal(e[ambos], "del-proceso");
   } finally {
-    if (antes === undefined) delete process.env.OTRA; else process.env.OTRA = antes;
+    for (const [nombre, valor] of Object.entries(antes)) {
+      if (valor === undefined) delete process.env[nombre]; else process.env[nombre] = valor;
+    }
   }
 });

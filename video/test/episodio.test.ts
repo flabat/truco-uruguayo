@@ -4,9 +4,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { familiasPorHabilidad } from "../../src/aprendizaje/generadores/familias.ts";
-import { generarMano, leerEpisodio, resolverManos, type Episodio } from "../src/lib/episodio.ts";
+import { generarMano, leerEpisodio, resolverManos, type EpisodioTantos } from "../src/lib/episodio.ts";
 
-const base: Episodio = {
+const base: EpisodioTantos = {
   plantilla: "contar-tantos", serie: "contar-envido", id: "03", modalidad: "envido", muestra: "espadas-03",
   gancho: "¿Cuánto tenés de envido?",
   manos: [["oros-05", "oros-07", "copas-02"], { cambio: { de: "oros-05", a: "espadas-05" } },
@@ -64,12 +64,12 @@ test("la misma semilla da la misma mano", () => {
 });
 
 test("rechaza una flor en un episodio de envido", () => {
-  const ep = { ...base, muestra: "bastos-06" as const, manos: [["copas-01", "copas-02", "copas-03"], { cambio: { de: "copas-01", a: "oros-01" } }, ["oros-04", "copas-07", "espadas-01"]] } as Episodio;
+  const ep = { ...base, muestra: "bastos-06" as const, manos: [["copas-01", "copas-02", "copas-03"], { cambio: { de: "copas-01", a: "oros-01" } }, ["oros-04", "copas-07", "espadas-01"]] } as EpisodioTantos;
   assert.throws(() => resolverManos(ep), /La mano 1 es flor, pero el episodio es de envido/);
 });
 
 test("una familia ajena a la modalidad lista las válidas", () => {
-  const ep = { ...base, modalidad: "flor", manos: [["oros-07", "oros-04", "oros-12"], { cambio: { de: "oros-12", a: "espadas-11" } }, { familia: "una-pieza", semilla: 1 }] } as Episodio;
+  const ep = { ...base, modalidad: "flor", manos: [["oros-07", "oros-04", "oros-12"], { cambio: { de: "oros-12", a: "espadas-11" } }, { familia: "una-pieza", semilla: 1 }] } as EpisodioTantos;
   assert.throws(() => resolverManos(ep), (e: Error) => /una-pieza/.test(e.message) && /dos-piezas/.test(e.message));
 });
 
@@ -86,11 +86,11 @@ test("toda familia de contar tantos se resuelve", () => {
 });
 
 test("un cambio con una carta ausente falla", () => {
-  const ep = { ...base, manos: [base.manos[0], { cambio: { de: "bastos-07", a: "espadas-05" } }, base.manos[2]] } as Episodio;
+  const ep = { ...base, manos: [base.manos[0], { cambio: { de: "bastos-07", a: "espadas-05" } }, base.manos[2]] } as EpisodioTantos;
   assert.throws(() => resolverManos(ep), /bastos-07/);
 });
 
 test("la segunda mano debe ser un cambio de la primera", () => {
-  const ep = { ...base, manos: [base.manos[0], ["oros-04", "copas-07", "espadas-01"], base.manos[2]] } as Episodio;
+  const ep = { ...base, manos: [base.manos[0], ["oros-04", "copas-07", "espadas-01"], base.manos[2]] } as EpisodioTantos;
   assert.throws(() => resolverManos(ep), /cambio/);
 });

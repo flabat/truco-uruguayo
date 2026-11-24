@@ -8,13 +8,12 @@ import { parseArgs } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { leerEntorno } from "../src/lib/entorno.ts";
-import { leerEpisodio, resolverManos, type Episodio, type Mano } from "../src/lib/episodio.ts";
+import { leerEpisodio } from "../src/lib/episodio.ts";
 import { armarLinea } from "../src/lib/linea.ts";
 import { generarVoz, importarVoz, type Voz } from "../src/lib/voz.ts";
 import { crearSobrescritura } from "../src/webpack.ts";
-import { guionContarTantos } from "../src/plantillas/contar-tantos/guion.ts";
 import { medirSalida, verificarSalida } from "./controles.ts";
-import { momentosDePrueba } from "./momentos.ts";
+import { preparar } from "./plantillas.ts";
 import { hojaDePrueba } from "./prueba.ts";
 
 const video = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -31,36 +30,11 @@ if (positionals.length !== 1) {
   process.exit(2);
 }
 
-function publicacion(ep: Episodio, manos: Mano[]): string {
-  const sinPrefijo = (c: string) => c.replace(/-0?(\d+)$/, " $1").replace(/^(\w+) (\d+)$/, "$2 de $1");
-  const descripcion = manos.map((m, i) => `Mano ${i + 1}: ${m.cartas.map(sinPrefijo).join(", ")}. Da ${m.tantos.total}.`).join(" ");
-  return `# ${ep.serie} ${ep.id}
-
-Borrador para publicar. Revisalo antes de subirlo.
-
-## Texto
-
-${ep.gancho} 🧉
-
-Contá las tres manos antes de que aparezca el resultado.
-
-Probá otra mano en eltru.co/aprender/ #TrucoUruguayo
-
-## Texto alternativo
-
-Lección de ${ep.modalidad} con la muestra ${sinPrefijo(ep.muestra)}. ${descripcion}
-
-## Enlace
-
-https://eltru.co/aprender/
-`;
-}
-
 async function principal() {
   const ruta = path.resolve(desde, positionals[0]);
   const ep = leerEpisodio(ruta);
-  const manos = resolverManos(ep);
-  const lineas = guionContarTantos(ep, manos);
+  const plantilla = preparar(ep);
+  const { lineas } = plantilla;
 
   let voz: Voz;
   if (values.importar) {
@@ -70,8 +44,8 @@ async function principal() {
     voz = await generarVoz(lineas, { raiz: video, entorno: leerEntorno(repo) });
   }
   const L = armarLinea(lineas, voz.palabras);
-  const lista = momentosDePrueba(L);
-  const props = { modalidad: ep.modalidad, muestra: ep.muestra, gancho: ep.gancho, manos, lineas, voz };
+  const lista = plantilla.momentos(L);
+  const props = { ...plantilla.props, lineas, voz };
   const preparado = path.join(video, "public", "preparado", `${ep.serie}-${ep.id}.json`);
   mkdirSync(path.dirname(preparado), { recursive: true });
   writeFileSync(preparado, JSON.stringify(props));
@@ -85,7 +59,7 @@ async function principal() {
 
   const salida = path.join(video, "salida", ep.serie, ep.id);
   mkdirSync(salida, { recursive: true });
-  const nombre = `Contar ${ep.modalidad} ${ep.id}`;
+  const { nombre } = plantilla;
   const mp4 = path.join(salida, nombre + ".mp4");
   const srt = path.join(salida, nombre + ".es.srt");
   let textoSrt = "";
@@ -93,7 +67,7 @@ async function principal() {
   console.log("Empaquetando…");
   const serveUrl = await bundle({ entryPoint: path.join(video, "src", "index.ts"), webpackOverride: crearSobrescritura(video),
     publicDir: path.join(video, "public") });
-  const composition = await selectComposition({ serveUrl, id: "ContarTantos", inputProps: props });
+  const composition = await selectComposition({ serveUrl, id: plantilla.composicion, inputProps: props });
   let ultimo = -1;
   await renderMedia({
     composition, serveUrl, codec: "h264", outputLocation: mp4, inputProps: props, scale: 3, imageFormat: "jpeg",
@@ -107,7 +81,7 @@ async function principal() {
   });
   process.stdout.write("\n");
 
-  const respuesta = lista.find(([id]) => id === "respuesta1") ?? lista[0];
+  const respuesta = lista.find(([id]) => id === plantilla.portada) ?? lista[0];
   await renderStill({ composition, serveUrl, inputProps: props, output: path.join(salida, "portada.jpg"),
     frame: Math.round(respuesta[1] * 30), scale: 3, imageFormat: "jpeg" });
   const temporal = mkdtempSync(path.join(tmpdir(), "prueba-"));
@@ -118,7 +92,7 @@ async function principal() {
     cuadros.push({ imagen, etiqueta: `${t.toFixed(1)} s · ${etiqueta}` });
   }
   await hojaDePrueba(cuadros, path.join(salida, "prueba.jpg"));
-  writeFileSync(path.join(salida, "publicacion.md"), publicacion(ep, manos));
+  writeFileSync(path.join(salida, "publicacion.md"), plantilla.publicacion);
 
   const problemas = verificarSalida(await medirSalida(mp4, video), { linea: L, lineas, srt: textoSrt });
   console.log(`Listo: ${path.relative(desde, salida)}`);

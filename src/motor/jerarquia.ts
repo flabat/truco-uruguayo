@@ -1,8 +1,8 @@
 import { pieza, rangoDe, rangosPieza, type CardId, type Rango } from "./cartas.ts";
 
 // De mayor a menor, como las cinco piezas en rangosPieza.
-const matas: readonly CardId[] = ["espadas-01", "bastos-01", "espadas-07", "oros-07"];
-const rangosComunes: readonly Rango[] = [3, 2, 1, 12, 11, 10, 7, 6, 5, 4];
+export const matas: readonly CardId[] = ["espadas-01", "bastos-01", "espadas-07", "oros-07"];
+export const rangosComunes: readonly Rango[] = [3, 2, 1, 12, 11, 10, 7, 6, 5, 4];
 
 function puesto(carta: CardId, muestra: CardId): number {
   const efectiva = pieza(carta, muestra);

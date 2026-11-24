@@ -1,7 +1,7 @@
 // Guion de «contar tantos»: el texto sale del resultado del motor, nunca de números escritos a mano.
 import { cartaId, paloDe, palos, pieza, rangoDe, rangos, type CardId, type Palo } from "../../../../src/motor/cartas.ts";
 import type { Aporte } from "../../../../src/motor/tantos.ts";
-import type { Episodio, Mano } from "../../lib/episodio.ts";
+import type { EpisodioTantos, Mano } from "../../lib/episodio.ts";
 import type { LineaGuion } from "../../lib/linea.ts";
 import { aPalabras, nombreHablado, numerosDichos, palabraDeRango } from "../../lib/numeros.ts";
 import { plano } from "../../lib/texto.ts";
@@ -10,7 +10,7 @@ const ids = {
   envido: ["pregunta", "cartas", "respuesta1", "cambio", "respuesta2", "tercera", "valores", "cierre"],
   flor: ["pregunta", "cartas", "respuesta1", "cambio", "respuesta2", "tercera", "respuesta3", "valores", "cierre"],
 } as const;
-const conPausa: Record<Episodio["modalidad"], readonly string[]> = {
+const conPausa: Record<EpisodioTantos["modalidad"], readonly string[]> = {
   envido: ["cartas", "cambio"],
   flor: ["cartas", "cambio", "tercera"],
 };
@@ -20,7 +20,7 @@ const manosDe: Record<string, number[]> = {
   cartas: [0], respuesta1: [0], cambio: [0, 1], respuesta2: [1], tercera: [2], respuesta3: [2],
 };
 
-export function idsContarTantos(modalidad: Episodio["modalidad"]): readonly string[] {
+export function idsContarTantos(modalidad: EpisodioTantos["modalidad"]): readonly string[] {
   return ids[modalidad];
 }
 
@@ -107,7 +107,7 @@ const menciones = new RegExp(`((?:${[...porRango.keys()].join("|")})(?: y (?:${[
  * Una línea reescrita a mano solo puede nombrar cartas que están en la mesa y decir números que el
  * motor da para su mano: el total, la base, lo que aporta cada carta o el valor de una carta.
  */
-function validarReescrita(id: string, texto: string, ep: Episodio, manos: Mano[]) {
+function validarReescrita(id: string, texto: string, ep: EpisodioTantos, manos: Mano[]) {
   const enMesa = new Set<CardId>([ep.muestra, ...manos.flatMap((m) => m.cartas)]);
   // En «cinco y siete de oros» las dos son cartas. En «ocho del cinco y seis de bastos» solo el seis:
   // un rango anterior que no está en la mesa vuelve al texto y se controla como número.
@@ -133,7 +133,7 @@ function validarReescrita(id: string, texto: string, ep: Episodio, manos: Mano[]
   }
 }
 
-export function guionContarTantos(ep: Episodio, manos: Mano[]): LineaGuion[] {
+export function guionContarTantos(ep: EpisodioTantos, manos: Mano[]): LineaGuion[] {
   const [primera, segunda, tercera] = manos;
   const { de, a } = segunda.cambio!;
   const envido = ep.modalidad === "envido";
