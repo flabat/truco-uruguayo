@@ -1,5 +1,6 @@
 import type { Format, PublicTurn } from "../../training/contracts/index.ts";
 import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "./mesa-online.ts";
+import type { IndicacionPie, VistaPie } from "./senas-pie.ts";
 import type { Asiento, Equipo } from "./reparto.ts";
 
 type FaseRepartida = "en-juego" | "reparto-cerrado" | "chico-terminado";
@@ -9,6 +10,12 @@ interface Contexto<Fase extends FaseRepartida | "sin-repartir"> {
 }
 
 interface Marcador {
+  versionSenas?: string | null;
+  pie?: VistaPie;
+  indicaciones?: readonly IndicacionPie[];
+  /** Sólo de presentación. Se fija al observar la apertura de esta vuelta en vivo. */
+  llegadaEnVivo?: boolean;
+  reconexion?: number;
   version: number;
   manoNumero: number;
   puntos: [number, number];
@@ -30,7 +37,6 @@ interface LanceSimple {
 
 export interface Partida extends Marcador {
   formato?: Format;
-  versionSenas?: string;
   turnos?: readonly PublicTurn[];
   contexto: Contexto<FaseRepartida>;
   lance: LanceSimple;

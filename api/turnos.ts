@@ -1,3 +1,4 @@
+import { versionSenasPie, type DestinoPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
 import { esCardId } from "../src/motor/cartas.ts";
 import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaParaPolitica,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "../src/motor/mesa-online.ts";
@@ -8,9 +9,16 @@ import type { FormatoMesa } from "./mesas.ts";
 import { ErrorPeticion } from "./http.ts";
 
 export type Confirmada = AccionOnline & { sena?: Signal };
-export interface ManoPublicable { estado: EstadoOnline; turnos: PublicTurn[] }
+export interface ManoPublicable {
+  estado: EstadoOnline;
+  turnos: PublicTurn[];
+  indicaciones?: IndicacionPie[];
+  pasesPie?: DestinoPie[];
+}
 export interface Registro {
   numero: number; version: number; version_reglas: number; version_senas: string | null;
+  indicaciones?: IndicacionPie[];
+  pases_pie?: DestinoPie[];
   reparto: RepartoOnline; puntos_inicio: [number, number]; acciones: Confirmada[];
 }
 
@@ -19,13 +27,13 @@ export function identificador(accion: Confirmada): ActionId {
   return accion.sena === undefined ? base : `${accion.sena}/${base}`;
 }
 
-export function leerAccion(datos: unknown, asiento: Asiento, formato: FormatoMesa): Confirmada {
+export function leerAccion(datos: unknown, asiento: Asiento, formato: FormatoMesa, alPie = false): Confirmada {
   if (!datos || typeof datos !== "object" || Array.isArray(datos) || !("tipo" in datos) || typeof datos.tipo !== "string") {
     throw new ErrorPeticion(400, "Falta la acción de juego.");
   }
   const claves = datos.tipo === "carta" ? ["tipo", "carta"] : ["tipo"];
   if ("sena" in datos) {
-    if (formato === "triples" || !hasSignals(formato) || !signals.includes(datos.sena as Signal)) throw new ErrorPeticion(400, "Seña no permitida.");
+    if (alPie || formato === "triples" || !hasSignals(formato) || !signals.includes(datos.sena as Signal)) throw new ErrorPeticion(400, "Seña no permitida.");
     claves.push("sena");
   }
   if (Object.keys(datos).length !== claves.length || !claves.every(k => Object.hasOwn(datos, k))
@@ -68,16 +76,22 @@ export function prepararTurno(mano: ManoPublicable, humanos: readonly number[]):
 }
 
 export function restaurar(fila: Registro, formato: Format, meta?: number, humanos?: readonly number[]): ManoPublicable {
-  if (fila.version_reglas !== versionReglasOnline || fila.version_senas !== signalVersionFor(formato)) {
+  const alPie = formato === "pairs-private-senas" && fila.version_senas === versionSenasPie;
+  if (fila.version_reglas !== versionReglasOnline || (!alPie && fila.version_senas !== signalVersionFor(formato))) {
     throw new ErrorPeticion(503, "Esta mesa requiere otra versión de las reglas.");
   }
   const inicial: ManoPublicable = {estado: iniciarOnline(fila.reparto, fila.puntos_inicio, meta), turnos: []};
   const mano = fila.acciones.reduce((previa, accion) => {
     // Las manos anteriores pueden tener una salida rival en este mismo punto.
     // Solo reconstruir la oportunidad si el registro contiene la intervención.
+    if (alPie && accion.sena !== undefined) throw new Error("Seña manual en un reparto con señas automáticas.");
     const enTurno = aDecidir(previa.estado).includes(accion.asiento);
     return confirmar(enTurno ? previa : prepararTurno(previa, []), formato, accion);
   }, inicial);
+  if (alPie) {
+    mano.indicaciones = fila.indicaciones ?? [];
+    mano.pasesPie = fila.pases_pie ?? [];
+  }
   return humanos ? prepararTurno(mano, humanos) : mano;
 }
 

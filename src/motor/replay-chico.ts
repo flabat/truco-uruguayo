@@ -1,4 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
+import { versionSenasPie, crearIndicacionPie, type IndicacionPie } from "./senas-pie.ts";
+import { esAsientoOnline } from "./reparto.ts";
 import { esMetaDeChico } from "./chico.ts";
 import type { Cobro, RepartoOnline } from "./mesa-online.ts";
 import type { Confirmada } from "../../api/turnos.ts";
@@ -49,6 +51,12 @@ export interface ReplayChicoV1 {
   eventos: readonly EventoChicoV1[];
 }
 
+export type ReplayChicoPie = Omit<ReplayChicoV1, "version" | "eventos"> & {
+  version: "chico-v2";
+  versionSenas: typeof versionSenasPie;
+  eventos: readonly (EventoChicoV1 | { secuencia: number; tipo: "indicacion"; indicacion: IndicacionPie })[];
+};
+
 function objeto(valor: unknown): valor is Record<string, unknown> {
   return typeof valor === "object" && valor !== null && !Array.isArray(valor);
 }
@@ -69,9 +77,12 @@ function esControlador(valor: unknown): valor is Controlador {
 }
 
 function leerCabecera(datos: unknown) {
-  if (!objeto(datos) || datos.version !== "chico-v1") throw new Error("Versión del replay de chico desconocida.");
+  if (!objeto(datos) || (datos.version !== "chico-v1" && datos.version !== "chico-v2")) throw new Error("Versión del replay de chico desconocida.");
   if (typeof datos.perfil !== "string" || !Object.hasOwn(perfiles, datos.perfil)) throw new Error("Perfil de reglas desconocido.");
   const perfil = datos.perfil as Perfil;
+  const alPie = datos.version === "chico-v2";
+  if (alPie ? datos.versionSenas !== versionSenasPie || (perfil !== "pairs-private-senas" && perfil !== "tercetos-v1")
+            : datos.versionSenas !== undefined) throw new Error("Versión de señas incompatible con el replay.");
   const reglas = perfiles[perfil];
   if (datos.variante !== reglas.variante || !objeto(datos.motor) || datos.motor.version !== reglas.motor) {
     throw new Error("Versión de motor o variante incompatible con el perfil.");
@@ -92,7 +103,7 @@ function leerCabecera(datos: unknown) {
       || ((c.par !== undefined || c.manga !== undefined) && !(typeof c.par === "number" && Number.isSafeInteger(c.par)
         && c.par >= 0 && (c.manga === 0 || c.manga === 1)))) throw new Error("Corrida de computadoras inválida.");
   } else if (datos.corrida !== undefined) throw new Error("El origen no corresponde a una corrida.");
-  return { id: datos.id, perfil, origen, meta: datos.meta, inicio: datos.inicio, asientos: datos.asientos, eventos: datos.eventos as unknown[] };
+  return { id: datos.id, perfil, alPie, origen, meta: datos.meta, inicio: datos.inicio, asientos: datos.asientos, eventos: datos.eventos as unknown[] };
 }
 
 function verificarBot(control: Controlador, bot: unknown) {
@@ -121,6 +132,7 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
   const humanos = cabecera.origen === "arena" ? undefined : asientos.flatMap((s, i) => s.tipo === "humano" ? [i] : []);
   let mano: Mano | undefined;
   let manoNumero = 0;
+  let indicaciones: IndicacionPie[] = [];
   let dadorAnterior: number | undefined;
   let puntos: Puntos = [0, 0];
   let cierre: "terminado" | "inconcluso" | undefined;
@@ -137,13 +149,23 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
         if (!objeto(e.reparto) || typeof e.reparto.dador !== "number"
           || (dadorAnterior !== undefined && e.reparto.dador !== (dadorAnterior + 1) % asientos.length)) throw new Error("Dador inválido.");
         manoNumero++;
+        indicaciones = [];
         mano = perfil === "gallo-sintetico-v1"
           ? { tipo: "gallo", valor: iniciarGallo(e.reparto, puntos, meta) }
           : { tipo: "online", valor: iniciarChicoOnline(perfil, e.reparto, puntos, meta, manoNumero, humanos) };
         dadorAnterior = e.reparto.dador;
+      } else if (e.tipo === "indicacion") {
+        const i = e.indicacion;
+        if (!cabecera.alPie || mano?.tipo !== "online" || !objeto(i) || !esAsientoOnline(i.emisor)) {
+          throw new Error("Indicación fuera de una mano con pie.");
+        }
+        const validada = crearIndicacionPie(mano.valor.motor, i.emisor, i.destinatario, i.frase, i.vuelta, indicaciones);
+        if (!validada || !isDeepStrictEqual(validada, i)) throw new Error("Indicación o posición inválida.");
+        indicaciones.push(validada);
       } else if (e.tipo === "decision") {
         if (!mano || !objeto(e.accion) || typeof e.accion.asiento !== "number" || !Number.isInteger(e.accion.asiento)
           || e.accion.asiento < 0 || e.accion.asiento >= asientos.length) throw new Error("Decisión sin reparto o asiento válido.");
+        if (cabecera.alPie && Object.hasOwn(e.accion, "sena")) throw new Error("La versión al pie genera los gestos automáticamente.");
         verificarBot(asientos[e.accion.asiento], e.bot);
         if (mano.tipo === "gallo") {
           if (e.duelo !== undefined) throw new Error("El gallo no lleva un índice de duelo.");
@@ -169,7 +191,7 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
     }
   }
   const ganador = puntos.indexOf(meta);
-  const vista = !mano ? null : mano.tipo === "gallo" ? vistaGallo(mano.valor, asiento) : vistaChicoOnline(mano.valor, asiento);
+  const vista = !mano ? null : mano.tipo === "gallo" ? vistaGallo(mano.valor, asiento) : vistaChicoOnline(mano.valor, asiento, cabecera.alPie ? indicaciones : undefined);
   return { id, secuencia: fin, manoNumero, meta, puntos, ganador: ganador < 0 ? null : ganador,
     estado: cierre ?? (ganador < 0 ? "en-juego" : "terminado"), vista };
 }

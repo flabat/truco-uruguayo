@@ -1,11 +1,14 @@
 import { countPublicHand, type PublicMove } from "../training/contracts/duel-memory.ts";
 import type {Pool, PoolClient} from "pg";
-import { aDecidir, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
+import { aDecidir, vistaOnline, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
 import { hasSignals, versions, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
+import { accionesPie, elegirAccionConPie, observacionPie, politicaPie } from "../src/motor/bot-pie.ts";
+import { versionSenasPie, vistaDelPie } from "../src/motor/senas-pie.ts";
+import { confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
 import { elegirAccionTercetos } from "../src/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
@@ -20,7 +23,7 @@ function actor(mano: ManoPublicable, humanos: readonly number[]) {
 
 export async function programarTurno(db: PoolClient, mesa: string, mano: ManoPublicable, humanos: readonly number[]) {
   if (actor(mano, humanos) === undefined) await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
-  else await db.query("INSERT INTO juego.turnos_bot VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);
+  else await db.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);
 }
 
 type Snapshot = {anteriores?: PublicMove[][]; mesa: string; politica: string; meta: number; humanos: Asiento[]};
@@ -34,12 +37,31 @@ async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) 
     ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
-    WHERE (m.cupo_exhibicion IS NOT NULL) = $2 AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null, exhibicion])).rows[0];
+    WHERE t.disponible_desde <= statement_timestamp() AND (m.cupo_exhibicion IS NOT NULL) = $2 AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null, exhibicion])).rows[0];
 }
 
 export interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }
 
 async function decidirTurno(fila: Fila, servicio: Inferencia) {
+  if (fila.version_senas === versionSenasPie) {
+    if (fila.politica !== politicaPie) throw new Error("La política no admite el contrato de señas al pie.");
+    const indicaciones = fila.indicaciones ?? [];
+    const mano: ManoPublicable = fila.modo === "3v3"
+      ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
+      : restaurar(fila, "pairs-private-senas", fila.meta, fila.humanos);
+    const asiento = actor(mano, fila.humanos);
+    if (asiento === undefined) return null;
+    const inicio = performance.now();
+    // Un bot activo ve sus cartas y recibe exactamente las mismas señas y palabras que ese asiento humano.
+    const vista = vistaOnline(mano.estado, asiento);
+    const accion = elegirAccionConPie(vista, vistaDelPie(mano.estado, asiento, indicaciones), indicaciones);
+    if (!accion) throw new Error("La computadora al pie no encontró una acción legal.");
+    const bot: DecisionBotV1 = { solicitada: politicaPie, aplicada: politicaPie, observacion: observacionPie,
+      acciones: accionesPie, latenciaMs: performance.now() - inicio };
+    return { asiento, bot, espera: (humanos: Asiento[]) => esperaDelPie(mano, humanos, accion) !== undefined,
+      actorActual: (humanos: Asiento[]) => actor(mano, humanos),
+      aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarJugadaPieDB(db, fila, mano, accion, humanos, bot) };
+  }
   if (fila.modo === "3v3") {
     if (fila.politica !== politicaTercetos) throw new Error("Política de tercetos desconocida.");
     const estado = restaurarTercetosDB(fila);
@@ -114,11 +136,17 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
     await db.query("SELECT id FROM juego.mesas WHERE id=$1 FOR UPDATE", [fila.mesa]);
     const actual = await snapshot(db, fila.mesa);
     if (!actual || actual.numero !== fila.numero || actual.version !== fila.version || actual.politica !== fila.politica
+      || actual.indicaciones?.length !== fila.indicaciones?.length || actual.pases_pie?.length !== fila.pases_pie?.length
       || turno.actorActual(actual.humanos) !== turno.asiento) {
       await db.query("ROLLBACK");
       return false;
     }
-    await aplicarInferencia(db, actual, turno);
+    // Un trabajo creado antes de la espera explícita puede haber quedado programado con el plazo anterior.
+    if (turno.espera?.(actual.humanos)) {
+      await db.query("UPDATE juego.turnos_bot SET disponible_desde='infinity' WHERE mesa=$1", [fila.mesa]);
+    } else {
+      await aplicarInferencia(db, actual, turno);
+    }
     await db.query("COMMIT");
   } catch (error) {
     await db.query("ROLLBACK");

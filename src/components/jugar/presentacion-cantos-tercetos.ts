@@ -46,7 +46,10 @@ function hastaLaAccion(actual: PartidaTercetos, lance: LanceTercetos, registro: 
   // Una referencia al resumen completo también expondría su resultado y el resto de sus acciones.
   const { tipo, duelo, activos } = lance;
   const visible: LanceTercetos = tipo === "redondilla" ? { tipo, duelo: null, activos } : { tipo, duelo, activos };
-  return { ...actual, contexto: { versionVista: 1, fase: "en-juego" }, lance: visible, vista, historialLances, puntos, ganadorPartida: null };
+  return { ...actual, contexto: { versionVista: 1, fase: "en-juego" }, lance: visible, vista, historialLances, puntos, ganadorPartida: null,
+    pie: previa?.pie?.vuelta === cerradas+1 ? previa.pie : undefined,
+    indicaciones: actual.indicaciones?.filter(d => d.indiceAccion <= indice),
+  };
 }
 
 function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercetos,

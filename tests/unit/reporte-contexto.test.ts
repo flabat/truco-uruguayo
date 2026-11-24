@@ -13,7 +13,7 @@ const mano = {
   version_reglas: 1, version_reparto: "online-1", regla_flor: "inmediata-v2", responden_sin_flor: null, tipo_reparto: null,
   mano: 0, dador: 1, computadoras: [false, true], cobros: [{ equipo: 0, tantos: 3, motivo: "flor" }],
   muestra: "bastos-01", puntos_inicio: [1, 0], puntos: [4, 0], build: "sha256:" + "a".repeat(64),
-  secuencia: "8", acciones: [flor],
+  secuencia: "8", acciones: [flor], indicaciones: [],
 };
 
 function lectura(actual: Record<string, unknown> | null, anteriores = [{ numero: 1, puntos_inicio: [0, 0] }]) {
@@ -116,4 +116,22 @@ test("una posición inexistente no genera un enlace ni consulta otro reparto", a
   const { db, parametros } = lectura(null);
   assert.equal(await prepararReporte(db, mesa, 0, cursor, web, reporte), null);
   assert.deepEqual(parametros, [[mesa, 2, 1]]);
+});
+
+test("dos indicaciones antes de la misma carta conservan el orden y la secuencia que vio el reportero", async () => {
+  const fila = { ...mano, modo: "3v3", acciones: [], indicaciones: [
+    { emisor: 4, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 },
+    { emisor: 4, destinatario: 2, frase: "juga", vuelta: 1, indiceAccion: 0 },
+  ] };
+  async function pantalla(cantidad: number) {
+    return prepararReporte(lectura(fila).db, mesa, 1, { ...cursor, posicion: 0, indicaciones: cantidad }, web, reporte);
+  }
+  for (const cantidad of [0, 1, 2]) {
+    const borrador = await pantalla(cantidad);
+    assert.equal(borrador?.secuencia, 8 + cantidad);
+    const texto = new URL(borrador!.url).searchParams.get("body")!;
+    assert.equal(texto.includes("A4 le dijo a A0 «Vení»"), cantidad >= 1);
+    assert.equal(texto.includes("A4 le dijo a A2 «Jugá»"), cantidad === 2);
+  }
+  assert.equal(await pantalla(3), null);
 });

@@ -1,5 +1,6 @@
 import { turnosDeEquipo } from "../../api/turnos.ts";
 import { signals, type PublicTurn, type Signal } from "../../training/contracts/index.ts";
+import { vistaDelPie, type IndicacionPie } from "./senas-pie.ts";
 import { esCardId } from "./cartas.ts";
 import {
   anticiparAnteFlor, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos,
@@ -82,10 +83,11 @@ export function decidirChicoOnline(previo: EstadoChicoOnline, entrada: unknown, 
   return { perfil, motor: siguiente, humanos, turnos, puntos: marcadorOnline(siguiente), cobros, terminada: siguiente.resultado !== null };
 }
 
-export function vistaChicoOnline({ motor, perfil, turnos }: EstadoChicoOnline, asiento: number) {
+export function vistaChicoOnline({ motor, perfil, turnos }: EstadoChicoOnline, asiento: number, indicaciones?: readonly IndicacionPie[]) {
   if (!esAsientoOnline(asiento) || asiento >= motor.mano.reparto.manos.length) throw new RangeError("Asiento fuera de la mesa.");
+  const comunicacion = indicaciones && { pie: vistaDelPie(motor, asiento, indicaciones), indicaciones };
   if (perfil === "tercetos-v1") {
-    return { ...vistaTercetos(motor, asiento), lance: motor.lance, historialLances: motor.historialLances };
+    return { ...comunicacion, ...vistaTercetos(motor, asiento), lance: motor.lance, historialLances: motor.historialLances };
   }
-  return { ...vistaOnline(motor, asiento), ...(perfil === "pairs-private-senas" && { turnos: turnosDeEquipo(turnos, asiento) }) };
+  return { ...vistaOnline(motor, asiento), ...comunicacion, ...(indicaciones === undefined && perfil === "pairs-private-senas" && { turnos: turnosDeEquipo(turnos, asiento) }) };
 }

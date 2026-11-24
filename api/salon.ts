@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
+import { versionSenasPie } from "../src/motor/senas-pie.ts";
 import { tableroEspectador } from "./tablero-espectador.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, responderJson } from "./http.ts";
@@ -123,9 +124,11 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
     if (!fila) return ausente();
     const mesa = resumen(fila);
     let actual = tableros.get(fila.id);
-    if (!actual || actual.version !== fila.version || actual.numero !== fila.numero) {
+    const indicaciones = fila.version_senas === versionSenasPie ? fila.registro.indicaciones : undefined;
+    if (!actual || actual.version !== fila.version || actual.numero !== fila.numero
+      || actual.tablero.indicaciones?.length !== indicaciones?.length) {
       const { estado } = restaurar(fila.registro, mesa.formato, fila.meta);
-      actual = { version: fila.version, numero: fila.numero, tablero: tableroEspectador(estado) };
+      actual = { version: fila.version, numero: fila.numero, tablero: tableroEspectador(estado, indicaciones) };
       if (!tableros.has(fila.id) && tableros.size >= 128) tableros.delete(tableros.keys().next().value!);
       tableros.set(fila.id, actual);
     }
