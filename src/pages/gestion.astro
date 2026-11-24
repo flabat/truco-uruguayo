@@ -1,5 +1,6 @@
 ---
 import Brand from "../components/Brand.astro";
+import { nombreSitio } from "../lib/marca";
 import Panel from "../components/gestion/Panel";
 import "@tabler/core/dist/css/tabler.min.css";
 import "@fontsource/dm-sans/latin-400.css";
@@ -7,6 +8,7 @@ import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-700.css";
 import "@fontsource/dm-serif-text/latin-400.css";
 import "../components/gestion/gestion.css";
+const titulo = `Administración · ${nombreSitio}`;
 ---
 <!doctype html>
 <html lang="es-UY">
@@ -15,8 +17,13 @@ import "../components/gestion/gestion.css";
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
+    <meta name="application-name" content={nombreSitio} />
+    <meta property="og:site_name" content={nombreSitio} />
+    <meta property="og:title" content={titulo} />
+    <meta name="twitter:title" content={titulo} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>Administración · Truco Oriental</title>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>{titulo}</title>
   </head>
   <body class="gestion">
     <a class="visually-hidden-focusable" href="#contenido">Saltar al contenido</a>
@@ -27,5 +34,8 @@ import "../components/gestion/gestion.css";
       <Panel client:load />
       <noscript>Activá JavaScript para consultar el panel.</noscript>
     </main>
+    <footer class="gestion-pie">
+      <div class="container-xl"><Brand /></div>
+    </footer>
   </body>
 </html>
