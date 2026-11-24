@@ -8,8 +8,11 @@
 !src/lib/
 !src/lib/cartas.ts
 !src/lib/cantos.ts
-!src/motor/
-!src/motor/*.ts
+!paquetes/
+!paquetes/motor/
+!paquetes/motor/package.json
+!paquetes/motor/src/
+!paquetes/motor/src/*.ts
 !training/
 !training/contracts/
 !training/contracts/*.ts
