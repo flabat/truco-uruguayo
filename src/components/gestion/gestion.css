@@ -17,6 +17,7 @@
 .gestion main { padding-bottom: 3rem; }
 .gestion-cabecera { background: #1e3c2c; color: #faf8ed; }
 .gestion-cabecera .container-xl { display: flex; align-items: center; gap: 1.2rem; min-height: 66px; }
+.gestion-pie { margin-top: 2rem; padding: 1rem 0 1.5rem; border-top: 1px solid rgba(30, 60, 44, .15); }
 .gestion .brand { display: inline-flex; align-items: center; gap: .55rem; font: 1.45rem "DM Serif Text", Georgia, serif; color: inherit; text-decoration: none; --brand-paper: #1e3c2c; }
 .gestion .brand svg { width: 26px; height: 31px; }
 .gestion-nombre { border-inline-start: 1px solid #6e8475; padding-inline-start: 1.2rem; color: #e0e8db; }
