@@ -1,3 +1,4 @@
+import { countPublicHand, type PublicMove } from "../training/contracts/duel-memory.ts";
 import type {Pool, PoolClient} from "pg";
 import { aDecidir, vistaOnline, vistaParaPolitica, vistaTercetos } from "../src/motor/mesa-online.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
@@ -25,10 +26,14 @@ export async function programarTurno(db: PoolClient, mesa: string, mano: ManoPub
   else await db.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);
 }
 
-type Snapshot = {mesa: string; politica: string; meta: number; humanos: Asiento[]};
+type Snapshot = {anteriores?: PublicMove[][]; mesa: string; politica: string; meta: number; humanos: Asiento[]};
 type Fila = Snapshot & ((Registro & {modo: "1v1" | "2v2"}) | (RegistroTercetos & {modo: "3v3"}));
 async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) {
   return (await db.query<Fila>(`SELECT h.*, m.politica, m.modo, m.meta,
+    CASE WHEN m.modo='1v1' AND EXISTS (SELECT 1 FROM juego.artefactos a
+      WHERE a.pin=m.politica AND a.contenido->>'memory'='opponent')
+    THEN ARRAY(SELECT anterior.acciones FROM juego.manos anterior
+      WHERE anterior.mesa=m.id AND anterior.numero<h.numero ORDER BY anterior.numero) END AS anteriores,
     ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
@@ -79,6 +84,11 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
   if (asiento === undefined) return null;
   const historial = formato === "pairs-senas" ? turnosDeEquipo(mano.turnos, asiento) : mano.turnos;
   const observacion = observe(mano.estado, asiento, formato, historial, vistaParaPolitica);
+  if (formato==="duel" && fila.anteriores) {
+    const counts = [Array(12).fill(0), Array(12).fill(0)];
+    for(const hand of fila.anteriores) countPublicHand(counts,hand);
+    Object.assign(observacion,{rivalCounts:counts[1-asiento]});
+  }
   const decision = await servicio.decide(fila.politica, hasSignals(formato)
     ? {...observacion, legalActions: signalRules.legalActions(observacion.legalActions as Move[])} : observacion);
   const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: decision.policy, observacion: observacion.schema, acciones: versions.actions,

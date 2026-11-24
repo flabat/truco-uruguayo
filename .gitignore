@@ -7,3 +7,7 @@ dist/
 test-results/
 
 /runs/
+
+# Claude Code (configuración y worktrees locales)
+.claude/settings.local.json
+.claude/worktrees/

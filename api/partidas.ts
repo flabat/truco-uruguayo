@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
+import { normalizarPartida } from "../src/motor/partida-jugador.ts";
 import type { Asiento } from "../src/motor/reparto.ts";
 import {
   iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
@@ -17,7 +18,7 @@ import {
 } from "./partidas-tercetos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
-import { hasSignals, seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
+import { seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
 import { decisionReplay, guardarDecisionesReplayDB, iniciarReplayDB, type DecisionReplay } from "./replay-db.ts";
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
@@ -72,9 +73,10 @@ function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, versi
   if (formato === "triples") return { ...proyectarTercetos(mano.estado, numero, version, asiento), ...pie };
   const puntos = marcadorOnline(mano.estado);
   const { meta } = mano.estado;
-  return { version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
-    ...pie, ...(!pie && hasSignals(formato) && {versionSenas: signalVersionFor(formato), turnos: turnosDeEquipo(mano.turnos, asiento)}),
-    vista: vistaOnline(mano.estado, asiento) };
+  const versionSenas = signalVersionFor(formato);
+  return normalizarPartida({ version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
+    ...pie, ...(!pie && versionSenas && {versionSenas, turnos: turnosDeEquipo(mano.turnos, asiento)}),
+    vista: vistaOnline(mano.estado, asiento) });
 }
 
 function asientosHumanos(mesa: VistaMesa) {
@@ -190,7 +192,8 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const comando = op && validar(op, datos, asiento, mesa.formato, alPie);
     if (!mesa.lista) {
       if (comando) throw new ErrorPeticion(409, "La mesa todavía tiene asientos libres.");
-      return { cambio: false, partida: { version: 0, formato: mesa.formato, manoNumero: 0, puntos: [0, 0], meta: mesa.meta, ganadorPartida: null, vista: null, ...(alPie && {versionSenas: versionSenasPie}) } };
+      return { cambio: false, partida: normalizarPartida({ version: 0, formato: mesa.formato, manoNumero: 0,
+        puntos: [0, 0], meta: mesa.meta, ganadorPartida: null, vista: null, ...(alPie && { versionSenas: versionSenasPie }) }) };
     }
     if (comando) {
       const { rows: [previo] } = await db.query(`SELECT respuesta, peticion = $4::jsonb AS coincide

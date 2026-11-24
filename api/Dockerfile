@@ -10,7 +10,7 @@ COPY training/contracts /app/training/contracts
 COPY training/seat /app/training/seat
 COPY training/anchored/actor.ts training/anchored/duel.ts training/anchored/partners.ts /app/training/anchored/
 COPY training/signals /app/training/signals
-COPY training/selfplay/learner.ts training/selfplay/team-mixture.ts training/selfplay/team-transfer.ts /app/training/selfplay/
+COPY training/selfplay/duel-card-odds.ts training/selfplay/learner.ts training/selfplay/team-mixture.ts training/selfplay/team-transfer.ts /app/training/selfplay/
 COPY training/duel/actor.ts training/duel/math.ts /app/training/duel/
 COPY training/partners/policy.ts /app/training/partners/
 USER node

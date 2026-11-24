@@ -130,13 +130,18 @@ async function probarMesa() {
   const leer = i => servicio.leer(id, jugadores[i]);
   const accion = (i, datos) => servicio.ejecutar(id, jugadores[i], "acciones", datos);
   await sentar(id, 0, jugadores[0]);
-  assert.equal((await leer(0)).vista, null);
+  const sinRepartir = await leer(0);
+  assert.equal(sinRepartir.vista, null);
+  assert.equal("lance" in sinRepartir, false);
+  assert.deepEqual(sinRepartir.contexto, { versionVista: 1, fase: "sin-repartir" });
   await assert.rejects(leer(1), { status: 404 });
   for (const i of [1, 2, 3]) await sentar(id, i, jugadores[i]);
   const vistas = await Promise.all([0, 1, 2, 3].map(leer));
   assert.ok(vistas.every(p => p.manoNumero === 1 && p.version === 1));
   assert.equal(new Set(vistas.flatMap(p => p.vista.cartas)).size, 12);
   for (const [i, p] of vistas.entries()) {
+    assert.deepEqual(p.lance, { tipo: "simple", duelo: null, activos: [0, 1, 2, 3] });
+    assert.deepEqual(p.contexto, { versionVista: 1, fase: "en-juego" });
     for (const [j, otra] of vistas.entries()) {
       if (i !== j) for (const carta of otra.vista.cartas) assert.ok(!JSON.stringify(p).includes(carta));
     }
@@ -173,6 +178,8 @@ async function probarMesa() {
     partida = await accion(turno, comando(propia.version, { tipo: "carta", carta: propia.vista.cartas[0] }));
   }
   assert.equal(partida.puntos.reduce((a, b) => a + b), 2);
+  assert.equal(partida.contexto.fase, "reparto-cerrado");
+  assert.ok(Array.isArray(partida.vista.cartas));
   const nueva = comando(partida.version);
   const siguiente = await servicio.ejecutar(id, jugadores[0], "siguiente", nueva);
   assert.equal(siguiente.manoNumero, 2);
@@ -214,6 +221,7 @@ async function probarComputadoras(modo, meta) {
     }
   }
   assert.equal(partida.puntos[partida.ganadorPartida], meta);
+  assert.equal(partida.contexto.fase, "chico-terminado");
   assert.deepEqual(await servicio.leer(id, jugadores[0]), partida);
   await assert.rejects(servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version)), { status: 409 });
   const replay = await replayDe(id);

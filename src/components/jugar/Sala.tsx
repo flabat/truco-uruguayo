@@ -247,13 +247,14 @@ function MesaAbierta({
   avisoInicial?: string;
   recienCreada?: boolean;
 }) {
-  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id, recienCreada);
+  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(id, recienCreada);
+  const recibida = lectura?.vista ? lectura : undefined;
   const encabezadoEspera = useRef<HTMLHeadingElement>(null);
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
   const esTerceto = recibida?.formato === "triples";
   const { tablero, partida: presentada, mostrandoCartas, voz } = usePresentacionVueltas(
-    esTerceto ? undefined : recibida, presencioReparto,
+    esTerceto ? undefined : recibida, presencioReparto, reconexion,
   );
   const partida = esTerceto ? recibida : presentada;
   const [ocupado, ocupar] = useState(false);
@@ -350,7 +351,7 @@ function MesaAbierta({
       {enJuego && partida ? (
         partida.formato === "triples" ? (
           <MesaDeTercetos base={base} mesa={mesa} partida={partida} {...estadoZona}
-            jugar={jugada} indicar={esPie ? indicar : undefined} presencioReparto={presencioReparto} />
+            jugar={jugada} indicar={esPie ? indicar : undefined} presencioReparto={presencioReparto} reconexion={reconexion} />
         ) : versionLegada && !esPie && !versionDesconocida ? (
           <MesaConSenas base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
         ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} indicar={esPie ? indicar : undefined} />

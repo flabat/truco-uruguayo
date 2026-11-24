@@ -43,6 +43,11 @@ async function mesa(cantidad, { alternativa = false, computadoras = [] } = {}) {
   const formato = tercetos ? "triples" : "pairs-private-senas";
   const m = await json(0, "/mesas", { modo: tercetos ? "3v3" : "2v2", meta: 50, formato, versionSenas, publica: !tercetos }, 201);
   assert.equal(m.versionSenas, versionSenas);
+  const sinRepartir = await json(0, "/mesas/" + m.id + "/partida");
+  assert.equal(sinRepartir.versionSenas, versionSenas);
+  assert.deepEqual(sinRepartir.contexto, { versionVista: 1, fase: "sin-repartir" });
+  assert.equal(sinRepartir.vista, null);
+  assert.equal("lance" in sinRepartir, false);
   const token = new URL(m.invitacion).searchParams.get("invitacion");
   for (let i = 1; i < cantidad; i++) {
     if (computadoras.includes(i)) await json(0, "/mesas/" + m.id + "/computadoras", { asiento: i });
@@ -91,7 +96,9 @@ async function indicacionEnVivo(id, pie, orden) {
     const recibo = await autor.recibir();
     assert.equal(recibo.tipo, "confirmacion");
     assert.equal(recibo.id, orden.id);
-    const refresco = await json(1, "/mesas/" + id + "/partida");
+    const ruta = "/mesas/" + id + "/partida";
+    assert.deepEqual(recibo.partida, await json(pie, ruta));
+    const refresco = await json(1, ruta);
     assert.deepEqual(refresco.indicaciones, recibo.partida.indicaciones);
     assert.deepEqual(recibo.partida.pie.grupos.map(g => g.emisor), [0]);
     assert.deepEqual(refresco.pie.grupos.map(g => g.emisor), [1]);
@@ -157,6 +164,9 @@ async function verificar(cantidad) {
   for (const asiento of asientos) {
     const p = await leer(asiento);
     const alterna = await json(asiento, "/mesas/" + otra + "/partida");
+    assert.equal(p.versionSenas, versionSenas);
+    assert.deepEqual(p.contexto, { versionVista: 1, fase: "en-juego" });
+    assert.deepEqual(p.lance, { tipo: cantidad === 6 ? "redondilla" : "simple", duelo: null, activos: asientos });
     const pie = asiento % 2 ? impar : par;
     assert.equal(p.pie.pie, pie);
     assert.deepEqual(p.pie.grupos.map(g => g.emisor), asiento === pie ? asientos.filter(i => i !== pie && i % 2 === pie % 2) : [asiento]);

@@ -23,6 +23,19 @@ function lectura(estado, asiento, version) {
   return proyectarTercetos(estado, estado.lance.tipo === "redondilla" ? 1 : 2, version, asiento);
 }
 
+const puestoDe = (page, asiento) => page.getByRole("group", { name: `Asiento ${asiento + 1} · ${nombres[asiento]}`, exact: true });
+
+async function comprobarDorsos(page, cantidades) {
+  for (const [asiento, cantidad] of cantidades.entries()) {
+    const mano = puestoDe(page, asiento).getByRole("img", { name: /cartas? en mano/i });
+    await expect(mano).toHaveCount(cantidad > 0 ? 1 : 0);
+    if (cantidad > 0) {
+      await expect(mano).toHaveAccessibleName(cantidad === 1 ? /^Una carta en mano/i : new RegExp("^" + cantidad + " cartas en mano"));
+      await expect(mano.locator('img[src$="/reverso.webp"]')).toHaveCount(cantidad);
+    }
+  }
+}
+
 test("la sala de tercetos ofrece cincuenta y guarda los seis asientos y la meta elegida", async ({ page }) => {
   let plazas = asientos.map((a, i) => i === 0 ? a : { ...a, nombre: null, tipo: "vacio" });
   let habilitado = false;
@@ -128,7 +141,10 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("group", { name: "Tus cartas" }).getByRole("button")).toHaveCount(3);
       return page;
     }));
-    for (const page of paginas) await comprobarMuestraDelDador(page, ejemplo.reparto.muestra);
+    for (const [yo, page] of paginas.entries()) {
+      await comprobarDorsos(page, asientos.map(a => a.asiento === yo ? 0 : 3));
+      await comprobarMuestraDelDador(page, ejemplo.reparto.muestra);
+    }
     for (const i of [0, 5]) {
       const puestos = paginas[i].getByRole("group", { name: "Los seis asientos" });
       await expect(puestos.getByRole("group", { name: /^Asiento / })).toHaveCount(6);
@@ -213,6 +229,7 @@ test("los seis invitados ven su turno y recuperan su lugar en el pico", async ({
       await expect(page.getByRole("link", { name: "Crear otra mesa" })).toBeVisible();
       await expect(page.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
     }
+    for (const page of paginas) await expect(page.getByRole("img", { name: /cartas? en mano/i })).toHaveCount(0);
     expect(confirmadas).toEqual(ejemplo.acciones);
     await expect(historia.getByRole("listitem")).toHaveText([
       "Diego dijo «Flor».", "Diego dijo «Contraflor al resto».", "Ana dijo «Quiero».",
@@ -269,6 +286,7 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await expect(reporte.locator("[name=fase]")).toHaveValue("resultado");
   await expect(reporte.locator("[name=posicion]")).toHaveValue(String(ejemplo.acciones.length));
   const envido = tapete.getByRole("figure", { name: "Envido ganador · 37 tantos" });
+  await expect(tapete.getByRole("img", { name: /cartas? en mano/i })).toHaveCount(0);
   await expect(flor.getByRole("img")).toHaveCount(3);
   await expect(flor).toContainText("Duelo 2");
   await expect(envido.getByRole("img")).toHaveCount(2);
@@ -284,14 +302,117 @@ test("un aviso que cierra dos duelos muestra sus cantos en orden y acredita ambo
   await expect(page.getByRole("region", { name: "Tantos de este reparto" })).toContainText("Tu equipo · +14 tantos");
 });
 
+async function abrirPresentacion(page, leer) {
+  await page.clock.install({ time: new Date("2026-01-01T12:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-01-01T12:01:00Z"));
+  let canal;
+  await page.routeWebSocket("**/vivo", s => { canal = s; });
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    const json = pathname === "/api/jugador" ? jugadores[0] : pathname.endsWith("/partida") ? leer() : crearSala(0);
+    return route.fulfill({ json });
+  });
+  await page.goto("jugar/?mesa=" + id);
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  await expect(tapete).toBeVisible();
+  await expect(page.getByText("Reconectando con tu mesa…")).toHaveCount(0);
+  return { tapete, actualizar: () => canal.send(JSON.stringify({ tipo: "actualizar" })),
+    desconectar: () => canal.close({ code: 1001, reason: "Corte de prueba" }) };
+}
+
+test("la parda que cierra un duelo precede al cobro y a la mano privada del siguiente", async ({ page, isMobile }) => {
+  if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  const reparto = structuredClone(ejemplo.reparto);
+  reparto.manos[2][2] = "copas-04";
+  reparto.manos[5][2] = "espadas-04";
+  let estado = iniciarOnline(reparto, [0, 0], 50, 2);
+  let version = 1;
+  function tirar(asiento, carta) {
+    const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta });
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  tirar(5, "bastos-01");
+  tirar(2, "oros-02");
+  tirar(2, "copas-04");
+  const descarga = Promise.withResolvers();
+  await page.route("**/img/cartas/tatu/espadas-04.webp", async route => {
+    await descarga.promise;
+    await route.continue();
+  });
+  const { tapete, actualizar } = await abrirPresentacion(page, () => lectura(estado, 0, version));
+  const mano = tapete.getByRole("group", { name: "Tus cartas" });
+  await expect(tapete.getByText(/Duelo 1 de 3 ·/)).toBeVisible();
+  tirar(5, "espadas-04");
+  actualizar();
+  await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
+  await page.clock.runFor(3000);
+  await expect(tapete.getByText("Parda", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "0"]);
+  await expect(mano).toHaveCount(0);
+
+  descarga.resolve();
+  await expect(tapete.getByText("Parda", { exact: true })).toBeVisible();
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["1", "0"]);
+  await expect(tapete.getByRole("status")).toContainText("La vuelta fue parda.");
+  await capturarTapete(page, "parda-del-pico");
+  await page.clock.runFor(1999);
+  await expect(mano).toHaveCount(0);
+  await expect(tapete.getByText(/Duelo 1 de 3 ·/)).toBeVisible();
+  await page.clock.runFor(1);
+  await expect(tapete.getByText(/Duelo 2 de 3 ·/)).toBeVisible();
+  await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
+  await expect(mano.getByRole("button")).toHaveCount(3);
+  await expect(tapete.getByRole("button", { name: "Flor", exact: true })).toBeEnabled();
+});
+
+test("la redondilla presenta las seis cartas y recupera directamente el retiro tras un corte", async ({ page }) => {
+  const reparto = structuredClone(ejemplo.reparto);
+  [reparto.manos[0][2], reparto.manos[3][2]] = [reparto.manos[3][2], reparto.manos[0][2]];
+  let estado = iniciarOnline(reparto, [0, 0], 50, 1);
+  let version = 1;
+  const { tapete, actualizar, desconectar } = await abrirPresentacion(page, () => lectura(estado, 0, version));
+  for (let n = 0; n < 6; n++) {
+    const asiento = estado.mano.turno;
+    const paso = aplicarOnline(estado, { tipo: "carta", asiento, carta: reparto.manos[asiento][0] });
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  actualizar();
+  const naipes = tapete.locator(".j-jugada img");
+  for (let n = 1; n < 6; n++) {
+    await expect(naipes).toHaveCount(n);
+    await expect.poll(() => naipes.evaluateAll(cartas => cartas.every(img => img.complete))).toBe(true);
+    await expect(tapete.getByText("Ganó Clara", { exact: true })).toHaveCount(0);
+    await page.clock.runFor(450);
+  }
+  await expect(naipes).toHaveCount(6);
+  await expect(tapete.getByText("Ganó Clara", { exact: true })).toBeVisible();
+  desconectar();
+  await expect(tapete.getByRole("heading", { name: /Reconectando/ })).toBeVisible();
+  const cierre = aplicarOnline(estado, { tipo: "mazo", asiento: estado.mano.turno });
+  expect(cierre.ok).toBe(true);
+  estado = cierre.estado;
+  version++;
+  await page.clock.runFor(400);
+  await expect(tapete.getByRole("heading", { name: "Reparto terminado" })).toBeVisible();
+  await expect(tapete.getByRole("status")).toContainText("El cierre fue por el retiro al mazo.");
+  await expect(naipes).toHaveCount(0);
+  await expect(tapete.getByText("Ganó Clara", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".j-tanteador strong")).toHaveText(["0", "1"]);
+});
+
 test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ page, isMobile }) => {
   if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
+  let yo = 4;
   let estado = iniciarOnline(ejemplo.reparto, [0, 0], 50, ejemplo.numero);
   await page.routeWebSocket("**/vivo", () => {});
   await page.route("**/api/**", route => {
     const { pathname } = new URL(route.request().url());
-    const json = pathname === "/api/jugador" ? jugadores[4] : pathname.endsWith("/partida")
-      ? lectura(estado, 4, estado.lance.duelo) : crearSala(4);
+    const json = pathname === "/api/jugador" ? jugadores[yo] : pathname.endsWith("/partida")
+      ? lectura(estado, yo, estado.lance.duelo) : crearSala(yo);
     return route.fulfill({ json });
   });
 
@@ -307,6 +428,7 @@ test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ p
   const activas = tapete.locator('[data-activo="true"] .j-persona b');
   const acciones = ejemplo.acciones.map(({ duelo, ...accion }) => accion);
   for (const [i, activos] of [["Clara", "Félix"], ["Ana", "Diego"], ["Bruno", "Elena"]].entries()) {
+    yo = 4;
     if (i === 0) await page.goto("jugar/?mesa=" + id);
     if (i === 1) { aplicar(acciones.slice(0, 3)); await page.reload(); }
     if (i === 2) { aplicar([...acciones.slice(3), { tipo: "mazo", asiento: 0 }]); await page.reload(); }
@@ -317,6 +439,19 @@ test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ p
     await expect(dador).toHaveClass(/j-vos/);
     await expect(dador.getByRole("img", { name: /^Muestra / })).toHaveCount(1);
     await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(i === 2 ? 1 : 0);
+    for (const asiento of [0, 1, 2, 3, 5, 4]) {
+      yo = asiento;
+      await page.reload();
+      await expect(puestoDe(page, yo)).toContainText("Vos");
+      const duelos = [2, 3, 1, 2, 3, 1];
+      for (const [otro, duelo] of duelos.entries()) {
+        await expect(puestoDe(page, otro)).toContainText(duelo < i + 1 ? "Ya jugó"
+          : duelo === i + 1 ? "En duelo" : "Espera el duelo " + duelo);
+      }
+      await comprobarDorsos(page, duelos.map((duelo, otro) =>
+        duelo < i + 1 || (duelo === i + 1 && otro === yo) ? 0 : 3));
+      await expect(tapete.getByRole("group", { name: "Tus cartas" })).toHaveCount(duelos[yo] === i + 1 ? 1 : 0);
+    }
     if (i === 2) {
       await capturarTapete(page, "tercetos");
       const anterior = page.getByRole("region", { name: "Historial del reparto" }).locator("summary").first();
@@ -330,4 +465,83 @@ test("el mazo sigue con el dador en los tres duelos del pico a pico", async ({ p
       await expect(activas).toHaveText(activos);
     }
   }
+});
+
+test("Ana responde al truco inicial con cinco manos boca abajo y ve las cartas de cada duelo hasta el cierre", async ({ page, isMobile }) => {
+  await page.setViewportSize({ width: isMobile ? 320 : 1280, height: 800 });
+  const reparto = {
+    ...ejemplo.reparto, mano: 3, dador: 2, muestra: "espadas-02",
+    manos: [
+      ["copas-12", "oros-05", "bastos-07"], ["oros-03", "copas-01", "bastos-06"], ["oros-02", "espadas-06", "copas-04"],
+      ["bastos-01", "espadas-12", "copas-05"], ["espadas-11", "copas-06", "oros-01"], ["bastos-02", "bastos-03", "bastos-04"],
+    ],
+  };
+  let estado = iniciarOnline(reparto, [0, 0], 26, 2);
+  let version = 1;
+  function aplicar(accion) {
+    const paso = aplicarOnline(estado, accion);
+    expect(paso.ok).toBe(true);
+    estado = paso.estado;
+    version++;
+  }
+  aplicar({ asiento: 3, tipo: "truco" });
+  await page.routeWebSocket("**/vivo", () => {});
+  await page.route("**/api/**", route => {
+    const { pathname } = new URL(route.request().url());
+    if (pathname.endsWith("/acciones")) {
+      const envio = route.request().postDataJSON();
+      expect(envio.accion).toEqual({ tipo: "no-quiero" });
+      expect(envio.version).toBe(version);
+      aplicar({ ...envio.accion, asiento: 0 });
+      return route.fulfill({ json: lectura(estado, 0, version) });
+    }
+    const json = pathname === "/api/jugador" ? jugadores[0] : pathname.endsWith("/partida")
+      ? lectura(estado, 0, version) : crearSala(0);
+    return route.fulfill({ json });
+  });
+  await page.goto("jugar/?mesa=" + id);
+  const mano = page.getByRole("group", { name: "Tus cartas" });
+  const tapete = page.getByRole("region", { name: "Tapete" });
+  await expect(tapete.getByRole("heading", { name: "Podés responder" })).toBeVisible();
+  await comprobarDorsos(page, [0, 3, 3, 3, 3, 3]);
+  await expect(mano.locator("img")).toHaveCount(3);
+  for (const asiento of [3, 0]) await expect(puestoDe(page, asiento)).toContainText("En duelo");
+  for (const asiento of [4, 1]) await expect(puestoDe(page, asiento)).toContainText("Espera el duelo 2");
+  for (const asiento of [5, 2]) await expect(puestoDe(page, asiento)).toContainText("Espera el duelo 3");
+  await capturarTapete(page, "tercetos-truco-inicial");
+  await page.getByRole("button", { name: "No quiero", exact: true }).press("Enter");
+  await expect(tapete.getByText("Ya jugaste tu duelo. Esperá el próximo reparto.")).toBeVisible();
+  await expect(mano).toHaveCount(0);
+  await comprobarDorsos(page, [0, 3, 3, 0, 3, 3]);
+  await page.reload();
+  await comprobarDorsos(page, [0, 3, 3, 0, 3, 3]);
+  await comprobarMuestraDelDador(page, reparto.muestra);
+  await capturarTapete(page, "tercetos-cambio-de-duelo");
+
+  aplicar({ asiento: 4, tipo: "envido" });
+  aplicar({ asiento: 1, tipo: "quiero" });
+  aplicar({ asiento: 4, tipo: "carta", carta: "copas-06" });
+  await page.reload();
+  await expect(puestoDe(page, 4).getByRole("img", { name: "6 de copas", exact: true })).toBeVisible();
+  await comprobarDorsos(page, [0, 3, 3, 0, 0, 3]);
+  aplicar({ asiento: 1, tipo: "carta", carta: "oros-03" });
+  aplicar({ asiento: 1, tipo: "carta", carta: "copas-01" });
+  await page.reload();
+  await comprobarDorsos(page, [0, 0, 3, 0, 2, 3]);
+  aplicar({ asiento: 4, tipo: "carta", carta: "espadas-11" });
+  aplicar({ asiento: 4, tipo: "carta", carta: "oros-01" });
+  await page.reload();
+  await comprobarDorsos(page, [0, 1, 3, 0, 0, 3]);
+  aplicar({ asiento: 1, tipo: "carta", carta: "bastos-06" });
+  await page.reload();
+  await comprobarDorsos(page, [0, 0, 3, 0, 0, 3]);
+  await expect(tapete.getByRole("figure")).toHaveCount(0);
+  aplicar({ asiento: 5, tipo: "flor" });
+  aplicar({ asiento: 2, tipo: "paso-flor" });
+  aplicar({ asiento: 5, tipo: "mazo" });
+  await page.reload();
+  await expect(tapete.getByRole("figure", { name: "Envido ganador · 33 tantos" })).toContainText("Duelo 2");
+  await comprobarDorsos(page, [0, 0, 0, 0, 0, 0]);
+  await expect(mano).toHaveCount(0);
+  await capturarTapete(page, "tercetos-cierre-del-pico");
 });
