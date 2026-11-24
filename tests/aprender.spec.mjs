@@ -3,7 +3,7 @@ import { temas } from "../src/aprendizaje/lecciones/index.ts";
 import { claveSituacion } from "../src/aprendizaje/generadores/index.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
 import { explicarSituacion } from "../src/aprendizaje/generadores/evaluacion.ts";
-import { paloDe } from "../src/motor/cartas.ts";
+import { paloDe } from "@eltruco/motor/cartas.ts";
 
 // Solo fijamos la fuente de semillas. Cada mano pasa por el generador, la sesión y el evaluador reales.
 async function semillas(page, ...valores) {

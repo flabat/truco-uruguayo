@@ -32,4 +32,4 @@ Una definición TypeScript identifica la lección, la habilidad, las familias de
 
 Un banco de preguntas escritas a mano facilita el control editorial y resulta útil para ejemplos guiados. La generación por familias añade variedad y permite corregir con la misma regla que se usa en la mesa. Un lenguaje de autoría independiente permitiría incorporar editores externos, con un coste de validación y mantenimiento. Para la primera ruta, una definición tipada permite revisar cada lección y sus pruebas en el mismo PR.
 
-El progreso local permite usar la práctica en GitHub Pages. Se conserva en ese navegador y dispositivo. Un nuevo dispositivo empieza sin historial. Las sesiones se prueban con un generador y un almacenamiento inyectables para comprobar pistas, avance y recuperación sin depender del navegador.
+Quien practica como invitado conserva su progreso en el mismo navegador y dispositivo. Un nuevo dispositivo empieza sin historial. Las sesiones se prueban con un generador y un almacenamiento inyectables para comprobar pistas, avance y recuperación sin depender del navegador.

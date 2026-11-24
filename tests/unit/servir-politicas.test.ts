@@ -68,3 +68,27 @@ test("los lectores exportados sirven chicos completos desde la misma vista y sim
     } finally { await service.close(); }
   }
 });
+
+test("un plazo vencido mientras arranca el worker no deja el resto del chico en el respaldo", async () => {
+  const actor = exportActor(initialize("pairs",7,1,.01,1,"cpu"));
+  const pin = artifactPin(actor);
+  async function chico(loadGraceMs?: number) {
+    // El plazo cubre una inferencia caliente, pero no el arranque del hilo ni la carga del artefacto.
+    const serving = createServing({loadArtifact:async () => actor,deadlineMs:10,loadGraceMs});
+    const fallbacks: (string | null)[] = [];
+    try {
+      await playMatchAsync({format:"pairs",seed:5,pair:1,leg:0,responders: () => async(obs, uniform) => {
+        const move = await serving.decide(pin, obs, uniform);
+        fallbacks.push(move.fallback);
+        return move.action;
+      }});
+    } finally { await serving.close(); }
+    assert.ok(fallbacks.length > 20);
+    assert.ok(fallbacks.every(f => f === null || f === "timeout"));
+    return fallbacks;
+  }
+  const conMargen = await chico();
+  assert.ok(conMargen.filter(f => f === null).length > conMargen.length / 2, JSON.stringify(conMargen));
+  // Sin margen, cada vencimiento termina el worker que arranca y el chico entero queda en el respaldo.
+  assert.ok((await chico(0)).every(f => f === "timeout"));
+});

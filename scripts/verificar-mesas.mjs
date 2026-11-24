@@ -1,8 +1,10 @@
 // Desde el contenedor de la API y sobre la base descartable de check:stack.
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { randomBytes, createHash } from "node:crypto";
 import pg from "pg";
-import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
+import { versionReglasOnline, versionReglasTercetos } from "@eltruco/motor/mesa-online.ts";
+import { initial } from "../training/anchored/actor.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
@@ -39,6 +41,69 @@ async function crear(p, modo, meta, publica) {
   assert.equal(r.datos.versionReglas, modo === "3v3" ? versionReglasTercetos : versionReglasOnline);
   assert.equal(r.datos.politica, modo === "3v3" ? "tercetos-basica-v1" : "incumbent-online-v1");
   return r.datos;
+}
+
+async function verificarPublicaciones(persona) {
+  const modelo = initial("duel");
+  const registrar = actor => execFileSync(process.execPath, ["policyctl.ts", "register", "duel"],
+    { input: JSON.stringify(actor), encoding: "utf8" }).trim();
+  const politica = (...args) => execFileSync(process.execPath, ["policyctl.ts", ...args], { encoding: "utf8" }).trim();
+  const primero = registrar(modelo);
+  const segundo = registrar({ ...modelo, bands: ["balanced", "v1", "v1"] });
+  const publicados = () => pool.query("SELECT pin FROM juego.publicaciones_modelo WHERE pin=ANY($1::text[])", [[primero, segundo]]);
+  const diaUruguayo = async () => (await pool.query("SELECT to_char(now() AT TIME ZONE 'America/Montevideo','YYYY-MM-DD') AS dia")).rows[0].dia;
+  const nuevaMesa = async () => {
+    const respuesta = await llamar(persona, "POST", "/api/mesas", { modo: "1v1" });
+    assert.equal(respuesta.estado, 201);
+    return respuesta.datos;
+  };
+  const releer = async mesa => {
+    const respuesta = await llamar(persona, "GET", "/api/mesas/" + mesa.id);
+    assert.equal(respuesta.estado, 200);
+    assert.equal(respuesta.datos.politica, mesa.politica);
+    assert.deepEqual(respuesta.datos.edicionModelo, mesa.edicionModelo);
+  };
+  assert.notEqual(primero, segundo);
+  assert.equal((await publicados()).rowCount, 0);
+  const inicio = await diaUruguayo();
+  assert.equal(politica("activate", "duel", primero), primero);
+  const anterior = await nuevaMesa();
+  assert.equal(anterior.politica, primero);
+  assert.equal(anterior.edicionModelo.nombre, "Duelo 2");
+  assert.ok([inicio, await diaUruguayo()].includes(anterior.edicionModelo.publicado));
+
+  const db = await pool.connect();
+  const cambiar = "UPDATE juego.activaciones SET pin=$1 WHERE formato='duel'";
+  try {
+    await db.query("BEGIN");
+    await db.query(cambiar, [segundo]);
+    assert.equal((await db.query("SELECT pin FROM juego.publicaciones_modelo WHERE pin=$1", [segundo])).rowCount, 1);
+  } finally {
+    await db.query("ROLLBACK");
+    db.release();
+  }
+  assert.deepEqual((await publicados()).rows, [{ pin: primero }]);
+  await Promise.all([pool.query(cambiar, [segundo]), pool.query(cambiar, [segundo])]);
+  const siguiente = await nuevaMesa();
+  assert.equal(siguiente.politica, segundo);
+  assert.equal(siguiente.edicionModelo.nombre, "Duelo 3");
+  assert.ok([inicio, await diaUruguayo()].includes(siguiente.edicionModelo.publicado));
+  await releer(anterior);
+
+  politica("rollback", "duel");
+  assert.equal((await nuevaMesa()).politica, "incumbent-online-v1");
+  await releer(siguiente);
+  // Simula que la primera edición se publicó un día antes de la reactivación.
+  const { rows: [publicacionAnterior] } = await pool.query(`UPDATE juego.publicaciones_modelo
+    SET publicada_el=publicada_el - 1 WHERE pin=$1 RETURNING publicada_el::text AS fecha`, [primero]);
+  anterior.edicionModelo.publicado = publicacionAnterior.fecha;
+  politica("activate", "duel", primero);
+  politica("activate", "duel", primero);
+  assert.equal((await publicados()).rowCount, 2);
+  assert.deepEqual((await nuevaMesa()).edicionModelo, anterior.edicionModelo);
+  await releer(anterior);
+  politica("rollback", "duel");
+  console.log("Registrados, publicados por CLI y SQL, revertidos y reactivados dos modelos con sus mesas y ediciones originales.");
 }
 
 try {
@@ -135,6 +200,7 @@ try {
     assert.equal(partida.datos.manoNumero, 1);
     assert.equal(await listada(), 1);
     console.log("Mesas de 2 y 4: invitación, carreras, reingreso y computadoras verificados.");
+    await verificarPublicaciones(ana);
   }
 } finally {
   await pool.end();

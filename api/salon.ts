@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { tableroEspectador } from "./tablero-espectador.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, responderJson } from "./http.ts";
@@ -25,6 +26,14 @@ interface Fila {
   numero: number;
   puntos: [number, number];
   computadoras: boolean[];
+}
+
+interface FilaDetalle extends Fila {
+  registro: Registro;
+  version: number;
+  politica: string;
+  nombre_modelo: string | null;
+  fecha_modelo: string | null;
 }
 
 // El evento en la posición exacta certifica el tanteador de esta versión de la mano.
@@ -105,16 +114,21 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
         return responderJson(res, error.status, { error: error.message });
       }
     }
-    const { rows: [fila] } = await pool.query<Fila & { registro: Registro; version: number }>(`
-      SELECT ${columnas}, h.registro, h.version FROM juego.mesas m ${manoActual(true)}
+    const { rows: [fila] } = await pool.query<FilaDetalle>(`
+      SELECT ${columnas}, h.registro, h.version, m.politica,
+        p.nombre AS nombre_modelo, to_char(p.publicada_el, 'YYYY-MM-DD') AS fecha_modelo
+      FROM juego.mesas m ${manoActual(true)}
+      LEFT JOIN juego.publicaciones_modelo p ON p.pin = m.politica
       WHERE m.id=$1 AND (${disponibleParaVoz}
         OR (m.publica AND m.exhibicion_retirada AND m.ultimo_hecho_publico IS NOT NULL AND m.fin_publico IS NULL))`, [id]);
     if (!fila) return ausente();
     const mesa = resumen(fila);
     let actual = tableros.get(fila.id);
-    if (!actual || actual.version !== fila.version || actual.numero !== fila.numero) {
+    const indicaciones = fila.version_senas === versionSenasPie ? fila.registro.indicaciones : undefined;
+    if (!actual || actual.version !== fila.version || actual.numero !== fila.numero
+      || actual.tablero.indicaciones?.length !== indicaciones?.length) {
       const { estado } = restaurar(fila.registro, mesa.formato, fila.meta);
-      actual = { version: fila.version, numero: fila.numero, tablero: tableroEspectador(estado) };
+      actual = { version: fila.version, numero: fila.numero, tablero: tableroEspectador(estado, indicaciones) };
       if (!tableros.has(fila.id) && tableros.size >= 128) tableros.delete(tableros.keys().next().value!);
       tableros.set(fila.id, actual);
     }
@@ -123,6 +137,10 @@ export function crearSalon(pool: Pool, habilitado: boolean, web: URL, voz?: Retu
       nombre: (cpu ? "Computadora " : "Jugador ") + (asiento + 1),
     }));
     const estado = fila.fin_publico ? "terminada" : fila.exhibicion_retirada ? "interrumpida" : "en-juego";
-    responderVista(req, res, { ...mesa, asientos, estado, vozDisponible: Boolean(voz) && estado !== "interrumpida", tablero: actual.tablero });
+    responderVista(req, res, {
+      ...mesa, asientos, estado, versionReglas: fila.registro.version_reglas, politica: fila.politica,
+      edicionModelo: fila.nombre_modelo == null ? undefined : { nombre: fila.nombre_modelo, publicado: fila.fecha_modelo },
+      vozDisponible: Boolean(voz) && estado !== "interrumpida", tablero: actual.tablero,
+    });
   };
 }

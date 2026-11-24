@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { tableroEspectador } from "../../api/tablero-espectador.ts";
 import { restaurar, type Registro } from "../../api/turnos.ts";
-import { vistaOnline } from "../../src/motor/mesa-online.ts";
+import { vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { dueloFlor, dueloMazo } from "../fixtures/duelo-mazo.ts";
 
 test("el cierre por mazo conserva la flor pública sin revelar las cartas que prueban los tantos", () => {
@@ -36,4 +36,16 @@ test("el envido que cierra el chico muestra los tantos y ninguna carta de la man
   assert.equal(tablero.resultado?.motivo, "envido");
   assert.equal(tablero.cobros[0].tantos, 2);
   for (const oculta of fila.reparto.manos.flat()) assert.ok(!JSON.stringify(tablero).includes(oculta));
+});
+
+test("el espectador ve la respuesta de la computadora en los repartos que la hacen pública", () => {
+  const acciones = dueloFlor.acciones.slice(0, 2);
+  const historico = restaurar({ ...dueloFlor, acciones }, "duel", 40);
+  assert.deepEqual(tableroEspectador(historico.estado).acciones, acciones.slice(0, 1));
+
+  const reparto = { ...dueloFlor.reparto, reglaFlor: "inmediata-v2", respondenSinFlor: [1] } as const;
+  const actual = restaurar({ ...dueloFlor, reparto, acciones }, "duel", 40);
+  const tablero = tableroEspectador(actual.estado);
+  assert.deepEqual(tablero.acciones, acciones);
+  assert.deepEqual(tablero.cobros.map(c => c.tantos), [3]);
 });

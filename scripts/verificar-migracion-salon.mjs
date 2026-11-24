@@ -33,9 +33,27 @@ try {
   const invitados = () => db.query(`SELECT m.id, m.invitacion, a.asiento, a.jugador, a.computadora FROM juego.mesas m
     JOIN juego.asientos a ON a.mesa=m.id ORDER BY m.id, a.asiento`).then(r => r.rows);
   const anteriores = await invitados();
+  const activoHistorico = "a".repeat(64), usadoEnMesa = "b".repeat(64), soloEnEnsayo = "c".repeat(64);
+  await db.query("INSERT INTO juego.artefactos VALUES ($1,'pairs','{}'),($2,'pairs','{}'),($3,'pairs','{}')",
+    [activoHistorico, usadoEnMesa, soloEnEnsayo]);
+  await db.query("INSERT INTO juego.activaciones VALUES ('pairs',$1)", [activoHistorico]);
+  await db.query("UPDATE juego.mesas SET politica=CASE WHEN solo_computadoras THEN $1 ELSE $2 END WHERE modo='2v2'",
+    [soloEnEnsayo, usadoEnMesa]);
   const pool = new pg.Pool({ connectionString: url.href });
   try { await migrate(pool); await migrate(pool); } finally { await pool.end(); }
   assert.deepEqual(await invitados(), anteriores);
+  const publicacion = async pin => (await db.query(
+    "SELECT nombre, publicada_el::text AS fecha FROM juego.publicaciones_modelo WHERE pin=$1", [pin])).rows[0];
+  assert.equal((await publicacion(activoHistorico)).fecha, null);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [usadoEnMesa]);
+  assert.equal((await publicacion(usadoEnMesa)).fecha, null);
+  assert.equal(await publicacion(soloEnEnsayo), undefined);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [soloEnEnsayo]);
+  assert.equal((await publicacion(soloEnEnsayo)).nombre, "Parejas 2");
+  const ceibo = "6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2";
+  await db.query("INSERT INTO juego.artefactos VALUES ($1,'pairs','{}')", [ceibo]);
+  await db.query("UPDATE juego.activaciones SET pin=$1 WHERE formato='pairs'", [ceibo]);
+  assert.deepEqual(await publicacion(ceibo), { nombre: "Ceibo Parejas", fecha: "2026-11-20" });
   assert.equal((await db.query("SELECT id FROM juego.mesas WHERE publica OR origen <> CASE WHEN solo_computadoras THEN 'ensayo' ELSE 'humana' END")).rowCount, 0);
   assert.equal((await db.query("SELECT id FROM juego.mesas_en_juego")).rowCount, 0);
   assert.equal((await db.query("SELECT numero FROM juego.cupos_exhibicion")).rowCount, 10);
@@ -46,8 +64,8 @@ try {
   assert.equal(mesa.origen, "exhibicion");
   await assert.rejects(alta, { code: "23505" });
   const visible = () => db.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [mesa.id]).then(r => r.rowCount);
-  const evento = (pos, dato) => db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
-    VALUES ($1,1,$2,$2::integer+1,$3,'prueba')`, [mesa.id, pos, dato]);
+  const evento = (pos, dato, id = mesa.id) => db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
+    VALUES ($1,1,$2,$2::integer+1,$3,'prueba')`, [id, pos, dato]);
   assert.equal(await visible(), 0);
   await evento(0, { tipo: "reparto" });
   assert.equal(await visible(), 1);
@@ -63,7 +81,13 @@ try {
   await evento(3, { tipo: "cierre", fecha: new Date().toISOString() });
   assert.equal(await visible(), 0);
   assert.ok((await db.query("SELECT fin_publico FROM juego.mesas WHERE id=$1", [mesa.id])).rows[0].fin_publico);
-  assert.notEqual((await alta()).id, mesa.id);
+  const nueva = await alta();
+  assert.notEqual(nueva.id, mesa.id);
+  await evento(0, { tipo: "reparto", reparto: { respondenSinFlor: [1] } }, nueva.id);
+  await evento(1, { tipo: "decision", accion: { tipo: "flor", asiento: 0 } }, nueva.id);
+  await db.query("UPDATE juego.mesas SET ultimo_hecho_publico=now()-interval '61 seconds' WHERE id=$1", [nueva.id]);
+  await evento(2, { tipo: "decision", accion: { tipo: "paso-flor", asiento: 1 } }, nueva.id);
+  assert.equal((await db.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [nueva.id])).rowCount, 1);
   console.log("Migración, privacidad histórica, frescura, cierre y reutilización del cupo comprobados.");
 } finally {
   await db.end();

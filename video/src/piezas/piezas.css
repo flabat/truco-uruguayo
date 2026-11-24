@@ -1,0 +1,13 @@
+/* Las <img> del sitio traen width y height: fuera del CSS del sitio se estiran. */
+.lamina img { display: block; width: 100%; height: auto; }
+
+.lamina {
+  --pano: #274838;
+  --crema: #faf3df;
+  --oro: #ffe099;
+  --apagado: #a9ad9f;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+.rotulo { font: 700 9px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; }

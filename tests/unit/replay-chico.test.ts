@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { reproducirChico } from "../../src/motor/replay-chico.ts";
+import { reproducirChico } from "../../api/replay-chico.ts";
 
 function fixture(nombre: string) {
   return JSON.parse(readFileSync(new URL(`../fixtures/replay-chico/${nombre}.json`, import.meta.url), "utf8"));
@@ -68,6 +68,19 @@ test("el siguiente reparto conserva el marcador y rota el dador después de term
   segundo.puntosInicio = [0, 1];
   segundo.reparto.dador = 3;
   assert.throws(() => reproducirChico(juego, 0), /Dador/);
+});
+
+test("el reparto solo puede habilitar la respuesta de una computadora registrada en la cabecera", () => {
+  const juego = fixture("duelo");
+  const reparto = juego.eventos[0].reparto;
+  reparto.reglaFlor = "inmediata-v2";
+  reparto.respondenSinFlor = [1];
+  assert.doesNotThrow(() => reproducirChico(juego, 0, 1));
+
+  juego.asientos[1] = { tipo: "humano" };
+  assert.throws(() => reproducirChico(juego, 0, 1), /Secuencia 1:.*asiento humano/);
+  delete reparto.respondenSinFlor;
+  assert.doesNotThrow(() => reproducirChico(juego, 0, 1));
 });
 
 test("la procedencia privada distingue una política alternativa, un humano y una corrida", () => {

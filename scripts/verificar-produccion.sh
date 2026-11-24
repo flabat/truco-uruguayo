@@ -75,6 +75,7 @@ copia() { "${dc[@]}" run --rm --no-deps -T backup "$@"; }
 arrancar_base
 copia iniciar
 "${dc[@]}" up -d --wait api identidad
+"${dc[@]}" exec -T api node --input-type=module - < scripts/produccion/cache-estatica.mjs
 "${dc[@]}" exec -T -e TEST_PLAYER_PASSWORD identidad bash -e <<'ADMIN'
 kcadm=/opt/keycloak/bin/kcadm.sh
 config=$(mktemp)

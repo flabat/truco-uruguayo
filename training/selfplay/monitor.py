@@ -533,7 +533,7 @@ def dashboard(states, recent, now):
     tmp.replace(ROOT / "monitor.html")
 
 
-def watch(file_only=False):
+def watch(file_only=False, until_finished=False):
     mutex = (OPS / "monitor.lock").open("a+")
     try:
         fcntl.flock(mutex, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -609,9 +609,13 @@ def watch(file_only=False):
                 )
             )
             heartbeat = now
-        if any_new or now - render_time >= 6:
+        finished = until_finished and load(OPS / "summary.json").get("state") in TERMINAL
+        if finished or any_new or now - render_time >= 6:
             dashboard(state, recent, now)
             render_time = now
+        if finished:
+            (OPS / "monitor-url.txt").unlink(missing_ok=True)
+            return
         if server is None and not file_only:
             try:
                 server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
@@ -649,6 +653,8 @@ def main():
         action="store_true",
         help="Render monitor.html and progress.log without an HTTP listener",
     )
+    parser.add_argument("--until-finished", action="store_true",
+                        help="Write the final dashboard and exit when the run ends")
     args = parser.parse_args()
     if not 0 <= args.port <= 65535:
         parser.error("Port must be in 0..65535")
@@ -659,7 +665,7 @@ def main():
         ET = ZoneInfo(args.timezone)
     OPS.mkdir(exist_ok=True, parents=True)
     (ROOT / "events").mkdir(exist_ok=True)
-    watch(args.file_only)
+    watch(args.file_only, args.until_finished)
 
 
 if __name__ == "__main__":

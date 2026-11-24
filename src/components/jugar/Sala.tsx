@@ -10,15 +10,22 @@ import {
   type Mesa,
   type Modo,
 } from "./cliente";
+import PieMesa from "./PieMesa";
+import Comunidad from "./Comunidad";
+import { contar } from "../../lib/eventos";
+import { nombreSitio } from "../../lib/marca";
 import SalonEnVivo from "./SalonEnVivo";
 import VisorEspectador from "./VisorEspectador";
 import { VozDiscord } from "./VozDiscord";
 import { EnJuego } from "./Tablero";
 import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
+import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
+import type { ElegirIndicacion } from "./GloboDelCompanero";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { MesaConSenas } from "./Senas";
 import { usePresentacionVueltas } from "./presentacion-vueltas";
-import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
+import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 
 const modalidades = {
   "1v1": ["1 contra 1", "Mano a mano"],
@@ -63,11 +70,17 @@ function AbrirMesa({
 }) {
   const [modo, elegir] = useState<Modo>("2v2");
   const [tercetos, habilitarTercetos] = useState(false);
+  const [modosPie, ofrecerPie] = useState<Modo[] | null>();
+  const modoPie = modosPie?.includes(modo) === true;
+  const senasDisponibles = modoPie || (modosPie === null && modo === "2v2");
   useEffect(() => {
     const cancel = new AbortController();
-    pedir<{ modos: Modo[] }>("/api/modalidades", undefined, cancel.signal)
-      .then(({ modos }) => habilitarTercetos(Array.isArray(modos) && modos.includes("3v3")))
-      .catch(() => { /* Un servidor anterior sigue ofreciendo duelo y parejas. */ });
+    pedir<{ modos: Modo[]; senasPie?: Modo[] }>("/api/modalidades", undefined, cancel.signal)
+      .then(({ modos, senasPie }) => {
+        habilitarTercetos(Array.isArray(modos) && modos.includes("3v3"));
+        ofrecerPie(senasPie ?? null);
+      })
+      .catch(() => { if (!cancel.signal.aborted) ofrecerPie(null); });
     return () => cancel.abort();
   }, []);
   const [puntaje, cambiarPuntaje] = useState(String(metaPorModalidad[modo]));
@@ -83,7 +96,10 @@ function AbrirMesa({
     avisar("");
     try {
       const mesa = await pedir<Mesa>("/api/mesas", {
-        modo, publica: salonHabilitado && modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(modo === "2v2" && senas && { formato: "pairs-private-senas" }),
+        modo, publica: salonHabilitado && modo !== "3v3" && publica, ...(meta !== metaPorModalidad[modo] && { meta }), ...(senasDisponibles && senas && {
+          formato: modo === "3v3" ? "triples" : "pairs-private-senas",
+          ...(modoPie && {versionSenas:versionSenasPie}),
+        }),
       });
       const destino = base + "jugar/?mesa=" + encodeURIComponent(mesa.id);
       // Guardar el enlace antes de llenar la mesa permite retomarla tras un corte.
@@ -130,10 +146,11 @@ function AbrirMesa({
               </label>
             ))}
           </div>
-          {modo === "2v2" && (
+          {senasDisponibles && (
             <label className="j-habilitar-senas">
               <input type="checkbox" checked={senas} onChange={e => habilitarSenas(e.target.checked)} />
-              Permitir señas entre compañeros
+              {modoPie ? "Señas automáticas al pie" : "Permitir señas entre compañeros"}
+              {modoPie && <small>El pie ve los gestos en privado. Toda la mesa oye sus indicaciones.{modo === "3v3" && " Sólo durante las redondillas."}</small>}
             </label>
           )}
           {salonHabilitado && modo !== "3v3" && <label className="j-habilitar-senas">
@@ -192,15 +209,26 @@ function Invitacion({ enlace }: { enlace: string }) {
       avisar(copiada ? "Invitación copiada." : "Enlace seleccionado. Copialo para compartirlo.");
     }
   }
+  async function compartir() {
+    contar("compartir-mesa");
+    if (!navigator.share) return copiar();
+    try {
+      await navigator.share({ title: nombreSitio, text: "¡Te invité a jugar al truco! Sumate a mi mesa:", url: enlace });
+    } catch (e) {
+      if (e instanceof Error && e.name === "AbortError") return;
+      await copiar();
+    }
+  }
   return (
     <div className="j-invita">
       <label htmlFor="invitacion">Enlace de invitación</label>
       <div>
         <input id="invitacion" ref={input} value={enlace} readOnly onFocus={(e) => e.target.select()} />
-        <button className="j-sec" onClick={copiar}>
+        <button className="j-sec" onClick={() => { contar("compartir-mesa"); void copiar(); }}>
           Copiar invitación
         </button>
       </div>
+      <button type="button" className="j-sec" onClick={compartir}>Compartir invitación</button>
       <span role="status">{mensaje}</span>
     </div>
   );
@@ -219,31 +247,18 @@ function MesaAbierta({
   avisoInicial?: string;
   recienCreada?: boolean;
 }) {
-  const { ruta, mesa, partida: recibida, conectada, error, refrescar } = useMesa(id);
+  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(id, recienCreada);
+  const recibida = lectura?.vista ? lectura : undefined;
+  const encabezadoEspera = useRef<HTMLHeadingElement>(null);
   const [presencioReparto, recordarEspera] = useState(recienCreada);
   if (!presencioReparto && mesa?.lista === false) recordarEspera(true);
   const esTerceto = recibida?.formato === "triples";
   const { tablero, partida: presentada, mostrandoCartas, voz } = usePresentacionVueltas(
-    esTerceto ? undefined : recibida, presencioReparto,
+    esTerceto ? undefined : recibida, presencioReparto, reconexion,
   );
   const partida = esTerceto ? recibida : presentada;
   const [ocupado, ocupar] = useState(false);
   const [aviso, avisar] = useState(avisoInicial);
-  const enMesa = Boolean(mesa && !error);
-  useEffect(() => {
-    if (!enMesa) return;
-    const motor = document.getElementById("version-motor-mesa");
-    const modelo = document.getElementById("version-modelo-mesa");
-    if (!motor || !modelo) return;
-    const sinMotor = motor.textContent;
-    const sinModelo = modelo.textContent;
-    motor.textContent = mesa?.versionReglas == null ? "Sin informar" : `v${mesa.versionReglas}`;
-    modelo.textContent = mesa?.politica || "Sin informar";
-    return () => {
-      motor.textContent = sinMotor;
-      modelo.textContent = sinModelo;
-    };
-  }, [enMesa, mesa?.versionReglas, mesa?.politica]);
   useEffect(() => {
     const clave = "truco.ultima-mesa." + jugador.id;
     try {
@@ -281,6 +296,11 @@ function MesaAbierta({
     });
   }
 
+  const indicar: ElegirIndicacion = (destinatario, frase, vuelta) => {
+    if (ocupado || !conectada || !partida || mostrandoCartas || !esPie) return;
+    void enviar("/indicaciones", { id: idComando(), version: partida.version, indicacion: { destinatario, frase, vuelta } });
+  };
+
   if (error?.status === 401) return <Ingreso volver={"/jugar/?mesa=" + encodeURIComponent(id)} />;
   if (error)
     return (
@@ -293,44 +313,55 @@ function MesaAbierta({
     );
   if (!mesa) return <p role="status">Conectando con tu mesa…</p>;
   const faltan = mesa.asientos.filter((a) => a.tipo === "vacio").length;
-  const versionSenas = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
-  const versionDesconocida = versionSenas && partida?.vista && partida.formato !== "triples" && partida.versionSenas !== versionSenas;
+  const versionLegada = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;
+  const versionSenas = mesa.versionSenas ?? versionLegada;
+  const esPie = versionSenas === versionSenasPie && partida?.versionSenas === versionSenasPie;
+  const versionDesconocida = Boolean(partida?.vista && (
+    (versionSenas && partida.versionSenas !== versionSenas) ||
+    (versionSenas && versionSenas !== versionSenasPie && versionSenas !== versionLegada)
+  ));
   const bloqueada = ocupado || !conectada || Boolean(versionDesconocida) || mostrandoCartas;
+  const enJuego = mesa.lista && partida?.vista;
+  let estadoRed: string | undefined;
+  if (!conectada) estadoRed = "Reconectando con tu mesa…";
+  else if (versionDesconocida) estadoRed = "Actualizá la aplicación para jugar con esta versión de señas.";
+  else if (ocupado) estadoRed = "Enviando jugada…";
+  const estadoZona = { bloqueada, estadoRed, aviso, puedeReportar: jugador.puedeReportar === true };
   return (
-    <div ref={tablero}>
+    <div className="j-mesa-abierta" ref={tablero}>
+      <PieMesa mesa={mesa} />
       <div className="j-barra">
         <span>
-          {versionSenas ? "Parejas con señas" : modalidades[mesa.modo][1]} · {jugador.nombre}
+          {versionSenas ? (mesa.modo === "3v3" ? "Tercetos con señas" : "Parejas con señas") : modalidades[mesa.modo][1]} · {jugador.nombre}
         </span>
         <a className="j-link" href={base + "jugar/"}>
           Volver al salón
         </a>
       </div>
-      {mesa.vozDisponible && <VozDiscord key={mesa.id} ruta={ruta} />}
-      {!conectada && (
+      {!enJuego && !conectada && (
         <p role="status" className="j-aviso">
           Reconectando con tu mesa…
         </p>
       )}
-      {versionDesconocida && <p role="alert">Actualizá la aplicación para jugar con esta versión de señas.</p>}
-      {aviso && (
+      {!enJuego && aviso && (
         <p role="alert" className="j-aviso">
           {aviso}
         </p>
       )}
-      {mesa.lista && partida?.vista ? (
+      {enJuego && partida ? (
         partida.formato === "triples" ? (
-          <MesaDeTercetos base={base} mesa={mesa} partida={partida} bloqueada={bloqueada}
-            jugar={jugada} presencioReparto={presencioReparto} />
-        ) : versionSenas && !versionDesconocida ? (
-          <MesaConSenas base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
-        ) : <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+          <MesaDeTercetos base={base} mesa={mesa} partida={partida} {...estadoZona}
+            jugar={jugada} indicar={esPie ? indicar : undefined} presencioReparto={presencioReparto} reconexion={reconexion} />
+        ) : versionLegada && !esPie && !versionDesconocida ? (
+          <MesaConSenas base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
+        ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} indicar={esPie ? indicar : undefined} />
       ) : (
         <div className="j-espera">
           <div className="j-panel">
-            <h2>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
+            <h2 ref={encabezadoEspera} tabIndex={-1}>{faltan ? "Esperando jugadores" : "Repartiendo las cartas…"}</h2>
             <Visibilidad publica={mesa.publica} />
             <p>Chico a {mesa.meta} tantos.</p>
+            {versionSenas === versionSenasPie && <p>Señas automáticas al pie. Toda la mesa oye sus indicaciones.{mesa.modo === "3v3" && " Sólo en redondilla."}</p>}
             <p>
               {faltan === 1
                 ? "Falta un jugador para repartir."
@@ -338,6 +369,7 @@ function MesaAbierta({
                   ? "Faltan " + faltan + " jugadores para repartir."
                   : "La mesa está completa."}
             </p>
+            {faltan > 0 && mesa.modo !== "1v1" && <SugerenciaHorizontal encabezado={encabezadoEspera} />}
             {faltan > 0 && <Invitacion enlace={mesa.invitacion} />}
           </div>
           <section className="j-asientos">
@@ -375,6 +407,7 @@ function MesaAbierta({
           </section>
         </div>
       )}
+      {mesa.vozDisponible && <VozDiscord key={mesa.id} ruta={ruta} />}
     </div>
   );
 }
@@ -442,6 +475,7 @@ export default function Sala({ base }: { base: string }) {
     aceptar(true);
     try {
       const mesa = await pedir<Mesa>("/api/invitaciones/" + encodeURIComponent(invitacion) + "/unirse", {});
+      contar("ingreso-mesa");
       history.replaceState(null, "", base + "jugar/?mesa=" + encodeURIComponent(mesa.id));
       abrir({ id: mesa.id });
     } catch (e) {
@@ -461,15 +495,16 @@ export default function Sala({ base }: { base: string }) {
   return (
     <>
       <header className="j-titulo">
-        <a className="j-link" href={base}>
-          ← Volver al inicio
-        </a>
-        {jugador && <a className="j-link" href={base + "perfil/"}>Mi perfil</a>}
+        <span id="enlaces-juego">
+          <a className="j-link" href={base}>← Volver al inicio</a>{" "}
+          {jugador && <a className="j-link" href={base + "perfil/"}>Mi perfil</a>}
+        </span>
         <h1>
           {mesa ? "Mesa de " : "Jugar al "}
           <em>truco</em>
         </h1>
       </header>
+      {jugador && !error && !mesa && !previa && !invitacion && vista !== "mirar" && <Comunidad jugador={jugador.id} />}
       {error ? (
         <div className="j-panel">
           <p role="alert">{mensajeDe(error)}</p>

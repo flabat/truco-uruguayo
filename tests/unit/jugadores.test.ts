@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { CardId } from "../../src/motor/cartas.ts";
-import { elegirJugada } from "../../src/motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano } from "../../src/motor/mano.ts";
-import { repartir, type RepartoV1 } from "../../src/motor/reparto.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano } from "@eltruco/motor/mano.ts";
+import { repartir, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 
 const reparto: RepartoV1 = {
   versionReparto: 1, semilla: 22, dador: 3, mano: 0, muestra: "copas-04",

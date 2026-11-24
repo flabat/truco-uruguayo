@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { baraja, cartasPorId, extras } from "../../src/lib/cartas.ts";
-import { cartaId, esCardId, mazo, paloDe, pieza, rangoDe } from "../../src/motor/cartas.ts";
+import { cartaId, esCardId, mazo, paloDe, pieza, rangoDe } from "@eltruco/motor/cartas.ts";
 
 test("el mazo canónico tiene 40 claves Tatú y la galería conserva sus 51 imágenes", () => {
   const esperado = ["oros", "copas", "espadas", "bastos"].flatMap((palo) =>

@@ -26,7 +26,7 @@ Podés tirar directamente o decir «truco». En este ejemplo el rival de la dere
 
 ## Registro y reanudación
 
-El [formato V1](../../../src/motor/replay.ts) guarda cartas en `jugadas` e informa un `EstadoMano`. Se conserva su lectura y su significado para el simulador y la mano guiada. Para esta mesa, el formato V2 lleva `version: 2`, `versionReglas: 2`, `versionReparto: 1`, semilla, dador y una lista ordenada `acciones`. Su precondición es que los lances laterales ya están resueltos. El estado de apuestas envuelve al de cartas. La vista de cada jugador entrega solo sus cartas y los hechos públicos. [Contrato de mano](../../../src/motor/mano.ts) · [ADR de replay](../adr/0001-motor-y-replay.md)
+El [formato V1](../../../paquetes/motor/src/replay.ts) guarda cartas en `jugadas` e informa un `EstadoMano`. Se conserva su lectura y su significado para el simulador y la mano guiada. Para esta mesa, el formato V2 lleva `version: 2`, `versionReglas: 2`, `versionReparto: 1`, semilla, dador y una lista ordenada `acciones`. Su precondición es que los lances laterales ya están resueltos. El estado de apuestas envuelve al de cartas. La vista de cada jugador entrega solo sus cartas y los hechos públicos. [Contrato de mano](../../../paquetes/motor/src/mano.ts) · [ADR de replay](../adr/0001-motor-y-replay.md)
 
 | Prefijo de acciones (semilla 217, dador 3) | Estado reconstruido justo después |
 | --- | --- |

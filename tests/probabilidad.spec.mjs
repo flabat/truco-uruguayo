@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { capturarTapete, comprobarMuestraDelDador, posicionEnTapete } from "./helpers/muestra.mjs";
 
 async function abrir(page) {
   await page.goto("aprender/probabilidad/");
@@ -58,8 +59,9 @@ test("una sola comparación de la salida, opcional y en el orden del tapete", as
   await expect(tabla(page)).toHaveCount(0);
 });
 
-test("tres vueltas y repaso 0 → 1 → 0 de 12 conservan muestra, orden y privacidad", async ({ page }) => {
-  await page.setViewportSize({ width: 320, height: 812 });
+test("tres vueltas y repaso 0 → 1 → 0 de 12 conservan muestra, orden y privacidad", async ({ page, isMobile }) => {
+  const ancho = isMobile ? 320 : 1280;
+  await page.setViewportSize({ width: ancho, height: 812 });
   await abrir(page);
   for (const carta of ["3 de bastos", "2 de copas", "5 de oros"]) {
     await boton(mano(page), carta).click();
@@ -68,10 +70,13 @@ test("tres vueltas y repaso 0 → 1 → 0 de 12 conservan muestra, orden y priva
   await boton(page, "Repasar la mano").click();
   await expect(page.getByRole("heading", { name: "Jugada 0 de 12" })).toBeFocused();
   const muestra = page.getByRole("img", { name: "Muestra 6 de copas" });
-  const frente = muestra.locator(".prob-frente");
+  await comprobarMuestraDelDador(page, "copas-06");
+  await capturarTapete(page, "probabilidad");
+  const posicion = await posicionEnTapete(page);
+  const frente = muestra.locator('img:not([src$="/reverso.webp"])');
   const srcMuestra = await frente.getAttribute("src");
   expect(srcMuestra).toMatch(/\/copas-06\.webp$/);
-  const otras = page.locator(".tapete .asiento:not(.asiento-0) img");
+  const otras = page.locator(".j-puestos .j-puesto:not(.j-vos) .j-ocupante img");
   await expect(otras).toHaveCount(9);
   expect(await otras.evaluateAll(imgs => imgs.every(img => img.src.endsWith("/reverso.webp")))).toBe(true);
   await expect(mano(page).getByRole("button")).toHaveText(apertura);
@@ -83,14 +88,15 @@ test("tres vueltas y repaso 0 → 1 → 0 de 12 conservan muestra, orden y priva
   await expect(panel(page)).toContainText("Vuelta 1 · Turno del rival de la derecha");
   await expect(mano(page).getByRole("button")).toHaveCount(0);
   await expect(mano(page).locator(".ap-carta")).toHaveText(["2 de copas", "5 de oros"]);
-  await expect(page.locator(".asiento-0 .mesa-jugada")).toContainText("Jugada3 de bastos");
+  await expect(page.locator(".j-vos .j-jugada").getByRole("img", { name: "3 de bastos" })).toBeVisible();
+  expect(await posicionEnTapete(page)).toEqual(posicion);
   await expect(otras).toHaveCount(9);
   expect(await otras.evaluateAll(imgs => imgs.every(img => img.src.endsWith("/reverso.webp")))).toBe(true);
   await expect(frente).toHaveAttribute("src", srcMuestra);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(320);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(ancho);
   await boton(page, "Anterior").press("Enter");
   await expect(mano(page).getByRole("button")).toHaveText(apertura);
-  await expect(page.locator(".asiento-0 .mesa-jugada")).toHaveCount(0);
+  await expect(page.locator(".j-vos .j-jugada")).toHaveCount(0);
   for (let i = 0; i < 4; i++) await boton(page, "Siguiente jugada").click();
   await expect(panel(page)).toContainText("Vuelta 2");
   await boton(page, "Anterior").click();

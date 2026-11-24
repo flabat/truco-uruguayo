@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { playMatch, replayMatch } from "../arena/index.ts";
 import { formats, seatsFor, trainingVersions, type Format, type Policy } from "../contracts/index.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { loadDuelActor } from "../duel/actor.ts";
 import { summarize, type PairOutcome } from "../eval/statistics.ts";
 import { loadPartnerPolicy } from "../partners/policy.ts";

@@ -10,6 +10,7 @@ import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
 import { crearSalon } from "./salon.ts";
 import { atenderPerfil } from "./perfil.ts";
+import { atenderReporte, rutaReporte } from "./reportes.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
@@ -34,7 +35,9 @@ const server = createServer(async (request, response) => {
   if (request.url?.startsWith("/api/")) {
     try {
       const ruta = request.url.split("?")[0];
+      const reporte = rutaReporte.exec(ruta);
       if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
+      else if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
       else if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
       else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);

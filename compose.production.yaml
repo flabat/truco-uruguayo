@@ -9,7 +9,12 @@ x-servicio: &servicio
 services:
   web:
     <<: *servicio
-    build: {context: ., dockerfile: infra/web.Dockerfile, target: produccion}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+      target: produccion
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
     environment:
       SITE_HOST: ${SITE_HOST:?Falta el dominio público}
     ports:
@@ -45,6 +50,8 @@ services:
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-1}"
       EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"
       EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
+      SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
+      SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
     depends_on:
       db: {condition: service_healthy}
     healthcheck:
@@ -72,7 +79,7 @@ services:
 
   identidad:
     <<: *servicio
-    image: quay.io/keycloak/keycloak:26.8.2
+    build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start", "--import-realm"]
     mem_limit: 1200m
     environment:

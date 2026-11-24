@@ -1,9 +1,12 @@
 import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
+import type { EdicionModelo } from "../src/lib/modelos.ts";
 import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
-import { esMetaDeChico, metaPorModalidad } from "../src/motor/chico.ts";
-import { versionReglasOnline, versionReglasTercetos } from "../src/motor/mesa-online.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
+import { politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { esMetaDeChico, metaPorModalidad } from "@eltruco/motor/chico.ts";
+import { versionReglasOnline, versionReglasTercetos } from "@eltruco/motor/mesa-online.ts";
 import { FalloDiscord } from "./discord.ts";
 import type { crearVoz } from "./voz-discord.ts";
 import { permiteTercetos, exigirTercetos } from "./funciones.ts";
@@ -34,7 +37,9 @@ export interface VistaMesa {
   creadorId: string;
   formato: FormatoMesa;
   versionReglas: number;
+  versionSenas?: string;
   politica: string;
+  edicionModelo?: EdicionModelo;
   miAsiento: number;
   invitacion: string;
   lista: boolean;
@@ -54,11 +59,13 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   if (!esId(id)) return null;
   const { rows } = await db.query(`
     SELECT m.id, m.modo, m.meta, m.publica, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
+           p.nombre AS nombre_modelo, to_char(p.publicada_el, 'YYYY-MM-DD') AS fecha_modelo,
            a.asiento, a.computadora, j.nombre
       FROM juego.mesas m
       JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
       JOIN juego.asientos a ON a.mesa = m.id
       LEFT JOIN juego.jugadores j ON j.id = a.jugador
+      LEFT JOIN juego.publicaciones_modelo p ON p.pin = m.politica
      WHERE m.id = $1
      ORDER BY a.asiento
   `, [id, jugadorId]);
@@ -78,6 +85,8 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   return {
     id: mesa.id, modo: mesa.modo, meta: mesa.meta, formato: formatoMesa(mesa.modo, mesa.version_senas),
     versionReglas: mesa.modo === "3v3" ? versionReglasTercetos : versionReglasOnline, politica: mesa.politica,
+    ...(mesa.version_senas && { versionSenas: mesa.version_senas }),
+    edicionModelo: mesa.nombre_modelo == null ? undefined : { nombre: mesa.nombre_modelo, publicado: mesa.fecha_modelo },
     publica: mesa.publica, creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
   };
 }
@@ -97,10 +106,17 @@ export function formatoMesa(modo: Modo, versionSenas: string | null): FormatoMes
     if (modo === "3v3") return "triples";
     return modo === "1v1" ? "duel" : "pairs";
   }
+  if (versionSenas === versionSenasPie && modo === "3v3") return "triples";
+  if (versionSenas === versionSenasPie && modo === "2v2") return "pairs-private-senas";
   if (modo === "2v2" && versionSenas === versions.signals) return "pairs-senas";
   if (modo === "2v2" && versionSenas === teamSignalsVersion) return "pairs-private-senas";
   throw new Error("Versión de señas desconocida.");
 }
+
+const altasPie = (tercetos: boolean): Modo[] => [
+  ...(process.env.SENAS_PIE_PAREJAS === "0" ? [] : ["2v2" as const]),
+  ...(tercetos && process.env.SENAS_PIE_TERCETOS !== "0" ? ["3v3" as const] : []),
+];
 
 async function crear(db: PoolClient, jugador: string, datos: Record<string, unknown>, salonHabilitado: boolean): Promise<Cambio> {
   const { modo, formato, meta: metaElegida, publica = false } = datos;
@@ -118,11 +134,18 @@ async function crear(db: PoolClient, jugador: string, datos: Record<string, unkn
   else if (formato !== undefined && formato !== nueva) {
     throw new ErrorPeticion(400, "El formato debe corresponder a la capacidad de la mesa.");
   }
+  const alPie = datos.versionSenas === versionSenasPie;
+  if (datos.versionSenas !== undefined && (!alPie || (nueva !== "pairs-private-senas" && nueva !== "triples"))) {
+    throw new ErrorPeticion(400, "La versión de señas no corresponde a esta mesa.");
+  }
+  if (alPie && !altasPie(true).includes(modo)) throw new ErrorPeticion(409, "Las señas al pie están deshabilitadas en esta modalidad.");
+  const versionSenas = alPie ? versionSenasPie : nueva === "triples" ? null : signalVersionFor(nueva);
+  const politica = alPie ? politicaPie : modo === "3v3" ? politicaTercetos : null;
   const token = randomBytes(24).toString("base64url");
   const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos, publica) VALUES ($1,$2,$3,$4,$5,
     COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8, $9) RETURNING id`,
-    [modo, jugador, token, nueva === "triples" ? null : signalVersionFor(nueva), meta, nueva,
-      modo === "3v3" ? politicaTercetos : null, modo === "3v3" ? perfilTercetos : null, publica]);
+    [modo, jugador, token, versionSenas, meta, nueva,
+      politica, modo === "3v3" ? perfilTercetos : null, publica]);
   await db.query("INSERT INTO juego.asientos (mesa, asiento, jugador, computadora) VALUES ($1,0,$2,false)", [mesa.id, jugador]);
   return { id: mesa.id, cambiado: true };
 }
@@ -166,7 +189,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         if (req.method !== "GET") throw new ErrorPeticion(405, "Método no permitido.");
         const jugador = await jugadorDeSesion(pool, req);
         const tercetos = jugador && await permiteTercetos(pool, jugador.id);
-        responderJson(res, 200, { modos: tercetos ? ["1v1", "2v2", "3v3"] : ["1v1", "2v2"] });
+        responderJson(res, 200, { modos: tercetos ? ["1v1", "2v2", "3v3"] : ["1v1", "2v2"], senasPie: altasPie(tercetos === true) });
         return;
       }
       const mesa = rutaMesa.exec(path);

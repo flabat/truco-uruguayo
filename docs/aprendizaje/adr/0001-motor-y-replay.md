@@ -12,14 +12,14 @@ Usar módulos TypeScript puros, ejecutables en Node y en el navegador. La guía 
 
 | Contrato público | Resultado |
 | --- | --- |
-| [`pieza(carta, muestra)`](../../../src/motor/cartas.ts) | Rango efectivo 2, 4, 5, 11 o 10, o `null` si la carta es común. Compartido por jerarquía y tantos. `CardId` usa claves Tatú como `copas-04`. |
-| [`compararCartas(a, b, muestra)`](../../../src/motor/jerarquia.ts) | Un resultado positivo favorece a la primera, negativo a la segunda y cero indica empate. |
-| [`evaluarTantos(cartas, muestra)`](../../../src/motor/tantos.ts) | Modalidad flor/envido, forma, total y todos los desgloses óptimos. Cada desglose identifica la base y los aportes de las cartas. |
-| [`repartir(semilla, dador)`](../../../src/motor/reparto.ts) | Reparto V1 con cuatro manos y muestra. Acepta semillas enteras sin signo de 32 bits, incluido cero, y dadores del 0 al 3. |
-| [`iniciarMano(reparto)` y `jugarCarta(estado, { asiento, carta })`](../../../src/motor/mano.ts) | La primera función crea el estado inicial. La segunda devuelve `{ ok: true, estado }` con el estado siguiente o `{ ok: false, error }` si rechaza la jugada. El estado previo se conserva. |
-| [`vistaPara(estado, asiento)`](../../../src/motor/mano.ts) | Cartas restantes propias, muestra, asientos, turno, cartas jugadas, historial público y resultado disponible. Se construye seleccionando campos permitidos. |
-| [`elegirJugada(vista)`](../../../src/motor/jugadores.ts) | Devuelve una carta legal para el asiento en turno. El llamador entrega la jugada al motor. |
-| [`capturarReplay(estado)` y `reproducirReplay(datos)`](../../../src/motor/replay.ts) | La captura guarda las jugadas de un reparto reproducible con su semilla y dador. La reproducción acepta texto JSON o su valor decodificado y devuelve el estado reconstruido o el motivo del rechazo. |
+| [`pieza(carta, muestra)`](../../../paquetes/motor/src/cartas.ts) | Rango efectivo 2, 4, 5, 11 o 10, o `null` si la carta es común. Compartido por jerarquía y tantos. `CardId` usa claves Tatú como `copas-04`. |
+| [`compararCartas(a, b, muestra)`](../../../paquetes/motor/src/jerarquia.ts) | Un resultado positivo favorece a la primera, negativo a la segunda y cero indica empate. |
+| [`evaluarTantos(cartas, muestra)`](../../../paquetes/motor/src/tantos.ts) | Modalidad flor/envido, forma, total y todos los desgloses óptimos. Cada desglose identifica la base y los aportes de las cartas. |
+| [`repartir(semilla, dador)`](../../../paquetes/motor/src/reparto.ts) | Reparto V1 con cuatro manos y muestra. Acepta semillas enteras sin signo de 32 bits, incluido cero, y dadores del 0 al 3. |
+| [`iniciarMano(reparto)` y `jugarCarta(estado, { asiento, carta })`](../../../paquetes/motor/src/mano.ts) | La primera función crea el estado inicial. La segunda devuelve `{ ok: true, estado }` con el estado siguiente o `{ ok: false, error }` si rechaza la jugada. El estado previo se conserva. |
+| [`vistaPara(estado, asiento)`](../../../paquetes/motor/src/mano.ts) | Cartas restantes propias, muestra, asientos, turno, cartas jugadas, historial público y resultado disponible. Se construye seleccionando campos permitidos. |
+| [`elegirJugada(vista)`](../../../paquetes/motor/src/jugadores.ts) | Devuelve una carta legal para el asiento en turno. El llamador entrega la jugada al motor. |
+| [`capturarReplay(estado)` y `reproducirReplay(datos)`](../../../paquetes/motor/src/replay.ts) | La captura guarda las jugadas de un reparto reproducible con su semilla y dador. La reproducción acepta texto JSON o su valor decodificado y devuelve el estado reconstruido o el motivo del rechazo. |
 
 **Orden y mesa.** El mazo canónico enumera oros, copas, espadas y bastos, cada palo con 1–7, 10, 11 y 12. Los asientos 0–3 se numeran en sentido antihorario y forman las parejas 0/2 y 1/3. El mano es el siguiente asiento después del dador. Se dan tres rondas de una carta por asiento y se gira la siguiente como muestra. El sitio elige una semilla para iniciar cada partida y la entrega explícitamente al motor.
 

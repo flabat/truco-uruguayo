@@ -4,6 +4,8 @@ const id = "00000000-0000-4000-8000-000000000232";
 const anterior = "00000000-0000-4000-8000-000000000017";
 const directorio = "/api/salon/mesas";
 const destino = "/jugar/?mirar=" + id;
+const pin = "af20".repeat(16);
+const nombrePublicado = "Parejas con señas 2 · Publicado el 20 nov 2026";
 const humana = {
   id, modo: "2v2", formato: "pairs-private-senas", origen: "humana", humanos: 2,
   computadoras: 2, manoNumero: 3, puntos: [12, 8], meta: 40, ultimaActividad: "2026-11-20T12:00:00Z",
@@ -16,7 +18,8 @@ const jugadas = [{ asiento: 0, carta: "espadas-01" }, { asiento: 1, carta: "oros
 function detalle(cantidad, estado = "en-juego") {
   const jugadasVisibles = jugadas.slice(0, cantidad);
   return {
-    ...humana, estado,
+    ...humana, estado, versionReglas: 1, politica: pin,
+    edicionModelo: { nombre: "Parejas con señas 2", publicado: "2026-11-20" },
     asientos: ["Jugador 1", "Computadora 2", "Jugador 3", "Computadora 4"].map((nombre, asiento) => ({
       nombre, asiento, tipo: asiento % 2 ? "computadora" : "humano", equipo: asiento % 2,
     })),
@@ -89,6 +92,15 @@ test("desde el salón sigue dos jugadas por teclado y conserva su asiento anteri
   await expect(page.getByRole("heading", { name: "Estás mirando" })).toBeFocused();
   const historial = page.getByRole("region", { name: "Historial de la mano" });
   await expect(historial).toContainText("Todavía no hay jugadas");
+  const pie = page.getByRole("contentinfo");
+  const motor = pie.getByText("Motor de la mesa", { exact: true }).locator("+ dd");
+  const modelo = pie.getByText("Modelo de la mesa", { exact: true }).locator("+ dd");
+  const ficha = modelo.locator("summary");
+  await expect(motor).toHaveText("v1");
+  await expect(ficha).toHaveText(nombrePublicado);
+  await expect(ficha.locator("time")).toHaveAttribute("datetime", "2026-11-20");
+  await ficha.press("Enter");
+  await expect(modelo.locator("code")).toHaveText(pin);
   estado.cantidad = 1;
   const entradas = historial.getByRole("listitem");
   await expect(entradas).toHaveText(["Jugador 1 jugó as de espadas."]);
@@ -96,6 +108,10 @@ test("desde el salón sigue dos jugadas por teclado y conserva su asiento anteri
   await expect(entradas).toHaveText(["Jugador 1 jugó as de espadas.", /Computadora 2 jugó .* de oros\./]);
   await expect.poll(() => etiquetas.filter(v => v === '"2en-juego"').length).toBeGreaterThan(0);
   await expect(entradas).toHaveCount(2);
+  await expect(ficha).toBeFocused();
+  await expect(modelo.locator("code")).toBeVisible();
+  if (process.env.CAPTURAS_VERSIONES)
+    await pie.screenshot({ path: `${process.env.CAPTURAS_VERSIONES}/visor-versiones-${test.info().project.name}.png`, scale: "css" });
   await captura(page, "visor");
   await expect(page.getByRole("group", { name: "Tus cartas" })).toHaveCount(0);
   await expect(page.getByRole("combobox", { name: /seña/i })).toHaveCount(0);
@@ -106,6 +122,8 @@ test("desde el salón sigue dos jugadas por teclado y conserva su asiento anteri
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL("/jugar/");
   await expect(page.getByRole("heading", { name: "Mesas en juego" })).toBeFocused();
+  await expect(motor).toHaveText("Sin mesa");
+  await expect(modelo).toHaveText("Sin mesa");
   expect(await page.evaluate(() => localStorage.getItem("truco.ultima-mesa.ana"))).toBe(anterior);
   expect(privadas).toEqual([]);
   expect(sockets).toEqual([]);
@@ -154,6 +172,7 @@ test("un corte permite reintentar y la pérdida de visibilidad retira la mesa", 
   estado.errorMesa = 503;
   const reintentar = page.getByRole("button", { name: "Reintentar" });
   await expect(reintentar).toBeVisible();
+  await expect(page.getByRole("contentinfo").locator("summary")).toHaveText(nombrePublicado);
   estado.errorMesa = 0;
   estado.cantidad = 1;
   await reintentar.press("Enter");
@@ -161,6 +180,7 @@ test("un corte permite reintentar y la pérdida de visibilidad retira la mesa", 
   estado.errorMesa = 404;
   await expect(page.getByText("Esta mesa ya no está disponible en el salón.")).toBeVisible();
   await expect(marcador).toHaveCount(0);
+  await expect(page.getByRole("contentinfo").getByText("Sin mesa", { exact: true }).filter({ visible: true })).toHaveCount(2);
 });
 
 for (const [estadoMesa, titulo] of [["terminada", "Partida terminada"], ["interrumpida", "Partida interrumpida"]]) {
@@ -169,6 +189,7 @@ for (const [estadoMesa, titulo] of [["terminada", "Partida terminada"], ["interr
     estado.estadoMesa = estadoMesa;
     await page.goto(destino);
     await expect(page.getByRole("heading", { name: titulo })).toBeVisible();
+    await expect(page.getByRole("contentinfo").locator("summary")).toHaveText(nombrePublicado);
     await expect(page.getByRole("button", { name: "Volver al salón" })).toBeVisible();
   });
 }
@@ -231,4 +252,46 @@ test("el salón pausa la consulta en segundo plano y revalida una sola vez al vo
   siguiente.resolve();
   await expect(page.getByText("Exhibición · Solo computadoras")).toBeVisible();
   await expect(page.getByText("2 personas y 2 computadoras")).toHaveCount(0);
+});
+
+test("la comunidad puede descartarse sin interrumpir el salón", async ({ page }) => {
+  await servicio(page);
+  await page.goto('/jugar/');
+  const comunidad = page.getByRole('complementary', { name: 'Comunidad de Discord' });
+  await expect(comunidad).toBeVisible();
+  await expect(comunidad.getByRole('link', { name: /Unirme al Discord/ })).toHaveAttribute('href', 'https://discord.gg/HpaWCPQDr');
+  await comunidad.getByRole('button', { name: 'Ahora no' }).click();
+  await expect(comunidad).toHaveCount(0);
+  await page.reload();
+  await expect(comunidad).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /Comunidad en Discord/ })).toBeVisible();
+});
+
+test("una invitación a mesa no muestra la tarjeta de comunidad", async ({ page }) => {
+  await page.route('**/api/**', route => {
+    const ruta = new URL(route.request().url()).pathname;
+    if (ruta === '/api/jugador') return route.fulfill({ json: { id: 'ana', nombre: 'Ana', salonHabilitado: true } });
+    if (ruta.startsWith('/api/invitaciones/')) return route.fulfill({ json: { publica: false, sentada: false } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/jugar/?invitacion=prueba');
+  await expect(page.getByRole('button', { name: 'Ocupar mi asiento' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Comunidad de Discord' })).toHaveCount(0);
+});
+
+test('cuenta un ingreso exitoso sin incluir el token en el evento', async ({ page }) => {
+  await page.route('**/api/**', route => {
+    const ruta = new URL(route.request().url()).pathname;
+    if (ruta === '/api/jugador') return route.fulfill({ json: { id: 'ana', nombre: 'Ana', salonHabilitado: true } });
+    if (ruta.endsWith('/unirse')) return route.fulfill({ json: { id } });
+    if (ruta.startsWith('/api/invitaciones/')) return route.fulfill({ json: { publica: false, sentada: false } });
+    return route.fulfill({ status: 404, json: {} });
+  });
+  await page.goto('/jugar/?invitacion=token-privado');
+  const evento = page.waitForRequest(request => new URL(request.url()).pathname === '/eventos/ingreso-mesa.txt');
+  await page.getByRole('button', { name: 'Ocupar mi asiento' }).click();
+  const solicitud = await evento;
+  expect(new URL(solicitud.url()).search).toBe('');
+  expect(solicitud.postData()).toBeNull();
+  expect(solicitud.headers().referer || "").toBe("");
 });

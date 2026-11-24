@@ -1,5 +1,5 @@
 ---
-import { metaMaxima, metaPorModalidad, mitadesDelChico } from "../motor/chico";
+import { metaMaxima, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 const meta = metaPorModalidad["3v3"];
 ---
 <div class="meta-de-seis">
@@ -9,7 +9,7 @@ const meta = metaPorModalidad["3v3"];
 </div>
 
 <script>
-  import { esMetaDeChico, metaPorModalidad, mitadesDelChico } from "../motor/chico";
+  import { esMetaDeChico, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
   const campo = document.querySelector<HTMLInputElement>("#meta-seis");
   const mitades = document.querySelector<HTMLOutputElement>("#mitades-seis");
   if (campo && mitades) {

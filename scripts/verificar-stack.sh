@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
-export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0
+export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
 export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
@@ -28,7 +28,7 @@ url() { echo "http://$("${compose[@]}" port "$1" "$2")"; }
 up
 web=$(url web 80)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
-curl -fsS "$web/" | grep -F 'Truco uruguayo' >/dev/null
+curl -fsS "$web/" | grep -F '<title>El Truco</title>' >/dev/null
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
@@ -36,12 +36,15 @@ curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
 ' "$issuer"
 node scripts/verificar-identidad.mjs "$issuer"
 export GOOGLE_CLIENT_ID=google-prueba GOOGLE_CLIENT_SECRET=secreto-google-prueba
+export DISCORD_CLIENT_ID=discord-prueba DISCORD_CLIENT_SECRET=secreto-discord-prueba
 export FACEBOOK_APP_ID=123456789 FACEBOOK_APP_SECRET=secreto-facebook-prueba
 node scripts/verificar-ingreso-social.mjs "$web"
 COMPOSE_PROJECT_NAME="$project" npm run auth:google
 node scripts/verificar-ingreso-social.mjs "$web" google
 COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
+COMPOSE_PROJECT_NAME="$project" npm run auth:discord
+node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
 node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
@@ -51,6 +54,7 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-senas-pie.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-persistencia-tercetos.mjs
@@ -80,10 +84,11 @@ sql "UPDATE juego.funciones SET audiencia='desactivado' WHERE clave='tercetos'"
 "${compose[@]}" stop db
 [[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
-export SALON_HABILITADO=0
+export SALON_HABILITADO=0 SENAS_PIE_PAREJAS=0 SENAS_PIE_TERCETOS=0
 up
 "${compose[@]}" exec -T api node --input-type=module - cerrar-altas < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-persistencia-tercetos.mjs
+"${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-senas-pie.mjs
 [[ $(sql "SELECT valor FROM juego.prueba_persistencia") == conservado ]]
 "${compose[@]}" exec -T api node --input-type=module - reinicio < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-vivo.mjs
@@ -91,4 +96,5 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 [[ $(sql "$consulta_jugadores") == "$jugadores" ]]
 [[ $(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'") == "$migration" ]]
 curl -fsS "$(url api 3001)/health"
+node scripts/verificar-correo-social.mjs "http://$TRUCO_HOST:$WEB_PORT" "http://$TRUCO_HOST:$OIDC_PORT" "$project"
 echo ' · Arranque, identidad, migraciones y persistencia verificados.'

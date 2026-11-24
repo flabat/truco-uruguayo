@@ -1,6 +1,6 @@
-import { cartaId, mazo, paloDe, pieza, rangoDe, type CardId } from "../../motor/cartas.ts";
-import { compararCartas } from "../../motor/jerarquia.ts";
-import { evaluarTantos } from "../../motor/tantos.ts";
+import { cartaId, mazo, paloDe, pieza, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 
 export const familiasPorHabilidad = {
   "comparar-cartas": ["gana-el-mayor", "gana-el-menor", "empate", "mismo-numero-distinta-fuerza"],

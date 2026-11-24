@@ -1,13 +1,17 @@
 import { useEffect, useRef } from "react";
+import { PalabraDelPie, useVozDelPie } from "./Voz";
 import { VozDiscord } from "./VozDiscord";
 import type { tableroEspectador } from "../../../api/tablero-espectador";
-import { descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
-import { Naipe, Tanteador } from "./Tablero";
+import { descripcionDeIndicacion, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
+import { Tanteador } from "./Tablero";
+import { Tapete } from "./Tapete";
+import type { VersionesMesa } from "./cliente";
+import PieMesa from "./PieMesa";
 import { participantesMesa, type ResumenMesa } from "./resumen-salon";
 import { useConsultaSalon } from "./useConsultaSalon";
 import "./visor.css";
 
-interface MesaEspectadora extends ResumenMesa {
+interface MesaEspectadora extends ResumenMesa, VersionesMesa {
   asientos: { asiento: number; equipo: number; tipo: "humano" | "computadora"; nombre: string }[];
   estado: "en-juego" | "terminada" | "interrumpida";
   vozDisponible?: boolean;
@@ -32,6 +36,10 @@ function resumenDeLaMano(mesa: MesaEspectadora) {
     return "Ganó el equipo " + ganador + ".";
   }
   if (mesa.tablero.resultado) return "El equipo " + (mesa.tablero.resultado.equipo + 1) + " ganó la mano.";
+  const ultimaPalabra = mesa.tablero.indicaciones?.at(-1);
+  if (ultimaPalabra?.indiceAccion === mesa.tablero.acciones.length) {
+    return descripcionDeIndicacion(ultimaPalabra, n => mesa.asientos[n].nombre);
+  }
   const ultima = mesa.tablero.acciones.at(-1);
   return ultima ? descripcionDeJugada(ultima, n => mesa.asientos[n].nombre) : "Se repartieron las cartas.";
 }
@@ -42,55 +50,43 @@ const titulos = {
   interrumpida: "Partida interrumpida",
 };
 
-function Tapete({ mesa }: { mesa: MesaEspectadora }) {
+function MesaObservada({ mesa }: { mesa: MesaEspectadora }) {
   const { tablero, asientos } = mesa;
   const nombre = (n: number) => asientos[n].nombre;
+  const palabra = useVozDelPie(mesa.manoNumero, tablero.indicaciones, tablero.acciones.length);
   const ultimaVuelta = tablero.vueltas.at(-1);
   // Conservar la vuelta cerrada hasta que aparezca la primera carta de la siguiente.
   const actual = tablero.vueltaActual;
   const cerrada = !actual?.jugadas.length ? ultimaVuelta : undefined;
-  const jugadas = cerrada?.jugadas ?? actual?.jugadas ?? [];
   const numeroVuelta = tablero.vueltas.length + (cerrada ? 0 : 1);
   const turno = tablero.turnoDeCartas;
   const resultado = tablero.resultado;
   return <>
+    <PieMesa mesa={mesa} />
     <Tanteador meta={mesa.meta} puntos={mesa.puntos} propio={0} equipo={equipo} />
     <div className="j-partida visor-partida">
-      <section className="j-tapete visor-tapete" aria-label="Tapete">
-        <header>
-          <strong>Mano {mesa.manoNumero}</strong>
-          <span>{numeroVuelta}.ª vuelta</span>
-        </header>
-        <div className={'visor-puestos visor-' + mesa.modo}>
-          <figure className="visor-muestra">
-            <Naipe id={tablero.muestra} base={base} />
-            <figcaption>Muestra</figcaption>
-          </figure>
-          {asientos.map(a => {
-            const carta = jugadas.find(j => j.asiento === a.asiento)?.carta;
-            const gano = cerrada?.resultado.tipo === "ganada" && cerrada.resultado.asiento === a.asiento;
-            return <div key={a.asiento} className={'visor-puesto visor-asiento-' + a.asiento} role="group" aria-label={a.nombre}>
-              <div className="j-persona">
-                <b>{a.nombre}</b>
-                <span>{equipo(a.equipo)}{tablero.dador === a.asiento && " · Dador"}{tablero.mano === a.asiento && " · Mano"}</span>
-              </div>
-              {carta && <div className={gano ? "j-jugada j-ganadora" : "j-jugada"}>
-                <Naipe id={carta} base={base} />
-                {gano && <small>Ganó la vuelta</small>}
-              </div>}
-            </div>;
-          })}
-        </div>
-        {cerrada?.resultado.tipo === "parda" && <p className="visor-parda">Vuelta parda</p>}
-      </section>
+      <Tapete
+        base={base}
+        asientos={asientos.map(a => ({ ...a, papel: equipo(a.equipo) }))}
+        asientoInferior={0}
+        dador={tablero.dador}
+        mano={tablero.mano}
+        muestra={tablero.muestra}
+        titulo={"Mano " + mesa.manoNumero}
+        numeroVuelta={numeroVuelta}
+        vuelta={cerrada ?? actual}
+        manosOcultas={{ jugadas: tablero.acciones.filter(a => a.tipo === "carta") }}
+        detalle={asiento => ({ contenido: <PalabraDelPie indicacion={palabra} asiento={asiento} nombre={nombre} /> })}
+        terminada={Boolean(resultado && !cerrada)}
+      />
       <section className="j-jugada-panel" aria-label="Desarrollo de la mano">
         <h3>{titulos[mesa.estado]}</h3>
-        <div role="status">{resumenDeLaMano(mesa)}</div>
+        <div role="status" aria-live={palabra ? "off" : "polite"}>{resumenDeLaMano(mesa)}</div>
         {mesa.estado === "en-juego" && !resultado && <p>
           La mano vale {tantos(tablero.valorTruco)}.
           {turno != null && " La próxima carta le corresponde a " + nombre(turno) + "."}
         </p>}
-        <HistorialDeMano key={mesa.manoNumero} acciones={tablero.acciones} cobros={tablero.cobros} nombre={nombre} />
+        <HistorialDeMano key={mesa.manoNumero} acciones={tablero.acciones} indicaciones={tablero.indicaciones} cobros={tablero.cobros} nombre={nombre} />
         {tablero.cobros.length > 0 && <section className="j-lances">
           <h3>Tantos cobrados</h3>
           <ul>{tablero.cobros.map((c, i) => <li key={i}>
@@ -136,7 +132,7 @@ export default function VisorEspectador({ id, volver, crear, volverAMiMesa, alPe
         ? <VozDiscord key={datos.id} espectador exhibicion={datos.origen === "exhibicion"}
             ruta={"/api/salon/mesas/" + encodeURIComponent(datos.id)} />
         : <p className="j-ayuda">La voz de esta mesa en Discord está desactivada.</p>}
-      <Tapete mesa={datos} />
+      <MesaObservada mesa={datos} />
     </>}
   </section>;
 }

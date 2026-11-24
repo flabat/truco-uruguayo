@@ -1,5 +1,5 @@
-import { esCardId, type CardId } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 import type { ActionId, Policy } from "../contracts/index.ts";
 

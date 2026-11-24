@@ -4,7 +4,7 @@
 
 ## Contexto
 
-Hoy la sala crea mesas por invitación. Leer una mesa como jugador exige asiento, devuelve la invitación para jugar y la lectura de la partida puede disparar el primer reparto. La vista por asiento incluye cartas, acciones legales y hechos visibles para su equipo. El cierre puede mostrar cartas que prueban los tantos. Ocultar componentes en el navegador dejaría esos datos en la respuesta. Abrir el replay completo también entregaría información para reconstruir el reparto. [Lectura de mesa](../../../../api/mesas.ts) · [Partida](../../../../api/partidas.ts) · [Vista por asiento](../../../../src/motor/mesa-online.ts)
+Hoy la sala crea mesas por invitación. Leer una mesa como jugador exige asiento, devuelve la invitación para jugar y la lectura de la partida puede disparar el primer reparto. La vista por asiento incluye cartas, acciones legales y hechos visibles para su equipo. El cierre puede mostrar cartas que prueban los tantos. Ocultar componentes en el navegador dejaría esos datos en la respuesta. Abrir el replay completo también entregaría información para reconstruir el reparto. [Lectura de mesa](../../../../api/mesas.ts) · [Partida](../../../../api/partidas.ts) · [Vista por asiento](../../../../paquetes/motor/src/mesa-online.ts)
 
 ## Contrato
 
@@ -16,7 +16,7 @@ El servidor arma una proyección por lista explícita de campos, sin asiento de 
 | Detalle neutral | Los mismos datos, equipos y etiquetas de asiento, mano/dador, muestra, cartas efectivamente jugadas y sus asientos, vueltas, cantos pronunciados, cobros y resultado públicos. El próximo turno se indica solo si se deduce del juego público. |
 | Datos que quedan en el servidor o en la vista del asiento autorizado | Cartas sin jugar, pruebas de tantos que las revelen incluso al cierre, reparto y semilla, señas y sus metadatos, consulta privada de flor, opciones legales, puntaje de la mano propia, decisiones internas del bot, IDs de cuenta, enlaces para tomar asiento y replay privado. |
 
-Para el piloto, identificar al humano como «Jugador 1» y a la computadora como «Computadora 2» según el asiento. Los dorsos, si se usan, se calculan a partir de tres cartas iniciales menos las jugadas visibles. El espectador conserva orientación neutral aunque también tenga asiento en otra pestaña. En parejas, agregar una seña a una jugada debe producir **idéntica respuesta pública** a la de esa jugada en silencio, incluidos historial, cursor, tamaño de la lista de eventos y avisos. Nunca anunciar una espera privada de flor como turno de un asiento.
+Para el piloto, identificar al humano como «Jugador 1» y a la computadora como «Computadora 2» según el asiento. El tapete compartido muestra los dorsos de los asientos que aún no tienen una carta en la vuelta visible. La cantidad se calcula a partir de tres cartas iniciales menos las jugadas públicas de cada asiento. El espectador conserva orientación neutral aunque también tenga asiento en otra pestaña. En parejas, agregar una seña a una jugada debe producir **idéntica respuesta pública** a la de esa jugada en silencio, incluidos historial, cursor, tamaño de la lista de eventos y avisos. Nunca anunciar una espera privada de flor como turno de un asiento.
 
 ## Transporte y ciclo de vida
 
@@ -33,6 +33,8 @@ Ambas lecturas requieren la cookie de sesión y devuelven JSON con una `versionP
 | Lectura | Respuesta 200 |
 | --- | --- |
 | `GET /api/salon/mesas` | `mesas` en orden estable, primero las humanas. Cada fila incluye `id`, `modo`, `formato`, `origen`, cantidades `humanos` y `computadoras`, `manoNumero`, `puntos` por equipo, `meta` y `ultimaActividad` en UTC. |
-| `GET /api/salon/mesas/:id` | Los campos de la fila, `asientos` con posición, equipo, tipo y etiqueta neutral, `estado` y `tablero`. El tablero reúne muestra, mano, dador, vueltas, acciones visibles de la mano actual, valor del truco, cobros y resultado. `turnoDeCartas` expresa el orden del tapete. Un canto puede requerir respuesta entre cartas. |
+| `GET /api/salon/mesas/:id` | Los campos de la fila, `asientos` con posición, equipo, tipo y etiqueta neutral, `estado`, las versiones de la mesa y `tablero`. El tablero reúne muestra, mano, dador, vueltas, acciones visibles de la mano actual, valor del truco, cobros y resultado. `turnoDeCartas` expresa el orden del tapete. Un canto puede requerir respuesta entre cartas. |
+
+El pie muestra la versión del motor guardada en la mano (`versionReglas`) y el identificador del modelo asignado a la mesa (`politica`). Cuando hay una publicación registrada para ese identificador, `edicionModelo` aporta el nombre y la fecha que ve el espectador. Al abrir el nombre se puede consultar la huella completa.
 
 El detalle de una mesa fresca indica `en-juego`. Un chico cerrado indica `terminada` durante los 30 minutos siguientes. Una exhibición retirada después de repartir indica `interrumpida`. Los tres estados requieren una mesa pública. Una mesa en espera, una mesa activa que perdió frescura y una partida cuya sobremesa venció devuelven 404.

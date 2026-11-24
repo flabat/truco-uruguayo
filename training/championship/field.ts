@@ -8,7 +8,7 @@ import { artifactPin, openActor } from "../../api/actor-registry.ts";
 import { createServing, type ServingDecision } from "../../api/serving.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { type MatchRecord, playMatchAsync, replayMatch, sample } from "../arena/index.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { type Format, requireTrainingFormat, type SeatObservation, seatsFor, trainingVersions, versions } from "../contracts/index.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 
@@ -52,7 +52,7 @@ export interface Field {
   versions: typeof versions | typeof trainingVersions;
 }
 export function buildId() {
-  const paths = execFileSync("git", ["ls-files", "-z", "src/motor", "api", "training"], { cwd: root }).toString()
+  const paths = execFileSync("git", ["ls-files", "-z", "paquetes/motor", "api", "training"], { cwd: root }).toString()
     .split("\0").filter((p) => /\.(ts|sql|py)$/.test(p)).sort();
   return sha(JSON.stringify(paths.map((p) => [p, sha(readFileSync(join(root, p)))])));
 }

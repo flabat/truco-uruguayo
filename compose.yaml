@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: infra/web.Dockerfile
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${WEB_PORT:-8081}:80"
       - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:80"
@@ -29,6 +31,8 @@ services:
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-0}"
       EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"
       EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
+      SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
+      SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
       WEB_ORIGIN: http://${TRUCO_HOST:-localhost}:${WEB_PORT:-8081}
       OIDC_CALLBACK: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/api/auth/callback
       OIDC_ISSUER: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/realms/mesa-local
@@ -60,7 +64,7 @@ services:
       retries: 20
 
   identidad:
-    build: ./infra/keycloak
+    build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start-dev", "--import-realm"]
     environment:
       - KC_HOSTNAME=http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}

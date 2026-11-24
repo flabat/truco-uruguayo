@@ -1,4 +1,4 @@
-# Truco Oriental en un VPS de 4 GB
+# El Truco en un VPS de 4 GB
 
 El despliegue usa una máquina Linux de dos CPU con Docker Engine y Compose v2. Caddy sirve el sitio estático, termina HTTPS y pasa las conexiones WebSocket a la API. Keycloak arranca en modo producción. PostgreSQL guarda las cuentas y las partidas en esquemas con propietarios distintos. Restic envía una copia cifrada a un destino independiente del VPS.
 
@@ -25,7 +25,7 @@ Se puede elegir un contexto Docker de dos CPU y 4 GiB con `DOCKER_CONTEXT`. El e
 4. Usá el siguiente atajo desde la raíz para todos los comandos de esta guía. Inicializá el repositorio restic una sola vez. La inicialización no necesita la base. Para un repositorio ya inicializado usá `listar` para probar las credenciales.
 
    ```sh
-   dc() { docker compose -f compose.production.yaml "$@"; }
+   dc() { TRUCO_RELEASE=$(git rev-parse HEAD) docker compose -f compose.production.yaml "$@"; }
    dc build
    dc run --rm --no-deps backup iniciar
    dc up -d --wait
@@ -73,6 +73,7 @@ kc update realms/mesa \
 En una ventana privada, abrí el sitio, elegí **Ingresar al juego** y registrá una cuenta de prueba. Comprobá que llega el mensaje, confirmá el correo y elegí la contraseña. Volvé a entrar con ese correo y probá **Olvidé mi contraseña**. Las cuentas existentes con un correo pendiente de verificación pueden recibir el mismo pedido al ingresar, incluso si usan un proveedor social. Probá un reingreso por usuario y uno por cada proveedor habilitado.
 
 En la portada o el salón, **Mi perfil** muestra el ID de jugador y los chicos empezados con esa cuenta. Incluye modalidad, tanteador, resultado y fecha cuando el registro la conserva. El correo y la contraseña quedan bajo la gestión de Keycloak.
+
 ### Panel personal de gestión
 
 El panel está en `/gestion/`. Para habilitarlo, elegí una única cuenta personal del realm `mesa` con usuario y contraseña. Podés crearla con el procedimiento anterior. Antes de salir de la sesión de administración, consultá su identificador estable con `kc get users -r mesa -q username=NOMBRE -q exact=true --fields id,username`.
@@ -108,6 +109,8 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
+La imagen de identidad incluye el tema de El Truco y un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google, Facebook o Discord ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak. Para aplicar la marca a un realm existente, [actualizá el nombre y los temas de ingreso y cuenta](ingreso-social.md#activar-la-pantalla-de-el-truco).
+
 ## Salón y exhibiciones
 
 La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)
@@ -135,7 +138,7 @@ install -d -m 700 /etc/truco-oriental
 
 Para recuperar una instalación que aún consulta el repositorio de forma anónima, instalá el ejecutor y la unidad desde la revisión verificada siguiendo los comandos de instalación de abajo. Iniciá `truco-deploy.service` y comprobá que el SHA en `current` coincida con el push aprobado de `main`.
 
-En el VPS de Truco Oriental, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
+En el VPS de El Truco, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
 
 ```sh
 systemctl stop truco-deploy.timer

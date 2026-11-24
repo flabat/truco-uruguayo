@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "10"
+muestra: oros-12
+gancho: "Tres vueltas. ¿Cuál gana cada una?"
+vueltas:
+  - { familia: gana-el-mayor, semilla: 5 }
+  - { familia: gana-el-menor, semilla: 9 }
+  - { familia: empate, semilla: 11 }

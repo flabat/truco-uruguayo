@@ -1,5 +1,5 @@
 import { parseArgs } from "node:util";
-import { crearAzar } from "../../src/motor/reparto.ts";
+import { crearAzar } from "@eltruco/motor/reparto.ts";
 import { ganaConCarta } from "../../src/probabilidad/calcular.ts";
 import { anotarMundo, crearConteo, intervaloPareado } from "../../src/probabilidad/estadistica.ts";
 import { prepararMundos } from "../../src/probabilidad/mundos.ts";

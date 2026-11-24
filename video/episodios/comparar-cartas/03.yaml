@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "03"
+muestra: copas-04
+gancho: "¿Cuándo el rey es pieza?"
+vueltas:
+  - [copas-12, espadas-01]    # el rey ocupa el lugar del 4 que salió de muestra
+  - [copas-05, copas-12]      # entre piezas, el rey vale como el 4
+  - [oros-04, espadas-04]     # los otros cuatros son comunes: parda

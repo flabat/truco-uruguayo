@@ -1,7 +1,7 @@
 import { cartasPorId } from "../../lib/cartas.ts";
-import { pieza, rangoDe, type CardId } from "../../motor/cartas.ts";
-import { compararCartas } from "../../motor/jerarquia.ts";
-import { evaluarTantos, type ResultadoTantos } from "../../motor/tantos.ts";
+import { pieza, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { evaluarTantos, type ResultadoTantos } from "@eltruco/motor/tantos.ts";
 import type { Evaluacion, Paso, Respuesta, SituacionVisible } from "../tipos.ts";
 
 const lista = new Intl.ListFormat("es-UY");

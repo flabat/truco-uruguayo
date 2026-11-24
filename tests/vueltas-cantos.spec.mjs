@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, jugarComputadoras } from "../api/turnos.ts";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "be480827-2dae-4e55-81d2-64ed0ccc0ac2";
 const puntosInicio = [7, 9];
@@ -53,7 +53,7 @@ for (const { canto, manos, valor, puntos } of casos) {
       await route.fulfill({ json: datos });
     });
     await page.goto("jugar/?mesa=" + id);
-    await expect(page.getByRole("heading", { name: canto, exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Podés responder", exact: true })).toBeVisible();
     const quiero = page.getByRole("button", { name: "Quiero", exact: true });
     await expect(quiero).toBeEnabled();
     await quiero.press("Enter");
@@ -65,14 +65,14 @@ for (const { canto, manos, valor, puntos } of casos) {
       await page.clock.runFor(1500);
     }
     await expect(tapete.getByText("Ganó la vuelta", { exact: true })).toBeVisible();
-    await expect(tapete.getByText("Vuelta 1", { exact: true })).toBeVisible();
+    await expect(tapete.locator("header").getByText("Vuelta 1", { exact: true })).toBeVisible();
     await expect(page.locator(".j-cuenta div").filter({ hasText: "Valor de la mano" }).locator("dd")).toHaveText(valor);
     await expect(page.locator(".j-tanteador strong")).toHaveText(puntos);
     if (canto === "Real envido") {
       await expect(page.locator(".j-lances")).toContainText("Tu rival · 3 tantos por envido");
     }
     await page.clock.runFor(2000);
-    await expect(tapete.getByText("Vuelta 2", { exact: true })).toBeVisible();
+    await expect(tapete.locator("header").getByText("Vuelta 2", { exact: true })).toBeVisible();
     await expect(page.locator(".j-tanteador strong")).toHaveText(puntos);
   });
 }

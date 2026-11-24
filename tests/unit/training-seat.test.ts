@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline,
   type AccionOnline, type RepartoOnline,
-} from "../../src/motor/mesa-online.ts";
-import { repartir, type Asiento } from "../../src/motor/reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { repartir, type Asiento } from "@eltruco/motor/reparto.ts";
 import type { Format, Move, PublicTurn, Score, SeatObservation } from "../../training/contracts/index.ts";
 import { challenger, decodeMove, incumbent, observe } from "../../training/seat/index.ts";
 
@@ -98,8 +98,8 @@ test("en duelos y parejas V1 reproduce cada decisión del bot y ofrece una acci�
           const obs = game.see(seat);
           const reference = vistaOnline(game.state, seat);
           const expected = elegirAccionOnline(reference);
-          // La mesa ubica el cobro en el historial y muestra el desglose de la flor.
-          const { indiceCobroLateral, ...vistaV1 } = reference;
+          // Los resúmenes de presentación y el desglose público no alteran la observación V1.
+          const { indiceCobroLateral, resumenTantos, resumenReparto, ...vistaV1 } = reference;
           const cobrosV1 = reference.cobros.map(({ comparacionFlor, ...cobro }) => cobro);
           assert.deepEqual(obs.view, { ...vistaV1, cobros: cobrosV1 });
           assert.deepEqual(obs.originalCards, deal.manos[seat]);

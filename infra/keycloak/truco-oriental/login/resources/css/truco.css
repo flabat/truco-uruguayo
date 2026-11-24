@@ -1,3 +1,20 @@
+#kc-header-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: Georgia, serif;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+#kc-header-wrapper::before {
+    content: "";
+    width: 2.25rem;
+    height: 2.25rem;
+    background: url("../img/favicon.svg") center / contain no-repeat;
+}
+
 main:has(.truco-social) {
     --keycloak-card-top-color: #a34b34;
 }

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { signalVersionFor } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
 
@@ -138,14 +138,14 @@ test("el duelo conserva la ganadora dos segundos aunque la computadora ya haya s
   await expect(ganadora).toHaveCount(0);
   await expect(as).toHaveCSS("outline-style", "none");
   await expect(tapete.getByText("Ganó CPU 1")).toHaveCount(0);
-  await expect(page.locator(".j-jugada-panel").getByRole("status")).not.toContainText(/ganó|parda|as de espadas/i);
+  await expect(page.getByRole("region", { name: "Zona de juego" }).getByRole("status")).not.toContainText(/ganó|parda|as de espadas/i);
   await expect(page.getByRole("list", { name: "Vueltas terminadas" })).toHaveCount(0);
   mostrarAs();
   await expect(as).toHaveCSS("outline-style", "solid");
   await expect(ganadora).toBeVisible();
   await expect(page.getByRole("status").filter({ hasText: /CPU 1/ })).toContainText(/ganó/i);
   await expect(tapete.locator(".j-jugada img")).toHaveCount(2);
-  await expect(tapete.getByText("Vuelta 1", { exact: true })).toBeVisible();
+  await expect(tapete.locator("header").getByText("Vuelta 1", { exact: true })).toBeVisible();
   await expect(jugarCuatro).toBeDisabled();
   await captura(tapete, "ganada");
 
@@ -191,7 +191,7 @@ for (const formato of ["pairs-senas", "pairs-private-senas"]) {
     await publicar("espadas-04");
     await expect(cartaEn(tapete, "Rival · Diego", "4 de espadas")).toBeVisible();
     await expect(page.getByText("Parda", { exact: true })).toHaveCount(0);
-    await expect(page.locator(".j-jugada-panel").getByRole("status")).not.toContainText(/parda|4 de espadas/i);
+    await expect(page.getByRole("region", { name: "Zona de juego" }).getByRole("status")).not.toContainText(/parda|4 de espadas/i);
     await expect(page.getByRole("list", { name: "Vueltas terminadas" })).toHaveCount(0);
     mostrarCuatro();
     await expect(page.getByRole("status").filter({ hasText: /parda/i })).toContainText("Diego jugó 4 de espadas.");
@@ -208,10 +208,11 @@ for (const formato of ["pairs-senas", "pairs-private-senas"]) {
     await page.clock.runFor(1);
     await expect(sena).toBeEnabled();
     await expect(seis).toBeEnabled();
-    await expect(tapete.locator(".j-jugada img")).toHaveCount(0);
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(4);
     await sena.selectOption("cejas");
     await seis.press("Enter");
     await expect(cartaEn(tapete, "Vos · Ana", "6 de espadas")).toBeVisible();
+    await expect(tapete.locator(".j-jugada img")).toHaveCount(1);
     await expect(page.getByRole("region", { name: "Señas de esta mano" })).toContainText(/Alzar ambas cejas/);
 
     await esperarNaipes(tapete);

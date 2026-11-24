@@ -158,12 +158,29 @@ async function probarParejas(paginas) {
   await paso(paginas, ["truco"]);
   const guardadas = await Promise.all(paginas.map(partida));
   await clara.reload();
-  await expect(clara.getByRole("heading", { name: "Truco", exact: true })).toBeVisible(espera);
+  const mesa = await (await ana.request.get(ruta(ana))).json();
+  const cantor = guardadas[0].vista.pendiente.asiento;
+  const anuncio = mesa.asientos[cantor].nombre + " cantó truco.";
+  for (const [i, p] of paginas.entries()) {
+    const { vista } = guardadas[i];
+    assert.deepEqual(vista.pendiente, { tipo: "truco", asiento: cantor });
+    const responde = vista.equipoPorAsiento[vista.asiento] !== vista.equipoPorAsiento[cantor];
+    const zona = tapete(p).getByRole("region", { name: "Zona de juego" });
+    await expect(zona.getByRole("heading", { name: responde ? "Podés responder" : "Responde el equipo rival", exact: true })).toBeVisible(espera);
+    await expect(zona.getByRole("status")).toContainText(anuncio, espera);
+    for (const tipo of ["quiero", "no-quiero"]) {
+      assert.equal(vista.legales.includes(tipo), responde);
+      const opcion = boton(zona, canto[tipo]);
+      if (responde) await expect(opcion).toBeEnabled(espera);
+      else await expect(opcion).toHaveCount(0, espera);
+    }
+  }
   assert.deepEqual(await partida(clara), guardadas[2]);
+  const reconectando = p => tapete(p).getByRole("heading", { name: "Reconectando con tu mesa…", exact: true });
   await compose("stop", "api", "db");
-  await Promise.all(paginas.map(p => expect(p.getByText("Reconectando con tu mesa…")).toBeVisible(espera)));
+  await Promise.all(paginas.map(p => expect(reconectando(p)).toBeVisible(espera)));
   await compose("up", "-d", "--wait", "--wait-timeout", "180", "db", "api");
-  await Promise.all(paginas.map(p => expect(p.getByText("Reconectando con tu mesa…")).toBeHidden(espera)));
+  await Promise.all(paginas.map(p => expect(reconectando(p)).toBeHidden(espera)));
   assert.deepEqual(await Promise.all(paginas.map(partida)), guardadas);
   // Ambos clics pasan por la UI. La barrera deja salir los POST juntos con la misma versión.
   const rivales = paginas.filter((_, i) => guardadas[i].vista.legales.includes("quiero"));

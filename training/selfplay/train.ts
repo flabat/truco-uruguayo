@@ -4,7 +4,7 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { artifactPin, openActor } from "../../api/actor-registry.ts";
-import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
+import { crearAzar, type Asiento } from "@eltruco/motor/reparto.ts";
 import { activeFormats, seatsFor, type Policy } from "../contracts/index.ts";
 import { playMatch } from "../arena/index.ts";
 import { baseline, styles } from "../baselines/index.ts";
@@ -12,7 +12,8 @@ import { incumbent } from "../seat/index.ts";
 import { kind, openAnchored, type AnchoredActor, type CycleFormat } from "../anchored/actor.ts";
 import { dealSeed, read, save } from "../anchored/io.ts";
 import { silence } from "../anchored/matches.ts";
-import { collect, createLearner, openSelfplay, selfplayKind, type LearnerState, type SelfplayActor } from "./learner.ts";
+import { collect, createLearner, duelInteractionsKind, duelOddsKind, isSelfplayKind, openSelfplay, selfplayKind,
+  withDuelCardOdds, withDuelInteractions, type LearnerState, type SelfplayActor } from "./learner.ts";
 
 type Lineage = "a" | "b";
 type Artifact = { format: string; kind?: string };
@@ -39,8 +40,8 @@ export function openTrainingTeam(model: Artifact, format: CycleFormat): Team {
   const silentGuest = format === "pairs-private-senas" && model.format === "pairs";
   if (!silentGuest && model.format !== format) throw new Error("Incompatible training artifact: " + model.format);
   const source = silentGuest ? "pairs" : format;
-  if (model.kind === selfplayKind || model.kind === kind) {
-    const policy = model.kind === selfplayKind ? openSelfplay(model as SelfplayActor) : openAnchored(model as AnchoredActor);
+  if (isSelfplayKind(model.kind) || model.kind === kind) {
+    const policy = model.kind === kind ? openAnchored(model as AnchoredActor) : openSelfplay(model as SelfplayActor);
     return Array(seatsFor(format)).fill(silentGuest ? silence(policy, source) : policy);
   }
   return Array.from({length: seatsFor(format)}, (_, s) => {
@@ -51,15 +52,20 @@ export function openTrainingTeam(model: Artifact, format: CycleFormat): Team {
 
 type Starter = AnchoredActor | SelfplayActor;
 
-function initialize(format: CycleFormat, lineage: Lineage, seed: number, starter: Starter): Checkpoint {
-  if (starter.format !== format || (starter.kind !== kind && starter.kind !== selfplayKind)) {
+function initialize(format: CycleFormat, lineage: Lineage, seed: number, starter: Starter, targetKind: SelfplayActor["kind"]): Checkpoint {
+  if (starter.format !== format || (starter.kind !== kind && !isSelfplayKind(starter.kind))) {
     throw new Error("Invalid frozen starting model");
   }
-  const learner = createLearner(starter.kind === selfplayKind ? starter.anchor : starter);
-  if (starter.kind === selfplayKind) {
+  const learner = createLearner(starter.kind === kind ? starter : starter.anchor);
+  if (starter.kind !== kind) {
     openSelfplay(starter);
     learner.actor = structuredClone(starter);
   }
+  if (learner.actor.kind !== targetKind) {
+    learner.actor = targetKind === duelInteractionsKind ? withDuelInteractions(learner.actor) : withDuelCardOdds(learner.actor);
+  }
+  if (learner.squaredGradient.length !== learner.actor.weights.length)
+    learner.squaredGradient = Array(learner.actor.weights.length).fill(0);
   return {schema:1, format, lineage, starterPin:artifactPin(starter), seed, rng:seed,
     epoch:0, trainingSeconds:0, totalTrainingSeconds:0, games:0, hands:0, decisions:0, learningDecisions:0,
     learnerUpdates:0, counterGames:0, counterWins:0, counterUpdates:0, counterTarget:"",
@@ -245,7 +251,7 @@ function league(state: Checkpoint, context: Context, frozen: Snapshot[], seedMod
   return step;
 }
 
-function withWriter<T>(dir: string, work: () => T) {
+export function withWriter<T>(dir: string, work: () => T) {
   // flock owns the shared open file description. The Node process keeps it
   // after Python exits; the kernel releases it even on an unclean shutdown.
   const fd = openSync(join(dir,"writer.lock"),"a");
@@ -284,9 +290,14 @@ export function runSlice(root: string, format: CycleFormat, lineage: Lineage, sl
     if ((typeof master !== "string" || !master.length) && !Number.isSafeInteger(master)) throw new Error("Missing run seed");
     const seed = dealSeed(String(master),"residual-selfplay-training",format,lineage);
     const file = join(dir,"checkpoint.json");
-    const state: Checkpoint = existsSync(file) ? read(file) : initialize(format,lineage,seed,starter);
+    let targetKind = isSelfplayKind(starter.kind) ? starter.kind : selfplayKind;
+    if (format === "duel" && protocol.duelInteractions === true) targetKind = duelInteractionsKind;
+    else if (format === "duel" && protocol.duelCardOdds === true && targetKind === selfplayKind) targetKind = duelOddsKind;
+    const state: Checkpoint = existsSync(file) ? read(file) : initialize(format,lineage,seed,starter,targetKind);
     assert.ok(state.schema===1 && state.format===format && state.lineage===lineage && state.seed===seed &&
-      state.starterPin===artifactPin(starter) && epoch>=state.epoch, "Changed training input or obsolete epoch");
+      state.starterPin===artifactPin(starter) && epoch>=state.epoch &&
+      [state.learner, state.specialist].every(learner => learner.actor.kind === targetKind &&
+        learner.squaredGradient.length === learner.actor.weights.length), "Changed training input or obsolete epoch");
     const inputs = loadArchive(join(input,"archive"));
     const ctx = freezeContext(root,state,epoch,inputs);
     if (epoch>state.epoch) { state.epoch=epoch; state.trainingSeconds=0; state.last=null; }

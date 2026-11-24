@@ -1,10 +1,10 @@
-import type { CardId } from "../../src/motor/cartas.ts";
-import { aDecidir, aplicarOnline, iniciarOnline } from "../../src/motor/mesa-online.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { aDecidir, aplicarOnline, iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 import { observe } from "../seat/index.ts";
 import { commitTurn } from "../signals/index.ts";
 import type { PublicTurn } from "../contracts/index.ts";
 import { loadPartnerPolicy, type Actor } from "./policy.ts";
-import type { TresCartas } from "../../src/motor/reparto.ts";
+import type { TresCartas } from "@eltruco/motor/reparto.ts";
 
 /** Juego reducido a 39–39: todos ya jugaron su primera carta. El equipo 0 elige, desde
  * la información común, dos prescripciones para la segunda vuelta. Cada una mapea las

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable } from "../../api/turnos.ts";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "../../src/motor/mesa-online.ts";
-import { mazo } from "../../src/motor/cartas.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import { mazo } from "@eltruco/motor/cartas.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import { observe } from "../../training/seat/index.ts";
 import { dueloFlor, dueloMazo } from "../fixtures/duelo-mazo.ts";
 

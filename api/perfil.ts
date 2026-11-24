@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
-import { marcadorOnline } from "../src/motor/mesa-online.ts";
+import { marcadorOnline } from "@eltruco/motor/mesa-online.ts";
 import type { ResumenPartida, PerfilJugador } from "../src/lib/perfil.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { responderJson } from "./http.ts";

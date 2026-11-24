@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import pg from "pg";
 import { crearPartidas } from "./partidas.ts";
-import { elegirAccionOnline } from "../src/motor/mesa-online.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { elegirAccionOnline } from "@eltruco/motor/mesa-online.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const web = new URL(process.env.WEB_ORIGIN);
@@ -11,7 +11,7 @@ const servicio = crearPartidas(pool, web);
 const jugadores = [];
 const mesas = [];
 const sesiones = [];
-async function perfilDe(indice, query = "") {
+async function cookieDe(indice) {
   let cookie = sesiones[indice];
   if (!cookie) {
     const valor = randomUUID();
@@ -19,7 +19,11 @@ async function perfilDe(indice, query = "") {
     await pool.query("INSERT INTO juego.sesiones (clave, jugador) VALUES ($1,$2)", [clave, jugadores[indice]]);
     cookie = sesiones[indice] = "truco_sesion=" + valor;
   }
-  return fetch("http://localhost:3001/api/perfil" + query, { headers: { cookie } });
+  return cookie;
+}
+
+async function perfilDe(indice, query = "") {
+  return fetch("http://localhost:3001/api/perfil" + query, { headers: { cookie: await cookieDe(indice) } });
 }
 
 const comando = (version, accion) => ({ id: randomUUID(), version, ...(accion && { accion }) });
@@ -83,18 +87,61 @@ async function probarReintentoAtomico(mesa, orden) {
   return primera;
 }
 
+async function probarReporte(mesa) {
+  const api = "http://localhost:3001/api";
+  const ruta = api + "/mesas/" + mesa + "/reportes";
+  const cookie = await cookieDe(0);
+  const cursor = { mano: "1", posicion: "1", vuelta: "1", puntos: "0-0", fase: "jugada", cliente: "a".repeat(40) };
+  const enviar = (campos = cursor, sesion = cookie, origen = web.origin, url = ruta) =>
+    fetch(url, { method: "POST", headers: { cookie: sesion, origin: origen }, body: new URLSearchParams(campos), redirect: "manual" });
+  const permiso = async () => (await (await fetch(api + "/jugador", { headers: { cookie } })).json()).puedeReportar;
+  assert.equal(await permiso(), false);
+  assert.equal((await enviar(cursor, "")).status, 401);
+  assert.equal((await enviar()).status, 403);
+  await pool.query("INSERT INTO juego.reporteros (jugador) VALUES ($1)", [jugadores[0]]);
+  assert.equal(await permiso(), true);
+  assert.equal((await enviar(cursor, cookie, "https://otro.example")).status, 403);
+  assert.equal((await enviar(cursor, cookie, web.origin, api + "/mesas/" + randomUUID() + "/reportes")).status, 404);
+  assert.equal((await enviar({ ...cursor, posicion: "9999" })).status, 409);
+  assert.equal((await enviar({ ...cursor, asiento: "3" })).status, 400);
+  // La API ya está en la mano 2. El navegador envía la primera jugada de la mano anterior.
+  const respuestas = await Promise.all([enviar(), enviar()]);
+  assert.ok(respuestas.every(r => r.status === 303));
+  const ubicacion = respuestas[0].headers.get("location");
+  assert.equal(respuestas[1].headers.get("location"), ubicacion);
+  const url = new URL(ubicacion);
+  assert.equal(url.origin + url.pathname, "https://github.com/flabat/truco-uruguayo/issues/new");
+  const body = url.searchParams.get("body");
+  assert.ok(body.includes(mesa));
+  assert.match(body, /Truco/i);
+  assert.doesNotMatch(body, /Quiero|oros-03|espadas-12/);
+  const { rows } = await pool.query("SELECT id, mano, posicion, secuencia, asiento, cliente FROM juego.reportes WHERE mesa=$1", [mesa]);
+  assert.equal(rows.length, 1);
+  assert.ok(body.includes(rows[0].id));
+  assert.deepEqual([rows[0].mano, rows[0].posicion, Number(rows[0].secuencia), rows[0].asiento, rows[0].cliente],
+    [1, 1, 2, 0, cursor.cliente]);
+  await pool.query("DELETE FROM juego.reporteros WHERE jugador=$1", [jugadores[0]]);
+  assert.equal(await permiso(), false);
+  assert.equal((await enviar()).status, 403);
+}
+
 async function probarMesa() {
   const id = await preparar("2v2");
   const leer = i => servicio.leer(id, jugadores[i]);
   const accion = (i, datos) => servicio.ejecutar(id, jugadores[i], "acciones", datos);
   await sentar(id, 0, jugadores[0]);
-  assert.equal((await leer(0)).vista, null);
+  const sinRepartir = await leer(0);
+  assert.equal(sinRepartir.vista, null);
+  assert.equal("lance" in sinRepartir, false);
+  assert.deepEqual(sinRepartir.contexto, { versionVista: 1, fase: "sin-repartir" });
   await assert.rejects(leer(1), { status: 404 });
   for (const i of [1, 2, 3]) await sentar(id, i, jugadores[i]);
   const vistas = await Promise.all([0, 1, 2, 3].map(leer));
   assert.ok(vistas.every(p => p.manoNumero === 1 && p.version === 1));
   assert.equal(new Set(vistas.flatMap(p => p.vista.cartas)).size, 12);
   for (const [i, p] of vistas.entries()) {
+    assert.deepEqual(p.lance, { tipo: "simple", duelo: null, activos: [0, 1, 2, 3] });
+    assert.deepEqual(p.contexto, { versionVista: 1, fase: "en-juego" });
     for (const [j, otra] of vistas.entries()) {
       if (i !== j) for (const carta of otra.vista.cartas) assert.ok(!JSON.stringify(p).includes(carta));
     }
@@ -131,6 +178,8 @@ async function probarMesa() {
     partida = await accion(turno, comando(propia.version, { tipo: "carta", carta: propia.vista.cartas[0] }));
   }
   assert.equal(partida.puntos.reduce((a, b) => a + b), 2);
+  assert.equal(partida.contexto.fase, "reparto-cerrado");
+  assert.ok(Array.isArray(partida.vista.cartas));
   const nueva = comando(partida.version);
   const siguiente = await servicio.ejecutar(id, jugadores[0], "siguiente", nueva);
   assert.equal(siguiente.manoNumero, 2);
@@ -139,6 +188,7 @@ async function probarMesa() {
   assert.deepEqual(await servicio.ejecutar(id, jugadores[0], "siguiente", nueva), siguiente);
   assert.deepEqual(await accion(0, truco), cantado);
   const { eventos } = await replayDe(id);
+  await probarReporte(id);
   assert.deepEqual(eventos.filter(e => e.tipo === "reparto").map(e => e.manoNumero), [1, 2]);
   assert.equal(eventos.filter(e => e.tipo === "decision" && e.accion.tipo === "quiero").length, 1);
 }
@@ -171,13 +221,17 @@ async function probarComputadoras(modo, meta) {
     }
   }
   assert.equal(partida.puntos[partida.ganadorPartida], meta);
+  assert.equal(partida.contexto.fase, "chico-terminado");
   assert.deepEqual(await servicio.leer(id, jugadores[0]), partida);
   await assert.rejects(servicio.ejecutar(id, jugadores[0], "siguiente", comando(partida.version)), { status: 409 });
   const replay = await replayDe(id);
-  const manos = (await pool.query("SELECT acciones FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id])).rows;
+  const manos = (await pool.query("SELECT reparto, acciones FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id])).rows;
   assert.equal(replay.id, id);
   assert.equal(replay.origen, "mesa");
-  assert.equal(replay.eventos.filter(e => e.tipo === "reparto").length, manos.length);
+  const repartos = replay.eventos.filter(e => e.tipo === "reparto").map(e => e.reparto);
+  assert.deepEqual(repartos, manos.map(m => m.reparto));
+  const computadoras = Array.from({ length: cantidad - 1 }, (_, i) => i + 1);
+  for (const reparto of repartos) assert.deepEqual(reparto.respondenSinFlor, computadoras);
   assert.equal(replay.eventos.filter(e => e.tipo === "cierre").length, 1);
   const decisiones = replay.eventos.filter(e => e.tipo === "decision");
   assert.deepEqual(decisiones.map(e => e.accion), manos.flatMap(m => m.acciones));

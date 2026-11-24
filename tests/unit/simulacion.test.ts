@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { capturarReplay, reproducirReplay } from "../../src/motor/replay.ts";
+import { capturarReplay, reproducirReplay } from "@eltruco/motor/replay.ts";
 import vector from "../fixtures/replay-v1.json" with { type: "json" };
 
 function terminal(args: string[], input?: string) {

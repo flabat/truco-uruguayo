@@ -3,8 +3,8 @@ import test from "node:test";
 import {
   aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline, vistaOnlineV1, type AccionOnline, type EstadoOnline,
   type RepartoOnline, type TipoAccionOnline,
-} from "../../src/motor/mesa-online.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { reparto as tresFlores, hastaLaSubida } from "../fixtures/flor-querida.ts";
 
 const envite: RepartoOnline = {

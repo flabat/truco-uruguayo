@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
-import { crearAzar, type RepartoOnline } from "../../src/motor/reparto.ts";
-import { iniciarOnline } from "../../src/motor/mesa-online.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
+import { crearAzar, type RepartoOnline } from "@eltruco/motor/reparto.ts";
+import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 import { baseline } from "../../training/baselines/index.ts";
 import { incumbent } from "../../training/seat/index.ts";
 import { commitTurn } from "../../training/signals/index.ts";

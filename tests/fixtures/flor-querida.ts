@@ -1,4 +1,4 @@
-import type { AccionOnline, RepartoOnline } from "../../src/motor/mesa-online.ts";
+import type { AccionOnline, RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 
 export const reparto: RepartoOnline = {
   versionReparto: "online-1", dador: 0, mano: 1, muestra: "oros-01",

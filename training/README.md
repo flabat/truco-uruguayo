@@ -1,6 +1,8 @@
-# Entrenamiento local de Truco Oriental
+# Entrenamiento local de El Truco
 
 La arena juega chicos a 40 usando el mismo reductor que el servidor. Cada asiento decide a partir de su mano y de los hechos públicos y, cuando se habilitan señas, de los gestos del propio equipo. Los tres formatos activos son, `duel`, `pairs` y `pairs-private-senas`. Todos los participantes en entrenamiento y evaluación son computadoras.
+
+Para continuar desde los modelos verificados del último ciclo, usá la [liga autónoma desde Terminal en macOS](selfplay/README.md#entrenar-desde-terminal-en-la-mac). Incluye preparación, ejecución en segundo plano, reanudación y resultados por modalidad.
 
 ## Primera corrida desde un checkout nuevo
 

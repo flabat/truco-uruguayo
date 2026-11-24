@@ -1,4 +1,4 @@
-import { esSemilla } from "../motor/reparto.ts";
+import { esSemilla } from "@eltruco/motor/reparto.ts";
 import { erroresRecientes, progresoDe } from "./progreso.ts";
 import type { FuenteProgreso } from "./progreso.ts";
 import type { Evaluar, Intento, Leccion, Paso, ProveedorSituaciones, Respuesta, Situacion, SituacionVisible } from "./tipos.ts";

@@ -5,7 +5,8 @@ cd "$(dirname "$0")/.."
 case "${1:-}" in
   google) credenciales=(-e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET) ;;
   facebook) credenciales=(-e FACEBOOK_APP_ID -e FACEBOOK_APP_SECRET) ;;
-  *) echo "Elegí google o facebook." >&2; exit 1 ;;
+  discord) credenciales=(-e DISCORD_CLIENT_ID -e DISCORD_CLIENT_SECRET) ;;
+  *) echo "Elegí google, facebook o discord." >&2; exit 1 ;;
 esac
 
 # La administración solo es accesible dentro de la red de Compose.

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { elegirJugada } from "../../src/motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara } from "../../src/motor/mano.ts";
-import { repartir, type Asiento } from "../../src/motor/reparto.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara } from "@eltruco/motor/mano.ts";
+import { repartir, type Asiento } from "@eltruco/motor/reparto.ts";
 import { calcularProbabilidades } from "../../src/probabilidad/calcular.ts";
 import { posicionPublica } from "../../src/probabilidad/informacion.ts";
 
