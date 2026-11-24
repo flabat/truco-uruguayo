@@ -1,0 +1,22 @@
+# Paridad con «Contar flor 03» de Codex: mismas manos y mismas líneas, para usar su voz importada.
+# npm run reel -- video/episodios/contar-flor/03.yaml --importar "$HOME/Downloads/El Truco - Codex fuentes/flor/03"
+plantilla: contar-tantos
+serie: contar-flor
+id: "03"
+modalidad: flor
+muestra: espadas-03
+gancho: "Contá esta flor."
+manos:
+  - [oros-07, oros-04, oros-12]
+  - cambio: { de: oros-12, a: espadas-11 }
+  - [espadas-02, espadas-05, bastos-06]
+lineas:
+  pregunta: "La muestra es el tres de espadas. Contá esta flor."
+  cartas: "Siete, cuatro y rey de oros. ¿Cuántos tantos tenés?"
+  respuesta1: "Treinta y uno. Veinte más siete más cuatro. El rey común vale cero."
+  cambio: "Cambiá el rey por el caballo de espadas. Es pieza. ¿Qué cantás?"
+  respuesta2: "Treinta y ocho. Contá veinte una sola vez. Sumale siete, cuatro y los siete que aporta el caballo."
+  tercera: "Dos y cinco de espadas, con el seis de bastos. ¿Cuánto da esta flor?"
+  respuesta3: "Cuarenta y cuatro. Veinte más diez del dos, ocho del cinco y seis de bastos."
+  valores: null
+  cierre: "Probá otra mano en El Truco."

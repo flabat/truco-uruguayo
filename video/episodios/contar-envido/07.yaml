@@ -1,0 +1,10 @@
+plantilla: contar-tantos
+serie: contar-envido
+id: "07"
+modalidad: envido
+muestra: bastos-06
+gancho: "¿Cuánto tenés de envido?"
+manos:
+  - [copas-04, copas-07, espadas-01]
+  - cambio: { de: copas-04, a: bastos-04 }
+  - { familia: tres-palos-distintos, semilla: 7 }
