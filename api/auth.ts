@@ -2,7 +2,8 @@ import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import * as oidc from "openid-client";
-import { cookieDe, hash, nombreSesion, origenValido, sesionDe } from "./sesion.ts";
+import { cookieDe, esDesafio, hash, nombreSesion, origenValido, sesionDe, verificadorCorresponde } from "./sesion.ts";
+import { leerJson, responderJson } from "./http.ts";
 
 export { origenValido, sesionDe };
 
@@ -11,6 +12,7 @@ const flujo = "truco_ingreso";
 const sesion = nombreSesion;
 const minutosDiez = 600;
 const diasSiete = 604800;
+const retornoApp = "eltruco://ingreso";
 const secreto = () => randomBytes(32).toString("base64url");
 
 export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
@@ -76,10 +78,13 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
 
     if (req.method === "GET" && url.pathname === "/api/auth/login") {
       const regreso = regresoPermitido(url.searchParams.get("volver"));
+      const desafioApp = url.searchParams.get("app");
+      if (desafioApp !== null && !esDesafio(desafioApp)) { res.writeHead(400).end("Desafío de la app inválido."); return; }
       // El intento y la sesión deben quedar en el dominio anunciado al navegador.
       if (req.headers.host !== web.host) {
         const login = new URL("/api/auth/login", web);
-        login.searchParams.set("volver", regreso);
+        if (desafioApp !== null) login.searchParams.set("app", desafioApp);
+        else login.searchParams.set("volver", regreso);
         res.writeHead(303, { Location: login.href }).end();
         return;
       }
@@ -89,8 +94,9 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       const verifier = oidc.randomPKCECodeVerifier();
       await pool.query("DELETE FROM juego.ingresos WHERE vence <= now()");
       await pool.query("DELETE FROM juego.sesiones WHERE vence <= now()");
-      await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador, regreso) VALUES ($1,$2,$3,$4,$5)",
-        [hash(handle), state, nonce, verifier, regreso]);
+      await pool.query("DELETE FROM juego.canjes WHERE vence <= now()");
+      await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador, regreso, desafio_app) VALUES ($1,$2,$3,$4,$5,$6)",
+        [hash(handle), state, nonce, verifier, regreso, desafioApp]);
       const location = oidc.buildAuthorizationUrl(config, {
         response_type: "code", redirect_uri: callback.href, scope: "openid profile",
         state, nonce, prompt: "login", code_challenge_method: "S256",
@@ -105,7 +111,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       // Los ingresos ya abiertos antes de esta migración usaban una cookie compartida.
       const nombreFlujo = cookieDe(req, flujo + "_" + state) ? flujo + "_" + state : flujo;
       const { rows: [attempt] } = await pool.query(
-        "DELETE FROM juego.ingresos WHERE clave = $1 AND estado = $2 AND vence > now() RETURNING estado, nonce, verificador, regreso",
+        "DELETE FROM juego.ingresos WHERE clave = $1 AND estado = $2 AND vence > now() RETURNING estado, nonce, verificador, regreso, desafio_app",
         [hash(cookieDe(req, nombreFlujo)), state]);
       res.setHeader("Set-Cookie", cookie(nombreFlujo, "", 0));
       if (!attempt) { res.writeHead(401).end("El ingreso venció. Volvé a ingresar desde el juego."); return; }
@@ -123,6 +129,21 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       // Algunos proveedores usan el correo como nombre de usuario. El nombre se muestra a toda la mesa.
       const name = [claims.given_name, claims.preferred_username]
         .find(value => typeof value === "string" && value.trim() && !value.includes("@")) || "Jugador";
+      if (attempt.desafio_app) {
+        // La app recibe un código de un solo uso, inútil sin el verificador que nunca salió del teléfono.
+        const codigo = secreto();
+        await pool.query(`
+          WITH jugador AS (
+            INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
+            ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
+          )
+          INSERT INTO juego.canjes (clave, jugador, desafio) SELECT $4, id, $5 FROM jugador
+        `, [claims.iss, claims.sub, name, hash(codigo), attempt.desafio_app]);
+        const destino = new URL(retornoApp);
+        destino.searchParams.set("codigo", codigo);
+        res.writeHead(303, { Location: destino.href, "Set-Cookie": cookie(nombreFlujo, "", 0) }).end();
+        return;
+      }
       const handle = secreto();
       // Un solo commit vincula la identidad y crea la sesión, incluso en el primer ingreso concurrente.
       await pool.query(`
@@ -136,6 +157,26 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
         cookie(nombreFlujo, "", 0), cookie(sesion, handle, diasSiete),
       ] }).end();
       return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/auth/canje") {
+      const vencido = () => responderJson(res, 401, { error: "El ingreso venció. Volvé a ingresar." });
+      const datos = await leerJson(req).catch(() => null);
+      const codigo = datos?.codigo, verificador = datos?.verificador;
+      if (typeof codigo !== "string" || typeof verificador !== "string") return vencido();
+      // Leer y borrar en la misma consulta: el código sirve una sola vez, aunque el verificador no corresponda.
+      const { rows: [canje] } = await pool.query(
+        "DELETE FROM juego.canjes WHERE clave = $1 RETURNING jugador, desafio, baja_cancelada, vence > now() AS vigente",
+        [hash(codigo)]);
+      if (!canje?.vigente || !verificadorCorresponde(verificador, canje.desafio)) return vencido();
+      const handle = secreto();
+      const { rows: [jugador] } = await pool.query(`
+        WITH sesion AS (
+          INSERT INTO juego.sesiones (clave, jugador, tipo, vence) VALUES ($1, $2, 'app', now() + interval '30 days')
+        )
+        SELECT id, nombre FROM juego.jugadores WHERE id = $2
+      `, [hash(handle), canje.jugador]);
+      return responderJson(res, 200, { sesion: handle, jugador, bajaCancelada: canje.baja_cancelada });
     }
 
     if (req.method === "GET" && url.pathname === "/api/jugador") {

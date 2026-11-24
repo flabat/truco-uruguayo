@@ -87,6 +87,16 @@ try {
   assert.equal(await cierre, 1008);
   assert.equal((await pedir("GET", "/api/jugador", bearer(a))).estado, 401);
 
+  // Un código de canje vencido no entrega sesión, aunque el verificador corresponda.
+  const verificador = randomBytes(32).toString("base64url");
+  const desafio = createHash("sha256").update(verificador).digest("base64url");
+  const codigo = randomBytes(32).toString("base64url");
+  await pool.query("INSERT INTO juego.canjes (clave,jugador,desafio,vence) VALUES ($1,$2,$3,now() - interval '1 second')",
+    [hash(codigo), b.id, desafio]);
+  r = await pedir("POST", "/api/auth/canje", {}, { codigo, verificador });
+  assert.equal(r.estado, 401);
+  assert.equal(r.datos.error, "El ingreso venció. Volvé a ingresar.");
+
   // Un encabezado mal formado no cae a la cookie.
   assert.equal((await pedir("GET", "/api/jugador", { ...cookie(web), authorization: "Basic x" })).estado, 401);
   console.log("Sesión de la app verificada · encabezado, origen, WebSocket, renovación y cierre.");

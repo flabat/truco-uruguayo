@@ -104,3 +104,14 @@ Abrí **Ingresar al juego** desde una ventana privada. Elegí el proveedor, comp
 Si el jugador entró primero con Google y después elige Facebook con el mismo correo, Keycloak puede pedirle que vuelva a ingresar con Google para verificar la cuenta existente. Al completar la vinculación, ambos botones deben llevar al mismo ID de jugador y a la misma mesa.
 
 El comando que activa un proveedor conserva su flujo de primer ingreso y sus permisos si ya existía. Revisá los permisos y quitá los adicionales si solo usás el ingreso. Comprobá que el flujo exige demostrar el control de la cuenta antes de vincularla. Conservá **Trust email** desactivado. Si el correo de confirmación resulta insuficiente, configurá la verificación con el método de ingreso original. Si Facebook omite el correo y el realm lo exige, el jugador puede completarlo al revisar su perfil. La identidad del jugador se guarda por emisor y sujeto de Keycloak. [Vinculación de identidades en Keycloak](https://www.keycloak.org/docs/latest/server_admin/#_identity_broker)
+
+## Ingreso desde la app
+
+La app usa el mismo ingreso, sin cookie:
+
+1. Genera un verificador aleatorio y abre en el navegador del sistema `/api/auth/login?app=<desafío>`, donde el desafío es el SHA-256 del verificador en base64url (S256, RFC 7636).
+2. Al terminar el ingreso, la API redirige a `eltruco://ingreso?codigo=<código>`. El código vence a los 60 segundos y sirve una sola vez.
+3. La app llama `POST /api/auth/canje` con `{"codigo", "verificador"}` y recibe `{"sesion", "jugador", "bajaCancelada"}`.
+4. En cada pedido HTTP y en el WebSocket envía `Authorization: Bearer <sesion>`. Con ese encabezado la API no exige el encabezado `Origin`. La sesión dura 30 días y se renueva con el uso.
+
+`POST /api/auth/logout` con el encabezado cierra esa sesión y sus conexiones en vivo.

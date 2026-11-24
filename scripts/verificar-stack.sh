@@ -45,6 +45,7 @@ node scripts/verificar-ingreso-social.mjs "$web" google facebook
 COMPOSE_PROJECT_NAME="$project" npm run auth:discord
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-migracion-salon.mjs
