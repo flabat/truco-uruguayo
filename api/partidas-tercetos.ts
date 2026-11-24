@@ -12,6 +12,7 @@ import { decisionTercetos, guardarDecisionesReplayDB } from "./replay-db.ts";
 import type { Registro } from "./turnos.ts";
 
 import type { TipoLance } from "@eltruco/motor/reglas-tercetos.ts";
+import { esperanDe } from "./cedidos.ts";
 export type RegistroTercetos = Omit<Registro, "acciones"> & {
   mesa: string;
   meta_tercetos: number | null;
@@ -43,7 +44,7 @@ export function asientoBotTercetos(estado: EstadoOnline, humanos: readonly numbe
 
 /** Compartida por el escritor humano y el de computadora, dentro del mismo bloqueo de mesa. */
 export async function registrarPendienteTercetos(db: PoolClient, mesa: string, estado: EstadoOnline, humanos: readonly number[]) {
-  if (asientoBotTercetos(estado, humanos) === undefined) {
+  if (asientoBotTercetos(estado, await esperanDe(db, mesa, humanos)) === undefined) {
     await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
   } else {
     await db.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);

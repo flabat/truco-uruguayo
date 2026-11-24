@@ -43,7 +43,7 @@ const columnas = `m.id, m.modo, m.meta, m.origen, m.version_senas, m.ultimo_hech
   m.fin_publico, m.exhibicion_retirada, h.numero,
   CASE WHEN h.cantidad=0 THEN h.puntos_inicio ELSE
     ARRAY[(e.evento->'puntos'->>0)::int, (e.evento->'puntos'->>1)::int] END AS puntos,
-  ARRAY(SELECT a.computadora FROM juego.asientos a WHERE a.mesa=m.id ORDER BY asiento) AS computadoras`;
+  ARRAY(SELECT a.computadora OR a.cedido FROM juego.asientos a WHERE a.mesa=m.id ORDER BY asiento) AS computadoras`;
 
 function manoActual(conRegistro: boolean) {
   return `JOIN LATERAL (

@@ -988,3 +988,16 @@ test("voz opcional abierta, reintento y enlace de teclado sin interrumpir el jue
   await expect(enlace).toHaveAttribute("target", "_blank");
   await expect(enlace).toHaveAttribute("rel", /noreferrer/);
 });
+
+test("una mesa en espera cancelada lo avisa en lugar de esperar jugadores", async ({ page }) => {
+  await simular(page, async path => {
+    if (path.endsWith("/" + mesaId)) {
+      return { json: { ...mesa("2v2", [seat(0, "humano", "Ana"), seat(1, "vacio", null), seat(2, "vacio", null), seat(3, "vacio", null)], 0),
+        creadorId: "bruno", cancelada: true } };
+    }
+    if (path.endsWith("/partida")) return { status: 409, json: { error: "La mesa se canceló." } };
+  });
+  await page.goto("jugar/?mesa=" + mesaId);
+  await expect(page.getByText("Se canceló la mesa: quien la creó dejó el juego.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Esperando jugadores" })).toHaveCount(0);
+});
