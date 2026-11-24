@@ -105,6 +105,8 @@ async function configurar() {
       trustEmail: false,
       // Los tokens de Apple se guardan para revocarlos al eliminar la cuenta, como exige Apple.
       storeToken: proveedor === "apple",
+      // El jugador puede leer su token guardado; la API lo pide al ingresar con el token de acceso del jugador.
+      addReadTokenRoleOnCreate: proveedor === "apple",
       config,
     });
   }

@@ -11,6 +11,7 @@ import { crearSalon } from "./salon.ts";
 import { atenderPerfil } from "./perfil.ts";
 import { atenderReporte, rutaReporte } from "./reportes.ts";
 import { crearCuenta, rutaEliminarCuenta } from "./cuenta.ts";
+import { crearCapturaApple, crearServiciosBaja, procesarBajas } from "./bajas.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
@@ -30,7 +31,10 @@ const auth = crearAuth(pool, {
   backend: new URL(process.env.OIDC_BACKEND!),
   local: process.env.LOCAL_OIDC === "1",
   cerrarConexiones: jugador => vivo.cerrarJugador(jugador),
+  capturarApple: crearCapturaApple(process.env, pool),
 });
+const serviciosBaja = crearServiciosBaja(process.env, pool);
+if (!serviciosBaja) console.warn("Sin KEYCLOAK_API_CLIENT_SECRET: las bajas vencidas no se completan.");
 
 const server = createServer(async (request, response) => {
   if (request.url?.startsWith("/api/")) {
@@ -85,10 +89,12 @@ const vivo = crearVivo(server, web, {
 
 const detenerExhibiciones = procesarExhibiciones(pool, configuracionExhibiciones(process.env), alCambiar);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
+const detenerBajas = serviciosBaja ? procesarBajas(pool, serviciosBaja) : undefined;
 server.listen(Number(process.env.PORT ?? 3001), "0.0.0.0");
 process.on("SIGTERM", () => {
   detenerLimpieza?.();
   detenerEnsayos();
+  detenerBajas?.();
   detenerExhibiciones();
   vivo.cerrar();
   server.close(() => Promise.all([pool.end(), poolVoz?.end()]));

@@ -74,6 +74,26 @@ En una ventana privada, abrí el sitio, elegí **Ingresar al juego** y registrá
 
 En la portada o el salón, **Mi perfil** muestra el ID de jugador y los chicos empezados con esa cuenta. Incluye modalidad, tanteador, resultado y fecha cuando el registro la conserva. El correo y la contraseña quedan bajo la gestión de Keycloak.
 
+### Eliminación de cuentas
+
+Los jugadores piden la eliminación desde **Mi perfil**. Durante 30 días pueden arrepentirse volviendo a ingresar. Al vencer, una tarea de la API (cada hora) revoca su token de Apple si ingresó con Apple, borra su usuario de Keycloak y deja su fila de jugador como «Jugador» anónimo para el historial de los demás.
+
+Para borrar usuarios, la API usa el cliente de servicio `truco-api`, que solo puede administrar usuarios del realm `mesa`:
+
+1. Generá el secreto con `openssl rand -hex 32` y guardalo como `KEYCLOAK_API_CLIENT_SECRET` en el archivo de entorno. Si habilitaste Apple, completá también las variables `APPLE_*` y generá `APPLE_TOKENS_KEY` con `openssl rand -base64 32`.
+2. Recreá la API para que tome las variables: `dc up -d api`.
+3. Registrá el cliente desde el servidor, con la contraseña de `operador`:
+
+   ```bash
+   read -rsp 'Contraseña de operador: ' KC_BOOTSTRAP_ADMIN_PASSWORD; echo
+   dc exec -T -e KEYCLOAK_ADMIN_URL=http://identidad:8080 -e KEYCLOAK_REALM=mesa \
+     -e KC_BOOTSTRAP_ADMIN_USERNAME=operador -e KC_BOOTSTRAP_ADMIN_PASSWORD \
+     api node --input-type=module - < scripts/configurar-cliente-api.mjs
+   unset KC_BOOTSTRAP_ADMIN_PASSWORD
+   ```
+
+El comando es idempotente: volvé a ejecutarlo si cambiás el secreto. Keycloak 26.8 exige el alcance `kc-admin-api` para usar la API de administración, y el comando lo asigna. Sin `KEYCLOAK_API_CLIENT_SECRET`, la API registra una advertencia al arrancar y las bajas vencidas quedan pendientes hasta configurarlo. Localmente, `npm run auth:api` hace lo mismo sobre `mesa-local`.
+
 ## Copias y recuperación
 
 El servicio `backup` guarda una copia al arrancar y vuelve a hacerlo cada 24 horas. `pg_dump` obtiene una vista consistente de los dos esquemas mientras se juega. Restic cifra el archivo y publica una instantánea sólo si el volcado terminó bien. Se guardan siete copias diarias, cuatro semanales y seis mensuales. Ante un error se reintenta tras cinco minutos. Revisá `dc ps`, `dc logs --tail=40 backup` y la fecha de la última instantánea. El servicio pasa a estado no saludable después de 26 horas sin una copia exitosa. Una copia diaria permite perder hasta un día de jugadas si se pierde el disco y las copias están al día.

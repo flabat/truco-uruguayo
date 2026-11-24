@@ -19,6 +19,7 @@
     "auth:discord": "bash scripts/ingreso-social-local.sh discord",
     "auth:facebook": "bash scripts/ingreso-social-local.sh facebook",
     "auth:apple": "bash scripts/ingreso-social-local.sh apple",
+    "auth:api": "bash scripts/cliente-api-local.sh",
     "preview": "astro preview",
     "cartas:generar": "node scripts/tatu/generar.mjs",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",

@@ -9,6 +9,7 @@ export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${
 export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
+export KEYCLOAK_API_CLIENT_SECRET=secreto-descartable-del-cliente-de-servicio-api APPLE_TOKENS_KEY="$(openssl rand -base64 32)"
 unset KEYCLOAK_ADMIN_TOKEN
 export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
 
@@ -58,6 +59,8 @@ node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-sesion-app.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
+COMPOSE_PROJECT_NAME="$project" npm run auth:api
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs

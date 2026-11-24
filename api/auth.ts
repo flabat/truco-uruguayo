@@ -50,9 +50,11 @@ interface OpcionesOIDC {
   local: boolean;
   salonHabilitado?: boolean;
   cerrarConexiones?: (jugador: string) => void;
+  /** Guarda el token de Apple del jugador, si ingresó con Apple, para poder revocarlo en una baja. */
+  capturarApple?: ((jugador: string, acceso: string) => Promise<void>) | null;
 }
 
-export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false, cerrarConexiones = () => {} }: OpcionesOIDC) {
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false, cerrarConexiones = () => {}, capturarApple }: OpcionesOIDC) {
   const protocol = "/protocol/openid-connect";
   const config = new oidc.Configuration({
     issuer: issuer.href,
@@ -117,13 +119,14 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
         [hash(cookieDe(req, nombreFlujo)), state]);
       res.setHeader("Set-Cookie", cookie(nombreFlujo, "", 0));
       if (!attempt) { texto(res, 401, "El ingreso venció. Volvé a ingresar desde el juego."); return; }
-      let claims;
+      let claims, acceso: string;
       try {
         const tokens = await oidc.authorizationCodeGrant(config, url, {
           expectedState: attempt.estado, expectedNonce: attempt.nonce,
           pkceCodeVerifier: attempt.verificador, idTokenExpected: true,
         });
         claims = tokens.claims()!;
+        acceso = tokens.access_token;
       } catch {
         texto(res, 401, "No se pudo verificar el ingreso. Volvé a ingresar desde el juego.");
         return;
@@ -140,6 +143,8 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       const cancelada = Boolean(baja) && (await pool.query(
         "DELETE FROM juego.bajas WHERE jugador = $1 AND vence > now()", [jugador.id])).rowCount === 1;
       if (baja && !cancelada) { texto(res, 403, "Tu cuenta se está eliminando."); return; }
+      // Un fallo al guardar el token de Apple no impide ingresar.
+      await capturarApple?.(jugador.id, acceso).catch(() => console.warn("No se pudo guardar el token de Apple del ingreso."));
       if (attempt.desafio_app) {
         // La app recibe un código de un solo uso, inútil sin el verificador que nunca salió del teléfono.
         const codigo = secreto();
