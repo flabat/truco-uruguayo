@@ -8,8 +8,73 @@ on:
 permissions:
   contents: read
 
+# Un push nuevo a un PR cancela la corrida anterior. En main cada commit conserva su
+# corrida, porque el despliegue espera el resultado del evento push para ese SHA exacto.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  check:
+  # Si el cambio solo toca docs/ o .md de la raíz, los demás jobs se omiten y check
+  # igual termina en verde, así el despliegue de main no queda esperando.
+  cambios:
+    runs-on: ubuntu-latest
+    outputs:
+      codigo: ${{ steps.clasificar.outputs.codigo }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - id: clasificar
+        env:
+          # En un PR, HEAD es el merge con la base y su primer padre es la base.
+          BASE: ${{ github.event_name == 'pull_request' && 'HEAD^1' || github.event.before }}
+        run: |
+          if [[ "$BASE" != HEAD^1 && ! "$BASE" =~ ^0+$ ]]; then
+            git fetch --quiet --depth=1 origin "$BASE" || true
+          fi
+          bash .github/scripts/cambios.sh "$BASE" HEAD | tee -a "$GITHUB_OUTPUT"
+
+  unitarias:
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: bash .github/scripts/check_site.sh unitarias
+        env:
+          # El runner tiene 2 vCPU y node --test correría un archivo por vez.
+          TEST_CONCURRENCY: 4
+
+  sitio:
+    name: sitio (${{ matrix.shard }}/3)
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm exec -- playwright install --with-deps --only-shell chromium
+      - run: bash .github/scripts/check_site.sh sitio
+        env:
+          PLAYWRIGHT_SHARD: ${{ matrix.shard }}/3
+
+  pila:
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,7 +84,31 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm exec -- playwright install --with-deps --only-shell chromium
-      - run: npm run check
-        env:
-          CHECK_STACK: 1
+      - run: npm run check:stack
+
+  produccion:
+    needs: cambios
+    if: needs.cambios.outputs.codigo == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
       - run: npm run check:production
+
+  # Un único check estable para el ruleset de main, sin importar cómo se repartan los jobs.
+  check:
+    if: always()
+    needs: [cambios, unitarias, sitio, pila, produccion]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -c 'map_values({result, codigo: .outputs.codigo})' <<<"$NEEDS"
+          # cambios siempre debe pasar. Los demás pasan, o se omiten solo si cambios dijo
+          # que el cambio es de documentación.
+          jq -e '.cambios.result == "success" and
+            (.cambios.outputs.codigo as $codigo | del(.cambios) | all(.[];
+              .result == "success" or (.result == "skipped" and $codigo == "false")))' <<<"$NEEDS"

@@ -8,7 +8,7 @@
     "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
-    "test:unit": "node --test \"tests/unit/*.test.ts\"",
+    "test:unit": "node --test ${TEST_CONCURRENCY:+--test-concurrency=$TEST_CONCURRENCY} \"tests/unit/*.test.ts\"",
     "check": "bash .github/scripts/check_site.sh",
     "check:production": "bash scripts/verificar-produccion.sh",
     "check:stack": "bash scripts/verificar-stack.sh",
