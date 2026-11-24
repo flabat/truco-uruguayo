@@ -5,8 +5,14 @@
 !api/migrations/
 !api/migrations/*.sql
 !src/
-!src/motor/
-!src/motor/*.ts
+!src/lib/
+!src/lib/cartas.ts
+!src/lib/cantos.ts
+!paquetes/
+!paquetes/motor/
+!paquetes/motor/package.json
+!paquetes/motor/src/
+!paquetes/motor/src/*.ts
 !training/
 !training/contracts/
 !training/contracts/*.ts
@@ -24,6 +30,7 @@
 !training/partners/
 !training/partners/policy.ts
 !training/selfplay/
+!training/selfplay/duel-card-odds.ts
 !training/selfplay/learner.ts
 !training/selfplay/team-mixture.ts
 !training/selfplay/team-transfer.ts

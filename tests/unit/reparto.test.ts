@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
-import { esCardId, mazo } from "../../src/motor/cartas.ts";
-import { crearAzar, equipoPorAsiento, esRepartoV1, repartir } from "../../src/motor/reparto.ts";
+import { esCardId, mazo } from "@eltruco/motor/cartas.ts";
+import { crearAzar, equipoPorAsiento, esRepartoV1, repartir } from "@eltruco/motor/reparto.ts";
 import vector from "../fixtures/reparto-v1.json" with { type: "json" };
 
 test("el vector V1 se reproduce en procesos nuevos", () => {
   assert.deepEqual(repartir(vector.semilla, vector.dador), vector);
-  const modulo = new URL("../../src/motor/reparto.ts", import.meta.url);
+  const modulo = new URL(import.meta.resolve("@eltruco/motor/reparto.ts"));
   const programa = `
     import { repartir } from ${JSON.stringify(modulo.href)};
     console.log(JSON.stringify(repartir(${vector.semilla}, ${vector.dador})));

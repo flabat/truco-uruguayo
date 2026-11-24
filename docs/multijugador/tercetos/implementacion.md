@@ -18,7 +18,7 @@ Los paquetes siguientes están dimensionados como PR revisables. Las dependencia
 
 ### 1. Fijar el perfil de reglas
 
-En `src/motor/`, separar la meta del chico del perfil que determina las apuestas. Reusar la configuración introducida en #170. Convocar la revisión de las propuestas de la casa sobre la falta, el resto, el retiro al mazo y el cruce de mitad durante un pico. Incorporar la decisión al perfil versionado de seis y a `src/data/cantos.json` y `src/data/juego.json`, con sus fuentes. Guardar casos determinados a mano en `tests/fixtures/`.
+En `paquetes/motor/src/`, separar la meta del chico del perfil que determina las apuestas. Reusar la configuración introducida en #170. Convocar la revisión de las propuestas de la casa sobre la falta, el resto, el retiro al mazo y el cruce de mitad durante un pico. Incorporar la decisión al perfil versionado de seis y a `src/data/cantos.json` y `src/data/juego.json`, con sus fuentes. Guardar casos determinados a mano en `tests/fixtures/`.
 
 **Aceptación.** Las aserciones incluyen 24, 25, 26, 49 y 50 sobre una meta de 50, ambos equipos en mitades distintas y el caso 13/26. Para la falta, verificar al ganador que va adelante y al que va atrás. La prueba de contraflor debe detectar un segundo cobro accidental de las flores. [ADR 1](adr/0001-puntaje-y-cantos.md)
 

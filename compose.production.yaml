@@ -9,7 +9,12 @@ x-servicio: &servicio
 services:
   web:
     <<: *servicio
-    build: {context: ., dockerfile: infra/web.Dockerfile, target: produccion}
+    build:
+      context: .
+      dockerfile: infra/web.Dockerfile
+      target: produccion
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
     environment:
       SITE_HOST: ${SITE_HOST:?Falta el dominio público}
     ports:
@@ -36,6 +41,17 @@ services:
       OIDC_CALLBACK: https://${SITE_HOST}/api/auth/callback
       OIDC_ISSUER: https://${SITE_HOST}/realms/mesa
       OIDC_BACKEND: https://${SITE_HOST}/realms/mesa
+      DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
+      DISCORD_CATEGORY_ID: ${DISCORD_CATEGORY_ID:-}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
+      SALON_HABILITADO: "${SALON_HABILITADO:-1}"
+      VOZ_ESPECTADORA_HABILITADA: "${VOZ_ESPECTADORA_HABILITADA:-1}"
+      EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-1}"
+      EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"
+      EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
+      SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
+      SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
       TERCETOS_HABILITADOS: "${TERCETOS_HABILITADOS:-1}"
     depends_on:
       db: {condition: service_healthy}
@@ -64,7 +80,7 @@ services:
 
   identidad:
     <<: *servicio
-    image: quay.io/keycloak/keycloak:26.8.2
+    build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start", "--import-realm"]
     mem_limit: 1200m
     environment:

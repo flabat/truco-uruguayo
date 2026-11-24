@@ -1,7 +1,7 @@
-import type { CardId } from "../../motor/cartas.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../../motor/mano.ts";
-import { avanzarHastaAprendiz } from "../../motor/parejas.ts";
-import { repartir, type RepartoV1 } from "../../motor/reparto.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";
+import { avanzarHastaAprendiz } from "@eltruco/motor/parejas.ts";
+import { repartir, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 import { segundaDelEstudioV1, semillaSalidaV1, type Escena } from "./escenas.ts";
 
 function nuevaDecision(estado: EstadoMano) {

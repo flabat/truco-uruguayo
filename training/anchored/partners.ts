@@ -1,5 +1,5 @@
-import { esCardId, pieza, type CardId, type RangoPieza } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
+import { esCardId, pieza, type CardId, type RangoPieza } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 import type { ActionId, Move, SeatObservation, Signal } from "../contracts/index.ts";
 import type { Partnership } from "../partners/policy.ts";
 

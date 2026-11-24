@@ -1,0 +1,13 @@
+.visor-cabecera, .visor-reconexion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+.visor-cabecera p { margin-top: .25rem; }
+.visor-partida .j-jugada-panel > h3 { font: 400 1.6rem/1.15 var(--serif); margin-bottom: .45rem; }
+@media (max-width: 760px) {
+  .visor-partida .j-jugada-panel { order: initial; }
+}

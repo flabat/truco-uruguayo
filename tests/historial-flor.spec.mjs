@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aplicarOnline, iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { hastaLaSubida, reparto } from "./fixtures/flor-querida.ts";
 
 test("la comparación de flor queda entre su Quiero y el del truco, también al recargar", async ({ page }) => {
@@ -53,7 +53,7 @@ test("la comparación de flor queda entre su Quiero y el del truco, también al 
     "Ganó Diego con 36 de flor. El equipo 2 sumó 5 tantos al tanteador.";
   const flor = [...inicio, "Ana dijo «Quiero».", comparacion];
   await expect(entradas).toHaveText(flor.slice(-3));
-  await expect(page.getByRole("heading", { name: "Truco", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Podés responder", exact: true })).toBeVisible();
   await quiero.click();
   const completa = [...flor, "Ana dijo «Quiero»."];
   await expect(entradas).toHaveText(completa.slice(-3));

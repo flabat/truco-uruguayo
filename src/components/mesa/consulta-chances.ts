@@ -1,4 +1,4 @@
-import type { VistaAsiento } from "../../motor/mano";
+import type { VistaAsiento } from "@eltruco/motor/mano.ts";
 import { textosProbabilidad } from "../../aprendizaje/probabilidad/escenas";
 import { crearClienteAnalisis, type EstadoConsulta } from "../../probabilidad/cliente";
 import { posicionPublica, type PosicionPublicaV1 } from "../../probabilidad/informacion";

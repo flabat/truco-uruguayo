@@ -1,12 +1,15 @@
 {
   "realm": "mesa",
-  "displayName": "Truco Oriental",
+  "displayName": "El Truco",
+  "loginTheme": "truco-oriental",
+  "accountTheme": "truco-oriental",
   "enabled": true,
   "sslRequired": "all",
   "registrationAllowed": false,
   "bruteForceProtected": true,
   "clients": [{
     "clientId": "truco-web",
+    "name": "El Truco",
     "enabled": true,
     "protocol": "openid-connect",
     "publicClient": true,

@@ -1,0 +1,12 @@
+---
+import Perfil from "../components/perfil/Perfil";
+import Site from "../layouts/Site.astro";
+import { url } from "../lib/guide";
+---
+<Site title="Mi perfil" description="Consultá tu jugador y tus partidas en El Truco.">
+  <article class="shell perfil">
+    <h1>Mi perfil</h1>
+    <Perfil base={url("")} client:load />
+    <noscript>Activá JavaScript para ver tu perfil.</noscript>
+  </article>
+</Site>

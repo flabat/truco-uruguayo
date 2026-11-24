@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { aDecidir, aplicarOnline, iniciarOnline, vistaOnline } from "../../src/motor/mesa-online.ts";
+import { aDecidir, aplicarOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { seatsFor, versions, type RefereeHand } from "../../training/contracts/index.ts";
 
 const bytes = readFileSync(new URL("../../training/contracts/fixtures.json", import.meta.url));

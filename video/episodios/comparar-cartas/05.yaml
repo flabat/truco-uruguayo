@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "05"
+muestra: copas-05
+gancho: "¿Qué son las matas?"
+vueltas:
+  - [bastos-01, espadas-01]   # entre matas, el as de espadas manda
+  - [oros-07, espadas-07]     # los dos sietes que son matas
+  - [oros-03, bastos-01]      # una mata le gana al 3

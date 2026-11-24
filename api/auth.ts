@@ -34,6 +34,8 @@ export async function jugadorDeSesion(pool: Pool, req: IncomingMessage) {
 function regresoPermitido(valor: string | null) {
   if (valor === "/gestion/") return valor;
   // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
+  if (valor === "/perfil/" || valor === "/jugar/?crear=1") return valor;
+  if (valor && /^(?:\/volver\/\?mesa=|\/jugar\/\?mirar=)[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor)) return valor;
   if (valor && /^\/jugar\/(?:\?(?:invitacion|mesa)=[a-zA-Z0-9_-]{1,80})?$/.test(valor)) return valor;
   return "/#jugador";
 }
@@ -44,9 +46,10 @@ interface OpcionesOIDC {
   issuer: URL;
   backend: URL;
   local: boolean;
+  salonHabilitado?: boolean;
 }
 
-export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }: OpcionesOIDC) {
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false }: OpcionesOIDC) {
   const protocol = "/protocol/openid-connect";
   const config = new oidc.Configuration({
     issuer: issuer.href,
@@ -137,7 +140,14 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local }:
 
     if (req.method === "GET" && url.pathname === "/api/jugador") {
       const player = await jugadorDeSesion(pool, req);
-      res.writeHead(player ? 200 : 401, { "Content-Type": "application/json" }).end(JSON.stringify(player ?? null));
+      if (!player) {
+        res.writeHead(401, { "Content-Type": "application/json" }).end("null");
+        return;
+      }
+      const permiso = await pool.query("SELECT 1 FROM juego.reporteros WHERE jugador = $1", [player.id]);
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({
+        ...player, salonHabilitado, puedeReportar: permiso.rowCount === 1,
+      }));
       return;
     }
 

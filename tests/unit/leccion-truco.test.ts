@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { crearLeccionTruco } from "../../src/aprendizaje/leccion-truco.ts";
-import { repartir } from "../../src/motor/reparto.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
+import { repartir } from "@eltruco/motor/reparto.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 
 function pestaña() {
   const datos = new Map<string, string>();

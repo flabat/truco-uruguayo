@@ -1,4 +1,4 @@
-import type { RepartoOnline } from "../../src/motor/reparto.ts";
+import type { RepartoOnline } from "@eltruco/motor/reparto.ts";
 
 // Primer reparto de la mesa de Fabián. Computadora 4 es mano y Computadora 3 es pareja de Fabián.
 export const mesaFabian: RepartoOnline = {

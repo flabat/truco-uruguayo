@@ -12,27 +12,28 @@ const bloques = juego.find(seccion => seccion.id === "senas")!.blocks;
 const filas = bloques.map(b => "table" in b ? b.table : undefined).find(tabla => tabla !== undefined)!.rows;
 const menu = signals.map((id, i) => ({ id, texto: filas[i][1].replace(/\.$/, "") }));
 
-export function MesaConSenas({ base, mesa, partida, bloqueada, mostrandoCartas, voz, jugar }: {
-  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; mostrandoCartas: boolean; voz?: Voz;
+export function MesaConSenas({ base, mesa, partida, bloqueada, estadoRed, aviso, puedeReportar, mostrandoCartas, voz, jugar }: {
+  base: string; mesa: Mesa; partida: Partida; bloqueada: boolean; estadoRed?: string; aviso?: string; mostrandoCartas: boolean; voz?: Voz;
+  puedeReportar: boolean;
   jugar: (accion?: Eleccion & { sena?: Signal }) => void;
 }) {
   const [seleccion, elegir] = useState<{version: number; sena: Signal | ""}>();
   const sena = seleccion?.version === partida.version ? seleccion.sena : "";
   const historial = (partida.turnos ?? []).filter(t => t.signal);
+  const selector = Boolean(partida.vista?.legales.length) && (
+    <div className="j-elegir-sena">
+      <label htmlFor="proxima-sena">Seña para esta jugada</label>
+      <select id="proxima-sena" value={sena} disabled={bloqueada}
+        aria-describedby="alcance-sena"
+        onChange={e => elegir({version:partida.version, sena:e.target.value as Signal | ""})}>
+        <option value="">Silencio</option>
+        {menu.map(s => <option key={s.id} value={s.id}>{s.texto}</option>)}
+      </select>
+      <small id="alcance-sena">La seña la ven vos y tu compañero al confirmar la jugada.</small>
+    </div>
+  );
   return <>
-    {Boolean(partida.vista?.legales.length) && (
-      <div className="j-elegir-sena">
-        <label htmlFor="proxima-sena">Seña para esta jugada</label>
-        <select id="proxima-sena" value={sena} disabled={bloqueada}
-          aria-describedby="alcance-sena"
-          onChange={e => elegir({version:partida.version, sena:e.target.value as Signal | ""})}>
-          <option value="">Silencio</option>
-          {menu.map(s => <option key={s.id} value={s.id}>{s.texto}</option>)}
-        </select>
-        <small id="alcance-sena">La seña la ven vos y tu compañero al confirmar la jugada.</small>
-      </div>
-    )}
-    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} mostrandoCartas={mostrandoCartas} voz={voz}
+    <EnJuego base={base} mesa={mesa} partida={partida} bloqueada={bloqueada} estadoRed={estadoRed} aviso={aviso} sena={selector} mostrandoCartas={mostrandoCartas} voz={voz} puedeReportar={puedeReportar}
       jugar={accion => jugar(accion && sena ? {...accion, sena} : accion)} />
     {historial.length > 0 && (
       <section className="j-senas-vistas" aria-label="Señas de esta mano">

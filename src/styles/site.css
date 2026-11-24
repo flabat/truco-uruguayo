@@ -96,8 +96,8 @@ input:focus-visible {
   align-items: center;
   white-space: nowrap;
 }
-.brand svg {
-  color: var(--accent);
+.brand img {
+  height: auto;
   flex-shrink: 0;
 }
 .brand span {
@@ -207,13 +207,6 @@ input:focus-visible {
   font-size: clamp(72px, 6.6vw, 99px);
   line-height: 0.93;
   letter-spacing: -0.05em;
-}
-.hero h1 em {
-  display: block;
-  font-weight: 400;
-}
-.hero h1 em span {
-  color: var(--accent);
 }
 .hero-deck {
   max-width: 445px;
@@ -464,8 +457,8 @@ footer {
 .footer-inner .brand {
   gap: 8px;
 }
-.footer-inner .brand svg {
-  width: 24px;
+.footer-inner .brand img {
+  width: 30px;
 }
 .footer-inner .brand span {
   font-size: 21px;
@@ -497,11 +490,41 @@ footer {
   column-gap: 4px;
   max-width: 100%;
 }
+.footer-versiones a {
+  text-decoration: underline;
+}
 .footer-versiones dd {
   margin: 0;
+  min-width: 0;
+  max-width: 100%;
   font-weight: 600;
   overflow-wrap: anywhere;
   color: var(--ink);
+}
+#version-modelo-mesa:not(:empty) + span {
+  display: none;
+}
+.ficha-modelo summary {
+  width: fit-content;
+  cursor: pointer;
+}
+.ficha-modelo summary:focus-visible {
+  outline-offset: 1px;
+}
+.ficha-modelo summary::marker {
+  color: var(--accent);
+}
+.modelo-publicacion,
+.modelo-identificador {
+  font-weight: 400;
+  color: var(--muted);
+}
+.modelo-identificador {
+  margin-block-start: 4px;
+}
+.modelo-identificador code {
+  color: var(--ink);
+  user-select: all;
 }
 .page-intro {
   background: var(--canvas);
@@ -982,9 +1005,8 @@ tbody tr:nth-child(even) {
   .brand {
     gap: 8px;
   }
-  .brand svg {
-    width: 27px;
-    height: 31px;
+  .brand img {
+    width: 34px;
   }
   .brand span {
     font-size: 24px;
@@ -1017,9 +1039,6 @@ tbody tr:nth-child(even) {
   }
   .hero h1 {
     font-size: clamp(56px, 11vw, 75px);
-  }
-  .hero h1 em {
-    display: inline;
   }
   .hero-deck {
     max-width: 480px;
@@ -1162,9 +1181,6 @@ tbody tr:nth-child(even) {
   }
 }
 @media (max-width: 390px) {
-  .hero h1 em {
-    display: block;
-  }
   .fact {
     padding-left: 3%;
   }

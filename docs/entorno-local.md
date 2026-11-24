@@ -3,12 +3,12 @@
 Desde la raíz del repositorio, con Docker y Compose disponibles, levantá el sitio, la API, PostgreSQL y Keycloak con un solo comando. La primera ejecución descarga las imágenes, compila el sitio e importa el entorno de identidad de prueba. El comando termina cuando los cuatro servicios están disponibles.
 
 ```sh
-docker compose up --build --wait
+TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
 ```
 
 | Servicio | Cómo probarlo |
 | --- | --- |
-| Web Astro | Abrí [Truco Oriental](http://localhost:8081/). Desde la portada podés acceder a las mesas, leer la guía de reglas o practicar como invitado. Nginx sirve la interfaz y reenvía las peticiones de juego a la API. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
+| Web Astro | Abrí [El Truco](http://localhost:8081/). Desde la portada podés acceder a las mesas, leer la guía de reglas o practicar como invitado. Nginx sirve la interfaz y reenvía las peticiones de juego a la API. Volvé a ejecutar el comando de arranque después de editar la web o la API. |
 | API Node/TypeScript | Abrí [el estado de la API](http://localhost:3001/health). Devuelve HTTP 200 con `api` y `postgres` en `ok`. Si la API responde y la base está caída, devuelve 503. |
 | PostgreSQL | Ejecutá `docker compose exec db psql -U truco -d truco`. El puerto de la base queda dentro de la red de Compose. |
 | Identidad de prueba | Abrí [la cuenta de Keycloak](http://localhost:8080/realms/truco-local/account/) con el usuario `prueba` y la contraseña `truco-local`. El [documento de descubrimiento OIDC](http://localhost:8080/realms/truco-local/.well-known/openid-configuration) publica el emisor y las URLs de autorización, tokens y claves. |
@@ -28,12 +28,12 @@ Abrí [Jugar al truco](http://localhost:8081/jugar/) y elegí **Ingresar al jueg
 | Eva | `eva` |
 | Luis | `luis` |
 
-1. Elegí **1 contra 1** para un duelo, **2 contra 2** para jugar en parejas o **3 contra 3** para dos tercetos. En parejas, con **Permitir señas entre compañeros**, solo vos y tu compañero ven las señas de su equipo. **Jugar con computadoras** completa todos los lugares y reparte. Para invitar amigos, elegí **Crear mesa** y **Copiar invitación**.
+1. Elegí **1 contra 1** para un duelo, **2 contra 2** para jugar en parejas o **3 contra 3** para dos tercetos. En parejas y tercetos podés activar **Señas automáticas al pie**. Al abrir cada vuelta, el pie de tu equipo ve las señas de cartas en un globo junto al asiento de cada compañero. Toda la mesa oye a quién le dice «Vení», «Jugá» o «Voy a vos». En tercetos se usa durante las redondillas. **Jugar con computadoras** completa todos los lugares y reparte. Para invitar amigos, elegí **Crear mesa** y **Copiar invitación**.
 2. Cada persona abre el enlace compartido e ingresa con su cuenta. Los asientos se ocupan en orden y los equipos se alternan. En parejas, el primer y el tercer asiento forman un equipo. El anfitrión también puede agregar una computadora en cualquier lugar libre para armar equipos mixtos. La partida empieza al ocuparse el último asiento.
 3. Al crear la mesa podés elegir a cuántos tantos se juega. En duelo y en parejas se proponen 40. En tercetos se proponen 50 (25 malas y 25 buenas). El tanteador divide la meta en dos mitades iguales. Cuando te toque, elegí una carta o un canto disponible. Las respuestas y las jugadas se actualizan para todos. Al terminar la mano, **Repartir otra mano** conserva el tanteador. El primer equipo que alcanza la meta gana el chico.
 4. Si se corta la conexión, la mesa espera la reconexión antes de aceptar nuevas jugadas desde ese navegador. Podés recargar la página o abrir otra vez el enlace de invitación con tu misma cuenta. En ese perfil, **Volver a mi mesa** también retoma la mesa más reciente.
 
-Usá dispositivos o perfiles independientes del navegador para probar diferentes jugadores. Las pestañas de un mismo perfil comparten sesión. Después del ingreso, la portada muestra el nombre y el ID de jugador. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador.
+Usá dispositivos o perfiles independientes del navegador para probar diferentes jugadores. Las pestañas de un mismo perfil comparten sesión. También podés crear una cuenta con correo y contraseña desde el enlace de registro de Keycloak. El entorno local nuevo permite probar este flujo sin enviar correo. Si ya existe el realm `mesa-local`, activá el registro y **Email as username** desde sus ajustes de ingreso. Después de ingresar, **Mi perfil** muestra el nombre, el ID y el historial de los chicos que empezaste. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador.
 
 El diseño del chat de voz opcional de la mesa se sigue en [#102](https://github.com/flabat/truco-uruguayo/issues/102).
 
@@ -44,6 +44,8 @@ Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloa
 En la primera redondilla juegan los seis. En el segundo reparto, si ambos equipos siguen en malas, juegan tres duelos con la misma muestra. Por ejemplo, si el mano ocupa el sexto lugar, se enfrentan sexto y tercero, primero y cuarto, y segundo y quinto. Cada jugador recibe sus cartas al comenzar su duelo. Si alguien cierra el navegador, puede volver con su cuenta y el enlace de la mesa. La partida espera si le toca actuar.
 
 Si un equipo entra en buenas durante un duelo, se completan los duelos que quedan en ese reparto y desde el siguiente se juega en redondilla. Si un cobro alcanza la meta, el chico termina en ese instante. Por ejemplo, con una meta de 26, 13 ya son buenas y un cobro que lleva de 24 a 27 deja el tanteador en 26.
+
+Las altas con señas automáticas tienen dos controles independientes. Activá `SENAS_PIE_PAREJAS=1` para parejas y `SENAS_PIE_TERCETOS=1` junto con `TERCETOS_HABILITADOS=1` para redondillas. Con el valor `0` se deshabilitan nuevas altas de esa variante y las mesas abiertas pueden terminar el chico. Aplicá las migraciones antes de habilitar el perfil.
 
 Compose habilita el alta de tercetos en desarrollo. Para desplegar por etapas, arrancá la API con `TERCETOS_HABILITADOS=0` y aplicá las migraciones con los lectores y el árbitro instalados. Cambiá a `1` y recreá la API para ofrecer la opción en la sala. Volver a `0` cierra la creación de mesas nuevas. Las invitaciones y las partidas de seis ya creadas siguen funcionando. Si conservás un volumen de Keycloak anterior, las cuentas nuevas del archivo de importación sólo se cargan al inicializar otro entorno. Las cuentas existentes pueden seguir jugando.
 

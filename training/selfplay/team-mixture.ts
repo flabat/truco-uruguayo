@@ -1,5 +1,5 @@
-import {esCardId, mazo} from "../../src/motor/cartas.ts";
-import {compararCartas} from "../../src/motor/jerarquia.ts";
+import {esCardId, mazo} from "@eltruco/motor/cartas.ts";
+import {compararCartas} from "@eltruco/motor/jerarquia.ts";
 import {kind as anchoredKind, openAnchored, type AnchoredActor} from "../anchored/actor.ts";
 import {partnerAction, partnerVariants} from "../anchored/partners.ts";
 import type {ActionId, Move, Policy, SeatObservation} from "../contracts/index.ts";

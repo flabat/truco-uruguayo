@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
-import { elegirJugada } from "../../src/motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara } from "../../src/motor/mano.ts";
-import { repartir, type Asiento, type RepartoV1 } from "../../src/motor/reparto.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara } from "@eltruco/motor/mano.ts";
+import { repartir, type Asiento, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 import { calcularPorLotes, calcularProbabilidades, evaluarMundos, ganaConCarta } from "../../src/probabilidad/calcular.ts";
 import { anotarMundo, crearConteo, intervaloPareado, resumir, sumarLote } from "../../src/probabilidad/estadistica.ts";
 import { posicionPublica } from "../../src/probabilidad/informacion.ts";

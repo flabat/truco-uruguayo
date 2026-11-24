@@ -8,8 +8,8 @@ import {resolverTurno} from "./bot-pendiente.ts";
 import {createServing} from "./serving.ts";
 import {restaurar} from "./turnos.ts";
 import {iniciarReplayDB} from "./replay-db.ts";
-import {iniciarOnline} from "../src/motor/mesa-online.ts";
-import {reproducirChico} from "../src/motor/replay-chico.ts";
+import {iniciarOnline} from "@eltruco/motor/mesa-online.ts";
+import {reproducirChico} from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({connectionString:process.env.DATABASE_URL});
 const {rows:[owner]}=await pool.query("INSERT INTO juego.jugadores (emisor,sujeto,nombre) VALUES ('race-policy',$1,'ficha') RETURNING id",[randomUUID()]);
@@ -23,6 +23,7 @@ async function verificarFlorEntreVueltas(historica) {
     [owner.id, randomUUID()]);
   await pool.query("INSERT INTO juego.asientos VALUES ($1,0,$2,false), ($1,1,NULL,true)", [mesa.id, owner.id]);
   const reparto = {versionReparto:"online-1", dador:1, mano:0, muestra:"oros-05",
+    ...(!historica && { reglaFlor: "inmediata-v2", respondenSinFlor: [1] }),
     manos:[["oros-06","oros-02","oros-10"],["copas-02","bastos-06","espadas-05"]]};
   const declaraciones = [{tipo:"flor",asiento:0},{tipo:"paso-flor",asiento:1}];
   const puntosInicio = historica ? [11,0] : [0,0];
@@ -49,8 +50,25 @@ async function verificarFlorEntreVueltas(historica) {
   }},()=>{},mesa.id);
 
   if (!historica) {
-    await jugar(1,{tipo:"flor"});
+    const orden = { id: randomUUID(), version: 1, accion: { tipo: "flor" } };
+    const cantar = () => partidas.ejecutar(mesa.id, owner.id, "acciones", orden);
+    const recibo = await cantar();
     assert.ok(await decidir("paso-flor"));
+    assert.deepEqual(await cantar(), recibo);
+    assert.equal(await decidir("paso-flor"), false);
+    const confirmada = await leer();
+    assert.deepEqual(confirmada.vista.acciones, declaraciones);
+    assert.deepEqual(confirmada.puntos, [3,0]);
+    assert.deepEqual(confirmada.vista.cobros, [{ equipo: 0, tantos: 3, motivo: "flor" }]);
+    assert.equal(confirmada.vista.turno, 0);
+    assert.ok(confirmada.vista.legales.includes("carta"));
+    const grabada = await replay(mesa.id);
+    const decisiones = grabada.eventos.filter(e => e.tipo === "decision");
+    assert.deepEqual(decisiones.map(e => e.accion), declaraciones);
+    assert.deepEqual(decisiones[0].cobros, []);
+    assert.deepEqual(decisiones[1].cobros, confirmada.vista.cobros);
+    assert.equal(decisiones[1].bot.aplicada, "prueba-flor");
+    assert.deepEqual(reproducirChico(grabada, 0).vista, confirmada.vista);
   }
   await jugar(3,{tipo:"carta",carta:"oros-06"});
   assert.ok(await decidir("espadas-05"));

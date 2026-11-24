@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "08"
+muestra: bastos-05
+gancho: "¿Cuál gana?"
+vueltas:
+  - { familia: gana-el-menor, semilla: 1 }
+  - { familia: mismo-numero-distinta-fuerza, semilla: 2 }
+  - { familia: empate, semilla: 3 }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "04a2a60c-500f-4dc5-aca4-a0abb48d3dcc";
 const conFlores = {
@@ -38,7 +38,7 @@ async function abrirMesa(page, reparto, acciones) {
   await page.routeWebSocket("**/vivo", canal => { socket = canal; });
   await page.route("**/api/**", async route => {
     const ruta = new URL(route.request().url()).pathname;
-    if (ruta === "/api/jugador") return route.fulfill({ json: { id: "ana", nombre: "Ana" } });
+    if (ruta === "/api/jugador") return route.fulfill({ json: { id: "ana", nombre: "Ana", puedeReportar: true } });
     if (ruta.endsWith(id)) return route.fulfill({ json: {
       id, lista: true, modo: asientos.length === 4 ? "2v2" : "1v1", miAsiento: 0, asientos,
     } });
@@ -95,13 +95,19 @@ test("una contraflor al resto entre una computadora y un rival remoto se escucha
     { tipo: "flor", asiento: 1 }, { tipo: "flor", asiento: 2 }, { tipo: "paso-flor", asiento: 3 },
     { tipo: "contraflor-al-resto", asiento: 2 }, { tipo: "quiero", asiento: 1 },
   ]);
-  for (const [puesto, texto] of [
-    [rival, "Flor"], [pareja, "Flor"], [dador, "Yo no canto"], [pareja, "Contraflor al resto"],
-    [rival, "Quiero"], [rival, "33 de flor"], [pareja, "44 de flor"],
+  const reporte = historia.locator("form");
+  for (const [puesto, texto, posicion, indice] of [
+    [rival, "Flor", 2, 0], [pareja, "Flor", 3, 0], [dador, "Yo no canto", 4, 0], [pareja, "Contraflor al resto", 5, 0],
+    [rival, "Quiero", 6, 0], [rival, "33 de flor", 6, 1], [pareja, "44 de flor", 6, 2],
   ]) {
     const voz = puesto.locator(".j-voz");
     await expect(voz).toBeVisible();
     await expect(voz).toHaveText(texto);
+    await expect(reporte.getByRole("button", { name: "Reportar esta jugada" })).toBeEnabled();
+    await expect(reporte.locator("[name=posicion]")).toHaveValue(String(posicion));
+    await expect(reporte.locator("[name=voz]")).toHaveValue(String(indice));
+    await expect(reporte.locator("[name=fase]")).toHaveValue("presentacion");
+    await expect(reporte.locator("[name=puntos]")).toHaveValue("0-0");
     await expect(tapete.getByRole("figure")).toHaveCount(0);
     await expect(fin).toHaveCount(0);
     if (texto === "Contraflor al resto") await captura(page, "contraflor");
@@ -109,6 +115,8 @@ test("una contraflor al resto entre una computadora y un rival remoto se escucha
   }
   async function comprobarFinal() {
     await expect(fin).toBeVisible();
+    await expect(reporte.locator("[name=fase]")).toHaveValue("resultado");
+    await expect(reporte.locator("[name=puntos]")).toHaveValue("40-0");
     await expect(historia.getByRole("listitem")).toHaveCount(3);
     await expect(historia.locator("details")).not.toHaveAttribute("open", "");
     await expect(historia.getByText("Flor querida.", { exact: true })).toBeVisible();
@@ -160,6 +168,10 @@ test("el envido ganador se acredita con su par al terminar la mano, incluida la 
   await expect(prueba).toBeVisible();
   await page.getByRole("button", { name: "Repartir otra mano" }).press("Enter");
   await expect(tapete.getByText("Mano 2", { exact: true })).toBeVisible();
+  const reporte = page.getByRole("region", { name: "Historial de la mano" }).locator("form");
+  await expect(reporte.locator("[name=mano]")).toHaveValue("2");
+  await expect(reporte.locator("[name=posicion]")).toHaveValue("0");
+  await expect(reporte.locator("[name=fase]")).toHaveValue("jugada");
   await expect(tapete.getByRole("figure")).toHaveCount(0);
   await expect(rival.getByRole("img", { name: "3 cartas en mano" })).toBeVisible();
 });

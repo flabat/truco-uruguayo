@@ -8,10 +8,14 @@ const browser = await chromium.launch();
 
 async function ingresar(page, usuario) {
   await ingresarConClaveLocal(page, usuario);
+  const salon = process.env.SALON_HABILITADO === "1";
+  await expect(page.getByRole("heading", { name: salon ? "Mesas en juego" : "Crear una mesa" })).toBeVisible();
+  await page.goto(web);
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
   const me = await page.request.get(web + "/api/jugador");
   assert.equal(me.status(), 200);
   const jugador = await me.json();
+  assert.equal(jugador.salonHabilitado, salon);
   assert.equal(jugador.nombre.toLowerCase(), usuario);
   await expect(page.locator("[data-id]")).toHaveText(jugador.id);
   return jugador.id;

@@ -1,7 +1,7 @@
-import { mazo, type CardId } from "../motor/cartas.ts";
-import { elegirJugada } from "../motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type VistaAsiento } from "../motor/mano.ts";
-import { versionReparto, type Asiento, type RepartoV1 } from "../motor/reparto.ts";
+import { mazo, type CardId } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type VistaAsiento } from "@eltruco/motor/mano.ts";
+import { versionReparto, type Asiento, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 import { leerPosicion, type PosicionPublicaV1 } from "./informacion.ts";
 
 const asientos = [0, 1, 2, 3] as const;

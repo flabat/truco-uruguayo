@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { crearMesaGuiada } from "../../src/aprendizaje/mano-guiada.ts";
 import { crearFuenteProgreso, progresoDe } from "../../src/aprendizaje/progreso.ts";
-import { vistaPara } from "../../src/motor/mano.ts";
-import { reproducirReplay } from "../../src/motor/replay.ts";
-import { evaluarTantos } from "../../src/motor/tantos.ts";
-import type { CardId } from "../../src/motor/cartas.ts";
+import { vistaPara } from "@eltruco/motor/mano.ts";
+import { reproducirReplay } from "@eltruco/motor/replay.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 function almacenamiento() {
   const datos = new Map<string, string>();

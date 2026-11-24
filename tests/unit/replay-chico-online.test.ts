@@ -4,8 +4,8 @@ import duelo from "../fixtures/replay-chico/duelo.json" with { type: "json" };
 import parejas from "../fixtures/replay-chico/parejas.json" with { type: "json" };
 import tercetos from "../fixtures/replay-chico/tercetos.json" with { type: "json" };
 import { dueloFlor, dueloMazo } from "../fixtures/duelo-mazo.ts";
-import { reproducirChico } from "../../src/motor/replay-chico.ts";
-import { iniciarChicoOnline, decidirChicoOnline, vistaChicoOnline } from "../../src/motor/replay-chico-online.ts";
+import { reproducirChico } from "../../api/replay-chico.ts";
+import { iniciarChicoOnline, decidirChicoOnline, vistaChicoOnline } from "../../api/replay-chico-online.ts";
 
 test("duelo mixto: la falta aceptada por la computadora paga 40 antes de tirar una carta", () => {
   const antes = reproducirChico(duelo, 1, 2);

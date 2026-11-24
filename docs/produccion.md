@@ -1,4 +1,4 @@
-# Truco Oriental en un VPS de 4 GB
+# El Truco en un VPS de 4 GB
 
 El despliegue usa una máquina Linux de dos CPU con Docker Engine y Compose v2. Caddy sirve el sitio estático, termina HTTPS y pasa las conexiones WebSocket a la API. Keycloak arranca en modo producción. PostgreSQL guarda las cuentas y las partidas en esquemas con propietarios distintos. Restic envía una copia cifrada a un destino independiente del VPS.
 
@@ -25,7 +25,7 @@ Se puede elegir un contexto Docker de dos CPU y 4 GiB con `DOCKER_CONTEXT`. El e
 4. Usá el siguiente atajo desde la raíz para todos los comandos de esta guía. Inicializá el repositorio restic una sola vez. La inicialización no necesita la base. Para un repositorio ya inicializado usá `listar` para probar las credenciales.
 
    ```sh
-   dc() { docker compose -f compose.production.yaml "$@"; }
+   dc() { TRUCO_RELEASE=$(git rev-parse HEAD) docker compose -f compose.production.yaml "$@"; }
    dc build
    dc run --rm --no-deps backup iniciar
    dc up -d --wait
@@ -37,7 +37,7 @@ Para preparar las imágenes antes de ocupar el VPS, también podés ejecutar `dc
 
 ## Dar acceso a los jugadores
 
-El realm `mesa` arranca vacío y admite cuentas creadas por el operador. El cliente `truco-web` sólo acepta la dirección HTTPS exacta de retorno del sitio y usa PKCE. La URL del emisor forma parte de la identidad del jugador: conservá el nombre DNS al migrar o restaurar. El administrador y el realm maestro sólo se alcanzan desde el servidor.
+El realm `mesa` arranca vacío y admite cuentas creadas por el operador. El registro por correo se habilita después de configurar y probar el envío de correo. El cliente `truco-web` sólo acepta la dirección HTTPS exacta de retorno del sitio y usa PKCE. La URL del emisor forma parte de la identidad del jugador: conservá el nombre DNS al migrar o restaurar. El administrador y el realm maestro sólo se alcanzan desde el servidor.
 
 Para dar el primer acceso, entrá por SSH, ejecutá `dc exec identidad bash` y abrí una sesión de administración desde el contenedor. El primer comando de autenticación pide la contraseña de `operador`. El archivo de sesión se elimina al salir de esa shell.
 
@@ -56,6 +56,23 @@ exit
 ```
 
 Sustituí los datos del ejemplo por los del jugador. Entregale la contraseña temporal por un canal privado. Al ingresar por primera vez deberá elegir la suya. Para operar de forma permanente, creá un administrador nominal en el realm maestro, asignale el rol de realm `admin`, verificá su ingreso por la consola local y retirale el acceso al administrador de arranque. Cambiar `KC_ADMIN_PASSWORD` en el archivo de entorno no cambia la contraseña de una cuenta existente.
+
+### Registro con correo y contraseña
+
+Configurá el remitente y el servidor SMTP del realm `mesa` desde **Realm settings → Email** de Keycloak. Probá el envío desde esa pantalla con un buzón al que tengas acceso. La configuración de correo queda en Keycloak. Usá la consola desde el acceso administrativo privado o configurá el campo `smtpServer` con `kcadm.sh` y un archivo protegido. [Configurar el correo de un realm](https://www.keycloak.org/docs/latest/server_admin/#_email)
+
+Con la sesión administrativa del paso anterior, ejecutá este comando sobre el realm existente.
+
+```bash
+kc update realms/mesa \
+  -s registrationAllowed=true -s registrationEmailAsUsername=true \
+  -s loginWithEmailAllowed=true -s duplicateEmailsAllowed=false \
+  -s verifyEmail=true -s resetPasswordAllowed=true
+```
+
+En una ventana privada, abrí el sitio, elegí **Ingresar al juego** y registrá una cuenta de prueba. Comprobá que llega el mensaje, confirmá el correo y elegí la contraseña. Volvé a entrar con ese correo y probá **Olvidé mi contraseña**. Las cuentas existentes con un correo pendiente de verificación pueden recibir el mismo pedido al ingresar, incluso si usan un proveedor social. Probá un reingreso por usuario y uno por cada proveedor habilitado.
+
+En la portada o el salón, **Mi perfil** muestra el ID de jugador y los chicos empezados con esa cuenta. Incluye modalidad, tanteador, resultado y fecha cuando el registro la conserva. El correo y la contraseña quedan bajo la gestión de Keycloak.
 
 ### Panel personal de gestión
 
@@ -90,6 +107,12 @@ Elegí el ID de la copia verificada. La restauración requiere espacio temporal 
 
 Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el ID y el commit desplegado, y prepará la versión siguiente. Con imágenes construidas en el VPS usá `dc build` y luego `dc up -d --wait`. La API aplica las migraciones al arrancar. Si una migración impide volver al binario anterior, recuperá la versión y su copia juntas en un proyecto nuevo. Un despliegue de una sola máquina puede pausar mesas durante un reinicio.
 
+La imagen de identidad incluye el tema de El Truco y un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google, Facebook o Discord ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak. Para aplicar la marca a un realm existente, [actualizá el nombre y los temas de ingreso y cuenta](ingreso-social.md#activar-la-pantalla-de-el-truco).
+
+## Salón y exhibiciones
+
+La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)
+
 ## Publicación automática desde main
 
 El VPS consulta el repositorio privado cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents** y **Actions** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa el segundo para comprobar el resultado del workflow.
@@ -113,7 +136,7 @@ install -d -m 700 /etc/truco-oriental
 
 Para recuperar una instalación que aún consulta el repositorio de forma anónima, instalá el ejecutor y la unidad desde la revisión verificada siguiendo los comandos de instalación de abajo. Iniciá `truco-deploy.service` y comprobá que el SHA en `current` coincida con el push aprobado de `main`.
 
-En el VPS de Truco Oriental, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
+En el VPS de El Truco, `/opt/truco-oriental/staged` señala la revisión preparada. Si falta el dominio o el destino de copias, se detiene ahí. Para el primer lanzamiento, completá esos datos en el archivo protegido y asegurate de que el repositorio restic esté inicializado. Podés pausar el temporizador mientras configurás DNS y copias. En una shell de administrador:
 
 ```sh
 systemctl stop truco-deploy.timer

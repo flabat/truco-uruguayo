@@ -1,4 +1,4 @@
-# Truco Oriental
+# El Truco
 
 Truco uruguayo con muestra para jugar en el navegador. La misma aplicación reúne las mesas de duelo, parejas y tercetos, la guía de reglas con sus fuentes y la práctica individual.
 
@@ -7,10 +7,10 @@ Truco uruguayo con muestra para jugar en el navegador. La misma aplicación reú
 Para jugar una partida, levantá la aplicación completa con Docker Compose desde la raíz del repositorio.
 
 ```sh
-docker compose up --build --wait
+TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
 ```
 
-Abrí [Truco Oriental](http://localhost:8081/). Podés leer las reglas o practicar como invitado. Para crear una mesa o aceptar una invitación, ingresá con una de las cuentas de prueba de la [guía del entorno local](docs/entorno-local.md). Compose levanta la web, la API que aplica el motor de juego, PostgreSQL y el proveedor de identidad.
+Abrí [El Truco](http://localhost:8081/). Podés leer las reglas o practicar como invitado. Para crear una mesa o aceptar una invitación, ingresá con una de las cuentas de prueba de la [guía del entorno local](docs/entorno-local.md). Compose levanta la web, la API que aplica el motor de juego, PostgreSQL y el proveedor de identidad.
 
 Para trabajar solo en la interfaz, usá Node.js 24 y npm.
 
@@ -28,7 +28,7 @@ npm run preview
 
 ## Producción
 
-La [guía del VPS](docs/produccion.md) incluye el despliegue con Docker Compose, HTTPS, cuentas, copias externas y el ensayo local de recuperación.
+La [guía del VPS](docs/produccion.md) incluye el despliegue con Docker Compose, HTTPS, cuentas, copias externas y el ensayo local de recuperación. Para cambiar la cantidad de mesas en vivo, pausar las exhibiciones o recuperar el servicio, seguí el [procedimiento de operación del salón](docs/multijugador/salon-en-vivo/operacion.md).
 
 ## Contenido y componentes
 

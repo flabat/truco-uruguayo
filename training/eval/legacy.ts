@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
-import { mazo } from "../../src/motor/cartas.ts";
-import { aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline } from "../../src/motor/mesa-online.ts";
-import { crearAzar, type Asiento, type RepartoOnline } from "../../src/motor/reparto.ts";
+import { mazo } from "@eltruco/motor/cartas.ts";
+import { aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { crearAzar, type Asiento, type RepartoOnline } from "@eltruco/motor/reparto.ts";
 
 function legacyDeal(random: () => number, mano: 0 | 1): RepartoOnline {
   const deck = [...mazo];

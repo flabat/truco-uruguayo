@@ -3,7 +3,7 @@ import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
 import { canto } from "../../lib/cantos";
-import type { CardId } from "../../motor/cartas";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";
 import { demostrarComparacion } from "./demostracion";

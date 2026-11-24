@@ -1,0 +1,31 @@
+---
+import Site from "./Site.astro";
+import { url } from "../lib/guide";
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+---
+
+<Site {title} {description}>
+  <article class="shell article privacidad">
+    <header>
+      <p class="crumb"><a href={url()}>Inicio</a><span aria-hidden="true">/</span>{title}</p>
+      <h1>{title}</h1>
+      <p class="standfirst"><slot name="introduccion" /></p>
+    </header>
+    <slot />
+  </article>
+</Site>
+
+<style>
+  .privacidad { padding-block: clamp(24px, 5vw, 64px); }
+  .privacidad :global(.rule-block a), .privacidad :global(.standfirst a) {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .privacidad :global(p + p) { margin-top: 12px; }
+</style>

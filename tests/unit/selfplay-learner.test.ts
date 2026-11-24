@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {iniciarOnline} from "../../src/motor/mesa-online.ts";
-import type {Asiento, RepartoOnline} from "../../src/motor/reparto.ts";
+import {iniciarOnline} from "@eltruco/motor/mesa-online.ts";
+import type {Asiento, RepartoOnline} from "@eltruco/motor/reparto.ts";
 import {playMatch, scheduledDeal} from "../../training/arena/index.ts";
 import {initial, openAnchored, type CycleFormat} from "../../training/anchored/actor.ts";
 import type {ActionId, Move} from "../../training/contracts/index.ts";

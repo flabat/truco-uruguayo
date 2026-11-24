@@ -100,7 +100,7 @@ def stage(sha):
             tree.rename(directory)
     if (ROOT / "staged").resolve() != directory:
         compose(sha, "build", build_only=True)
-        compose(sha, "pull", "db", "identidad", build_only=True)
+        compose(sha, "pull", "--ignore-buildable", "db", "identidad", build_only=True)
         point("staged", directory)
     return True
 

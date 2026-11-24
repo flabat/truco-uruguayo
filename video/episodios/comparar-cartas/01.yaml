@@ -1,0 +1,9 @@
+plantilla: comparar-cartas
+serie: comparar-cartas
+id: "01"
+muestra: bastos-06
+gancho: "¿Cuál gana la vuelta?"
+vueltas:
+  - [bastos-02, espadas-01]   # una pieza le gana a una mata
+  - [espadas-07, copas-07]    # mismo número: la mata manda
+  - [oros-03, copas-03]       # mismo puesto: parda

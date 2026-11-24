@@ -1,8 +1,11 @@
 ---
+import { Image } from "astro:assets";
+import mesaCriolla from "../assets/mesa-criolla.webp";
 import Site from "../layouts/Site.astro";
 import Icon from "../components/Icon.astro";
 import Jugador from "../components/Jugador.astro";
 import { groups, url } from "../lib/guide";
+import { nombreSitio } from "../lib/marca";
 const facts = [
   { icon: "deck", label: "Baraja española", value: "40 cartas" },
   { icon: "players", label: "Jugadores", value: "2, 4 o 6" },
@@ -12,7 +15,7 @@ const facts = [
 ---
 
 <Site
-  title="Truco uruguayo"
+  title={nombreSitio}
   description="Aprendé a jugar al truco uruguayo con muestra. Una guía en español de las cartas, los cantos y las variantes de mesa, con ejemplos y fuentes."
   active="inicio"
 >
@@ -22,12 +25,7 @@ const facts = [
         <p class="eyebrow hero-kicker">
           <span aria-hidden="true"></span> Guía de juego
         </p>
-        <h1>
-          Truco{" "}
-          <em>
-            uruguayo<span>.</span>
-          </em>
-        </h1>
+        <h1>{nombreSitio}</h1>
         <p class="hero-deck">
           Aprendé a jugar al truco con muestra. Una guía de las cartas, los cantos y las reglas de
           la mesa uruguaya.
@@ -47,11 +45,14 @@ const facts = [
         <Jugador />
       </div>
       <div class="hero-art">
-        <img
-          src={url("img/mesa-criolla.webp")}
+        <Image
+          src={mesaCriolla}
           alt="Grabado ilustrado de tres gauchos jugando a las cartas en una mesa de campo."
-          width="1536"
-          height="1024"
+          widths={[360, 480, 768, 960, 1200, 1536]}
+          sizes="(max-width: 700px) min(90vw, 360px), (max-width: 960px) 53vw, min(55vw, 698px)"
+          format="webp"
+          quality={80}
+          loading="eager"
           fetchpriority="high"
         />
       </div>

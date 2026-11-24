@@ -1,9 +1,9 @@
-import { esCardId, type CardId } from "../motor/cartas.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano } from "../motor/mano.ts";
-import { avanzarHastaAprendiz } from "../motor/parejas.ts";
-import { repartir } from "../motor/reparto.ts";
-import { capturarReplay, reproducirReplay } from "../motor/replay.ts";
-import { evaluarTantos } from "../motor/tantos.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano } from "@eltruco/motor/mano.ts";
+import { avanzarHastaAprendiz } from "@eltruco/motor/parejas.ts";
+import { repartir } from "@eltruco/motor/reparto.ts";
+import { capturarReplay, reproducirReplay } from "@eltruco/motor/replay.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import { claveSituacion, evaluarRespuesta } from "./generadores/index.ts";
 import { familiasPorHabilidad, pertenece } from "./generadores/familias.ts";
 import { reconocerFlor, temas, type Tema } from "./lecciones/index.ts";

@@ -1,9 +1,9 @@
-import type { CardId } from "../../src/motor/cartas.ts";
-import type { AccionOnlineV1, Cobro, TipoAccionOnlineV1, VistaOnlineV1 } from "../../src/motor/mesa-online.ts";
-import type { Asiento, AsientoV1, RepartoOnline } from "../../src/motor/reparto.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import type { TipoAccionOnlineV1, VistaOnlineV1 } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, AsientoV1, RepartoOnline } from "@eltruco/motor/reparto.ts";
+import type { Format, PublicTurn, Signal } from "@eltruco/motor/contratos.ts";
 
-export const supportedFormats = ["duel", "pairs", "pairs-senas", "pairs-private-senas"] as const;
-export type Format = typeof supportedFormats[number];
+export { supportedFormats, signals, type Format, type PublicTurn, type Signal } from "@eltruco/motor/contratos.ts";
 export const activeFormats = ["duel", "pairs", "pairs-private-senas"] as const;
 export const formats: readonly Format[] = activeFormats;
 export function requireTrainingFormat(format: unknown): asserts format is typeof activeFormats[number] {
@@ -31,21 +31,11 @@ export function canSeeSignal(format: Format, sender: Asiento, viewer?: Asiento):
 
 export type Score = readonly [number, number];
 export type Move = CardId | Exclude<TipoAccionOnlineV1, "carta">;
-// IDs follow the rows of the published table in src/data/juego.json.
-export const signals = ["cejas", "beso", "nariz", "ojo-derecho", "ojo-izquierdo",
-  "labios-derecha", "labios-izquierda", "labio-inferior", "boca", "lengua",
-  "ojos-cerrados", "labio-superior", "cachetes"] as const;
-export type Signal = typeof signals[number];
 // An ordinary move without a prefix means silence in every format.
 export type ActionId = Move | `${Signal}/${Move}`;
 
-/** One committed turn. In a seat projection the signal is omitted if that seat cannot see it. */
-export interface PublicTurn {
-  readonly signal?: Signal;
-  readonly action: AccionOnlineV1;
-  readonly awards: readonly Cobro[];
-}
 export interface SeatObservation {
+  readonly rivalCounts?: readonly number[];
   readonly schema: typeof versions.observation;
   readonly format: Format;
   readonly seats: 2 | 4;

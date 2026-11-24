@@ -1,7 +1,7 @@
 import type { Ejemplo } from "../../aprendizaje/lecciones";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
-import { paloDe } from "../../motor/cartas";
-import { compararCartas } from "../../motor/jerarquia";
+import { paloDe } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 
 /** Ilustra la elección en las cartas ya repartidas, sin abrir una sesión de práctica. */
 export function demostrarComparacion(

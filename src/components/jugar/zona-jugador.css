@@ -1,0 +1,99 @@
+.j-zona-jugador {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .5rem;
+  min-width: 0;
+  padding: clamp(.6rem, 1.5vw, 1rem);
+  border: 1px solid #c7c6ac;
+  border-radius: .55rem;
+  background: #fcf9ee;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.j-zona-jugador .j-zona-estado h2 {
+  margin: 0;
+  font: 400 clamp(1.2rem, 2.5vw, 1.65rem)/1.12 var(--serif);
+}
+.j-zona-estado [role="status"] {
+  font-size: .9rem;
+  line-height: 1.3;
+  color: var(--body);
+}
+.j-zona-estado [role="status"] p {
+  margin: .15rem 0 0;
+  line-height: inherit;
+}
+.j-zona-estado .j-flor-anunciada { color: var(--ink); font-weight: 700; }
+.j-zona-anuncio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.j-zona-jugador .j-mano {
+  margin: 0;
+  gap: .35rem;
+}
+.j-zona-jugador .j-mano button {
+  width: clamp(48px, 6.5vw, 74px);
+  padding: 2px;
+  color: var(--ink);
+}
+.j-zona-jugador .j-mano button:enabled {
+  border-color: #849c82;
+  background: #e8ede3;
+}
+.j-zona-jugador .j-mano button:enabled:hover {
+  border-color: #45664d;
+  background: #d6e3d1;
+}
+.j-zona-jugador .j-mano button:disabled img { box-shadow: none; }
+.j-zona-jugador :is(button, select, a.button) {
+  min-width: 44px;
+  min-height: 44px;
+  max-width: 100%;
+}
+.j-zona-jugador :is(h2, button, select, a):focus-visible {
+  outline: 3px solid #8a461d;
+  outline-offset: 2px;
+}
+.j-zona-cantos, .j-zona-jugador .j-cantos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: center;
+  gap: .3rem;
+}
+.j-zona-cantos .j-opciones { margin: 0; max-width: 100%; }
+.j-zona-cantos .j-opciones legend { margin: 0 auto .1rem; }
+.j-zona-cantos :is(.j-sec, .button) {
+  margin: 0;
+  padding: .3rem .65rem;
+  line-height: 1.18;
+}
+
+@media (min-width: 640px) {
+  .j-zona-jugador {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: clamp(.75rem, 2vw, 1.6rem);
+  }
+  .j-zona-estado, .j-zona-sena { grid-column: 1 / -1; }
+  .j-zona-mano { grid-column: 1; }
+  .j-zona-cantos { grid-column: 2; justify-content: flex-start; }
+  .j-zona-jugador:not(:has(.j-zona-mano)) .j-zona-cantos { grid-column: 1 / -1; }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .j-zona-jugador { padding: .35rem .55rem; row-gap: .25rem; }
+  .j-zona-estado {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: .15rem .65rem;
+  }
+  .j-zona-estado [role="status"] p { display: inline; margin-inline-end: .4rem; }
+  .j-zona-jugador .j-mano button { width: 44px; }
+}

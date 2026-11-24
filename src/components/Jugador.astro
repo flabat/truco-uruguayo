@@ -3,12 +3,14 @@ import { url } from "../lib/guide";
 ---
 <div class="jugador" id="jugador">
   <form action="/api/auth/login" method="get" hidden data-ingreso>
+    <input type="hidden" name="volver" value="/jugar/" />
     <button class="button" type="submit">Ingresar al juego</button>
   </form>
   <div hidden data-cuenta>
     <strong data-nombre></strong>
     <p>ID de jugador <code data-id></code></p>
     <a class="button" href={url("jugar/")}>Jugar al truco</a>
+    <a class="quiet-link" href={url("perfil/")}>Mi perfil</a>
     <form action="/api/auth/logout" method="post"><button class="quiet-link" type="submit">Cerrar sesión</button></form>
   </div>
   <span role="status" data-estado>Consultando la sesión…</span>

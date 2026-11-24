@@ -1,5 +1,9 @@
 export async function ingresarConClaveLocal(page, usuario) {
   await page.getByRole("button", { name: "Ingresar al juego", exact: true }).click();
+  await ingresarDesdeIdentidad(page, usuario);
+}
+
+export async function ingresarDesdeIdentidad(page, usuario) {
   const nombre = page.locator("#username");
   await nombre.waitFor({ state: "attached" });
   const opcionLocal = page.locator("#truco-existing-account:not([open]) > summary");

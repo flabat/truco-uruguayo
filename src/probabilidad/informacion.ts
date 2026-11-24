@@ -1,6 +1,6 @@
-import { esCardId, mazo, type CardId } from "../motor/cartas.ts";
-import type { Jugada, VistaAsiento } from "../motor/mano.ts";
-import { esAsiento, type Asiento } from "../motor/reparto.ts";
+import { esCardId, mazo, type CardId } from "@eltruco/motor/cartas.ts";
+import type { Jugada, VistaAsiento } from "@eltruco/motor/mano.ts";
+import { esAsiento, type Asiento } from "@eltruco/motor/reparto.ts";
 
 export interface PosicionPublicaV1 {
   readonly version: 1;

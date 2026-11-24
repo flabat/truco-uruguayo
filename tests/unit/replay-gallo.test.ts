@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import chico from "../fixtures/replay-chico/gallo.json" with { type: "json" };
-import { decidirGallo, iniciarGallo, vistaGallo } from "../../src/motor/replay-gallo.ts";
+import { decidirGallo, iniciarGallo, vistaGallo } from "@eltruco/motor/replay-gallo.ts";
 
 const { reparto, puntosInicio } = chico.eventos[0];
 assert.ok(reparto && puntosInicio);

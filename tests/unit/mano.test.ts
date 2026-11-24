@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { CardId } from "../../src/motor/cartas.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../../src/motor/mano.ts";
-import { repartir, type Asiento, type Equipo, type RepartoV1 } from "../../src/motor/reparto.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";
+import { repartir, type Asiento, type Equipo, type RepartoV1 } from "@eltruco/motor/reparto.ts";
 
 function jugar(estado: EstadoMano, asiento: Asiento, carta: CardId): EstadoMano {
   const paso = jugarCarta(estado, { asiento, carta });

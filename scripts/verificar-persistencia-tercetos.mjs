@@ -4,7 +4,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import pg from "pg";
 import WebSocket from "ws";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
@@ -43,6 +44,10 @@ async function crear(personas) {
   const {body: sala} = await llamar(personas[0], "/api/mesas", {modo: "3v3"}, [201]);
   assert.deepEqual(sala.asientos.map(a => a.equipo), [0, 1, 0, 1, 0, 1]);
   assert.equal(sala.meta, 50);
+  const {body: espera} = await llamar(personas[0], "/api/mesas/" + sala.id + "/partida");
+  assert.deepEqual(espera.contexto, { versionVista: 1, fase: "sin-repartir" });
+  assert.equal(espera.vista, null);
+  assert.equal("lance" in espera, false);
   const unir = "/api/invitaciones/" + new URL(sala.invitacion).searchParams.get("invitacion") + "/unirse";
   for (let i = 1; i < 5; i++) assert.equal((await llamar(personas[i], unir, {})).body.miAsiento, i);
   const candidatos = personas.slice(5);
@@ -54,6 +59,7 @@ async function crear(personas) {
   await llamar(candidatos[1 - ultimo], "/api/mesas/" + mesa.id + "/partida", undefined, [404]);
   const inicial = await vistas(mesa);
   assert.ok(inicial.every(p => p.version === 1 && p.manoNumero === 1));
+  assert.ok(inicial.every(p => p.contexto.fase === "en-juego" && p.lance.tipo === "redondilla"));
   assert.equal(new Set(inicial.flatMap(p => p.vista.cartas)).size, 18);
   return mesa;
 }
@@ -150,6 +156,11 @@ async function iniciar(personas) {
   assert.equal(aceptada.vista.acciones.filter(a => a.tipo === "quiero").length, 1);
   const cierre = await hastaCerrar(mesa);
   assert.deepEqual(cierre.puntos, [0, 2]);
+  assert.deepEqual(cierre.contexto, { versionVista: 1, fase: "reparto-cerrado" });
+  for (const p of await vistas(mesa)) {
+    assert.equal("cartas" in p.vista || "tantosPropios" in p.vista, false);
+    assert.deepEqual(p.vista.legales, []);
+  }
   const siguientes = await Promise.all([0, 5].map(i => partida(mesa, i, "siguiente", comando(cierre.version), [200, 409])));
   assert.deepEqual(siguientes.map(r => r.status).sort(), [200, 409]);
   const pico = siguientes.find(r => r.status === 200).body;
@@ -202,6 +213,17 @@ async function reconectar(personas) {
     const actuales = await comprobarPrivacidad(mesa);
     assert.deepEqual(actuales.map(p => hash(JSON.stringify(p))), previa.huellas);
     await confirmarPorSocket(mesa, previa.asiento, previa.orden, previa.respuesta);
+    // Conservar el mismo recibo de PostgreSQL tal como lo escribía la versión anterior.
+    const { contexto, ...historica } = previa.respuesta;
+    assert.ok(contexto);
+    const cambio = await pool.query("UPDATE juego.comandos SET respuesta=$3 WHERE mesa=$1 AND id=$2",
+      [mesa.id, previa.orden.id, historica]);
+    assert.equal(cambio.rowCount, 1);
+    const { body: recibida } = await partida(mesa, previa.asiento, "acciones", previa.orden);
+    assert.deepEqual(recibida, historica);
+    assert.deepEqual(normalizarPartida(recibida), previa.respuesta);
+    await confirmarPorSocket(mesa, previa.asiento, previa.orden, historica);
+    assert.deepEqual(await vistas(mesa), actuales);
   }
 }
 

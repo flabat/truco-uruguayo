@@ -1,5 +1,5 @@
 import { cartasPorId } from "../lib/cartas";
-import type { CardId } from "../motor/cartas";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 export function actualizarMuestra(elemento: HTMLElement, base: string, carta: CardId) {
   const frente = elemento.querySelector<HTMLImageElement>(".frente")!;
