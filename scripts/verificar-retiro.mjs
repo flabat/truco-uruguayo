@@ -124,10 +124,23 @@ async function llevarAlTurnoDeA(id, a, b) {
   }
 }
 
+/** Un reparto puede cerrar el chico antes del turno de A: en ese caso se prueba con otra mesa. */
+async function mesaEnTurnoDeA(crear) {
+  for (let intento = 1; ; intento++) {
+    const { a, b, m } = await crear();
+    try {
+      return { a, b, m, partida: await llevarAlTurnoDeA(m.id, a, b) };
+    } catch (error) {
+      if (intento === 3 || !(error instanceof Error) || error.message !== "El chico terminó antes del turno de A.") throw error;
+    }
+  }
+}
+
 async function probarCesion(politica) {
-  const a = await jugador("a"), b = await jugador("b");
-  const m = await mesa("1v1", a, [a, b], { politica, meta: 12 });
-  const antes = await llevarAlTurnoDeA(m.id, a, b);
+  const { a, b, m, partida: antes } = await mesaEnTurnoDeA(async () => {
+    const a = await jugador("a"), b = await jugador("b");
+    return { a, b, m: await mesa("1v1", a, [a, b], { politica, meta: 12 }) };
+  });
   assert.deepEqual(await retirar(a), [m.id]);
   // Quien se fue ya no ve ni controla la mesa; su historial la conserva.
   assert.equal(await leerMesa(pool, m.id, a.id, web), null);
@@ -151,9 +164,10 @@ async function probarCesion(politica) {
 
 /** Parejas con señas al pie: A y B humanos, dos computadoras; la computadora no espera palabras del asiento cedido. */
 async function probarCesionPie() {
-  const a = await jugador("a"), b = await jugador("b");
-  const m = await mesa("2v2", a, [a, b, null, null], { politica: politicaPie, versionSenas: versionSenasPie, meta: 6 });
-  const partida = await llevarAlTurnoDeA(m.id, a, b);
+  const { a, b, m, partida } = await mesaEnTurnoDeA(async () => {
+    const a = await jugador("a"), b = await jugador("b");
+    return { a, b, m: await mesa("2v2", a, [a, b, null, null], { politica: politicaPie, versionSenas: versionSenasPie, meta: 6 }) };
+  });
   const antes = partida.version;
   assert.deepEqual(await retirar(a), [m.id]);
   assert.ok(await esperar(async () => (await servicio.leer(m.id, b.id)).version > antes), "la computadora juega el turno cedido al pie");
