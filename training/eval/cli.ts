@@ -39,7 +39,7 @@ interface Plan extends Field {
 }
 
 function source() {
-  const files = execFileSync("git", ["ls-files","-z","src/motor","training"], {cwd:root,encoding:"utf8"})
+  const files = execFileSync("git", ["ls-files","-z","paquetes/motor","training"], {cwd:root,encoding:"utf8"})
     .split("\0").filter(f => /\.(ts|py)$/.test(f)).sort();
   return hash(json(files.map(f => [f,hash(readFileSync(join(root,f)))])));
 }

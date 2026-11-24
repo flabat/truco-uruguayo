@@ -28,7 +28,7 @@ test("el paquete solo importa archivos propios", async () => {
 });
 
 test("nadie importa la ruta vieja del motor", async () => {
-  const vieja = /src\/motor\/|@site\/motor\/|["'][./]+(?:[^"']*\/)?motor\/[a-z0-9-]+(\.ts)?["']/;
+  const vieja = /src\/motor\b|@site\/motor\/|["'][./]+(?:[^"']*\/)?motor\/[a-z0-9-]+(\.ts)?["']/;
   const propio = fileURLToPath(import.meta.url);
   for (const carpeta of ["src", "api", "training", "scripts", "tests", "video", "docs"]) {
     for (const archivo of await archivos(new URL(`${carpeta}/`, raiz), [".ts", ".tsx", ".astro", ".mjs"])) {

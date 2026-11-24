@@ -52,7 +52,7 @@ export interface Field {
   versions: typeof versions | typeof trainingVersions;
 }
 export function buildId() {
-  const paths = execFileSync("git", ["ls-files", "-z", "src/motor", "api", "training"], { cwd: root }).toString()
+  const paths = execFileSync("git", ["ls-files", "-z", "paquetes/motor", "api", "training"], { cwd: root }).toString()
     .split("\0").filter((p) => /\.(ts|sql|py)$/.test(p)).sort();
   return sha(JSON.stringify(paths.map((p) => [p, sha(readFileSync(join(root, p)))])));
 }
