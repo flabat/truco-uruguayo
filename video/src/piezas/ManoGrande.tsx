@@ -27,7 +27,7 @@ export const ManoGrande = ({ cartas }: { cartas: EstadoCarta[] }) => (
             outline: cuenta ? "2px solid var(--oro)" : "none", outlineOffset: 2 }}>
             <Naipe base={base} id={cara} />
           </div>
-          <figcaption style={{ font: "600 12px/1.2 var(--sans)", marginTop: 6, whiteSpace: "nowrap" }}>{nombrar(cara)}</figcaption>
+          <figcaption style={{ font: `600 ${nombrar(cara).length > 15 ? 10 : 12}px/1.2 var(--sans)`, marginTop: 6, whiteSpace: "nowrap" }}>{nombrar(cara)}</figcaption>
           <div style={{ height: 3, borderRadius: 2, marginTop: 5, background: cuenta ? "var(--oro)" : "#4e6b58" }} />
         </figure>
       );
