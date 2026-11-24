@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { armarLinea, type LineaGuion, type Palabra } from "../src/lib/linea.ts";
-import { momentosDeCartas, valoresDePiezas, vozSilenciosa } from "../src/lib/escena.ts";
+import { cartasQueCuentan, momentosDeCartas, valoresDePiezas, vozSilenciosa } from "../src/lib/escena.ts";
+import { evaluarTantos } from "../../src/motor/tantos.ts";
 import fixture from "./fixtures/envido-03.json" with { type: "json" };
 
 const linea = armarLinea(fixture.lineas as LineaGuion[], fixture.palabras as Palabra[]);
@@ -41,4 +42,11 @@ test("vozSilenciosa da una palabra cada 0,3 s para previsualizar sin audio", () 
   const voz = vozSilenciosa([{ id: "a", texto: "Hola che." }, { id: "b", texto: "Chau." }]);
   assert.equal(voz.archivo, "");
   assert.deepEqual(voz.palabras.map((p) => [p.text, p.start]), [["Hola", 0], ["che.", 0.3], ["Chau.", 0.6]]);
+});
+
+test("cartasQueCuentan incluye todas las selecciones equivalentes", () => {
+  const tantos = evaluarTantos(["oros-06", "espadas-06", "oros-02"], "oros-01");
+  assert.ok(tantos.desgloses.length > 1);
+  assert.deepEqual([...cartasQueCuentan(tantos)].sort(), ["espadas-06", "oros-02", "oros-06"]);
+  assert.deepEqual([...cartasQueCuentan(evaluarTantos(["oros-05", "oros-07", "copas-02"], "espadas-03"))].sort(), ["oros-05", "oros-07"]);
 });

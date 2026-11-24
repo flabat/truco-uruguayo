@@ -85,3 +85,34 @@ test("la tercera mano de envido dice el total", () => {
   assert.equal(texto(ep, "tercera"),
     "Cinco y caballo de copas, y tres de oros. Veinte por el palo, más cinco. El caballo de copas vale cero. El tres de oros queda afuera. En total, veinticinco.");
 });
+
+test("un override no puede decir un número que el motor no da", () => {
+  const ep = (lineas: Record<string, string>) => ({ ...envido, lineas });
+  assert.throws(() => guionContarTantos(ep({ tercera: "As de copas, seis de oros y caballo de bastos. Te quedás con el siete. En total, siete." }),
+    resolverManos(envido)), /tercera.*siete/);
+  assert.throws(() => guionContarTantos(ep({ respuesta1: "Treinta y dos. Veinte más cinco más nueve." }), resolverManos(envido)),
+    /respuesta1.*nueve/);
+});
+
+test("un override no puede nombrar una carta que no está en la mesa", () => {
+  assert.throws(() => guionContarTantos({ ...envido, lineas: { cartas: "Cuatro de espadas y as de bastos. ¿Cuánto cantás?" } },
+    resolverManos(envido)), /cartas.*cuatro de espadas/);
+});
+
+test("los overrides de paridad de Codex pasan la validación", () => {
+  const lineas = {
+    pregunta: "¿Cuánto envido cantás con el tres de espadas de muestra?",
+    cartas: "Cinco y siete de oros, y dos de copas. ¿Cuánto te da?",
+    respuesta1: "Treinta y dos. Son veinte por los oros, más cinco, más siete. El dos de copas queda afuera.",
+    cambio: "Cambiá el cinco de oros por el cinco de espadas. Ahora es pieza. ¿Cuánto cantás?",
+    respuesta2: "Treinta y cinco. El cinco de espadas vale veintiocho. Sumale el siete, que vale más que el dos. Los veinte ya están incluidos.",
+    tercera: "As de copas, seis de oros y caballo de bastos. Tres palos distintos. Te quedás con el seis. El caballo común vale cero.",
+  };
+  assert.doesNotThrow(() => guionContarTantos({ ...envido, lineas }, resolverManos(envido)));
+  const floral = {
+    respuesta2: "Treinta y ocho. Contá veinte una sola vez. Sumale siete, cuatro y los siete que aporta el caballo.",
+    tercera: "Dos y cinco de espadas, con el seis de bastos. ¿Cuánto da esta flor?",
+    respuesta3: "Cuarenta y cuatro. Veinte más diez del dos, ocho del cinco y seis de bastos.",
+  };
+  assert.doesNotThrow(() => guionContarTantos({ ...flor, lineas: floral }, resolverManos(flor)));
+});

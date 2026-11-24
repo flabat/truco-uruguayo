@@ -9,11 +9,12 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, renderStill, selectComposition } from "@remotion/renderer";
 import { leerEntorno } from "../src/lib/entorno.ts";
 import { leerEpisodio, resolverManos, type Episodio, type Mano } from "../src/lib/episodio.ts";
-import { armarLinea, type Linea } from "../src/lib/linea.ts";
+import { armarLinea } from "../src/lib/linea.ts";
 import { generarVoz, importarVoz, type Voz } from "../src/lib/voz.ts";
 import { crearSobrescritura } from "../src/webpack.ts";
 import { guionContarTantos } from "../src/plantillas/contar-tantos/guion.ts";
 import { medirSalida, verificarSalida } from "./controles.ts";
+import { momentosDePrueba } from "./momentos.ts";
 import { hojaDePrueba } from "./prueba.ts";
 
 const video = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,19 +29,6 @@ const { values, positionals } = parseArgs({
 if (positionals.length !== 1) {
   console.error("Uso: npm run reel -- <episodio.yaml> [--importar <carpeta con noemi-master.wav y words.json>] [--sin-render] [--studio]");
   process.exit(2);
-}
-
-function momentos(ep: Episodio, manos: Mano[], L: Linea): [string, number][] {
-  const hay = (id: string) => L.tramos.some((t) => t.id === id);
-  const lista: [string, number][] = [["pregunta", L.inicio("pregunta") + 1]];
-  if (hay("cartas")) lista.push(["cartas", L.fin("cartas") - 0.3]);
-  L.pausas.forEach((p) => lista.push([`pausa ${p.id}`, p.desde + 1]));
-  for (const id of ["respuesta1", "respuesta2", "respuesta3"]) if (hay(id)) lista.push([id, L.inicio(id) + 1]);
-  if (hay("cambio")) lista.push(["cambio", L.fin("cambio") - 0.2]);
-  if (hay("tercera")) lista.push(["tercera", L.fin("tercera") - 0.3]);
-  if (hay("valores")) lista.push(["valores", L.inicio("valores") + 1]);
-  if (hay("cierre")) lista.push(["cierre", L.inicio("cierre") + 0.6]);
-  return lista.sort((a, b) => a[1] - b[1]).slice(0, 10);
 }
 
 function publicacion(ep: Episodio, manos: Mano[]): string {
@@ -82,6 +70,7 @@ async function principal() {
     voz = await generarVoz(lineas, { raiz: video, entorno: leerEntorno(repo) });
   }
   const L = armarLinea(lineas, voz.palabras);
+  const lista = momentosDePrueba(L);
   const props = { modalidad: ep.modalidad, muestra: ep.muestra, gancho: ep.gancho, manos, lineas, voz };
   const preparado = path.join(video, "public", "preparado", `${ep.serie}-${ep.id}.json`);
   mkdirSync(path.dirname(preparado), { recursive: true });
@@ -118,7 +107,6 @@ async function principal() {
   });
   process.stdout.write("\n");
 
-  const lista = momentos(ep, manos, L);
   const respuesta = lista.find(([id]) => id === "respuesta1") ?? lista[0];
   await renderStill({ composition, serveUrl, inputProps: props, output: path.join(salida, "portada.jpg"),
     frame: Math.round(respuesta[1] * 30), scale: 3, imageFormat: "jpeg" });

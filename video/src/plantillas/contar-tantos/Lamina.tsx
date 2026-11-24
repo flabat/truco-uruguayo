@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import { AbsoluteFill, Artifact, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { pieza, type CardId } from "@site/motor/cartas";
 import type { Mano } from "../../lib/episodio.ts";
-import { momentosDeCartas } from "../../lib/escena.ts";
+import { cartasQueCuentan, momentosDeCartas } from "../../lib/escena.ts";
 import { armarLinea, type LineaGuion } from "../../lib/linea.ts";
 import { palabraDeRango } from "../../lib/numeros.ts";
 import type { Voz } from "../../lib/voz.ts";
@@ -93,7 +93,7 @@ export const Lamina = ({ modalidad, muestra, gancho, manos, lineas, voz }: Props
   // Entradas de las cartas: la primera mano en «cartas», la tercera en «tercera».
   const entradas = nMano === 0 && hay("cartas") ? momentosDeCartas(L, "cartas", primera.cartas)
     : nMano === 2 ? repartoTercera : mano.cartas.map(() => -10);
-  const cuentan = new Set(mano.tantos.desgloses[0].aportes.map((x) => x.carta));
+  const cuentan = cartasQueCuentan(mano.tantos);
   const cartas: EstadoCarta[] = mano.cartas.map((carta, i) => {
     const v = (t - giro) / 0.45;
     return {

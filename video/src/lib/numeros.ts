@@ -24,3 +24,19 @@ export function palabraDeRango(rango: Rango): string {
 export function nombreHablado(carta: CardId): string {
   return palabraDeRango(rangoDe(carta)) + " de " + paloDe(carta);
 }
+
+const porPalabras = new Map(Array.from({ length: 100 }, (_, n) => [aPalabras(n).normalize("NFD").replace(/[̀-ͯ]/g, ""), n]));
+
+/** Los números dichos en un texto ya pasado por `plano`, tomando la frase más larga («treinta y dos», no «treinta»). */
+export function numerosDichos(textoPlano: string): { valor: number; dicho: string }[] {
+  const palabras = textoPlano.split(" ").filter(Boolean);
+  const hallados: { valor: number; dicho: string }[] = [];
+  for (let i = 0; i < palabras.length; i++) {
+    for (const largo of [3, 1]) {
+      const dicho = palabras.slice(i, i + largo).join(" ");
+      const valor = porPalabras.get(dicho);
+      if (valor !== undefined) { hallados.push({ valor, dicho }); i += largo - 1; break; }
+    }
+  }
+  return hallados;
+}

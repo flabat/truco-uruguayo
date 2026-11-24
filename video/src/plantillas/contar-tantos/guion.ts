@@ -1,9 +1,9 @@
 // Guion de «contar tantos»: el texto sale del resultado del motor, nunca de números escritos a mano.
-import { paloDe, pieza, rangoDe, type CardId } from "../../../../src/motor/cartas.ts";
+import { cartaId, paloDe, palos, pieza, rangoDe, rangos, type CardId, type Palo } from "../../../../src/motor/cartas.ts";
 import type { Aporte } from "../../../../src/motor/tantos.ts";
 import type { Episodio, Mano } from "../../lib/episodio.ts";
 import type { LineaGuion } from "../../lib/linea.ts";
-import { aPalabras, nombreHablado, palabraDeRango } from "../../lib/numeros.ts";
+import { aPalabras, nombreHablado, numerosDichos, palabraDeRango } from "../../lib/numeros.ts";
 import { plano } from "../../lib/texto.ts";
 
 const ids = {
@@ -15,6 +15,10 @@ const conPausa: Record<Episodio["modalidad"], readonly string[]> = {
   flor: ["cartas", "cambio", "tercera"],
 };
 const totalDe: Record<string, number> = { respuesta1: 0, respuesta2: 1, respuesta3: 2 };
+/** De qué manos puede hablar cada línea. */
+const manosDe: Record<string, number[]> = {
+  cartas: [0], respuesta1: [0], cambio: [0, 1], respuesta2: [1], tercera: [2], respuesta3: [2],
+};
 
 export function idsContarTantos(modalidad: Episodio["modalidad"]): readonly string[] {
   return ids[modalidad];
@@ -96,6 +100,39 @@ function respuesta(mano: Mano, muestra: CardId): string {
   return `${mayuscula(aPalabras(mano.tantos.total))}. ${explicar(mano, muestra)}`;
 }
 
+const porRango = new Map(rangos.map((r) => [plano(palabraDeRango(r)), r]));
+const menciones = new RegExp(`((?:${[...porRango.keys()].join("|")})(?: y (?:${[...porRango.keys()].join("|")}))*) de (${palos.join("|")})`, "g");
+
+/**
+ * Una línea reescrita a mano solo puede nombrar cartas que están en la mesa y decir números que el
+ * motor da para su mano: el total, la base, lo que aporta cada carta o el valor de una carta.
+ */
+function validarReescrita(id: string, texto: string, ep: Episodio, manos: Mano[]) {
+  const enMesa = new Set<CardId>([ep.muestra, ...manos.flatMap((m) => m.cartas)]);
+  // En «cinco y siete de oros» las dos son cartas. En «ocho del cinco y seis de bastos» solo el seis:
+  // un rango anterior que no está en la mesa vuelve al texto y se controla como número.
+  const resto = plano(texto).replace(menciones, (_, grupo: string, palo: Palo) => {
+    const rangosDichos = grupo.split(" y ");
+    const ultimo = rangosDichos.at(-1)!;
+    if (!enMesa.has(cartaId(palo, porRango.get(ultimo)!))) {
+      throw new Error(`La línea ${id} nombra el ${ultimo} de ${palo}, que no está en la mesa.`);
+    }
+    return " " + rangosDichos.slice(0, -1).filter((r) => !enMesa.has(cartaId(palo, porRango.get(r)!))).join(" ") + " ";
+  // «tres palos», «las tres cartas», «dos piezas» cuentan cosas, no tantos.
+  }).replace(/\b[a-z]+ (?:palos|cartas|piezas)\b/g, " ");
+  const propias = (manosDe[id] ?? []).map((n) => manos[n]);
+  if (!propias.length) return;
+  const validos = new Set<number>([0, 20]);
+  for (const { cartas, tantos } of propias) {
+    validos.add(tantos.total);
+    for (const d of tantos.desgloses) for (const a of d.aportes) validos.add(a.tantos);
+    for (const c of cartas) if (rangoDe(c) <= 7) validos.add(rangoDe(c));
+  }
+  for (const { valor, dicho } of numerosDichos(resto)) {
+    if (!validos.has(valor)) throw new Error(`La línea ${id} dice «${dicho}», un número que el motor no da para esa mano.`);
+  }
+}
+
 export function guionContarTantos(ep: Episodio, manos: Mano[]): LineaGuion[] {
   const [primera, segunda, tercera] = manos;
   const { de, a } = segunda.cambio!;
@@ -129,6 +166,7 @@ export function guionContarTantos(ep: Episodio, manos: Mano[]): LineaGuion[] {
         throw new Error(`La línea ${id} dice «${primeraOracion}», pero el motor da ${total}.`);
       }
     }
+    if (ep.lineas && id in ep.lineas) validarReescrita(id, texto, ep, manos);
     lineas.push({ id, texto, ...(conPausa[ep.modalidad].includes(id) ? { pausa: true } : {}) });
   }
   return lineas;

@@ -70,7 +70,7 @@ export async function generarVoz(lineas: LineaGuion[], o: {
   const apiKey = entorno.ELEVENLABS_API_KEY;
   if (!apiKey) throw new Error("Falta ELEVENLABS_API_KEY. Agregala al .env de la raíz del repositorio.");
   const respuesta = await (o.fetch ?? fetch)(
-    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vozId)}/with-timestamps?output_format=mp3_44100_192`,
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(vozId)}/with-timestamps?output_format=mp3_44100_128`,
     { method: "POST", headers: { "xi-api-key": apiKey, "content-type": "application/json" },
       body: JSON.stringify({ text: textoDe(lineas), model_id: modelo }) },
   );

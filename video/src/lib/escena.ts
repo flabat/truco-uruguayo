@@ -1,6 +1,6 @@
 // Ayudas puras para animar las escenas al ritmo de la narración.
 import { cartaId, paloDe, palos, rangoDe, type CardId, type Rango } from "../../../src/motor/cartas.ts";
-import { evaluarTantos } from "../../../src/motor/tantos.ts";
+import { evaluarTantos, type ResultadoTantos } from "../../../src/motor/tantos.ts";
 import type { Linea, LineaGuion } from "./linea.ts";
 import type { Voz } from "./voz.ts";
 import { palabraDeRango } from "./numeros.ts";
@@ -38,4 +38,9 @@ export function valoresDePiezas(muestra: CardId): { carta: CardId; envido: numbe
 export function vozSilenciosa(lineas: LineaGuion[]): Voz {
   const textos = lineas.flatMap((l) => l.texto.trim().split(/\s+/));
   return { archivo: "", palabras: textos.map((text, i) => ({ text, start: i * 0.3, end: i * 0.3 + 0.25 })) };
+}
+
+/** Las cartas que cuentan en alguna de las selecciones de mayor valor (puede haber varias equivalentes). */
+export function cartasQueCuentan(tantos: ResultadoTantos): Set<CardId> {
+  return new Set(tantos.desgloses.flatMap((d) => d.aportes.map((a) => a.carta)));
 }

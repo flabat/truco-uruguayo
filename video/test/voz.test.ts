@@ -40,7 +40,7 @@ test("genera la voz y la segunda llamada usa la caché sin red ni clave", async 
   const { fetch, llamadas } = fetchFalso();
   const voz = await generarVoz(lineas, { raiz, fetch, entorno });
   assert.equal(llamadas.length, 1);
-  assert.match(llamadas[0].url, /\/v1\/text-to-speech\/voz-de-prueba\/with-timestamps/);
+  assert.match(llamadas[0].url, /\/v1\/text-to-speech\/voz-de-prueba\/with-timestamps\?output_format=mp3_44100_128$/);
   assert.equal((llamadas[0].init.headers as Record<string, string>)["xi-api-key"], "clave-de-prueba");
   assert.deepEqual(JSON.parse(String(llamadas[0].init.body)), { text: "Hola che. Probá otra.", model_id: "eleven_v4" });
   assert.match(voz.archivo, /^voz\/[0-9a-f]{64}\.wav$/);
