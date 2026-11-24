@@ -8,7 +8,7 @@ import { artifactPin, openActor } from "../../api/actor-registry.ts";
 import { createServing, type ServingDecision } from "../../api/serving.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { type MatchRecord, playMatchAsync, replayMatch, sample } from "../arena/index.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { type Format, requireTrainingFormat, type SeatObservation, seatsFor, trainingVersions, versions } from "../contracts/index.ts";
 import { challenger, incumbent } from "../seat/index.ts";
 

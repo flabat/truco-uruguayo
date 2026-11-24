@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { VistaOnline } from "../../motor/mesa-online";
-import { normalizarPartida, type PartidaJugador, type RespuestaPartida } from "../../motor/partida-jugador";
-export type { Partida, PartidaTercetos } from "../../motor/partida-jugador";
-import type { CardId } from "../../motor/cartas";
+import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { normalizarPartida, type PartidaJugador, type RespuestaPartida } from "@eltruco/motor/partida-jugador.ts";
+export type { Partida, PartidaTercetos } from "@eltruco/motor/partida-jugador.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { EdicionModelo } from "../../lib/modelos";
 
 import type { Format } from "../../../training/contracts/index";

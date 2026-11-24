@@ -1,7 +1,7 @@
 // Guion de «comparar cartas»: la ganadora sale de `compararCartas` y la parda de `explicarSituacion`.
 import { explicarSituacion } from "../../../../src/aprendizaje/generadores/evaluacion.ts";
-import { cartaId, palos, pieza, rangoDe, rangos, rangosPieza, type CardId, type Palo } from "../../../../src/motor/cartas.ts";
-import { matas, rangosComunes } from "../../../../src/motor/jerarquia.ts";
+import { cartaId, palos, pieza, rangoDe, rangos, rangosPieza, type CardId, type Palo } from "@eltruco/motor/cartas.ts";
+import { matas, rangosComunes } from "@eltruco/motor/jerarquia.ts";
 import type { EpisodioComparar, Vuelta } from "../../lib/episodio.ts";
 import type { LineaGuion } from "../../lib/linea.ts";
 import { nombreHablado, palabraDeRango } from "../../lib/numeros.ts";

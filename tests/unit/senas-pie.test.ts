@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { elegirAccionConPie, elegirIndicacionesPie } from "../../src/motor/bot-pie.ts";
-import type { CardId } from "../../src/motor/cartas.ts";
-import { aplicarOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento, TresCartas } from "../../src/motor/reparto.ts";
-import { catalogoGestosPie, crearIndicacionPie, gestosDeCartas, vistaDelPie, type IndicacionPie } from "../../src/motor/senas-pie.ts";
+import { elegirAccionConPie, elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { aplicarOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, TresCartas } from "@eltruco/motor/reparto.ts";
+import { catalogoGestosPie, crearIndicacionPie, gestosDeCartas, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 
 const manos: TresCartas[] = [
   ["copas-02", "bastos-01", "oros-04"], ["bastos-06", "copas-03", "oros-06"],

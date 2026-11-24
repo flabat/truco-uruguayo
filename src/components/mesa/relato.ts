@@ -1,7 +1,7 @@
 import { cartasPorId } from "../../lib/cartas.ts";
-import { pieza, type CardId } from "../../motor/cartas.ts";
-import { compararCartas } from "../../motor/jerarquia.ts";
-import type { VistaAsiento, VueltaCerrada } from "../../motor/mano.ts";
+import { pieza, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import type { VistaAsiento, VueltaCerrada } from "@eltruco/motor/mano.ts";
 
 export const asientos = ["Vos", "Rival de la derecha", "Tu compañero", "Rival de la izquierda"] as const;
 export const nombre = (carta: CardId) => cartasPorId.get(carta)!.nombre.toLowerCase();

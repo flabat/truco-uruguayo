@@ -1,8 +1,8 @@
-import { versionSenasPie, type DestinoPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
-import { esCardId } from "../src/motor/cartas.ts";
+import { versionSenasPie, type DestinoPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { esCardId } from "@eltruco/motor/cartas.ts";
 import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaParaPolitica,
-  type AccionOnline, type EstadoOnline, type RepartoOnline } from "../src/motor/mesa-online.ts";
-import type { Asiento } from "../src/motor/reparto.ts";
+  type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { canSeeSignal, hasSignals, signals, signalVersionFor, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
 import { commitTurn } from "../training/signals/index.ts";
 import type { FormatoMesa } from "./mesas.ts";

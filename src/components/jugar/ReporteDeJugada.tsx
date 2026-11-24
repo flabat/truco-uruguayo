@@ -1,4 +1,4 @@
-import { versionSenasPie } from "../../motor/senas-pie";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import type { Partida, PartidaTercetos } from "./cliente";
 
 export function ReporteDeJugada({ mesaId, partida, vuelta, presentando, voz }: {

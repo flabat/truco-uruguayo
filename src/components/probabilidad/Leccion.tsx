@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { crearLeccionProbabilidad } from "../../aprendizaje/probabilidad/leccion";
 import { escenas, textosProbabilidad, type Escena } from "../../aprendizaje/probabilidad/escenas";
-import type { VistaAsiento } from "../../motor/mano";
+import type { VistaAsiento } from "@eltruco/motor/mano.ts";
 import { crearClienteAnalisis, type EstadoConsulta } from "../../probabilidad/cliente";
 import { posicionPublica } from "../../probabilidad/informacion";
 import { asientos, nombre, pareja, resultadoMano } from "../mesa/relato";

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {openActor} from "../../api/actor-registry.ts";
-import {compararCartas} from "../../src/motor/jerarquia.ts";
-import {iniciarOnline} from "../../src/motor/mesa-online.ts";
-import type {RepartoOnline} from "../../src/motor/reparto.ts";
+import {compararCartas} from "@eltruco/motor/jerarquia.ts";
+import {iniciarOnline} from "@eltruco/motor/mesa-online.ts";
+import type {RepartoOnline} from "@eltruco/motor/reparto.ts";
 import {initial} from "../../training/anchored/actor.ts";
 import type {SeatObservation} from "../../training/contracts/index.ts";
 import {duelDeals} from "../../training/search/belief.ts";

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { esCardId, type CardId } from "../../src/motor/cartas.ts";
-import { compararCartas } from "../../src/motor/jerarquia.ts";
-import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import { compararCartas } from "@eltruco/motor/jerarquia.ts";
+import { crearAzar, type Asiento } from "@eltruco/motor/reparto.ts";
 import { signalVersionFor, versions, signals, type ActionId, type Move, type Policy, type SeatObservation } from "../contracts/index.ts";
 import { signalRules } from "../signals/index.ts";
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { esCardId } from "../../src/motor/cartas.ts";
+import { esCardId } from "@eltruco/motor/cartas.ts";
 
 const cartas = ["copas-02", "bastos-03", "oros-05"];
 

@@ -5,7 +5,7 @@ import { setTimeout as esperar } from "node:timers/promises";
 import pg from "pg";
 import { crearEnsayo } from "./ensayos.ts";
 import { restaurarTercetosDB } from "./partidas-tercetos.ts";
-import { marcadorOnline } from "../src/motor/mesa-online.ts";
+import { marcadorOnline } from "@eltruco/motor/mesa-online.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const modo = process.argv[2];

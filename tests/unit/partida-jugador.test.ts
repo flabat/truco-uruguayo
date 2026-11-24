@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { proyectarTercetos } from "../../api/partidas-tercetos.ts";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
-import { normalizarPartida } from "../../src/motor/partida-jugador.ts";
-import { esRepartoOnline } from "../../src/motor/reparto.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import { esRepartoOnline } from "@eltruco/motor/reparto.ts";
 import { dueloMazo } from "../fixtures/duelo-mazo.ts";
 import pico from "../fixtures/pico-tercetos-v2.json" with { type: "json" };
 

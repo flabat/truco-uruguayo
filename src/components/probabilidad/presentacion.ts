@@ -1,4 +1,4 @@
-import type { CardId } from "../../motor/cartas.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { ResultadoAnalisis } from "../../probabilidad/perfil.ts";
 import { nombre } from "../mesa/relato.ts";
 import { textosProbabilidad } from "../../aprendizaje/probabilidad/escenas.ts";

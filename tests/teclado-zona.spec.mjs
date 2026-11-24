@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, turnosDeEquipo } from "../api/turnos.ts";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { teamSignalsVersion } from "../training/contracts/index.ts";
 import reparto from "./fixtures/reparto-v1.json" with { type: "json" };
 

@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import type { PoolClient } from "pg";
-import { marcadorOnline, type AccionOnline, type EstadoOnline } from "../src/motor/mesa-online.ts";
-import { cobrosDeDecision } from "../src/motor/replay-chico-online.ts";
-import type { DecisionBotV1, EventoChicoV1, ReplayChicoPie, ReplayChicoV1 } from "../src/motor/replay-chico.ts";
-import { versionSenasPie, type IndicacionPie } from "../src/motor/senas-pie.ts";
+import { marcadorOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import { cobrosDeDecision } from "./replay-chico-online.ts";
+import type { DecisionBotV1, EventoChicoV1, ReplayChicoPie, ReplayChicoV1 } from "./replay-chico.ts";
+import { versionSenasPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { versions, type ActionId } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import type { FormatoMesa } from "./mesas.ts";
@@ -13,11 +13,11 @@ import { identificador, type ManoPublicable } from "./turnos.ts";
 export type DecisionReplay = Omit<Extract<EventoChicoV1, { tipo: "decision" }>, "secuencia">;
 
 // Calculada una vez sobre los módulos instalados. También funciona en la imagen de la API sin .git.
-const motor = new URL("../src/motor/", import.meta.url);
+const motor = new URL("../paquetes/motor/src/", import.meta.url);
 const hash = createHash("sha256");
 for (const ruta of [
-  ...readdirSync(motor).filter(n => n.endsWith(".ts")).sort().map(n => "../src/motor/" + n),
-  "./turnos.ts", "../training/contracts/index.ts", "../training/seat/index.ts", "../training/signals/index.ts",
+  ...readdirSync(motor).filter(n => n.endsWith(".ts")).sort().map(n => "../paquetes/motor/src/" + n),
+  "./replay-chico.ts", "./replay-chico-online.ts", "./turnos.ts", "../training/contracts/index.ts", "../training/seat/index.ts", "../training/signals/index.ts",
 ]) hash.update(ruta).update("\0").update(readFileSync(new URL(ruta, import.meta.url))).update("\0");
 const build = "sha256:" + hash.digest("hex");
 

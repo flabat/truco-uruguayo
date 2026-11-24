@@ -7,7 +7,7 @@ import { migrate } from "./migrate.ts";
 import { crearPartidas } from "./partidas.ts";
 import { avanzarExhibicion, configuracionExhibiciones, reponerExhibiciones } from "./exhibiciones.ts";
 import { servicioComputadoras } from "./ensayos.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const admin = new pg.Pool({connectionString: process.env.DATABASE_URL});
 const nombre = "exhibiciones_" + randomUUID().replaceAll("-", "");

@@ -2,16 +2,16 @@ import type { PoolClient } from "pg";
 import {
   aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, versionReglasTercetos, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline,
-} from "../src/motor/mesa-online.ts";
-import { normalizarPartida } from "../src/motor/partida-jugador.ts";
-import type { Asiento } from "../src/motor/reparto.ts";
-import type { DecisionBotV1 } from "../src/motor/replay-chico.ts";
-import { versionSenasPie } from "../src/motor/senas-pie.ts";
+} from "@eltruco/motor/mesa-online.ts";
+import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
+import type { DecisionBotV1 } from "./replay-chico.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { ErrorPeticion } from "./http.ts";
 import { decisionTercetos, guardarDecisionesReplayDB } from "./replay-db.ts";
 import type { Registro } from "./turnos.ts";
 
-import type { TipoLance } from "../src/motor/reglas-tercetos.ts";
+import type { TipoLance } from "@eltruco/motor/reglas-tercetos.ts";
 export type RegistroTercetos = Omit<Registro, "acciones"> & {
   mesa: string;
   meta_tercetos: number | null;

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { iniciarMano, jugarCarta, type EstadoMano, type Jugada } from "../../src/motor/mano.ts";
-import { repartir, type RepartoV1 } from "../../src/motor/reparto.ts";
-import { capturarReplay, reproducirReplay } from "../../src/motor/replay.ts";
+import { iniciarMano, jugarCarta, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";
+import { repartir, type RepartoV1 } from "@eltruco/motor/reparto.ts";
+import { capturarReplay, reproducirReplay } from "@eltruco/motor/replay.ts";
 import vector from "../fixtures/replay-v1.json" with { type: "json" };
 
 const reparto: RepartoV1 = {

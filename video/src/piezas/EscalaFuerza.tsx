@@ -1,7 +1,7 @@
 import { staticFile } from "remotion";
 import { Naipe } from "@site/components/jugar/Tapete";
-import type { CardId } from "@site/motor/cartas";
-import { matas, rangosComunes } from "@site/motor/jerarquia";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { matas, rangosComunes } from "@eltruco/motor/jerarquia.ts";
 import { valoresDePiezas } from "../lib/escena.ts";
 
 const base = staticFile("img").slice(0, -3);

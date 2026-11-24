@@ -6,8 +6,8 @@ import pg from "pg";
 import { crearEnsayo } from "./ensayos.ts";
 import { restaurar } from "./turnos.ts";
 import { restaurarTercetosDB } from "./partidas-tercetos.ts";
-import { marcadorOnline } from "../src/motor/mesa-online.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { marcadorOnline } from "@eltruco/motor/mesa-online.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 import { hasSignals, activeFormats, seatsFor } from "../training/contracts/index.ts";
 
 const pool = new pg.Pool({connectionString: process.env.DATABASE_URL});

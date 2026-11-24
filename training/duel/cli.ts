@@ -104,7 +104,7 @@ function run(directory: string, values: Record<string, string | undefined>) {
     counters: state.counters, tableRows: Object.keys(state.rows).length, maxRssKiB: process.resourceUsage().maxRSS,
     artifacts: { checkpoint: checkpointHash, "actor.json": actorHash }, actor: candidate.id,
     reference: { iterations: state.reference.iteration, ...exactResponses(referenceAverage(state.reference)) },
-    opponentCode: Object.fromEntries(["src/motor/mesa-online.ts", "src/motor/jugadores.ts", "training/seat/index.ts"]
+    opponentCode: Object.fromEntries(["paquetes/motor/src/mesa-online.ts", "paquetes/motor/src/jugadores.ts", "training/seat/index.ts"]
       .map(path => [path, hash(readFileSync(join(repo, path)))])),
     field: opponents.map(o => o.id), matches, promotion: "not-tested",
   };

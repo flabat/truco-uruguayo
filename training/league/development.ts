@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { pathToFileURL } from "node:url";
-import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
+import { crearAzar, type Asiento } from "@eltruco/motor/reparto.ts";
 import { playMatch } from "../arena/index.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { formats, type Format, type Policy } from "../contracts/index.ts";

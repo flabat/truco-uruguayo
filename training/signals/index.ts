@@ -1,6 +1,6 @@
-import { esCardId, type CardId } from "../../src/motor/cartas.ts";
-import { aplicarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import { aplicarOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import {
   hasSignals, supportedFormats, seatsFor, signals, type ActionId, type Format, type Move, type PublicTurn, type Signal,
 } from "../contracts/index.ts";

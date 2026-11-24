@@ -1,8 +1,8 @@
 import { ResumenDeTantos } from "./ResumenDeTantos";
-import { resumirTantos } from "../../motor/resumen-tantos";
+import { resumirTantos } from "@eltruco/motor/resumen-tantos.ts";
 import { canto, respuestaConFlor } from "../../lib/cantos";
 import { ZonaJugador } from "./ZonaJugador";
-import type { LanceTercetos, ResumenLance, VistaTercetos } from "../../motor/mesa-online";
+import type { LanceTercetos, ResumenLance, VistaTercetos } from "@eltruco/motor/mesa-online.ts";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
 import { controlesDeCantos, Continuacion, ManoJugador, PruebaEnMesa, Tanteador, tituloDeRespuesta } from "./Tablero";
 import { Tapete } from "./Tapete";

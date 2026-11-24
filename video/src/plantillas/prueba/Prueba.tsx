@@ -3,7 +3,7 @@ import "@fontsource/dm-serif-text/latin-400.css";
 import "@site/styles/site.css";
 import { AbsoluteFill, staticFile } from "remotion";
 import { Naipe } from "@site/components/jugar/Tapete";
-import { evaluarTantos } from "@site/motor/tantos";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 
 const base = staticFile("img").slice(0, -3);
 

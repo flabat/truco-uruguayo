@@ -1,6 +1,6 @@
 import {readFileSync} from "node:fs";
 import pg from "pg";
-import type { Asiento } from "../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { supportedFormats, seatsFor, type Format } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { artifactPin, openActor } from "./actor-registry.ts";

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resumirTantos } from "../../src/motor/resumen-tantos.ts";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaOnlineV1, vistaTercetos, type AccionOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { resumirTantos } from "@eltruco/motor/resumen-tantos.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaOnlineV1, vistaTercetos, type AccionOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { manoReportada, reparto } from "../fixtures/flor-retruco.ts";
 import pico from "../fixtures/pico-tercetos-v2.json" with { type: "json" };
 

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import pg from "pg";
 import { crearPartidas } from "./partidas.ts";
-import { elegirAccionOnline } from "../src/motor/mesa-online.ts";
-import { reproducirChico } from "../src/motor/replay-chico.ts";
+import { elegirAccionOnline } from "@eltruco/motor/mesa-online.ts";
+import { reproducirChico } from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const web = new URL(process.env.WEB_ORIGIN);

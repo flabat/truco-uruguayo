@@ -1,4 +1,4 @@
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { playMatch } from "../arena/index.ts";
 import { hasSignals, type Policy } from "../contracts/index.ts";
 import { incumbent } from "../seat/index.ts";

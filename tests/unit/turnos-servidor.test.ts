@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
 import { esperaDelPie } from "../../api/partidas-pie.ts";
-import { versionSenasPie, type IndicacionPie } from "../../src/motor/senas-pie.ts";
+import { versionSenasPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
-import { iniciarOnline, marcadorOnline, vistaOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+import { iniciarOnline, marcadorOnline, vistaOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { dueloFlor } from "../fixtures/duelo-mazo.ts";
 
 const parejas: RepartoOnline = {versionReparto: "online-1", mano: 0, dador: 3, muestra: "oros-01", manos: [

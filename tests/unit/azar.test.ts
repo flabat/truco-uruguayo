@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
-import { enteroAleatorio } from "../../src/motor/azar.ts";
+import { enteroAleatorio } from "@eltruco/motor/azar.ts";
 
 test("un argumento devuelve enteros en [0, n)", () => {
   for (let i = 0; i < 10_000; i++) {
@@ -30,6 +30,6 @@ test("rechaza rangos inválidos", () => {
 });
 
 test("el motor no importa node:crypto", async () => {
-  const fuente = await readFile(new URL("../../src/motor/mesa-online.ts", import.meta.url), "utf8");
+  const fuente = await readFile(new URL(import.meta.resolve("@eltruco/motor/mesa-online.ts")), "utf8");
   assert.doesNotMatch(fuente, /node:crypto/);
 });

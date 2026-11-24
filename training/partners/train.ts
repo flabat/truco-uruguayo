@@ -4,8 +4,8 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { playMatch, type Decision } from "../arena/index.ts";
 import { versions, type Policy } from "../contracts/index.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
-import { tantosPropios } from "../../src/motor/cantos-online.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
+import { tantosPropios } from "@eltruco/motor/cantos-online.ts";
 import { incumbent } from "../seat/index.ts";
 import { domainSeed, encode, header, initNetworks, loadPartnerPolicy, mcKeys, mcProbabilities, monteCarloId,
   probabilities, recurrentId, type Actor, type Input, type Network, type Partnership, type Values } from "./policy.ts";

@@ -4,7 +4,7 @@ import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync
 import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { artifactPin, openActor } from "../../api/actor-registry.ts";
-import { crearAzar, type Asiento } from "../../src/motor/reparto.ts";
+import { crearAzar, type Asiento } from "@eltruco/motor/reparto.ts";
 import { activeFormats, seatsFor, type Policy } from "../contracts/index.ts";
 import { playMatch } from "../arena/index.ts";
 import { baseline, styles } from "../baselines/index.ts";

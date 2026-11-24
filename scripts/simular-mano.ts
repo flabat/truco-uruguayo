@@ -1,12 +1,12 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { cartasPorId } from "../src/lib/cartas.ts";
-import type { CardId } from "../src/motor/cartas.ts";
-import { avanzarHastaAprendiz } from "../src/motor/parejas.ts";
-import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "../src/motor/mano.ts";
-import { repartir } from "../src/motor/reparto.ts";
-import { capturarReplay, reproducirReplay } from "../src/motor/replay.ts";
-import { evaluarTantos } from "../src/motor/tantos.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { avanzarHastaAprendiz } from "@eltruco/motor/parejas.ts";
+import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";
+import { repartir } from "@eltruco/motor/reparto.ts";
+import { capturarReplay, reproducirReplay } from "@eltruco/motor/replay.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 
 const uso = `node scripts/simular-mano.ts [--semilla N] [--dador 0..3] [--guardar ARCHIVO|-]
 node scripts/simular-mano.ts --replay ARCHIVO|-`;

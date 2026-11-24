@@ -2,7 +2,7 @@ import { pieza, rangoDe, type CardId, type RangoPieza } from "./cartas.ts";
 import { participantesDe } from "./mano.ts";
 import type { EstadoOnline } from "./mesa-online.ts";
 import { equipoDelAsiento, esAsientoOnline, type Asiento } from "./reparto.ts";
-import type { Signal } from "../../training/contracts/index.ts";
+import type { Signal } from "./contratos.ts";
 
 export const versionSenasPie = "senas-pie-v1";
 export type GestoPie = Exclude<Signal, "cachetes" | "labio-superior">;

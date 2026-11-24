@@ -1,5 +1,5 @@
-import {mazo, type CardId} from "../../src/motor/cartas.ts";
-import {compararCartas} from "../../src/motor/jerarquia.ts";
+import {mazo, type CardId} from "@eltruco/motor/cartas.ts";
+import {compararCartas} from "@eltruco/motor/jerarquia.ts";
 import type {SeatObservation} from "../contracts/index.ts";
 
 interface CardCounts { power: number; higher: number; equal: number }

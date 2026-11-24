@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { reproducirChico } from "../../src/motor/replay-chico.ts";
+import { reproducirChico } from "../../api/replay-chico.ts";
 
 function fixture(nombre: string) {
   return JSON.parse(readFileSync(new URL(`../fixtures/replay-chico/${nombre}.json`, import.meta.url), "utf8"));

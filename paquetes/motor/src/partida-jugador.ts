@@ -1,4 +1,4 @@
-import type { Format, PublicTurn } from "../../training/contracts/index.ts";
+import type { Format, PublicTurn } from "./contratos.ts";
 import type { LanceTercetos, ResumenLance, VistaOnline, VistaTercetos } from "./mesa-online.ts";
 import type { IndicacionPie, VistaPie } from "./senas-pie.ts";
 import type { Asiento, Equipo } from "./reparto.ts";

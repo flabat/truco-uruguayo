@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
-import { mazo, type CardId } from "../../src/motor/cartas.ts";
-import { aDecidir, iniciarOnline, type EstadoOnline } from "../../src/motor/mesa-online.ts";
-import type { Asiento, RepartoOnline, TresCartas } from "../../src/motor/reparto.ts";
+import { mazo, type CardId } from "@eltruco/motor/cartas.ts";
+import { aDecidir, iniciarOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
+import type { Asiento, RepartoOnline, TresCartas } from "@eltruco/motor/reparto.ts";
 import { sample } from "../arena/index.ts";
 import { hasSignals, canSeeSignal, type ActionId, type Format, type Move, type PublicTurn, type SeatObservation } from "../contracts/index.ts";
 import { observe } from "../seat/index.ts";

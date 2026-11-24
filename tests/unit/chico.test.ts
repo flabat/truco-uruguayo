@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cuentaDelChico, esMetaDeChico, metaPorModalidad, mitadesDelChico } from "../../src/motor/chico.ts";
+import { cuentaDelChico, esMetaDeChico, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 
 test("el chico de tercetos tiene 25 malas y 25 buenas, con cuenta por equipo", () => {
   const meta = metaPorModalidad["3v3"];

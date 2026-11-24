@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, restaurar } from "../api/turnos.ts";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { reparto as tresFlores } from "./fixtures/flor-querida.ts";
 import { mesaFabian } from "./fixtures/mesa-flor-fabian.ts";
 import { dueloFlor, dueloMazo } from "./fixtures/duelo-mazo.ts";

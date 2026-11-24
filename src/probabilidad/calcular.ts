@@ -1,7 +1,7 @@
-import type { CardId } from "../motor/cartas.ts";
-import { elegirJugada } from "../motor/jugadores.ts";
-import { jugarCarta, vistaPara, type EstadoMano } from "../motor/mano.ts";
-import { crearAzar, equipoPorAsiento, type Asiento } from "../motor/reparto.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { jugarCarta, vistaPara, type EstadoMano } from "@eltruco/motor/mano.ts";
+import { crearAzar, equipoPorAsiento, type Asiento } from "@eltruco/motor/reparto.ts";
 import { anotarMundo, crearConteo, sumarLote } from "./estadistica.ts";
 import { prepararMundos, type MundosDisponibles } from "./mundos.ts";
 import { perfilAnalisis, resultadoCompleto, semillaAnalisis, type Perfil, type ResultadoAnalisis } from "./perfil.ts";

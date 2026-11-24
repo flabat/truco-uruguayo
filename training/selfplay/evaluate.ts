@@ -12,7 +12,7 @@ import {baseline,styles} from "../baselines/index.ts";
 import {requireTrainingFormat, type Format, type Policy} from "../contracts/index.ts";
 import {summarize,type PairOutcome} from "../eval/statistics.ts";
 import {incumbent} from "../seat/index.ts";
-import type {Asiento} from "../../src/motor/reparto.ts";
+import type {Asiento} from "@eltruco/motor/reparto.ts";
 
 type Model = {format:Format;kind?:string};
 type Team = readonly Policy[];

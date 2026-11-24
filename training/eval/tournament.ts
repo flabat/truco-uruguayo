@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { playMatch, replayMatch, type MatchRecord } from "../arena/index.ts";
-import type { Asiento } from "../../src/motor/reparto.ts";
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { Format, Policy } from "../contracts/index.ts";
 import type { PairOutcome } from "./statistics.ts";
 

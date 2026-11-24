@@ -9,7 +9,7 @@ import { useMemo } from "react";
 import { AbsoluteFill, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Naipe } from "@site/components/jugar/Tapete";
 import { nombrar } from "@site/components/jugar/HistorialDeMano";
-import { paloDe, rangoDe, type CardId } from "@site/motor/cartas";
+import { paloDe, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
 import type { Vuelta } from "../../lib/episodio.ts";
 import { momentosDeCartas, valoresDePiezas } from "../../lib/escena.ts";
 import { armarLinea, type LineaGuion } from "../../lib/linea.ts";

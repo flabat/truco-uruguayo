@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
-import { versionSenasPie } from "../src/motor/senas-pie.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { tableroEspectador } from "./tablero-espectador.ts";
 import { jugadorDeSesion } from "./auth.ts";
 import { ErrorPeticion, responderJson } from "./http.ts";

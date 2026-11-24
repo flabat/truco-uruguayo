@@ -1,9 +1,9 @@
-import { elegirJugada } from "../motor/jugadores.ts";
-import { vistaPara } from "../motor/mano.ts";
-import { equipoPorAsiento, repartir, type Asiento, type RepartoV1 } from "../motor/reparto.ts";
-import { capturarTruco, reproducirTruco } from "../motor/replay-truco.ts";
-import { evaluarTantos } from "../motor/tantos.ts";
-import { aplicarAccion, iniciarTruco, resultadoTruco, type AccionTruco, type EstadoTruco } from "../motor/truco.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { vistaPara } from "@eltruco/motor/mano.ts";
+import { equipoPorAsiento, repartir, type Asiento, type RepartoV1 } from "@eltruco/motor/reparto.ts";
+import { capturarTruco, reproducirTruco } from "@eltruco/motor/replay-truco.ts";
+import { evaluarTantos } from "@eltruco/motor/tantos.ts";
+import { aplicarAccion, iniciarTruco, resultadoTruco, type AccionTruco, type EstadoTruco } from "@eltruco/motor/truco.ts";
 
 const ejemplo = 217;
 const clave = "truco-oriental.leccion-truco.v2";

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { confirmar, jugarComputadoras } from "../api/turnos.ts";
-import { iniciarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "be480827-2dae-4e55-81d2-64ed0ccc0ac2";
 const puntosInicio = [7, 9];

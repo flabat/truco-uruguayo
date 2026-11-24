@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Img, staticFile } from "remotion";
 import { Naipe } from "@site/components/jugar/Tapete";
 import { nombrar } from "@site/components/jugar/HistorialDeMano";
-import type { CardId } from "@site/motor/cartas";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 const base = staticFile("img").slice(0, -3);
 

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { iniciarOnline, aplicarOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { iniciarOnline, aplicarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { comprobarMuestra } from "./helpers/muestra.mjs";
 import { tableroEspectador } from "../api/tablero-espectador.ts";
 

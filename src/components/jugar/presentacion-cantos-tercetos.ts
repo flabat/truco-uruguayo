@@ -1,5 +1,5 @@
-import type { LanceTercetos, VistaTercetos } from "../../motor/mesa-online";
-import { faltaDelGanador } from "../../motor/reglas-tercetos";
+import type { LanceTercetos, VistaTercetos } from "@eltruco/motor/mesa-online.ts";
+import { faltaDelGanador } from "@eltruco/motor/reglas-tercetos.ts";
 import type { PartidaTercetos } from "./cliente";
 import { pausaDeVoz, vocesEnAccion } from "./Voz";
 

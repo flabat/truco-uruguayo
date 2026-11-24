@@ -1,5 +1,5 @@
 import { useId } from "react";
-import type { GestoPie } from "../../motor/senas-pie";
+import type { GestoPie } from "@eltruco/motor/senas-pie.ts";
 
 // Las coordenadas siempre miran al emisor de frente. Su lado derecho queda a nuestra izquierda.
 export function CaraSena({ gesto }: { gesto: GestoPie }) {

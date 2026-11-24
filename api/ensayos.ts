@@ -1,9 +1,9 @@
 import type { Pool, PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
 import { hasSignals, requireTrainingFormat, seatsFor, signalVersionFor } from "../training/contracts/index.ts";
-import { politicaPie } from "../src/motor/bot-pie.ts";
-import { versionSenasPie } from "../src/motor/senas-pie.ts";
-import { metaPorModalidad } from "../src/motor/chico.ts";
+import { politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
+import { metaPorModalidad } from "@eltruco/motor/chico.ts";
 import { politicaTercetos, perfilTercetos, type FormatoMesa } from "./mesas.ts";
 import { resolverTurno } from "./bot-pendiente.ts";
 import { createServing, exampleSignalPin } from "./serving.ts";

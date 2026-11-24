@@ -1,6 +1,6 @@
 // Guion de «contar tantos»: el texto sale del resultado del motor, nunca de números escritos a mano.
-import { cartaId, paloDe, palos, pieza, rangoDe, rangos, type CardId, type Palo } from "../../../../src/motor/cartas.ts";
-import type { Aporte } from "../../../../src/motor/tantos.ts";
+import { cartaId, paloDe, palos, pieza, rangoDe, rangos, type CardId, type Palo } from "@eltruco/motor/cartas.ts";
+import type { Aporte } from "@eltruco/motor/tantos.ts";
 import type { EpisodioTantos, Mano } from "../../lib/episodio.ts";
 import type { LineaGuion } from "../../lib/linea.ts";
 import { aPalabras, nombreHablado, numerosDichos, palabraDeRango } from "../../lib/numeros.ts";

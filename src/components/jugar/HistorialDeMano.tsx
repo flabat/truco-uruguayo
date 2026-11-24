@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { cartasPorId } from "../../lib/cartas";
-import type { CardId } from "../../motor/cartas";
-import type { VistaOnline } from "../../motor/mesa-online";
-import { textoFrasePie, type IndicacionPie } from "../../motor/senas-pie";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { textoFrasePie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { canto } from "../../lib/cantos";
 
 export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;

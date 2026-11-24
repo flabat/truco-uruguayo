@@ -56,7 +56,7 @@ function hashSources(files: readonly string[]) {
 }
 
 function sourceHashes() {
-  const motor = readdirSync(join(root, "src/motor")).filter(f => f.endsWith(".ts")).sort().map(f => "src/motor/" + f);
+  const motor = readdirSync(join(root, "paquetes/motor/src")).filter(f => f.endsWith(".ts")).sort().map(f => "paquetes/motor/src/" + f);
   const actors = [...motor, "training/seat/index.ts", "training/contracts/index.ts"];
   const files = [...actors, "training/arena/index.ts", "training/arena/runs.ts", "training/arena/cli.ts"];
   if (existsSync(join(root, "training/signals/index.ts"))) files.push("training/signals/index.ts");

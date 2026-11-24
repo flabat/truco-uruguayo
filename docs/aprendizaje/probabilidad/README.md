@@ -8,7 +8,7 @@
 - Cómo una carta pública cambia las posibilidades del compañero y de los rivales, y cuándo vale la pena guardar o gastar una pieza.
 - Qué significa «ganó en unas 69 de cada 100 manos posibles con estos jugadores». La explicación identifica las cartas conocidas, el modo de jugar de los bots y la variación entre repartos. Una sola derrota también es compatible con esa estimación.
 
-La unidad de práctica es una **decisión de carta**. Participan vos (asiento 0), tu compañero (2) y los rivales (1 y 3). Se juega hasta que el motor adjudica las vueltas, con sus reglas de pardas y cierre temprano. El tanteador del partido, los cantos, las señas y las creencias sobre rivales humanos quedan para modelos posteriores. La probabilidad de ganar una vuelta se puede mencionar cuando se deduce directamente de la posición. La cifra que se compara en todas las filas es la de ganar la mano. [Motor de la mano](../../../src/motor/mano.ts) · [Antecedente de aprendizaje estratégico](../adr/0002-lecciones-y-progreso.md)
+La unidad de práctica es una **decisión de carta**. Participan vos (asiento 0), tu compañero (2) y los rivales (1 y 3). Se juega hasta que el motor adjudica las vueltas, con sus reglas de pardas y cierre temprano. El tanteador del partido, los cantos, las señas y las creencias sobre rivales humanos quedan para modelos posteriores. La probabilidad de ganar una vuelta se puede mencionar cuando se deduce directamente de la posición. La cifra que se compara en todas las filas es la de ganar la mano. [Motor de la mano](../../../paquetes/motor/src/mano.ts) · [Antecedente de aprendizaje estratégico](../adr/0002-lecciones-y-progreso.md)
 
 ## Primera decisión · salir o guardar la pieza
 
@@ -49,7 +49,7 @@ El rival ya tiene una vuelta y está ganando la segunda con el 5 de copas, una p
 | Repasar | Retroceder recupera la vista pública de ese prefijo. Una carta jugada vuelve a la mano si se retrocede a su turno. Se pueden explorar las alternativas y volver al presente con la jugada y la selección originales. |
 | Transferir | Abrir el segundo ejercicio aunque el reparto jugado haya seguido otra línea. «La salida» y «La segunda vuelta» se agrupan en «Ejemplos guiados». «Repartir otra mano» crea un reparto V1 nuevo. El panel indica la vuelta en juego o en el cursor. La predicción y la victoria real son ocasiones de reflexión y no suman aciertos a las habilidades existentes. |
 
-El caso editorial de apertura se puede jugar con el reparto V1 de semilla **830838**, dador 3. El caso editorial intermedio proviene del muestreo del **estudio 44**, que tiene un generador distinto. Asociar ese escenario a su definición versionada y a las jugadas confirmadas. El replay V1 del motor corresponde a repartos generados por `repartir`. En ambos casos el proveedor de análisis recibe sólo la vista proyectada hasta el cursor. [Estudio original](../../investigacion/salidas/README.md) · [Replay V1](../../../src/motor/replay.ts)
+El caso editorial de apertura se puede jugar con el reparto V1 de semilla **830838**, dador 3. El caso editorial intermedio proviene del muestreo del **estudio 44**, que tiene un generador distinto. Asociar ese escenario a su definición versionada y a las jugadas confirmadas. El replay V1 del motor corresponde a repartos generados por `repartir`. En ambos casos el proveedor de análisis recibe sólo la vista proyectada hasta el cursor. [Estudio original](../../investigacion/salidas/README.md) · [Replay V1](../../../paquetes/motor/src/replay.ts)
 
 ## Probabilidades durante la mano guiada
 

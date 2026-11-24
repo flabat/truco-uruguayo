@@ -1,10 +1,10 @@
 import type { PoolClient } from "pg";
-import { textoFrasePie, type IndicacionPie } from "../src/motor/senas-pie.ts";
+import { textoFrasePie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { canto } from "../src/lib/cantos.ts";
 import { cartasPorId } from "../src/lib/cartas.ts";
-import { esCardId, type CardId } from "../src/motor/cartas.ts";
-import type { AccionOnline, Cobro } from "../src/motor/cantos-online.ts";
-import { resumirTantos } from "../src/motor/resumen-tantos.ts";
+import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
+import type { AccionOnline, Cobro } from "@eltruco/motor/cantos-online.ts";
+import { resumirTantos } from "@eltruco/motor/resumen-tantos.ts";
 import { esAccionPublica } from "./tablero-espectador.ts";
 
 export interface CursorReporte {

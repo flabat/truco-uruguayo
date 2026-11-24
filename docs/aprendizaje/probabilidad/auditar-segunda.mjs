@@ -1,9 +1,9 @@
 // Oráculo del segundo ejercicio. Enumeración directa independiente del analizador propuesto.
 import assert from "node:assert/strict";
-import { mazo } from "../../../src/motor/cartas.ts";
-import { elegirJugada } from "../../../src/motor/jugadores.ts";
-import { iniciarMano, jugarCarta, vistaPara } from "../../../src/motor/mano.ts";
-import { versionReparto } from "../../../src/motor/reparto.ts";
+import { mazo } from "@eltruco/motor/cartas.ts";
+import { elegirJugada } from "@eltruco/motor/jugadores.ts";
+import { iniciarMano, jugarCarta, vistaPara } from "@eltruco/motor/mano.ts";
+import { versionReparto } from "@eltruco/motor/reparto.ts";
 
 const muestra = "copas-06";
 const alternativas = ["copas-02", "oros-05"];

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { esRepartoOnline, esRepartoV1, repartir, type Asiento } from "../../src/motor/reparto.ts";
-import { iniciarMano, jugarCarta } from "../../src/motor/mano.ts";
+import { esRepartoOnline, esRepartoV1, repartir, type Asiento } from "@eltruco/motor/reparto.ts";
+import { iniciarMano, jugarCarta } from "@eltruco/motor/mano.ts";
 import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, repartirOnline, vistaOnline, vistaTercetos,
-  type AccionOnline, type EstadoOnline, type RepartoOnline } from "../../src/motor/mesa-online.ts";
+  type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 
 const empate: RepartoOnline = {
   versionReparto: "online-2", dador: 5, mano: 0, muestra: "copas-01",

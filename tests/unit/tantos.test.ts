@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { cartaId, type CardId, type RangoPieza } from "../../src/motor/cartas.ts";
-import { evaluarTantos, type Aporte, type ResultadoTantos } from "../../src/motor/tantos.ts";
+import { cartaId, type CardId, type RangoPieza } from "@eltruco/motor/cartas.ts";
+import { evaluarTantos, type Aporte, type ResultadoTantos } from "@eltruco/motor/tantos.ts";
 
 function aporte(carta: CardId, tantos: number, pieza: RangoPieza | null = null): Aporte {
   return { carta, tantos, pieza };

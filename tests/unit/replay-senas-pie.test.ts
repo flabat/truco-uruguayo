@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import parejas from "../fixtures/replay-chico/parejas.json" with { type: "json" };
 import tercetos from "../fixtures/replay-chico/tercetos.json" with { type: "json" };
-import { reproducirChico } from "../../src/motor/replay-chico.ts";
-import { versionSenasPie } from "../../src/motor/senas-pie.ts";
-import { iniciarChicoOnline } from "../../src/motor/replay-chico-online.ts";
+import { reproducirChico } from "../../api/replay-chico.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
+import { iniciarChicoOnline } from "../../api/replay-chico-online.ts";
 import { tableroEspectador } from "../../api/tablero-espectador.ts";
 
 const cabecera = { ...parejas, version: "chico-v2", versionSenas: versionSenasPie };

@@ -22,10 +22,10 @@ import { signalVersionFor } from "../../../training/contracts/index";
 import { MesaDeTercetos } from "./Tercetos";
 import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
 import type { ElegirIndicacion } from "./GloboDelCompanero";
-import { versionSenasPie } from "../../motor/senas-pie";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { MesaConSenas } from "./Senas";
 import { usePresentacionVueltas } from "./presentacion-vueltas";
-import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "../../motor/chico";
+import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 
 const modalidades = {
   "1v1": ["1 contra 1", "Mano a mano"],

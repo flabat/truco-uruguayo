@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { manoReportada } from "./fixtures/flor-retruco.ts";
-import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 
 const id = "44b9a82c-c1f9-404f-b0fd-f7956d9b50b0";
 async function abrir(page, estado, miAsiento = 0) {

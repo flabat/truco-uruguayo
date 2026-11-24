@@ -8,8 +8,8 @@ import {resolverTurno} from "./bot-pendiente.ts";
 import {createServing} from "./serving.ts";
 import {restaurar} from "./turnos.ts";
 import {iniciarReplayDB} from "./replay-db.ts";
-import {iniciarOnline} from "../src/motor/mesa-online.ts";
-import {reproducirChico} from "../src/motor/replay-chico.ts";
+import {iniciarOnline} from "@eltruco/motor/mesa-online.ts";
+import {reproducirChico} from "../api/replay-chico.ts";
 
 const pool = new pg.Pool({connectionString:process.env.DATABASE_URL});
 const {rows:[owner]}=await pool.query("INSERT INTO juego.jugadores (emisor,sujeto,nombre) VALUES ('race-policy',$1,'ficha') RETURNING id",[randomUUID()]);

@@ -1,5 +1,5 @@
-import {esCardId, pieza, rangoDe, type CardId} from "../../src/motor/cartas.ts";
-import {compararCartas} from "../../src/motor/jerarquia.ts";
+import {esCardId, pieza, rangoDe, type CardId} from "@eltruco/motor/cartas.ts";
+import {compararCartas} from "@eltruco/motor/jerarquia.ts";
 import {openAnchored, type AnchoredActor, type CycleFormat} from "../anchored/actor.ts";
 import {signals, type ActionId, type Move, type Policy, type SeatObservation, type Signal} from "../contracts/index.ts";
 import {duelCardOdds} from "./duel-card-odds.ts";

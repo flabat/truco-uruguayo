@@ -1,5 +1,5 @@
 import { crearLeccionTruco } from "../../aprendizaje/leccion-truco";
-import type { AccionTruco } from "../../motor/truco";
+import type { AccionTruco } from "@eltruco/motor/truco.ts";
 import { createElement } from "react";
 import { CartaEnLeccion } from "./TapeteLeccion";
 import { asientos, nombre, pareja, resultadoMano, situacionDeJuego } from "./relato";

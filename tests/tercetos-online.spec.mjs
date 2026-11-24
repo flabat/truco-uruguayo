@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { capturarTapete, comprobarMuestraDelDador } from "./helpers/muestra.mjs";
 import { readFileSync } from "node:fs";
 import { proyectarTercetos } from "../api/partidas-tercetos.ts";
-import { aplicarOnline, iniciarOnline } from "../src/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 
 const ejemplo = JSON.parse(readFileSync(new URL("./fixtures/pico-tercetos-v2.json", import.meta.url), "utf8"));
 

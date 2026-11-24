@@ -1,4 +1,4 @@
-import type { VistaOnline } from "../../motor/mesa-online";
+import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { nombrar } from "./HistorialDeMano";
 
 export function vueltaEnMesa(v: Pick<VistaOnline, "vueltaActual" | "vueltas" | "resultado">,

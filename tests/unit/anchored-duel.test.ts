@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { aDecidir, aplicarOnline, iniciarOnline } from "../../src/motor/mesa-online.ts";
-import type { TresCartas } from "../../src/motor/reparto.ts";
+import { aDecidir, aplicarOnline, iniciarOnline } from "@eltruco/motor/mesa-online.ts";
+import type { TresCartas } from "@eltruco/motor/reparto.ts";
 import { duelAction, duelVariants } from "../../training/anchored/duel.ts";
 import type { Move, PublicTurn, Score } from "../../training/contracts/index.ts";
 import { decodeMove, incumbent, observe } from "../../training/seat/index.ts";
