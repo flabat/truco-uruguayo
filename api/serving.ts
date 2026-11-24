@@ -6,13 +6,15 @@ export { artifactPin } from "./actor-registry.ts";
 
 export const exampleSignalPin = "fixture-senas-v1";
 export const defaultDeadlineMs = 200;
+// Un worker que tarda más que esto en contestar una carga se da por colgado.
+export const defaultLoadGraceMs = 10_000;
 export interface ServingDecision {
   action: ActionId;
   policy: string;
   fallback: string | null;
   latencyMs: number;
 }
-interface Options { loadArtifact(pin: string): Promise<unknown>; deadlineMs?: number }
+interface Options { loadArtifact(pin: string): Promise<unknown>; deadlineMs?: number; loadGraceMs?: number }
 
 function draw(weights: readonly number[], actions: readonly ActionId[], uniform: number) {
   if (weights.length !== actions.length || !weights.length || weights.some(x => !Number.isFinite(x) || x < 0)) throw new Error("probabilities");
@@ -30,12 +32,15 @@ function draw(weights: readonly number[], actions: readonly ActionId[], uniform:
 export function createServing(options: Options) {
   const deadlineMs = options.deadlineMs ?? defaultDeadlineMs;
   if (!Number.isFinite(deadlineMs) || deadlineMs <= 0) throw new Error("Plazo de inferencia inválido.");
+  const loadGraceMs = options.loadGraceMs ?? defaultLoadGraceMs;
   let worker: Worker | null = null, sequence = 0, closed = false;
+  // Mensajes enviados al worker actual sin respuesta, incluidos los que ya vencieron, y desde cuándo espera.
+  let inFlight = 0, busySince = 0;
   const ready = new Set<string>();
   const pending = new Map<number, {resolve: (v: number[]) => void; reject: (e: Error) => void}>();
   function abandon() {
     const previous = worker;
-    worker = null; ready.clear();
+    worker = null; ready.clear(); inFlight = 0;
     for (const request of pending.values()) request.reject(new Error("restart"));
     pending.clear();
     return previous?.terminate();
@@ -45,6 +50,7 @@ export function createServing(options: Options) {
     if (worker) return worker;
     const next = new Worker(new URL("./serving-worker.ts", import.meta.url), {env: {}, execArgv: []});
     next.on("message", msg => {
+      if (worker === next && inFlight > 0 && --inFlight > 0) busySince = performance.now();
       const request = pending.get(msg.id);
       if (!request) return;
       pending.delete(msg.id);
@@ -66,16 +72,18 @@ export function createServing(options: Options) {
       action = `${signals[observation.history.length % signals.length]}/${base()}` as ActionId;
       if (!observation.legalActions.includes(action)) throw new Error("Falta la máscara de señas.");
     } else {
-      let timer: ReturnType<typeof setTimeout> | undefined, expired = false, posted = false;
+      let timer: ReturnType<typeof setTimeout> | undefined, expired = false, posted = false, loading = false;
       const id = ++sequence;
       const inference = async () => {
         const thread = ensureWorker();
         const load = !ready.has(pin);
+        loading = load;
         const artifact = load ? await options.loadArtifact(pin) : undefined;
         if (expired || closed || thread !== worker) throw new Error("restart");
         if (load && !artifact) throw new Error("missing");
         const weights = await new Promise<number[]>((resolve, reject) => {
           pending.set(id, {resolve, reject}); posted = true;
+          if (inFlight++ === 0) busySince = performance.now();
           thread.postMessage({id, pin, obs: observation, ...(load && {artifact})});
         });
         ready.add(pin);
@@ -89,7 +97,10 @@ export function createServing(options: Options) {
       } catch (error) {
         const reason = error instanceof Error ? error.message : "";
         fallback = ["missing","timeout","restart","incompatible","probabilities"].includes(reason) ? reason : "unavailable";
-        if (fallback === "timeout" && posted && pending.has(id)) void abandon();
+        // El primer pedido de cada worker incluye arrancar el hilo y abrir el artefacto. Si se terminara al
+        // vencer, el siguiente pedido volvería a arrancar en frío y ninguna decisión del chico usaría la política.
+        if (fallback === "timeout" && posted && pending.has(id)
+          && (!loading || performance.now() - busySince > loadGraceMs)) void abandon();
         policy = incumbent.id;
         action = base();
       } finally {
