@@ -10,6 +10,7 @@ import { crearVivo } from "./vivo.ts";
 import { crearSalon } from "./salon.ts";
 import { atenderPerfil } from "./perfil.ts";
 import { atenderReporte, rutaReporte } from "./reportes.ts";
+import { crearCuenta, rutaEliminarCuenta } from "./cuenta.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
@@ -41,6 +42,7 @@ const server = createServer(async (request, response) => {
       else if (esRutaMesas(ruta)) await mesas(request, response);
       else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);
       else if (ruta === "/api/perfil") await atenderPerfil(pool, request, response);
+      else if (ruta === rutaEliminarCuenta) await cuenta(request, response);
       else await auth(request, response);
     } catch {
       response.writeHead(503).end("El servicio de jugadores no está disponible.");
@@ -71,6 +73,7 @@ const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABAS
   connectionTimeoutMillis: 5000, statement_timeout: 15000 });
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
+const cuenta = crearCuenta(pool, web, jugador => vivo.cerrarJugador(jugador), alCambiar);
 const salon = crearSalon(pool, salonHabilitado, web, process.env.VOZ_ESPECTADORA_HABILITADA === "1" ? voz : undefined);
 const detenerLimpieza = voz?.iniciarLimpieza();
 const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz, salonHabilitado);

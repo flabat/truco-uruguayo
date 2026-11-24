@@ -46,11 +46,13 @@ COMPOSE_PROJECT_NAME="$project" npm run auth:discord
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-migracion-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-sesion-app.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs

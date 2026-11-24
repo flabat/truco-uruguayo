@@ -14,6 +14,8 @@ const minutosDiez = 600;
 const diasSiete = 604800;
 const retornoApp = "eltruco://ingreso";
 const secreto = () => randomBytes(32).toString("base64url");
+const texto = (res: ServerResponse, estado: number, mensaje: string) =>
+  res.writeHead(estado, { "Content-Type": "text/plain; charset=utf-8" }).end(mensaje);
 
 export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
   const handle = sesionDe(req)?.handle;
@@ -79,7 +81,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
     if (req.method === "GET" && url.pathname === "/api/auth/login") {
       const regreso = regresoPermitido(url.searchParams.get("volver"));
       const desafioApp = url.searchParams.get("app");
-      if (desafioApp !== null && !esDesafio(desafioApp)) { res.writeHead(400).end("Desafío de la app inválido."); return; }
+      if (desafioApp !== null && !esDesafio(desafioApp)) { texto(res, 400, "Desafío de la app inválido."); return; }
       // El intento y la sesión deben quedar en el dominio anunciado al navegador.
       if (req.headers.host !== web.host) {
         const login = new URL("/api/auth/login", web);
@@ -114,7 +116,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
         "DELETE FROM juego.ingresos WHERE clave = $1 AND estado = $2 AND vence > now() RETURNING estado, nonce, verificador, regreso, desafio_app",
         [hash(cookieDe(req, nombreFlujo)), state]);
       res.setHeader("Set-Cookie", cookie(nombreFlujo, "", 0));
-      if (!attempt) { res.writeHead(401).end("El ingreso venció. Volvé a ingresar desde el juego."); return; }
+      if (!attempt) { texto(res, 401, "El ingreso venció. Volvé a ingresar desde el juego."); return; }
       let claims;
       try {
         const tokens = await oidc.authorizationCodeGrant(config, url, {
@@ -123,37 +125,39 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
         });
         claims = tokens.claims()!;
       } catch {
-        res.writeHead(401).end("No se pudo verificar el ingreso. Volvé a ingresar desde el juego.");
+        texto(res, 401, "No se pudo verificar el ingreso. Volvé a ingresar desde el juego.");
         return;
       }
       // Algunos proveedores usan el correo como nombre de usuario. El nombre se muestra a toda la mesa.
       const name = [claims.given_name, claims.preferred_username]
         .find(value => typeof value === "string" && value.trim() && !value.includes("@")) || "Jugador";
+      const { rows: [jugador] } = await pool.query(`
+        INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
+        ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
+      `, [claims.iss, claims.sub, name]);
+      // Volver a ingresar dentro de los 30 días cancela la baja. Vencida, la cuenta ya se está borrando.
+      const { rows: [baja] } = await pool.query("SELECT vence > now() AS vigente FROM juego.bajas WHERE jugador = $1", [jugador.id]);
+      const cancelada = Boolean(baja) && (await pool.query(
+        "DELETE FROM juego.bajas WHERE jugador = $1 AND vence > now()", [jugador.id])).rowCount === 1;
+      if (baja && !cancelada) { texto(res, 403, "Tu cuenta se está eliminando."); return; }
       if (attempt.desafio_app) {
         // La app recibe un código de un solo uso, inútil sin el verificador que nunca salió del teléfono.
         const codigo = secreto();
-        await pool.query(`
-          WITH jugador AS (
-            INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
-            ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
-          )
-          INSERT INTO juego.canjes (clave, jugador, desafio) SELECT $4, id, $5 FROM jugador
-        `, [claims.iss, claims.sub, name, hash(codigo), attempt.desafio_app]);
+        await pool.query("INSERT INTO juego.canjes (clave, jugador, desafio, baja_cancelada) VALUES ($1,$2,$3,$4)",
+          [hash(codigo), jugador.id, attempt.desafio_app, cancelada]);
         const destino = new URL(retornoApp);
         destino.searchParams.set("codigo", codigo);
         res.writeHead(303, { Location: destino.href, "Set-Cookie": cookie(nombreFlujo, "", 0) }).end();
         return;
       }
       const handle = secreto();
-      // Un solo commit vincula la identidad y crea la sesión, incluso en el primer ingreso concurrente.
+      // La sesión anterior de este navegador se reemplaza en el mismo commit que crea la nueva.
       await pool.query(`
-        WITH jugador AS (
-          INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
-          ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
-        ), anterior AS (DELETE FROM juego.sesiones WHERE clave = $4)
-        INSERT INTO juego.sesiones (clave, jugador) SELECT $5, id FROM jugador
-      `, [claims.iss, claims.sub, name, sessionKey, hash(handle)]);
-      res.writeHead(303, { Location: new URL(regresoPermitido(attempt.regreso), web).href, "Set-Cookie": [
+        WITH anterior AS (DELETE FROM juego.sesiones WHERE clave = $1)
+        INSERT INTO juego.sesiones (clave, jugador) VALUES ($2, $3)
+      `, [sessionKey, hash(handle), jugador.id]);
+      const destino = cancelada ? "/perfil/?baja=cancelada" : regresoPermitido(attempt.regreso);
+      res.writeHead(303, { Location: new URL(destino, web).href, "Set-Cookie": [
         cookie(nombreFlujo, "", 0), cookie(sesion, handle, diasSiete),
       ] }).end();
       return;
