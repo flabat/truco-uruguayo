@@ -111,7 +111,7 @@ test("al cerrar la mano, el fin resume los tantos, las pruebas y el botón", () 
     titulo: "Ganaste la mano",
     motivo: "El cierre fue por las vueltas.",
     cobros: [
-      { equipo: "Vos", texto: "+4 tantos · 2 por envido (Ana con 31), 2 por truco querido" },
+      { equipo: "Vos", texto: "+4 tantos · 2 tantos por envido (Ana con 31), 2 tantos por truco querido" },
       { equipo: "Rival", texto: "0 tantos" },
     ],
     pruebas: [{ nombre: "Ana", titulo: "Envido ganador · 31 tantos", cartas: ["espadas-01", "oros-07"] }],
@@ -124,6 +124,24 @@ test("al cerrar la mano, el fin resume los tantos, las pruebas y el botón", () 
   const fin = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vista, { contexto: { versionVista: 1, fase: "chico-terminado" } }), enReposo);
   assert.equal(fin.fin?.boton, "Crear otra mesa");
   assert.equal(fin.fin?.titulo, "Ganaste la partida");
+  assert.equal(mesaDeJugador(mesaDe("1v1", 0), partidaDe(vista), { presentando: true }).fin, null,
+    "mientras se presenta la última carta no hay tarjeta de fin");
+});
+
+test("con resultado, el asiento que muestra su prueba de tantos no deja dorsos", () => {
+  const vista = vistaDe(2, 0, {
+    vueltaActual: null,
+    acciones: [{ tipo: "carta", asiento: 1, carta: "copas-12" }],
+    resultado: { equipo: 1, tantos: 2, motivo: "envido" },
+    resumenTantos: { totales: [0, 1], cobros: [{ equipo: 1, tantos: 1, motivo: "truco" }] },
+    pruebasDeTantos: [{ asiento: 1, motivo: "envido", total: 30, cartas: ["oros-10", "oros-12"] }],
+  });
+  const m = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vista), enReposo);
+  assert.equal(m.asientos[1].enMano, 0);
+  assert.equal(m.asientos[0].enMano, 3);
+  assert.deepEqual(m.fin?.cobros[1], { equipo: "Rival", texto: "+1 tanto · 1 tanto por truco sin cantar" });
+  const enJuego = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vistaDe(2, 0, { acciones: vista.acciones, pruebasDeTantos: vista.pruebasDeTantos })), enReposo);
+  assert.equal(enJuego.asientos[1].enMano, 2, "sin resultado la prueba no oculta dorsos");
 });
 
 test("las voces vienen del reposo o del paso que se presenta", () => {

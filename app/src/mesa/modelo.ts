@@ -99,7 +99,7 @@ function textoDeCobros(resumen: ResumenTantos, equipo: number, v: VistaOnline, n
   const detalle = resumen.cobros.filter(c => c.equipo === equipo).map(c => {
     const ganador = c.tantoGanador != null ? ` (${c.asiento != null ? nombre(c.asiento) + " con " : ""}${c.tantoGanador})` : "";
     const valor = c.valor != null && c.valor !== c.tantos ? ` (valor de la apuesta: ${tantos(c.valor)})` : "";
-    return `${c.tantos} por ${motivoDelCobro(c, v.acciones, v.resultado)}${ganador}${valor}`;
+    return `${tantos(c.tantos)} por ${motivoDelCobro(c, v.acciones, v.resultado)}${ganador}${valor}`;
   });
   return [(total > 0 ? "+" : "") + tantos(total), detalle.join(", ")].filter(Boolean).join(" · ");
 }
@@ -136,6 +136,8 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
 
   const pruebaPropia = resultado ? v.pruebasDeTantos?.find(pr => pr.asiento === yo) : undefined;
   const manoPropia = v.cartas.filter(carta => !pruebaPropia?.cartas.includes(carta));
+  // Las cartas de una prueba se ven en el fin de mano: sus dorsos se ocultan para no duplicarlas.
+  const conPrueba = new Set<number>(resultado ? (v.pruebasDeTantos ?? []).map(pr => pr.asiento) : []);
 
   const asientos = mesa.asientos.map((a): AsientoVisible => {
     const nombreAsiento = a.nombre ?? "";
@@ -151,7 +153,8 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
       inicial: inicialDe(nombreAsiento),
       papel: a.asiento === yo ? "Vos" : a.equipo === propio ? "Tu pareja" : "Rival",
       etiquetas,
-      enMano: a.asiento === yo ? manoPropia.length : Math.max(0, 3 - jugadas.filter(j => j.asiento === a.asiento).length),
+      enMano: a.asiento === yo ? manoPropia.length : conPrueba.has(a.asiento) ? 0
+        : Math.max(0, 3 - jugadas.filter(j => j.asiento === a.asiento).length),
       jugada,
       ganadora: jugada !== null && ganador === a.asiento,
       parda: jugada !== null && cerrada?.resultado.tipo === "parda",
@@ -174,7 +177,8 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
   }
 
   let fin: FinDeMano | null = null;
-  if (resultado) {
+  // La tarjeta aparece cuando termina de mostrarse la última carta.
+  if (resultado && !p.presentando) {
     const cierre = estadoDelTurno(mesa, partida, v);
     const resumen = resumenDe(v);
     fin = {
