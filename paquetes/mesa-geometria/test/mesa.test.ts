@@ -89,3 +89,49 @@ test("en el pico a pico el rival del duelo va arriba, grande, y los demás queda
     assert.ok(!seCortan(g.asientos[a].rotulo!, rival.rotulo!));
   }
 });
+
+test("con una hoja abierta la mano sube, se achica y no queda tapada", () => {
+  const sin = calcularMesa(entrada());
+  const g = calcularMesa(entrada({ hoja: { alto: 320 } }));
+  assert.ok(g.hoja);
+  assert.equal(g.hoja.alto, 320);
+  assert.equal(g.hoja.y + g.hoja.alto, 844);
+  const mano = unir(g.mano.map(cajaDeCarta));
+  assert.ok(!seCortan(mano, g.hoja));
+  assert.ok(mano.y + mano.alto <= g.hoja.y + 0.5);
+  assert.ok(g.mano[1].ancho < sin.mano[1].ancho);
+  assert.equal(g.cantos, null);
+  assert.equal(g.asientos[0].rotulo, null);
+});
+
+test("una hoja más alta que la pantalla se recorta y la mano sigue a la vista", () => {
+  const g = calcularMesa(entrada({ hoja: { alto: 5000 } }));
+  assert.ok(g.hoja && g.hoja.alto < 844);
+  const mano = unir(g.mano.map(cajaDeCarta));
+  assert.ok(mano.y >= 0 && mano.y + mano.alto <= g.hoja.y + 0.5);
+  assert.ok(g.pano.alto > 0);
+});
+
+test("desde 1024 de ancho la tira pasa a paneles y la mesa va en la columna central", () => {
+  const g = calcularMesa(entrada({ ancho: 1440, alto: 900 }));
+  assert.equal(g.disposicion, "escritorio");
+  assert.equal(g.tira, null);
+  assert.ok(g.paneles);
+  const { izquierdo, derecho } = g.paneles;
+  assert.equal(izquierdo.x, 0);
+  assert.equal(derecho.x + derecho.ancho, 1440);
+  assert.equal(g.columna.x, izquierdo.ancho);
+  for (const carta of g.mano) {
+    const caja = cajaDeCarta(carta);
+    assert.ok(caja.x >= g.columna.x && caja.x + caja.ancho <= g.columna.x + g.columna.ancho);
+  }
+  assert.equal(calcularMesa(entrada({ ancho: 1023, alto: 900 })).disposicion, "telefono");
+  assert.equal(calcularMesa(entrada({ ancho: 1024, alto: 900 })).disposicion, "escritorio");
+});
+
+test("en el escritorio la hoja sube solo dentro de la columna central", () => {
+  const g = calcularMesa(entrada({ ancho: 1440, alto: 900, hoja: { alto: 300 } }));
+  assert.ok(g.hoja);
+  assert.equal(g.hoja.x, g.columna.x);
+  assert.equal(g.hoja.ancho, g.columna.ancho);
+});
