@@ -47,7 +47,7 @@ Varias sesiones comparten la misma computadora. Elegí el nivel según el moment
 | Nivel | Cuándo | Qué corre | Tiempo aproximado |
 |---|---|---|---|
 | `npm run check:rapido` | Mientras trabajás, después de cada cambio. | Las cartas, las unitarias cuyo árbol de imports toca lo que cambió respecto de `origin/main`, los tipos de la app si cambió `app/` o `paquetes/`, las pruebas de despliegue si cambió Python o `infra/`, y Playwright solo para las rutas afectadas. Sin Docker. | Menos de 2 minutos |
-| `npm run check` | Antes de un commit que vas a publicar. | Todo lo anterior completo: unitarias en paralelo, build, enlaces, cartas y las 294 pruebas de Playwright. | Unos 5 minutos |
+| `npm run check` | Antes de un commit que vas a publicar. | Todo lo anterior completo: unitarias en paralelo, build, enlaces, cartas y todas las pruebas de Playwright. | Unos 3 minutos |
 | `CHECK_STACK=1 npm run check` | Antes de pedir revisión y antes de integrar, sobre el último commit. | `npm run check` más la pila completa en Docker. | Unos 12 minutos, más la espera en la cola |
 
 `npm run check:rapido -- --plan` muestra qué correría y por qué, sin correr nada. Si cambia `package.json`, `package-lock.json`, `astro.config.mjs` o `playwright.config.mjs`, corre todo lo que no usa Docker. Lo que el sitio carga sin `import` (por ejemplo `public/`) hace correr todas las pruebas de navegador. Es una ayuda para iterar: no reemplaza la verificación completa del PR.
