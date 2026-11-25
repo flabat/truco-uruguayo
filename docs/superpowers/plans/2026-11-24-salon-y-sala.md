@@ -35,7 +35,7 @@
 ### Tarea 1: lógica pura del salón y la sala (TDD)
 
 **Archivos:**
-- Crear: `paquetes/cliente/src/salon.ts` (mueve `ResumenMesa` y `participantesMesa` de `src/components/jugar/resumen-salon.ts`, que pasa a reexportar)
+- Crear: `paquetes/cliente/src/salon.ts` (mueve `ResumenMesa` y `participantesMesa` de `src/components/jugar/resumen-salon.ts`; `SalonEnVivo.tsx` y `VisorEspectador.tsx` lo importan de ahí)
 - Crear: `app/src/salon/mesa-nueva.ts`, `app/src/salon/enlaces.ts`, `app/src/salon/asientos.ts`, `app/src/salon/memoria.ts`, `app/src/salon/consulta.ts`, `app/src/salon/compartir.ts`
 - Prueba: `tests/unit/app-salon.test.ts`
 
@@ -103,7 +103,7 @@
 
 **Archivos:**
 - Crear: `scripts/verificar-app-salon.mjs`
-- Modificar: `scripts/verificar-app-navegador.mjs` (el perfil está en «Tu perfil» y la mesa provisoria se abre con `?id=`), `scripts/verificar-app-web.sh` (una carta de `/app/` responde 200), `scripts/verificar-stack.sh`
+- Modificar: `scripts/verificar-app-navegador.mjs` (el perfil está en «Tu perfil» y la mesa provisoria se abre con `?id=`), `scripts/verificar-stack.sh`. Las 41 cartas se comprueban en el recorrido: responden 200 desde `/app/assets/` mientras el jugador está en el salón.
 
 - [ ] `verificar-app-salon.mjs` con ana (anfitriona), bruno (invitado) y clara (espectadora), en teléfono: ana crea 2 contra 2 pública desde `/app/`; `/api/mesas/<id>` tiene `formato: "pairs-private-senas"` y `versionSenas` igual a `versionSenasPie`; la sala muestra el enlace `/app/?invitacion=`; bruno lo abre sin sesión, ingresa, vuelve a la invitación y ocupa su asiento; ana ve a bruno; clara ve la mesa en el salón y «Mirar» abre `/app/mirar/<id>`; ana agrega dos computadoras, todos pasan a `/app/mesa?id=<id>`; ana vuelve al salón y ve «Volver a mi mesa». En escritorio: 1 contra 1 con computadoras llega a la mesa.
 - [ ] `CHECK_STACK=1 npm run check` pasa; commit.
