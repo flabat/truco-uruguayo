@@ -32,6 +32,9 @@
 !app/tsconfig.json
 !app/src/
 !app/src/**
+!app/assets/
+!app/assets/sonido/
+!app/assets/sonido/**
 app/node_modules/
 app/dist/
 app/.expo/

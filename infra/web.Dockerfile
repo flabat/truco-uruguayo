@@ -21,6 +21,8 @@ COPY app/app.json app/tsconfig.json ./app/
 # Las cartas Tatú se empaquetan como recursos de la app.
 COPY public/img/cartas/tatu ./public/img/cartas/tatu
 COPY app/src ./app/src
+# Las voces y los efectos de la 4e, que la mesa importa.
+COPY app/assets/sonido ./app/assets/sonido
 COPY scripts/copiar-canvaskit.mjs ./scripts/copiar-canvaskit.mjs
 RUN npm run app:exportar
 
