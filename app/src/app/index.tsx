@@ -7,7 +7,10 @@ import { Aviso, Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx
 import { useSesion } from "../ingreso/contexto.tsx";
 import { colores, fuentes } from "../tema.ts";
 
+import { usePrecargaDeMesa } from "../precarga/usePrecargaDeMesa.ts";
+
 export default function Inicio() {
+  usePrecargaDeMesa();
   const { estado, ingresar, reintentar } = useSesion();
   const [ingresando, setIngresando] = useState(false);
   if (estado.tipo === "cargando") return <Cargando />;

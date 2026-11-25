@@ -270,3 +270,39 @@ test("compartir la invitación usa la hoja del sistema y copia si no hay", async
   );
   assert.equal(await compartirInvitacion({ enlace }), "Copiá el enlace para compartirlo.");
 });
+
+test("la app empaqueta las 40 cartas y el reverso", async () => {
+  const { readFile, access } = await import("node:fs/promises");
+  const { mazo } = await import("@eltruco/motor/cartas.ts");
+  const archivo = new URL("../../app/src/cartas/imagenes.ts", import.meta.url);
+  const texto = await readFile(archivo, "utf8");
+  const entradas = [...texto.matchAll(/"([a-z]+(?:-\d{2})?)": require\("([^"]+)"\)/g)];
+  assert.deepEqual(entradas.map(e => e[1]).sort(), [...mazo, "reverso"].sort());
+  assert.equal(entradas.length, 41);
+  for (const [, id, ruta] of entradas) {
+    assert.ok(ruta.endsWith("/tatu/" + id + ".webp"), ruta);
+    await access(new URL(ruta, archivo));
+  }
+});
+
+test("la precarga corre una sola vez y se puede reintentar tras un fallo", async () => {
+  const { crearPrecarga } = await import("../../app/src/precarga/precarga.ts");
+  let corridas = 0;
+  let fallar = true;
+  const precargar = crearPrecarga(() => [async () => { corridas++; if (fallar) throw new Error("red"); }]);
+  await assert.rejects(precargar());
+  fallar = false;
+  await Promise.all([precargar(), precargar()]);
+  await precargar();
+  assert.equal(corridas, 2);
+});
+
+test("los ganchos de precarga se suman a las cartas", async () => {
+  const { crearPrecarga, crearRegistroDePrecarga } = await import("../../app/src/precarga/precarga.ts");
+  const registro = crearRegistroDePrecarga();
+  const hechas: string[] = [];
+  registro.registrar(async () => { hechas.push("canvaskit"); });
+  const precargar = crearPrecarga(() => [async () => { hechas.push("cartas"); }, ...registro.tareas()]);
+  await precargar();
+  assert.deepEqual(hechas.sort(), ["canvaskit", "cartas"]);
+});
