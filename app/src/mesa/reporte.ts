@@ -3,7 +3,7 @@ import { almacen, cliente, esWeb } from "../ingreso/plataforma.ts";
 
 /**
  * Abre un borrador de reporte en GitHub. En la web envía el mismo formulario que la mesa web a otra
- * pestaña, con la cookie; en las apps lo envía con la sesión y abre la página a la que redirige.
+ * pestaña, con la cookie; en las apps lo envía con la sesión y abre el enlace que devuelve.
  */
 export async function reportarJugada(mesaId: string, campos: Record<string, string>) {
   const url = cliente.url("/api/mesas/" + encodeURIComponent(mesaId) + "/reportes");
@@ -18,16 +18,22 @@ export async function reportarJugada(mesaId: string, campos: Record<string, stri
     formulario.remove();
     return;
   }
+  // Con `Accept: application/json` el servidor devuelve el enlace en vez de redirigir: la sesión
+  // nunca viaja en una redirección hacia GitHub.
   const sesion = almacen.actual();
   const respuesta = await fetch(url, {
     method: "POST",
     cache: "no-store",
+    redirect: "error",
     headers: {
+      Accept: "application/json",
       "Content-Type": "application/x-www-form-urlencoded",
       ...(sesion && { Authorization: "Bearer " + sesion }),
     },
     body: new URLSearchParams(campos).toString(),
   });
   if (!respuesta.ok) throw new Error((await respuesta.text().catch(() => "")) || "No se pudo abrir el reporte.");
-  await Linking.openURL(respuesta.url);
+  const { enlace } = await respuesta.json() as { enlace?: unknown };
+  if (typeof enlace !== "string" || !enlace.startsWith("https://")) throw new Error("No se pudo abrir el reporte.");
+  await Linking.openURL(enlace);
 }
