@@ -4,6 +4,7 @@ import { configuracionExhibiciones, procesarExhibiciones } from "./exhibiciones.
 import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
+import { ingresoDePruebaHabilitado } from "./auth-dev.ts";
 import { crearGestion } from "./gestion.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
@@ -26,6 +27,8 @@ pool.on("error", error => console.error("Conexión a PostgreSQL interrumpida:", 
 await migrate(pool);
 const web = new URL(process.env.WEB_ORIGIN!);
 const salonHabilitado = process.env.SALON_HABILITADO === "1";
+const ingresoDePrueba = ingresoDePruebaHabilitado(process.env);
+if (ingresoDePrueba) console.warn("AUTH_DEV=1: cualquiera puede entrar como un jugador de prueba en /api/auth/dev.");
 const auth = crearAuth(pool, {
   web, salonHabilitado,
   callback: new URL(process.env.OIDC_CALLBACK ?? "/api/auth/callback", web),
@@ -34,6 +37,7 @@ const auth = crearAuth(pool, {
   local: process.env.LOCAL_OIDC === "1",
   cerrarConexiones: jugador => vivo.cerrarJugador(jugador),
   capturarApple: crearCapturaApple(process.env, pool),
+  ingresoDePrueba,
 });
 const serviciosBaja = crearServiciosBaja(process.env, pool);
 if (!serviciosBaja) console.warn("Sin KEYCLOAK_API_CLIENT_SECRET: las bajas vencidas no se completan.");

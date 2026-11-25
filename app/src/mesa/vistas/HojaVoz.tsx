@@ -67,7 +67,9 @@ export function HojaVoz({ ruta, disponible, espectador, exhibicion }: {
           {aviso ? <Text role="status" style={[estilosDeHoja.nota, estilos.aviso]}>{aviso}</Text> : null}
         </>
       ) : (
-        <Text style={estilosDeHoja.nota}>Esta mesa no tiene voz por Discord.</Text>
+        <Text style={estilosDeHoja.nota}>
+          {espectador ? "La voz de esta mesa en Discord está desactivada." : "Esta mesa no tiene voz por Discord."}
+        </Text>
       )}
     </View>
   );
