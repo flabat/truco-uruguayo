@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
-import { camposDelReporte } from "../../app/src/mesa/reporte-campos.ts";
+import { camposDelReporte, enlaceDeReporte } from "../../app/src/mesa/reporte-campos.ts";
 import { partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 const acciones = [
@@ -46,4 +46,15 @@ test("tercetos: la posición suma las acciones de los otros duelos y manda el du
   assert.deepEqual(camposDelReporte(partida, 1, false), {
     mano: "1", posicion: "5", vuelta: "1", puntos: "0-0", fase: "jugada", duelo: "2",
   });
+});
+
+test("la app solo abre el enlace del reporte si es de GitHub y la respuesta no se redirigió", () => {
+  const enlace = "https://github.com/flabat/truco-uruguayo/issues/new?title=x";
+  assert.equal(enlaceDeReporte({ enlace }, false), enlace);
+  assert.equal(enlaceDeReporte({ enlace }, true), null);
+  assert.equal(enlaceDeReporte({ enlace: "https://github.com.ejemplo.com/x" }, false), null);
+  assert.equal(enlaceDeReporte({ enlace: "https://ejemplo.com/" }, false), null);
+  assert.equal(enlaceDeReporte({ enlace: "http://github.com/x" }, false), null);
+  assert.equal(enlaceDeReporte({}, false), null);
+  assert.equal(enlaceDeReporte(null, false), null);
 });

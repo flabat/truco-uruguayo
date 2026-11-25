@@ -28,3 +28,13 @@ export function camposDelReporte(partida: Partida | PartidaTercetos, vuelta: num
   if (voz != null) campos.voz = String(voz);
   return campos;
 }
+
+/**
+ * El enlace que devuelve la API para abrir el borrador del reporte. Solo vale uno de GitHub, y nunca
+ * de una respuesta redirigida: la sesión no debe haber viajado a otro lado.
+ */
+export function enlaceDeReporte(cuerpo: unknown, redirigida: boolean): string | null {
+  if (redirigida || typeof cuerpo !== "object" || cuerpo === null) return null;
+  const { enlace } = cuerpo as { enlace?: unknown };
+  return typeof enlace === "string" && enlace.startsWith("https://github.com/") ? enlace : null;
+}

@@ -60,7 +60,7 @@ export function HojaVoz({ ruta, disponible, espectador, exhibicion }: {
             <BotonDeHoja alPresionar={() => void preparar()} deshabilitado={pendiente}>
               {destino ? "Renovar enlace" : "Abrir voz de la mesa"}
             </BotonDeHoja>
-            {destino ? (
+            {destino?.enlace.startsWith("https://") ? (
               <BotonDeHoja principal alPresionar={() => abrirAparte(destino.enlace)}>Entrar a Discord ↗</BotonDeHoja>
             ) : null}
           </View>

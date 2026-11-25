@@ -1,5 +1,6 @@
 import { Linking } from "react-native";
 import { almacen, cliente, esWeb } from "../ingreso/plataforma.ts";
+import { enlaceDeReporte } from "./reporte-campos.ts";
 
 /**
  * Abre un borrador de reporte en GitHub. En la web envía el mismo formulario que la mesa web a otra
@@ -33,7 +34,7 @@ export async function reportarJugada(mesaId: string, campos: Record<string, stri
     body: new URLSearchParams(campos).toString(),
   });
   if (!respuesta.ok) throw new Error((await respuesta.text().catch(() => "")) || "No se pudo abrir el reporte.");
-  const { enlace } = await respuesta.json() as { enlace?: unknown };
-  if (typeof enlace !== "string" || !enlace.startsWith("https://")) throw new Error("No se pudo abrir el reporte.");
+  const enlace = enlaceDeReporte(await respuesta.json(), respuesta.redirected);
+  if (!enlace) throw new Error("No se pudo abrir el reporte.");
   await Linking.openURL(enlace);
 }
