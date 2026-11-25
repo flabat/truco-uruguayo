@@ -20,14 +20,17 @@ export function Pantalla({ titulo, children }: { titulo: string; children: React
   );
 }
 
-type Variante = "principal" | "secundario" | "peligro";
+type Variante = "principal" | "secundario" | "peligro" | "claro";
 
-export function Boton({ children, onPress, variante = "principal", ocupado = false }: {
+export function Boton({ children, onPress, variante = "principal", ocupado = false, etiqueta }: {
   children: string; onPress: () => void; variante?: Variante; ocupado?: boolean;
+  /** Nombre accesible cuando el texto visible no alcanza («Agregar computadora al asiento 2»). */
+  etiqueta?: string;
 }) {
   return (
     <Pressable
       role="button"
+      aria-label={etiqueta}
       aria-disabled={ocupado}
       disabled={ocupado}
       onPress={onPress}
@@ -85,6 +88,8 @@ export const estilos = StyleSheet.create({
   principal: { backgroundColor: colores.panoClaro, borderColor: colores.panoClaro },
   secundario: { backgroundColor: "transparent", borderColor: colores.tinta },
   peligro: { backgroundColor: "transparent", borderColor: colores.acento },
+  // Sobre el paño: píldora de papel.
+  claro: { backgroundColor: colores.papel, borderColor: colores.papel },
   apretado: { opacity: 0.7 },
   textoBoton: { color: colores.papel, fontFamily: fuentes.textoFuerte, fontSize: 16 },
 });

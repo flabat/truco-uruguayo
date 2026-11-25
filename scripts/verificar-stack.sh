@@ -65,6 +65,7 @@ node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-app-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-app-salon.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs

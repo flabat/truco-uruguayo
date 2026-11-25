@@ -12,7 +12,7 @@ import { completarIngreso } from "./sesion.ts";
 
 export const esWeb = Platform.OS === "web";
 
-const guardadoSeguro: Guardado = {
+export const guardadoSeguro: Guardado = {
   leer: clave => SecureStore.getItemAsync(clave),
   guardar: (clave, valor) => SecureStore.setItemAsync(clave, valor),
   borrar: clave => SecureStore.deleteItemAsync(clave),

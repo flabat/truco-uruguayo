@@ -28,3 +28,7 @@ export function textoDeMeta(texto: string): { meta: number; valida: boolean; ayu
   const valida = esMetaDeChico(meta);
   return { meta, valida, ayuda: valida ? mitadesDelChico(meta) : "Elegí un número par desde 2." };
 }
+
+export const textoVisibilidad = (publica: boolean) => publica
+  ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas."
+  : "Mesa privada por invitación.";
