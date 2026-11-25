@@ -108,19 +108,32 @@ async function teclear(p, id, tecla, version) {
   return intentar(p, id, () => p.keyboard.press(tecla).then(() => true), version);
 }
 
+const esPedidoDeAccion = r => /\/api\/mesas\/[^/]+\/(acciones|siguiente|indicaciones)$/.test(new URL(r.url()).pathname)
+  && r.method() === "POST";
+
+/**
+ * Anota el pedido que sale de la página, no la respuesta: con la máquina cargada la respuesta puede tardar
+ * más que cualquier plazo corto, y una indicación al pie no cambia la versión de la mano. Si se la perdiera,
+ * la prueba volvería a tocar un control que ya no está hasta agotar los intentos.
+ */
 async function intentar(p, id, hacer, version) {
-  for (let intento = 0; intento < 20; intento++) {
-    const respuesta = p.waitForResponse(esAccion, { timeout: 3_000 }).catch(() => null);
-    const tocado = await hacer();
-    const r = tocado ? await respuesta : null;
-    if (r) {
-      const indicacion = new URL(r.url()).pathname.endsWith("/indicaciones");
-      assert.ok(r.status() === 200 || (indicacion && r.status() === 409), new URL(r.url()).pathname + " · " + await r.text());
-      return;
+  let enviado = null;
+  const anotar = r => { if (!enviado && esPedidoDeAccion(r)) enviado = r; };
+  p.on("request", anotar);
+  try {
+    for (let intento = 0; intento < 20 && !enviado; intento++) {
+      if (await hacer()) await expect.poll(() => enviado !== null, { timeout: 3_000 }).toBe(true).catch(() => {});
+      if (!enviado && (await partida(p, id)).version !== version) return;
     }
-    if ((await partida(p, id)).version !== version) return;
+  } finally {
+    p.off("request", anotar);
   }
-  assert.fail("La mesa no envió la jugada");
+  if (!enviado) assert.fail("La mesa no envió la jugada");
+  const ruta = new URL(enviado.url()).pathname;
+  const r = await enviado.response();
+  assert.ok(r, ruta + " · el pedido falló: " + enviado.failure()?.errorText);
+  const indicacion = ruta.endsWith("/indicaciones");
+  assert.ok(r.status() === 200 || (indicacion && r.status() === 409), ruta + " · " + await r.text());
 }
 
 /**
