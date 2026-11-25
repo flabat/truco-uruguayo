@@ -25,6 +25,7 @@
     "auth:api": "bash scripts/cliente-api-local.sh",
     "preview": "astro preview",
     "cartas:generar": "node scripts/tatu/generar.mjs",
+    "voces:generar": "node scripts/voces/generar.ts",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
     "cartas:exportar": "node scripts/tatu/generar.mjs --exportar",
     "train": "node training/cli.ts",
