@@ -117,12 +117,13 @@ class RemoteTest(unittest.TestCase):
         self.assertIn(f"printf '%s %s\\n' {self.main} \"$release\" > /var/lib/truco-deploy/manual.next", text)
         self.assertIn("for service in ; do", text)
         self.assertIn("dc run --rm --no-deps -T backup guardar", text)
-        self.assertIn("dc up -d --no-build --wait --wait-timeout 600 db identidad api web", text)
+        self.assertIn("dc up -d --no-build db identidad api web\n  esperar db identidad api web", text)
+        self.assertIn("dc up -d --no-build\n  esperar $(dc config --services)", text)
 
     def test_web_only_retags_other_services(self):
         text = self.script(("web",))
         self.assertIn("for service in api identidad backup; do", text)
-        self.assertIn("dc up -d --no-build --no-deps --wait --wait-timeout 600 web", text)
+        self.assertIn("dc up -d --no-build --no-deps web\n  esperar web", text)
 
     def test_deploy_sends_images_files_and_script(self):
         plan = v.Plan(ref="rama", sha=self.sha, release=self.sha, main=self.main)

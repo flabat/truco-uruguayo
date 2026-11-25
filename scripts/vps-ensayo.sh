@@ -5,8 +5,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 # Compose resuelve los montajes en el daemon: la raíz remota tiene que existir con la
-# misma ruta en esta máquina y en el contenedor (Docker Desktop comparte /private/tmp).
-tmp=$(mktemp -d /private/tmp/truco-vps-ensayo.XXXXXX 2>/dev/null || mktemp -d)
+# misma ruta en esta máquina y en el contenedor. Docker Desktop y Colima comparten $HOME.
+mkdir -p "$HOME/.cache"
+tmp=$(mktemp -d "$HOME/.cache/truco-vps-ensayo.XXXXXX")
 tmp=$(cd "$tmp" && pwd -P)
 name="truco-vps-ensayo-$$"
 project="$name"
@@ -29,9 +30,9 @@ ssh-keygen -q -t ed25519 -N '' -f "$tmp/clave"
 cp "$tmp/clave.pub" "$tmp/imagen/authorized_keys"
 cat > "$tmp/imagen/Dockerfile" <<'DOCKER'
 FROM docker:29-cli
-RUN apk add --no-cache openssh-server && ssh-keygen -A \
+RUN apk add --no-cache openssh-server flock && ssh-keygen -A \
   && sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config \
-  && passwd -u root
+  && sed -i "s/^root:[^:]*:/root:*:/" /etc/shadow
 COPY --chmod=600 authorized_keys /root/.ssh/authorized_keys
 CMD ["/usr/sbin/sshd", "-D", "-e"]
 DOCKER

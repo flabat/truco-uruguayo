@@ -185,17 +185,43 @@ if [ -f {q(os.path.dirname(r.config) + "/copias-pausadas")} ]; then
   paused=1
   export RESTIC_REPOSITORY=/dev/null RESTIC_PASSWORD=unused
 fi
+# Como `up --wait`, pero tolera que un servicio lento (Keycloak en su primer arranque)
+# pase por unhealthy antes de estar sano. Falla si un contenedor termina.
+esperar() {{
+  limite=$(($(date +%s) + 600))
+  while :; do
+    pendientes=
+    for service in "$@"; do
+      estado=$(docker inspect --format '{{{{.State.Status}}}} {{{{if .State.Health}}}}{{{{.State.Health.Status}}}}{{{{end}}}}' "$(dc ps -q "$service")")
+      case "$estado" in
+        "running healthy"|"running ") ;;
+        running*) pendientes="$pendientes $service" ;;
+        *) echo "$service quedó en estado $estado" >&2; dc logs --tail=40 "$service" >&2; return 1 ;;
+      esac
+    done
+    [ -z "$pendientes" ] && return 0
+    if [ "$(date +%s)" -ge "$limite" ]; then
+      echo "Sin salud después de 10 minutos:$pendientes" >&2
+      dc logs --tail=40 $pendientes >&2
+      return 1
+    fi
+    sleep 5
+  done
+}}
 if [ -n "{keep}" ]; then
-  dc up -d --no-build --no-deps --wait --wait-timeout 600 web
+  dc up -d --no-build --no-deps web
+  esperar web
 elif [ -n "$paused" ]; then
   dc rm --stop --force backup
-  dc up -d --no-build --wait --wait-timeout 600 db identidad api web
+  dc up -d --no-build db identidad api web
+  esperar db identidad api web
 else
   # Copia antes de una posible migración, si ya hay base.
   if docker volume ls -q --filter label=com.docker.compose.project={q(r.project)} --filter label=com.docker.compose.volume=postgres | grep -q .; then
     dc run --rm --no-deps -T backup guardar
   fi
-  dc up -d --no-build --wait --wait-timeout 600
+  dc up -d --no-build
+  esperar $(dc config --services)
 fi
 printf '%s %s\\n' {q(plan_.main)} "$release" > {q(r.state + "/manual.next")}
 mv {q(r.state + "/manual.next")} {q(r.state + "/manual")}
