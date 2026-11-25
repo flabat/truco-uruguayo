@@ -116,3 +116,16 @@ test("el paquete solo importa sus archivos, el motor o React, y no toca el DOM",
       /\b(?:window|document|HTMLElement|HTMLImageElement)\b|(?<!\.)\blocation\b/, nombre);
   }
 });
+
+test("las imágenes de la web y de la API incluyen el paquete", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const leer = (ruta: string) => readFile(new URL("../../" + ruta, import.meta.url), "utf8");
+  const web = await leer("infra/web.Dockerfile");
+  assert.match(web, /COPY paquetes\/cliente\/package\.json [^\n]+\nRUN npm ci/);
+  assert.match(web, /COPY paquetes\/cliente\/src /);
+  assert.match(await leer(".dockerignore"), /^!paquetes\/cliente\/src\/\*\.ts$/m);
+  const api = await leer("api/Dockerfile");
+  assert.match(api, /COPY paquetes\/cliente /);
+  assert.match(api, /ln -s \.\.\/\.\.\/paquetes\/cliente \/app\/node_modules\/@eltruco\/cliente/);
+  assert.match(await leer("api/Dockerfile.dockerignore"), /^!paquetes\/cliente\/src\/\*\.ts$/m);
+});
