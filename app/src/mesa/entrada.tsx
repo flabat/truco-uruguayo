@@ -8,8 +8,8 @@ import { Hoja, Pano, Pildora } from "../componentes/salon.tsx";
 import { Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { baseDeLaApi } from "../configuracion.ts";
 import { esWeb } from "../ingreso/plataforma.ts";
-import { useConsulta } from "../salon/useConsulta.ts";
 import { registrarPrecargaWeb } from "../precarga/usePrecargaDeMesa.ts";
+import { useConsulta } from "../salon/useConsulta.ts";
 import { colores, fuentes } from "../tema.ts";
 import { cargarCanvasKit } from "./canvaskit.ts";
 
