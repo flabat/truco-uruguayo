@@ -1,23 +1,32 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { calcularMesa } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { colores, fuentes } from "../tema.ts";
-import { CapaLienzo } from "./CapaLienzo";
+import { CapaFestejo, CapaLienzo } from "./CapaLienzo";
+import type { Atajo } from "./atajos.ts";
+import {
+  avanceDelFestejo, chicoTrasEvento, hayParticulas, terminarFestejo, type ChicoTerminado, type EventosDeMesa,
+} from "./eventos.ts";
 import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
-import { ManoPropia } from "./ManoPropia.tsx";
+import { ManoPropia, type JugarSinGesto } from "./ManoPropia.tsx";
 import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
+import { movimiento } from "./movimiento.ts";
 import type { SenasEnMesa } from "./senas.ts";
+import { useAtajos } from "./useAtajos.ts";
 import { useManoAnimada } from "./useManoAnimada.ts";
+import { useReparto } from "./useReparto.ts";
 import { Asientos } from "./vistas/Asientos.tsx";
 import { Barra } from "./vistas/Barra.tsx";
 import { Estado } from "./vistas/Estado.tsx";
 import { FinDeMano } from "./vistas/FinDeMano.tsx";
 import { enRect } from "./vistas/estilo.ts";
 import { Hoja } from "./vistas/Hoja.tsx";
+import { Paneles } from "./vistas/Paneles.tsx";
 import { HojaCantos } from "./vistas/HojaCantos.tsx";
+import { PieDelEspectador } from "./vistas/PieDelEspectador.tsx";
 import { franjaDeSenas, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
 import { Tira, titulosDePestana, type Pestana } from "./vistas/Tira.tsx";
 
@@ -44,6 +53,12 @@ interface Props {
   /** Jugadas rechazadas o que no se pudieron enviar: ver `ManoPropia`. */
   rechazos: number;
   conectada: boolean;
+  /** Lo que anuncia la cola de presentación: el reparto y los cobros se animan al oírlo. */
+  eventos?: EventosDeMesa;
+  /** Modo liviano: `livianoActivo(preferencias, reducirMovimiento)`. */
+  liviano?: boolean;
+  /** Hápticos al levantar y apoyar una carta. */
+  hapticos?: boolean;
 }
 
 type HojaAbierta = "cantos" | Pestana | null;
@@ -52,7 +67,7 @@ type HojaAbierta = "cantos" | Pestana | null;
  * La mesa entera. Una sola geometría (`calcularMesa`) ubica el lienzo del fondo, la mano que se
  * toca y las vistas de texto. Con una hoja abierta, la geometría recibe su alto y la mano sube.
  */
-export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada }: Props) {
+export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false, hapticos = false }: Props) {
   const ventana = useWindowDimensions();
   const area = useSafeAreaInsets();
   const ancho = Math.max(0, ventana.width - area.left - area.right);
@@ -86,6 +101,14 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     [mesa, ancho, alto, abierta !== null, altoHoja],
   );
   const mano = useManoAnimada(mesa.manoPropia, geometria?.mano ?? []);
+  const reparto = useReparto(eventos, geometria, mesa, liviano);
+  // El chico ganado: cuando termina de presentarse (aparece la tarjeta) las cartas se juntan, aparece
+  // el cartel y, salvo en liviano, saltan las partículas sobre él. Se festeja una sola vez por chico.
+  const [chico, cambiarChico] = useState<ChicoTerminado | null>(null);
+  useLayoutEffect(() => eventos?.escuchar(e => cambiarChico(c => chicoTrasEvento(c, e))), [eventos]);
+  const { festejo } = movimiento(liviano);
+  // Mientras se reparte, la mano no se toca: sus cartas todavía están volando o de dorso.
+  const puedeJugarCarta = mesa.puedeJugarCarta && !reparto;
 
   const cerrar = useCallback(() => elegir(a => (a === "cantos" && forzada ? a : null)), [forzada]);
   const abrir = useCallback((hoja: Exclude<HojaAbierta, null>) => {
@@ -96,12 +119,38 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     if (!forzada) elegir(null);
     acciones.cantar(tipo);
   }, [acciones, forzada]);
+  // Atajos de teclado (solo web). La carta va por `ManoPropia`, que traba la mano como el toque.
+  const jugarSinGesto = useRef<JugarSinGesto | null>(null);
+  const aplicarAtajo = useCallback((a: Atajo) => {
+    if (a.tipo === "carta") jugarSinGesto.current?.(a.carta);
+    else if (a.tipo === "abrir-cantos") abrir("cantos");
+    else if (a.tipo === "canto") cantar(a.canto);
+    else cerrar();
+  }, [abrir, cantar, cerrar]);
+  useAtajos(aplicarAtajo, {
+    mano: mesa.manoPropia, puedeJugarCarta: mesa.propio != null && puedeJugarCarta, hoja: hojaCantos, hojaAbierta: abierta !== null,
+  });
+
   const medir = useCallback((h: number) => cambiarMedida(m => (
     m.hoja === abierta && Math.abs(m.alto - h) < 1 ? m : { hoja: abierta, alto: h }
   )), [abierta]);
 
   // Con una hoja abierta la mano sube al paño: la tarjeta de fin se oculta para no taparla.
   const conFin = mesa.fin !== null && !abierta;
+  const conMovimiento = festejo !== null;
+  useEffect(() => {
+    cambiarChico(c => avanceDelFestejo(c, conFin, conMovimiento));
+  }, [conFin, conMovimiento, chico?.fase]);
+  // Hasta que corre el efecto, un chico pendiente con el cartel a la vista ya se festeja.
+  const festejando = chico !== null && conFin && festejo !== null && chico.fase !== "festejado";
+  const numeroDeChico = chico?.numero;
+  const enCurso = chico?.fase === "festejando";
+  useEffect(() => {
+    if (!enCurso || !festejo || numeroDeChico === undefined) return;
+    const listo = setTimeout(() => cambiarChico(c => terminarFestejo(c, numeroDeChico)),
+      festejo.juntar + festejo.cartel + festejo.duracion);
+    return () => clearTimeout(listo);
+  }, [enCurso, numeroDeChico]);
   const tercetos = mesa.modalidad === "3v3";
   const titulos = titulosDePestana(tercetos);
 
@@ -121,28 +170,40 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
-          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={false} />
+          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto}
+            juntar={chico !== null && mesa.fin !== null} />
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
-          <Asientos mesa={mesa} geometria={geometria} />
+          <Asientos mesa={mesa} geometria={geometria} liviano={liviano} />
           {/* La tarjeta de fin de mano ya dice quién ganó y por qué. */}
           {conFin ? null : <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />}
-          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} abrirMas={() => abrir("mas")} />
+          {/* En el escritorio, lo de Más está siempre a la vista en el panel derecho: no hay ☰. */}
+          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} eventos={eventos} liviano={liviano}
+            abrirMas={geometria.paneles ? undefined : () => abrir("mas")} />
           {mesa.propio != null ? (
-            <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
-              jugar={acciones.jugarCarta} rechazos={rechazos} />
+            <ManoPropia mano={mano} pano={geometria.pano} habilitada={puedeJugarCarta}
+              jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} hapticos={hapticos} />
           ) : null}
-          <Senas senas={senas} geometria={geometria} />
+          <Senas senas={senas} geometria={geometria} liviano={liviano} />
+          {geometria.espectador ? <PieDelEspectador rect={geometria.espectador} salir={acciones.salir} /> : null}
           {mesa.fin && conFin ? (
-            <FinDeMano fin={mesa.fin} rect={geometria.pano}
-              alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir} />
+            <FinDeMano key={"fin-" + (numeroDeChico ?? 0)} fin={mesa.fin} rect={geometria.pano}
+              alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir}
+              aparicion={festejando ? { demora: festejo.juntar, duracion: festejo.cartel } : null}
+              festejo={festejando && hayParticulas(chico, mesa.propio) ? (
+                <CapaFestejo cantidad={festejo.particulas} demora={festejo.juntar + festejo.cartel} duracion={festejo.duracion} />
+              ) : null} />
           ) : null}
           {geometria.cantos && hojaCantos ? (
             <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}
               style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>
               <Text style={estilos.textoCantos}>Cantos</Text>
             </Pressable>
+          ) : null}
+          {geometria.paneles ? (
+            <Paneles paneles={geometria.paneles} titulos={titulos} extra={extra}
+              recibidas={senas.tipo === "silencio" ? <SenasRecibidas recibidas={senas.recibidas} /> : null} />
           ) : null}
           {geometria.tira && !abierta ? <Tira rect={geometria.tira} tercetos={tercetos} abierta={abierta} abrir={abrir} /> : null}
           <Hoja key={abierta ?? "cerrada"} abierta={abierta !== null} cerrable={cerrable} alCerrar={cerrar} alMedir={medir}

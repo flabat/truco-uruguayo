@@ -126,11 +126,12 @@ test("las imágenes de la web y de la API incluyen el paquete", async () => {
   assert.match(await leer(".dockerignore"), /^!paquetes\/cliente\/src\/\*\.ts$/m);
   // La exportación de la app también resuelve la geometría de la mesa y las señas.
   const app = web.slice(web.indexOf("AS app"), web.indexOf("AS build"));
-  for (const ruta of ["paquetes/mesa-geometria/src", "training/contracts/index.ts", "src/data/juego.json"]) {
+  for (const ruta of ["paquetes/mesa-geometria/src", "training/contracts/index.ts", "src/data/juego.json", "app/assets/sonido"]) {
     assert.ok(app.includes("COPY " + ruta + " "), ruta);
   }
   assert.match(web, /COPY paquetes\/mesa-geometria\/package\.json /);
   assert.match(await leer(".dockerignore"), /^!paquetes\/mesa-geometria\/src\/\*\.ts$/m);
+  assert.match(await leer(".dockerignore"), /^!app\/assets\/sonido\/\*\*$/m);
   const api = await leer("api/Dockerfile");
   assert.match(api, /COPY paquetes\/cliente /);
   assert.match(api, /ln -s \.\.\/\.\.\/paquetes\/cliente \/app\/node_modules\/@eltruco\/cliente/);

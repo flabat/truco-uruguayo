@@ -1,4 +1,6 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
 import type { Rect } from "@eltruco/mesa-geometria";
 import { imagenesDeCartas } from "../../cartas/imagenes.ts";
 import { colores, fuentes } from "../../tema.ts";
@@ -8,16 +10,39 @@ import { enRect, mesaColores } from "./estilo.ts";
 const anchoCarta = 40;
 const proporcionCarta = 596 / 384;
 
-/** La tarjeta de fin de mano sobre el paño: quién ganó, por qué, los cobros, las pruebas y el botón grande. */
-export function FinDeMano({ fin, rect, alPresionar, deshabilitado }: {
+/**
+ * La tarjeta de fin de mano sobre el paño: quién ganó, por qué, los cobros, las pruebas y el botón grande.
+ * Al ganar el chico es el cartel: con `aparicion`, aparece después de que las cartas se juntan, y
+ * `festejo` (el segundo lienzo con las partículas) se dibuja encima de la tarjeta.
+ */
+export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = null, festejo = null }: {
   fin: DatosFin;
   /** `geometria.pano`. */
   rect: Rect;
   alPresionar: () => void;
   deshabilitado?: boolean;
+  /** Se lee al montar; null aparece de una. */
+  aparicion?: { demora: number; duracion: number } | null;
+  festejo?: ReactNode;
 }) {
+  const [entrada] = useState(aparicion);
+  const visible = useSharedValue(entrada ? 0 : 1);
+  // Mientras aparece, el botón no responde: no se toca algo que todavía no se ve.
+  const [lista, marcarLista] = useState(entrada === null);
+  useEffect(() => {
+    if (!entrada) return;
+    visible.value = withDelay(entrada.demora, withTiming(1, { duration: entrada.duracion, easing: Easing.out(Easing.cubic) }));
+    const aparecio = setTimeout(() => marcarLista(true), entrada.demora + entrada.duracion);
+    return () => clearTimeout(aparecio);
+  }, [visible, entrada]);
+  const apagado = deshabilitado || !lista;
+  const animado = useAnimatedStyle(() => ({
+    opacity: visible.value,
+    transform: [{ scale: 0.9 + 0.1 * visible.value }],
+  }));
+
   return (
-    <View testID="fin-de-mano" style={[enRect(rect), estilos.capa]} pointerEvents="box-none">
+    <Animated.View testID="fin-de-mano" style={[enRect(rect), estilos.capa, animado]} pointerEvents={lista ? "box-none" : "none"}>
       <View style={estilos.tarjeta}>
         <ScrollView bounces={false} contentContainerStyle={estilos.contenido}>
           <Text role="heading" aria-level={2} style={estilos.titulo}>{fin.titulo}</Text>
@@ -40,13 +65,14 @@ export function FinDeMano({ fin, rect, alPresionar, deshabilitado }: {
             </View>
           ))}
         </ScrollView>
+        {festejo}
       </View>
-      <Pressable accessibilityRole="button" onPress={alPresionar} disabled={deshabilitado}
-        accessibilityState={{ disabled: deshabilitado }}
+      <Pressable accessibilityRole="button" onPress={alPresionar} disabled={apagado}
+        accessibilityState={{ disabled: apagado }}
         style={({ pressed }) => [estilos.boton, (pressed || deshabilitado) && estilos.apretado]}>
         <Text style={estilos.textoBoton}>{fin.boton}</Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

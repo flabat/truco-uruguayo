@@ -24,7 +24,7 @@ const frasesDe = (senas: SenasEnMesa) =>
   senas.tipo === "pie" ? senas.frases.filter(f => f.frases.length > 0 || f.esperando) : [];
 
 /** Los globos con candado del pie, colgados del asiento de cada compañero. */
-export function Senas({ senas, geometria }: { senas: SenasEnMesa; geometria: Geometria }) {
+export function Senas({ senas, geometria, liviano = false }: { senas: SenasEnMesa; geometria: Geometria; liviano?: boolean }) {
   if (senas.tipo !== "pie") return null;
   const limites = {
     columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado,
@@ -37,7 +37,7 @@ export function Senas({ senas, geometria }: { senas: SenasEnMesa; geometria: Geo
         if (!geo || g.gestos.length === 0) return null;
         return (
           <Globo key={g.emisor + ":" + senas.vuelta} asiento={geo} posicion="debajo" limites={limites}
-            testID={"globo-senas-" + g.emisor} etiqueta={"Señas de " + g.nombre}>
+            testID={"globo-senas-" + g.emisor} etiqueta={"Señas de " + g.nombre} liviano={liviano}>
             <View style={estilos.tituloGlobo}>
               <Candado color={colores.tinta} />
               <Text style={estilos.textoTitulo}>Señas de {g.nombre}</Text>
