@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PasosNuevos } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import type { Nombre } from "@eltruco/cliente/textos.ts";
 import type { Voz } from "@eltruco/cliente/voces.ts";
-import { avanzar, colaInicial, duracion, enPantalla, eventosEnPantalla, recibir, type Evento, type Versionada } from "./cola.ts";
+import {
+  avanzar, colaInicial, enPantalla, esperaDelPaso, esperaDelReparto, eventosEnPantalla, recibir, type Evento, type Versionada,
+} from "./cola.ts";
 
 interface Opciones {
   liviano: boolean;
@@ -25,6 +27,8 @@ export function useColaDePresentacion<T extends Versionada>(actual: T, presencio
   const paso = cola.pasos[0];
   const cargado = paso !== undefined && cola.cargado === paso;
   const { liviano } = opciones;
+  // Hasta cuándo dura el último reparto anunciado (`Date.now()`): el paso en pantalla no avanza antes.
+  const repartoHasta = useRef(0);
   useEffect(() => {
     if (!paso) return;
     const seguir = () => guardar(c => c.pasos[0] === paso ? avanzar(c) : c);
@@ -33,7 +37,7 @@ export function useColaDePresentacion<T extends Versionada>(actual: T, presencio
       seguir();
       return;
     }
-    const timer = setTimeout(seguir, duracion(paso, liviano));
+    const timer = setTimeout(seguir, esperaDelPaso(paso, liviano, repartoHasta.current, Date.now()));
     return () => clearTimeout(timer);
   }, [paso, cargado, liviano]);
 
@@ -53,7 +57,10 @@ export function useColaDePresentacion<T extends Versionada>(actual: T, presencio
     // Al reconectar el estado aparece en su lugar, sin sonar el pasado.
     if (previo.reconexion !== reconexion) return;
     const { alEvento, miAsiento, nombre } = opcionesVigentes.current;
-    for (const e of eventosEnPantalla(previo, { partida, voz }, porPaso, miAsiento, nombre)) alEvento(e);
+    const eventos = eventosEnPantalla(previo, { partida, voz }, porPaso, miAsiento, nombre);
+    const reparto = esperaDelReparto(eventos, partida, opcionesVigentes.current.liviano);
+    if (reparto > 0) repartoHasta.current = Date.now() + reparto;
+    for (const e of eventos) alEvento(e);
   }, [partida, voz, reconexion]);
 
   return pantalla;

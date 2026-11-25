@@ -14,6 +14,7 @@ import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
 import type { SenasEnMesa } from "./senas.ts";
 import { useAtajos } from "./useAtajos.ts";
 import { useManoAnimada } from "./useManoAnimada.ts";
+import { useReparto } from "./useReparto.ts";
 import { Asientos } from "./vistas/Asientos.tsx";
 import { Barra } from "./vistas/Barra.tsx";
 import { Estado } from "./vistas/Estado.tsx";
@@ -95,6 +96,9 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     [mesa, ancho, alto, abierta !== null, altoHoja],
   );
   const mano = useManoAnimada(mesa.manoPropia, geometria?.mano ?? []);
+  const reparto = useReparto(eventos, geometria, mesa, liviano);
+  // Mientras se reparte, la mano no se toca: sus cartas todavía están volando o de dorso.
+  const puedeJugarCarta = mesa.puedeJugarCarta && !reparto;
 
   const cerrar = useCallback(() => elegir(a => (a === "cantos" && forzada ? a : null)), [forzada]);
   const abrir = useCallback((hoja: Exclude<HojaAbierta, null>) => {
@@ -114,7 +118,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     else cerrar();
   }, [abrir, cantar, cerrar]);
   useAtajos(aplicarAtajo, {
-    mano: mesa.manoPropia, puedeJugarCarta: mesa.propio != null && mesa.puedeJugarCarta, hoja: hojaCantos, hojaAbierta: abierta !== null,
+    mano: mesa.manoPropia, puedeJugarCarta: mesa.propio != null && puedeJugarCarta, hoja: hojaCantos, hojaAbierta: abierta !== null,
   });
 
   const medir = useCallback((h: number) => cambiarMedida(m => (
@@ -142,7 +146,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
-          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} eventos={eventos} />
+          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto} />
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
@@ -153,7 +157,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
           <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} eventos={eventos} liviano={liviano}
             abrirMas={geometria.paneles ? undefined : () => abrir("mas")} />
           {mesa.propio != null ? (
-            <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
+            <ManoPropia mano={mano} pano={geometria.pano} habilitada={puedeJugarCarta}
               jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} />
           ) : null}
           <Senas senas={senas} geometria={geometria} />

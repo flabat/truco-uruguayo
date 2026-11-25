@@ -90,3 +90,10 @@ export function planDeReparto(dador: number, cartas: readonly number[], propio: 
   }
   return { vuelos, duracion: t.vuelo, fin };
 }
+
+/** Lo que dura un reparto completo de tres cartas por asiento, con las propias dándose vuelta. 0 en liviano. */
+export function duracionDelReparto(esLiviano: boolean, asientos: number): number {
+  const { reparto, vuelo } = movimiento(esLiviano);
+  if (!reparto || asientos === 0) return 0;
+  return planDeReparto(0, Array<number>(asientos).fill(3), 0, { entreCartas: reparto.entreCartas, vuelo: vuelo.duracion }).fin;
+}

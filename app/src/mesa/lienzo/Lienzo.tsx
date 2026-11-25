@@ -1,12 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { Canvas, RadialGradient, Rect } from "@shopify/react-native-skia";
 import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 import type { Geometria } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
-import type { EventosDeMesa } from "../eventos.ts";
 import type { MesaVisible } from "../modelo.ts";
-import { movimiento, planDeReparto, type PlanDeReparto } from "../movimiento.ts";
+import type { PlanDeReparto } from "../movimiento.ts";
+import type { RepartoEnCurso } from "../useReparto.ts";
 import type { CartaAnimada } from "../useManoAnimada.ts";
 import { CartaDeMano, CartaDelPano, CartaFija, CartaRepartida, poseDeMano, type Pose } from "./CartaSkia.tsx";
 
@@ -15,15 +15,15 @@ export interface PropsLienzo {
   mesa: MesaVisible;
   mano: Map<CardId, CartaAnimada>;
   liviano: boolean;
-  /** Con el evento `reparto`, las cartas salen del mazo de a una. */
-  eventos?: EventosDeMesa;
+  /** Mientras dura, las cartas salen del mazo de a una en lugar de verse los dorsos y la mano. */
+  reparto: RepartoEnCurso | null;
 }
 
 const colores = ["#3a614a", "#244936", "#1c392d"];
 const posiciones = [0, 0.67, 1];
 
 /** El paño, el mazo y todas las cartas, dibujados con Skia al fondo de la mesa. Nada de texto. */
-export default function Lienzo({ geometria, mesa, mano, liviano, eventos }: PropsLienzo) {
+export default function Lienzo({ geometria, mesa, mano, liviano, reparto }: PropsLienzo) {
   const { ancho, alto } = geometria.pantalla;
   const claves = mesa.asientos.flatMap(a => (a.jugada ? [a.asiento + ":" + a.jugada] : []));
 
@@ -42,31 +42,6 @@ export default function Lienzo({ geometria, mesa, mano, liviano, eventos }: Prop
   useEffect(() => {
     manoAnterior.current = mano;
   }, [mano]);
-
-  // El reparto se planea al oírlo, con las cartas que hay en ese momento. Llega antes de pintar
-  // la mano nueva (ver `useColaDePresentacion`), así nunca se ven las cartas quietas antes de volar.
-  const [reparto, cambiarReparto] = useState<{ numero: number; plan: PlanDeReparto } | null>(null);
-  const vigentes = useRef({ geometria, mesa, liviano });
-  useLayoutEffect(() => {
-    vigentes.current = { geometria, mesa, liviano };
-  });
-  useLayoutEffect(() => {
-    if (!eventos) return;
-    return eventos.escuchar(e => {
-      if (e.tipo !== "reparto") return;
-      const { geometria: g, mesa: m, liviano: l } = vigentes.current;
-      const { reparto: tiempos, vuelo } = movimiento(l);
-      if (!tiempos) return;
-      const cartas = g.asientos.map((a, i) => (i === m.propio ? m.manoPropia.length : a.dorsos.length));
-      const plan = planDeReparto(e.dador, cartas, m.propio, { entreCartas: tiempos.entreCartas, vuelo: vuelo.duracion });
-      cambiarReparto(r => (plan.vuelos.length ? { numero: (r?.numero ?? 0) + 1, plan } : null));
-    });
-  }, [eventos]);
-  useEffect(() => {
-    if (!reparto) return;
-    const listo = setTimeout(() => cambiarReparto(r => (r === reparto ? null : r)), reparto.plan.fin);
-    return () => clearTimeout(listo);
-  }, [reparto]);
 
   const hayGanadora = mesa.asientos.some(a => a.ganadora);
 

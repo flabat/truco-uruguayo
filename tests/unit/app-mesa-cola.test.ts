@@ -4,7 +4,9 @@ import type { Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import { pasosDeVueltas } from "@eltruco/cliente/presentacion-vueltas.ts";
 import { entreCartas, vueltaCompleta, type Paso } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { pausaDeVoz } from "@eltruco/cliente/voces.ts";
-import { avanzar, colaInicial, duracion, enPantalla, eventosEnPantalla, eventosEntre, recibir } from "../../app/src/mesa/cola.ts";
+import {
+  avanzar, colaInicial, duracion, enPantalla, esperaDelPaso, esperaDelReparto, eventosEnPantalla, eventosEntre, recibir,
+} from "../../app/src/mesa/cola.ts";
 import { partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 type Recibida = Partida | undefined;
@@ -271,4 +273,20 @@ test("eventosEntre en tercetos: un duelo nuevo trae sus propias cartas y archiva
   assert.deepEqual(eventosEntre(duelo1, archivado, 0), []);
   const duelo2 = tercetos(2, 1, [{ tipo: "carta", asiento: 1, carta: "oros-03" }], 3);
   assert.deepEqual(eventosEntre(archivado, duelo2, 0), [{ tipo: "carta", asiento: 1, carta: "oros-03", propia: false }]);
+});
+
+test("un paso que trae un reparto espera a que se den vuelta las cartas antes de avanzar", () => {
+  const siguiente = partidaDe(vistaDe(4, 0, { dador: 0, mano: 1 }), { manoNumero: 2, version: 3 });
+  const reparto = [{ tipo: "reparto", dador: 0 } as const];
+  // 12 cartas cada 80 ms, 320 ms la última y las tres propias se dan vuelta de a una.
+  assert.equal(esperaDelReparto(reparto, siguiente, false), 11 * 80 + 320 + 2 * 80 + 320);
+  assert.equal(esperaDelReparto(reparto, partidaDe(vistaDe(2, 0)), false), 5 * 80 + 320 + 2 * 80 + 320);
+  assert.equal(esperaDelReparto(reparto, siguiente, true), 0, "en liviano no hay reparto animado");
+  assert.equal(esperaDelReparto([{ tipo: "chico", nuestro: true }], siguiente, false), 0);
+
+  const carta: Paso<unknown> = { partida: null, espera: entreCartas };
+  // El reparto terminó de anunciarse en t = 1000 y dura hasta t = 2680: el paso espera lo que falta.
+  assert.equal(esperaDelPaso(carta, false, 2680, 1000), entreCartas + 1680);
+  assert.equal(esperaDelPaso(carta, false, 2680, 3000), entreCartas, "un reparto ya terminado no demora");
+  assert.equal(esperaDelPaso(carta, true, 0, 3000), 250);
 });

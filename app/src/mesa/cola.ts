@@ -5,6 +5,7 @@ import { vozDeIndicacion, type Nombre } from "@eltruco/cliente/textos.ts";
 import { vocesEnAccion, type Voz } from "@eltruco/cliente/voces.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { textoFrasePie } from "@eltruco/motor/senas-pie.ts";
+import { duracionDelReparto } from "./movimiento.ts";
 
 export const entreCartasLiviano = 250;
 export const vueltaCompletaLiviana = 1200;
@@ -67,6 +68,17 @@ export function duracion(paso: Paso<unknown>, liviano: boolean): number {
   if (paso.espera === entreCartas) return entreCartasLiviano;
   if (paso.espera === vueltaCompleta) return vueltaCompletaLiviana;
   return paso.espera;
+}
+
+/** Lo que tarda el reparto que anuncian `eventos`, o 0 si no hay. La cola no avanza mientras tanto. */
+export function esperaDelReparto(eventos: readonly Evento[], partida: unknown, liviano: boolean): number {
+  if (!eventos.some(e => e.tipo === "reparto") || !esMostrada(partida)) return 0;
+  return duracionDelReparto(liviano, partida.vista.equipoPorAsiento.length);
+}
+
+/** Cuánto queda en pantalla `paso`: su espera más lo que falte del reparto que termina en `repartoHasta`. */
+export function esperaDelPaso(paso: Paso<unknown>, liviano: boolean, repartoHasta: number, ahora: number): number {
+  return duracion(paso, liviano) + Math.max(0, repartoHasta - ahora);
 }
 
 export type Evento =
