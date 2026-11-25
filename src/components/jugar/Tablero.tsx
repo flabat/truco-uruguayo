@@ -1,17 +1,19 @@
 import { ResumenDeTantos } from "./ResumenDeTantos";
-import { motivoDelCobro } from "../../lib/cobros";
-import { canto, respuestaConFlor } from "../../lib/cantos";
+import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
+import { canto } from "@eltruco/cliente/cantos.ts";
 import type { ReactNode } from "react";
 import { ZonaJugador } from "./ZonaJugador";
-import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
+import { AvisoFlor, HistorialDeMano } from "./HistorialDeMano";
+import { nombrar, tantos } from "@eltruco/cliente/textos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { PruebaDeTantos, VistaOnline } from "@eltruco/motor/mesa-online.ts";
-import { cuentaDelChico, mitadesDelChico } from "@eltruco/motor/chico.ts";
 import type { Eleccion, Mesa, Partida, Tipo } from "./cliente";
-import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo, type Voz } from "./Voz";
+import { GloboDeVoz, PalabraDelPie } from "./Voz";
+import { useVozDelPie, vocesEnReposo, type Voz } from "@eltruco/cliente/voces.ts";
+import { estadoDelTurno, tanteador } from "@eltruco/cliente/turno.ts";
 import { Naipe, Tapete } from "./Tapete";
 import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
-import { vueltaEnMesa } from "./vuelta-en-mesa";
+import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 
 type Canto = Exclude<Tipo, "carta">;
@@ -67,80 +69,21 @@ export function PruebaEnMesa({ prueba, acciones, base, jugada, ganadora }: {
   </figure>;
 }
 
-export function tituloDeRespuesta(mesa: Mesa, vista: Pick<VistaOnline, "pendiente" | "legales">, participantes: readonly number[]) {
-  if (vista.legales.length) return "Podés responder";
-  const cantor = vista.pendiente!.asiento;
-  if (participantes.length === 2) {
-    const rival = participantes.find(asiento => asiento !== cantor)!;
-    return "Responde " + mesa.asientos[rival].nombre;
-  }
-  return mesa.asientos[cantor].equipo === mesa.asientos[mesa.miAsiento].equipo
-    ? "Responde el equipo rival" : "Responde tu equipo";
-}
-
-function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
-  const { resultado, pendiente, porDeclararFlor, turno, legales } = vista;
-  const propio = mesa.asientos[mesa.miAsiento].equipo;
-  if (resultado) {
-    const fin = partida.contexto.fase === "chico-terminado";
-    const victoria = resultado.equipo === propio;
-    const motivos = { mazo: "el retiro al mazo", vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor" };
-    return {
-      titulo: fin
-        ? victoria
-          ? "Ganaste la partida"
-          : "Ganó el rival"
-        : victoria
-          ? "Ganaste la mano"
-          : "El rival ganó la mano",
-      indicacion: resultado.motivo === "mazo"
-        ? `${mesa.asientos[1 - resultado.equipo].nombre} se fue al mazo.`
-        : `El cierre fue por ${motivos[resultado.motivo]}.`,
-    };
-  }
-  if (porDeclararFlor !== null) {
-    const esTuTurno = porDeclararFlor === mesa.miAsiento;
-    if (legales.includes("con-flor-quiero")) return { titulo: "Te toca declarar", indicacion: respuestaConFlor };
-    return {
-      titulo: esTuTurno ? "Te toca declarar" : "Declara " + mesa.asientos[porDeclararFlor].nombre,
-      indicacion: esTuTurno
-        ? legales.includes("paso-flor") ? "No tenés flor en esta mano." : "Cantá tu flor."
-        : "Esperando su declaración de flor.",
-    };
-  }
-  if (pendiente) {
-    const cantor = mesa.asientos[pendiente.asiento];
-    const indicacion = cantor.nombre + " cantó " + canto[pendiente.tipo].toLowerCase() + ".";
-    return { titulo: tituloDeRespuesta(mesa, vista, mesa.asientos.map(a => a.asiento)),
-      indicacion: legales.includes("flor") ? indicacion + " Cantá tu flor para responder." : indicacion };
-  }
-  if (turno === mesa.miAsiento) {
-    let indicacion = "Elegí una carta en el tapete.";
-    if (legales.length > 1) indicacion = "Elegí una carta en el tapete o hacé un canto.";
-    if (legales.includes("mazo") && !legales.includes("carta")) indicacion = "Podés irte al mazo.";
-    if (legales.includes("flor")) indicacion = "Cantá tu flor antes de tirar la primera carta.";
-    return { titulo: "Tu turno", indicacion };
-  }
-  return {
-    titulo: turno === null ? "Esperando la jugada" : "Turno de " + mesa.asientos[turno].nombre,
-    indicacion: "Esperando la jugada.",
-  };
-}
-
 export function Tanteador({ meta, puntos, propio, equipo }: {
   meta: number; puntos: readonly [number, number]; propio: number; equipo: (n: number) => string;
 }) {
+  const datos = tanteador(meta, puntos, propio, equipo);
   return (
       <div className="j-tanteador" role="group" aria-label="Tanteador">
         <div className="j-meta">
-          <b>Chico a {meta}</b>
-          <small>Acumulado · {mitadesDelChico(meta)}</small>
+          <b>{datos.meta}</b>
+          <small>{datos.detalle}</small>
         </div>
-        {[propio, 1 - propio].map((e) => (
-          <div key={e} role="group" aria-labelledby={"j-equipo-" + e}>
-            <span id={"j-equipo-" + e}>{equipo(e)}</span>
-            <strong>{puntos[e]}</strong>
-            <small>{cuentaDelChico(puntos[e], meta)}</small>
+        {datos.equipos.map((e) => (
+          <div key={e.equipo} role="group" aria-labelledby={"j-equipo-" + e.equipo}>
+            <span id={"j-equipo-" + e.equipo}>{e.nombre}</span>
+            <strong>{e.puntos}</strong>
+            <small>{e.cuenta}</small>
           </div>
         ))}
       </div>

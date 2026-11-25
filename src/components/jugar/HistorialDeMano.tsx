@@ -1,34 +1,12 @@
 import type { ReactNode } from "react";
-import { cartasPorId } from "../../lib/cartas";
-import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
-import { textoFrasePie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
-import { canto } from "../../lib/cantos";
-
-export const nombrar = (id: CardId) => cartasPorId.get(id)!.nombre;
-export const tantos = (n: number) => n + (n === 1 ? " tanto" : " tantos");
-
-type Nombre = (asiento: number) => string;
+import type { IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { descripcionDeIndicacion, descripcionDeJugada, tantos, type Nombre } from "@eltruco/cliente/textos.ts";
 
 export function AvisoFlor({ pendiente, porDeclararFlor, nombre }:
   Pick<VistaOnline, "pendiente" | "porDeclararFlor"> & { nombre: Nombre }) {
   if (porDeclararFlor == null || pendiente?.tipo !== "flor") return null;
   return <p className="j-flor-anunciada">{nombre(pendiente.asiento)} cantó flor.</p>;
-}
-
-export function descripcionDeJugada(accion: VistaOnline["acciones"][number], nombre: Nombre) {
-  const quien = nombre(accion.asiento);
-  if (accion.tipo === "carta") return quien + " jugó " + nombrar(accion.carta).toLowerCase() + ".";
-  if (accion.tipo === "mazo") return quien + " se fue al mazo.";
-  return quien + " dijo «" + canto[accion.tipo] + "».";
-}
-
-export function vozDeIndicacion(i: IndicacionPie, nombre: Nombre) {
-  return nombre(i.destinatario) + ", " + textoFrasePie[i.frase].toLocaleLowerCase("es-UY");
-}
-
-export function descripcionDeIndicacion(i: IndicacionPie, nombre: Nombre) {
-  return nombre(i.emisor) + " le dijo a " + nombre(i.destinatario) + " «" + textoFrasePie[i.frase] + "».";
 }
 
 export function HistorialDeMano({ acciones, cobros, nombre, indicaciones = [], titulo = "Historial de la mano", children }:
