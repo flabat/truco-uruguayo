@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { cajaDeCarta, calcularMesa } from "@eltruco/mesa-geometria";
 import type { ResumenLance } from "@eltruco/motor/mesa-online.ts";
+import type { PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import { hojaDeCantos } from "../../app/src/mesa/hoja-cantos.ts";
 import {
   cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador,
@@ -302,6 +303,17 @@ test("tercetos: el canto del rival que no te toca lo responde tu equipo", () => 
   const vista = vistaDe(6, 0, { pendiente: { tipo: "truco", asiento: 1 }, acciones: [{ tipo: "truco", asiento: 1 }] });
   const m = mesaDeTercetos(mesaTercetosDe(0), partidaTercetosDe(vista), enReposo);
   assert.deepEqual(m.estado, { titulo: "Responde tu equipo", indicacion: "Diego gritó truco." });
+});
+
+test("tercetos con señas: el envido del rival lo responde el pie de la computadora", () => {
+  const vista = vistaDe(6, 0, { pendiente: { tipo: "real-envido", asiento: 1 }, acciones: [{ tipo: "real-envido", asiento: 1 }] });
+  const partida = { ...partidaTercetosDe(vista), pie: { pie: 4, vuelta: 1, responde: 4, grupos: [], opciones: [] } } as PartidaTercetos;
+  const m = mesaDeTercetos(mesaTercetosDe(0), partida, enReposo);
+  assert.equal(m.estado.titulo, "Responde " + mesaTercetosDe(0).asientos[4].nombre);
+  assert.match(m.estado.indicacion, /Tu pie responde por el equipo\.$/);
+  const parejas = partidaDe(vistaDe(4, 0, { pendiente: { tipo: "envido", asiento: 1 } }),
+    { pie: { pie: 2, vuelta: 1, responde: 2, grupos: [], opciones: [] } });
+  assert.equal(mesaDeJugador(mesaDe("2v2", 0), parejas, enReposo).estado.indicacion.endsWith("Tu pie responde por el equipo."), true);
 });
 
 test("tercetos: la falta envido de la hoja dice cuánto cobra cada equipo con faltaPorEquipo", () => {

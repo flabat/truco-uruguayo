@@ -4,7 +4,7 @@ import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
 import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { DecisionBotV1 } from "./replay-chico.ts";
-import { crearIndicacionPie, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { crearIndicacionPie, pieQueResponde, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { ErrorPeticion } from "./http.ts";
 import { asientoBotTercetos, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { decisionReplay, decisionTercetos, guardarDecisionesReplayDB, guardarIndicacionReplayDB, type DecisionReplay } from "./replay-db.ts";
@@ -22,11 +22,16 @@ export function destinosAtendidos(mano: ManoPublicable) {
   return [...(mano.indicaciones ?? []), ...(mano.pasesPie ?? [])];
 }
 
+/** La computadora que decide ahora: su pie responde el envido aunque haya compañeros humanos. */
+export function asientoBotPie(estado: EstadoOnline, humanos: readonly number[]) {
+  return pieQueResponde(estado, humanos) ?? asientoBotTercetos(estado, humanos);
+}
+
 /** Sólo se espera cuando la siguiente decisión real del bot es una carta. Los cantos siguen su curso. */
 export function esperaDelPie(mano: ManoPublicable, humanos: readonly number[], accion?: AccionOnline): Asiento | undefined {
   if (!mano.indicaciones || !humanos.length) return;
   const { estado, indicaciones } = mano;
-  const asiento = asientoBotTercetos(estado, humanos);
+  const asiento = asientoBotPie(estado, humanos);
   if (asiento === undefined) return;
   const companero = vistaDelPie(estado, asiento, indicaciones);
   if (!companero || companero.pie === asiento || !humanos.includes(companero.pie)) return;
@@ -42,6 +47,8 @@ export function vistaPiePrivada(mano: ManoPublicable, asiento: Asiento, humanos:
     const esperando = esperaDelPie(mano, humanos);
     if (vista.opciones.some(o => o.destinatario === esperando)) return { ...vista, esperando };
   }
+  const responde = pieQueResponde(mano.estado, humanos);
+  if (vista && responde !== undefined && responde !== asiento && vista.pie === responde) return { ...vista, responde };
   return vista;
 }
 
@@ -49,7 +56,7 @@ export function vistaPiePrivada(mano: ManoPublicable, asiento: Asiento, humanos:
 export async function programarBotPie(db: PoolClient, mesa: string, mano: ManoPublicable, reglas: readonly number[]) {
   // Un compañero cedido no da indicaciones: la computadora no espera su palabra.
   const humanos = await esperanDe(db, mesa, reglas);
-  if (asientoBotTercetos(mano.estado, humanos) === undefined) {
+  if (asientoBotPie(mano.estado, humanos) === undefined) {
     await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
     return;
   }
@@ -86,6 +93,8 @@ export async function continuarAlPie(db: PoolClient, mesa: string, numero: numbe
 
 export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTercetos, "mesa" | "numero" | "version">,
     mano: ManoPublicable, accion: AccionOnline, humanos: readonly number[], bot?: DecisionBotV1) {
+  const pie = bot ? undefined : pieQueResponde(mano.estado, humanos);
+  if (pie !== undefined && pie !== accion.asiento) throw new ErrorPeticion(409, "El envido lo responde tu pie.");
   let nueva: ManoPublicable;
   let decision: DecisionReplay;
   const lance = mano.estado.lance;

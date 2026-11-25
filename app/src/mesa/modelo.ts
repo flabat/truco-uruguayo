@@ -106,9 +106,11 @@ export function esperaDelCompanero(pie: VistaPie | undefined, nombre: Nombre) {
 
 /**
  * Como `estadoDelTurno`, pero un canto pendiente se anuncia con su verbo o nombra a la pareja que
- * responde. En tercetos hay dos compañeros: responde «tu equipo», salvo en el duelo.
+ * responde. En tercetos hay dos compañeros: responde «tu equipo», salvo en el duelo. Con señas al pie,
+ * el pie de la computadora responde el envido por el equipo.
  */
-function estadoDeCanto(mesa: Mesa, v: Pick<VistaOnline, "pendiente" | "legales">, nombre: Nombre, participantes: readonly number[]) {
+function estadoDeCanto(mesa: Mesa, v: Pick<VistaOnline, "pendiente" | "legales">, nombre: Nombre, participantes: readonly number[],
+    pie?: VistaPie) {
   const pendiente = v.pendiente!;
   const propio = mesa.asientos[mesa.miAsiento].equipo;
   const aviso = avisoDeCanto(nombre(pendiente.asiento), pendiente.tipo);
@@ -118,6 +120,9 @@ function estadoDeCanto(mesa: Mesa, v: Pick<VistaOnline, "pendiente" | "legales">
       titulo: aviso,
       indicacion: v.legales.includes("flor") ? "Cantá tu flor para responder." : "Elegí tu respuesta en Cantos.",
     };
+  }
+  if (deRival && pie?.responde != null) {
+    return { titulo: "Responde " + nombre(pie.responde), indicacion: aviso + ". Tu pie responde por el equipo." };
   }
   const companeros = participantes.filter(a => a !== mesa.miAsiento && mesa.asientos[a]?.equipo === propio);
   const titulo = deRival && companeros.length === 1
@@ -206,7 +211,7 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
   } else {
     estado = esperaDelCompanero(partida.pie, nombre)
       ?? (v.pendiente && v.porDeclararFlor === null
-        ? estadoDeCanto(mesa, v, nombre, mesa.asientos.map(a => a.asiento))
+        ? estadoDeCanto(mesa, v, nombre, mesa.asientos.map(a => a.asiento), partida.pie)
         : estadoDelTurno(mesa, partida, v));
   }
 
@@ -337,7 +342,7 @@ export function mesaDeTercetos(mesa: Mesa, partida: PartidaTercetos,
       : dueloPropio > (lance.duelo ?? 0) ? `Te toca en el duelo ${dueloPropio} de 3.` : "Ya jugaste tu duelo. Esperá el próximo reparto.";
     estado = esperaDelCompanero(esPico ? undefined : partida.pie, nombre)
       ?? (v.pendiente && v.porDeclararFlor === null
-        ? estadoDeCanto(mesa, v, nombre, lance.activos)
+        ? estadoDeCanto(mesa, v, nombre, lance.activos, esPico ? undefined : partida.pie)
         : { titulo: palabraDeTercetos(mesa, partida), indicacion });
   }
 

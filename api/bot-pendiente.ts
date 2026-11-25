@@ -9,7 +9,7 @@ import { signalRules } from "../training/signals/index.ts";
 import { accionesPie, observacionPie, politicaPie } from "@eltruco/motor/bot-pie.ts";
 import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
 import { versionSenasPie, vistaDelPie } from "@eltruco/motor/senas-pie.ts";
-import { confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
+import { asientoBotPie, confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
 import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
@@ -54,7 +54,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
       ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
       : restaurar(fila, "pairs-private-senas", fila.meta, fila.humanos);
     mano.politicaPie = fila.politica;
-    const asiento = actor(mano, fila.esperan);
+    const asiento = asientoBotPie(mano.estado, fila.esperan);
     if (asiento === undefined) return null;
     const inicio = performance.now();
     // Un bot activo ve sus cartas y recibe exactamente las mismas señas y palabras que ese asiento humano.
@@ -64,7 +64,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: fila.politica, observacion: observacionPie,
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
     return { asiento, bot, espera: (esperan: Asiento[]) => esperaDelPie(mano, esperan, accion) !== undefined,
-      actorActual: (esperan: Asiento[]) => actor(mano, esperan),
+      actorActual: (esperan: Asiento[]) => asientoBotPie(mano.estado, esperan),
       aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarJugadaPieDB(db, fila, mano, accion, humanos, bot) };
   }
   if (fila.modo === "3v3") {
