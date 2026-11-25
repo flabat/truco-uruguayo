@@ -3,6 +3,15 @@ import { Text, View } from "react-native";
 import type { DatosDeHojas } from "../modelo.ts";
 import { Apartado, BotonDeHoja, estilosDeHoja, Fila } from "./PartesDeHoja.tsx";
 
+function Vueltas({ vueltas }: { vueltas: DatosDeHojas["vueltas"] }) {
+  return vueltas.map(v => (
+    <View key={v.numero}>
+      <Fila dato={v.ganador}>{v.numero}</Fila>
+      <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>{v.jugadas}</Text>
+    </View>
+  ));
+}
+
 /**
  * Lo que pasó en la mano, las vueltas terminadas y «Reportar esta jugada». En tercetos es la hoja
  * Reparto: suma la redondilla o los duelos ya cerrados. Las señas recibidas de
@@ -39,12 +48,7 @@ export function HojaMano({ datos, reportar }: {
       </Apartado>
       {datos.vueltas.length ? (
         <Apartado titulo="Vueltas terminadas">
-          {datos.vueltas.map(v => (
-            <View key={v.numero}>
-              <Fila dato={v.ganador}>{v.numero}</Fila>
-              <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>{v.jugadas}</Text>
-            </View>
-          ))}
+          <Vueltas vueltas={datos.vueltas} />
         </Apartado>
       ) : null}
       {datos.reparto?.map(lance => (
@@ -52,12 +56,7 @@ export function HojaMano({ datos, reportar }: {
           <Fila>{lance.resultado}</Fila>
           <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>Tantos de este lance · {lance.tantos}</Text>
           {lance.historial.map((entrada, i) => <Fila key={i}>{entrada}</Fila>)}
-          {lance.vueltas.map(v => (
-            <View key={v.numero}>
-              <Fila dato={v.ganador}>{v.numero}</Fila>
-              <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>{v.jugadas}</Text>
-            </View>
-          ))}
+          <Vueltas vueltas={lance.vueltas} />
           {lance.cobros.map((c, i) => <Fila key={i}><Text style={estilosDeHoja.fuerte}>{c.equipo}</Text> {c.texto}</Fila>)}
         </Apartado>
       ))}

@@ -255,20 +255,49 @@ const nombreDelLance = (lance: LanceTercetos) => lance.tipo === "redondilla" ? "
 const esElLance = (a: LanceTercetos, b: LanceTercetos) => a.tipo === b.tipo && a.duelo === b.duelo;
 
 /** La mesa común de un lance: la redondilla o el duelo, con sus participantes y sin el pie en el pico a pico. */
-function lanceComoPartida(partida: PartidaTercetos): Partida {
+/** Las cartas propias de la última vista «jugando» de un reparto, que la app recuerda. */
+export interface CartasRecordadas {
+  manoNumero: number;
+  cartas: readonly CardId[];
+}
+
+/** Guarda las cartas propias mientras el asiento juega; si no, conserva las que ya tenía. */
+export function recordarCartas(previa: CartasRecordadas | null, partida: PartidaTercetos): CartasRecordadas | null {
+  const v = partida.vista;
+  if (v.estado !== "jugando") return previa;
+  if (previa?.manoNumero === partida.manoNumero && previa.cartas.length === v.cartas.length
+      && previa.cartas.every((c, i) => c === v.cartas[i])) return previa;
+  return { manoNumero: partida.manoNumero, cartas: [...v.cartas] };
+}
+
+/**
+ * El servidor no manda cartas a quien espera su duelo. La mano que se ve (y no se juega) son las
+ * recordadas del mismo reparto, menos las que ese asiento ya jugó.
+ */
+export function cartasDeLaEspera(recordadas: CartasRecordadas | null, partida: PartidaTercetos, asiento: number): CardId[] {
+  const v = partida.vista;
+  if (v.estado !== "esperando" || recordadas?.manoNumero !== partida.manoNumero) return [];
+  const acciones = [...partida.historialLances.flatMap(l => l.acciones), ...v.acciones];
+  const jugadas = new Set(acciones.flatMap(a => a.tipo === "carta" && a.asiento === asiento ? [a.carta] : []));
+  return recordadas.cartas.filter(c => !jugadas.has(c));
+}
+
+function lanceComoPartida(partida: PartidaTercetos, cartasEnEspera: readonly CardId[] = []): Partida {
   const { formato: _formato, historialLances: _historial, lance, vista, ...resto } = partida;
   return {
     ...resto,
     pie: lance.tipo === "pico-a-pico" ? undefined : partida.pie,
     lance: { tipo: "simple", duelo: null, activos: lance.activos },
-    // Quien espera su duelo no tiene cartas ni tantos propios: la mesa común no los lee.
-    vista: (vista.estado === "jugando" ? vista : { ...vista, cartas: [] }) as VistaOnline,
+    // Invariante: fuera de «jugando» la vista no trae `tantosPropios` y `legales` está vacío. La mesa
+    // común no lee `tantosPropios` y `datosDeHojas` se guarda de su ausencia; sin legales no se juega.
+    vista: (vista.estado === "jugando" ? vista : { ...vista, cartas: [...cartasEnEspera] }) as VistaOnline,
   };
 }
 
 /** La mesa de tercetos: la de parejas con círculos, el lance y el estado de cada puesto en el pico a pico. */
-export function mesaDeTercetos(mesa: Mesa, partida: PartidaTercetos, p: { voz?: Voz; presentando: boolean }): MesaVisible {
-  const base = mesaDeJugador(mesa, lanceComoPartida(partida), p);
+export function mesaDeTercetos(mesa: Mesa, partida: PartidaTercetos,
+    p: { voz?: Voz; presentando: boolean; cartasEnEspera?: readonly CardId[] }): MesaVisible {
+  const base = mesaDeJugador(mesa, lanceComoPartida(partida, p.cartasEnEspera), p);
   const v = partida.vista;
   const { lance, historialLances } = partida;
   const yo = mesa.miAsiento;
@@ -426,7 +455,7 @@ export function datosDeHojas(mesa: Mesa, partida: Partida, visible: MesaVisible,
     encabezado: "Mano " + partida.manoNumero + " · Vuelta " + visible.vuelta,
     historial: historialDeMano(v, partida.indicaciones, nombre),
     vueltas: filasDeVueltas(v.vueltas, equipo, nombre),
-    // En tercetos, quien espera su duelo no tiene tantos propios.
+    // En tercetos, quien espera su duelo no tiene tantos propios (ver `lanceComoPartida`).
     cuenta: resultado || (p.presentando && p.voz) || !v.tantosPropios ? null : {
       tusTantos: v.tantosPropios.total + " de " + v.tantosPropios.modalidad,
       valor: tantos(v.valorTruco),
@@ -460,8 +489,11 @@ export function datosDeTercetos(mesa: Mesa, partida: PartidaTercetos, visible: M
     };
   };
   const etiqueta = lance.tipo === "pico-a-pico" ? "Pico a pico · " + nombreDelLance(lance) : "Redondilla";
+  // El lance en la mesa ya archivado muestra sus vueltas en su apartado del reparto.
+  const archivado = partida.historialLances.some(l => esElLance(l, lance));
   return {
     ...datos,
+    vueltas: archivado ? [] : datos.vueltas,
     encabezado: `Reparto ${partida.manoNumero} · ${etiqueta} · Vuelta ${visible.vuelta}`,
     reparto: partida.historialLances.map(cerrado),
   };

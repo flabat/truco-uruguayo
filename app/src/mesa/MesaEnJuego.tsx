@@ -7,7 +7,7 @@ import { useMesa } from "@eltruco/cliente/use-mesa.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { router, type Href } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Aviso, Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { useSesion } from "../ingreso/contexto.tsx";
 import { cliente } from "../ingreso/plataforma.ts";
@@ -15,7 +15,10 @@ import { avisosDeApp, memoriaDeMesa } from "../salon/plataforma.ts";
 import { signalVersionFor } from "../../../training/contracts/index.ts";
 import { hojaDeLaMesa, type Canto } from "./hoja-cantos.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
-import { datosDeHojas, datosDeTercetos, entradaDeHoja, mesaDeJugador, mesaDeTercetos } from "./modelo.ts";
+import {
+  cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeHoja, mesaDeJugador, mesaDeTercetos, recordarCartas,
+  type CartasRecordadas,
+} from "./modelo.ts";
 import { presencioElReparto } from "./presenciadas.ts";
 import { reportarJugada } from "./reporte.ts";
 import { camposDelReporte } from "./reporte-campos.ts";
@@ -54,6 +57,10 @@ export function MesaEnJuego({ id }: { id: string }) {
   const colaSimple = useColaDePresentacion(simple, presencio, reconexion, pasosDeVueltas, opcionesDeCola);
   const colaTercetos = useColaDePresentacion(tercetos, presencio, reconexion, pasosDeLosTercetos, opcionesDeCola);
   const { partida, presentando, voz } = tercetos ? colaTercetos : colaSimple;
+  // Tercetos: el servidor no manda cartas a quien espera su duelo; la app recuerda las del reparto.
+  // Al recargar mientras se espera, la mano queda vacía.
+  const recordadas = useRef<CartasRecordadas | null>(null);
+  if (partida?.formato === "triples") recordadas.current = recordarCartas(recordadas.current, partida);
   const { enviando, aviso, jugar, indicar } = useJugadas(cliente, ruta, refrescar, partida?.version);
   const [rechazos, setRechazos] = useState(0);
   const rechazar = useCallback(() => setRechazos(n => n + 1), []);
@@ -97,7 +104,7 @@ export function MesaEnJuego({ id }: { id: string }) {
   const bloqueada = enviando || !conectada || versionDesconocida || presentando;
 
   const visible = partida.formato === "triples"
-    ? mesaDeTercetos(mesa, partida, { voz, presentando })
+    ? mesaDeTercetos(mesa, partida, { voz, presentando, cartasEnEspera: cartasDeLaEspera(recordadas.current, partida, mesa.miAsiento) })
     : mesaDeJugador(mesa, partida, { voz, presentando });
   const indicacion = versionDesconocida ? "Actualizá la aplicación para jugar con esta versión de señas." : aviso;
   const mesaVisible = {

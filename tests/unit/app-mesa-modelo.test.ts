@@ -4,7 +4,8 @@ import { cajaDeCarta, calcularMesa } from "@eltruco/mesa-geometria";
 import type { ResumenLance } from "@eltruco/motor/mesa-online.ts";
 import { hojaDeCantos } from "../../app/src/mesa/hoja-cantos.ts";
 import {
-  datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador, mesaDeTercetos,
+  cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador,
+  mesaDeTercetos, recordarCartas,
 } from "../../app/src/mesa/modelo.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
 
@@ -343,4 +344,54 @@ test("datosDeTercetos: el encabezado nombra el lance y la hoja Reparto agrupa lo
     vueltas: [{ numero: "1.ª vuelta", ganador: "Nos", jugadas: "Clara · As de espadas, Beto · Rey de copas" }],
     cobros: [{ equipo: "Nos · 1 tanto", texto: "por truco sin cantar" }],
   }]);
+});
+
+test("tercetos: quien espera ve las cartas recordadas del reparto, menos las que ya jugó, y no las juega", () => {
+  const duelo1 = partidaTercetosDe(vistaDe(6, 0, { turno: 0, legales: ["carta"] }), {
+    manoNumero: 3, lance: { tipo: "pico-a-pico", duelo: 1, activos: [0, 3] },
+  });
+  const recordadas = recordarCartas(null, duelo1);
+  assert.deepEqual(recordadas, { manoNumero: 3, cartas: ["espadas-01", "oros-07", "copas-04"] });
+  assert.equal(recordarCartas(recordadas, duelo1), recordadas, "las mismas cartas no cambian la memoria");
+  const espera = picoDelDuelo2();
+  assert.equal(recordarCartas(recordadas, espera), recordadas, "esperando no se olvidan");
+
+  const cartas = cartasDeLaEspera(recordadas, espera, 0);
+  assert.deepEqual(cartas, ["oros-07", "copas-04"]);
+  assert.deepEqual(cartasDeLaEspera(recordadas, { ...espera, manoNumero: 4 }, 0), [], "de otro reparto no sirven");
+  assert.deepEqual(cartasDeLaEspera(null, espera, 0), [], "al recargar mientras espera, la mano queda vacía");
+  assert.deepEqual(cartasDeLaEspera(recordadas, duelo1, 0), [], "jugando manda la vista");
+
+  const m = mesaDeTercetos(mesaTercetosDe(0, 40), espera, { presentando: false, cartasEnEspera: cartas });
+  assert.deepEqual(m.manoPropia, ["oros-07", "copas-04"]);
+  assert.equal(m.puedeJugarCarta, false);
+  assert.equal(entradaDeGeometria(m, { ancho: 375, alto: 760 }, null).cartas[0], 2);
+});
+
+test("tercetos: la hoja de quien espera no trae tantos propios y sí la falta", () => {
+  const entrada = entradaDeHoja(mesaTercetosDe(2, 40), picoDelDuelo2());
+  assert.equal("tantosPropios" in entrada, false);
+  assert.deepEqual(entrada.falta, { propio: 30, rival: 30 });
+  assert.equal(hojaDeCantos(entrada), null);
+});
+
+test("tercetos: un canto pendiente en el pico a pico lo responde el compañero que juega el duelo", () => {
+  const partida = picoDelDuelo2();
+  const conCanto = { ...partida, vista: { ...partida.vista, pendiente: { tipo: "envido" as const, asiento: 1 as const } } };
+  const m = mesaDeTercetos(mesaTercetosDe(2, 40), conCanto, enReposo);
+  assert.deepEqual(m.estado, { titulo: "Responde Eli", indicacion: "Diego tocó envido." });
+});
+
+test("datosDeTercetos: con el lance en la mesa ya archivado, sus vueltas no se repiten arriba", () => {
+  const vueltas = primerDuelo.vueltas;
+  const vista = vistaDe(6, 0, { vueltaActual: null, vueltas, resultado: { equipo: 0, tantos: 1, motivo: "vueltas" } });
+  const partida = partidaTercetosDe(vista, {
+    estado: "terminado", contexto: { versionVista: 1, fase: "reparto-cerrado" },
+    lance: { tipo: "pico-a-pico", duelo: 1, activos: [0, 3] }, historialLances: [primerDuelo],
+  });
+  const mesa = mesaTercetosDe(0);
+  const datos = datosDeTercetos(mesa, partida, mesaDeTercetos(mesa, partida, enReposo), enReposo);
+  assert.deepEqual(datos.vueltas, []);
+  assert.equal(datos.reparto?.[0].vueltas.length, 1);
+  assert.deepEqual(datos.reparto?.[0].historial, [], "su historial ya está arriba");
 });

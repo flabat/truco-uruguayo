@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 import type { Geometria, GeometriaAsiento, Rect } from "@eltruco/mesa-geometria";
@@ -72,8 +73,14 @@ function Rotulo({ asiento, geo, columna, propio, tercetos }: {
     .filter(Boolean).join(", ");
   const punto = geo.forma === "punto" && !propio ? rectDelPunto(geo.rotulo!, columna) : null;
   const alineado = propio ? "izquierda" : punto?.alineado ?? "centro";
+  // Solo se desliza al cambiar de forma (el duelo nuevo), no al abrir una hoja ni al cambiar el tamaño.
+  const formaAnterior = useRef(geo.forma);
+  const cambioDeForma = formaAnterior.current !== geo.forma;
+  useEffect(() => {
+    formaAnterior.current = geo.forma;
+  });
   return (
-    <Animated.View layout={tercetos ? deslizar : undefined} accessibilityLabel={etiqueta}
+    <Animated.View layout={tercetos && cambioDeForma ? deslizar : undefined} accessibilityLabel={etiqueta}
       style={[enRect(punto?.rect ?? geo.rotulo!), estilos[alineado]]}>
       <Contenido asiento={asiento} forma={geo.forma} propio={propio} papel={papel} />
     </Animated.View>
