@@ -5,6 +5,7 @@ import {
   type RepartoOnline, type TipoAccionOnline,
 } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
+import { vocesDelEnvido } from "@eltruco/motor/cantos-online.ts";
 import { reparto as tresFlores, hastaLaSubida } from "../fixtures/flor-querida.ts";
 
 const envite: RepartoOnline = {
@@ -185,6 +186,9 @@ test("los empates de tantos se deciden por el orden desde mano también en parej
   const igual = cantar(iniciarOnline(base), [2, "envido"], [3, "quiero"], [0, "paso-flor"], [1, "paso-flor"]);
   assert.deepEqual(igual.cobros, [{ equipo: 0, tantos: 2, asiento: 2, motivo: "envido", tantoGanador: 7 }]);
   assert.equal(vistaOnline(igual, 0).indiceCobroLateral, 3);
+  // Habla el mano. Su compañero calla y los rivales que no le ganan dicen «son buenas».
+  assert.deepEqual(vistaOnline(igual, 1).cobros[0].comparacionEnvido,
+    { indiceAccion: 3, participantes: [{ asiento: 2, total: 7 }, { asiento: 3, total: null }, { asiento: 1, total: null }] });
   const duelo = { ...flores, dador: 0, mano: 1, manos: [flores.manos[0], ["espadas-02", "espadas-03", "espadas-04"] as const] } as const;
   const empateFlor = cantar(iniciarOnline(duelo), [1, "flor"], [0, "flor"], [0, "quiero"]);
   assert.deepEqual(vistaOnline(empateFlor, 0).cobros, [{ equipo: 1, tantos: 3, asiento: 1, motivo: "flor", tantoGanador: 29,
@@ -245,4 +249,36 @@ test("la falta respeta lo ya aceptado y se cierra la ventana al jugar la carta o
   assert.ok(!vistaOnline(truco, 0).legales.includes("envido"));
   const antes = cantar(iniciarOnline(envite), [0, "truco"], [1, "quiero"]);
   assert.ok(!vistaOnline(antes, 0).legales.includes("envido"));
+});
+
+test("el envido querido publica lo que dijo cada uno y oculta el tanto de quien dijo «son buenas»", () => {
+  const querido = cantar(iniciarOnline(envite), [0, "envido"], [1, "real-envido"], [0, "quiero"]);
+  for (const asiento of [0, 1] as const) {
+    const vista = vistaOnline(querido, asiento);
+    assert.deepEqual(vista.cobros[0].comparacionEnvido,
+      { indiceAccion: 2, participantes: [{ asiento: 0, total: 37 }, { asiento: 1, total: null }] });
+    assert.equal("comparacionEnvido" in vistaOnlineV1(querido, asiento).cobros[0], false);
+  }
+  // El que es mano habla primero aunque pierda: su tanto queda dicho.
+  const pie = cantar(iniciarOnline({ ...envite, manos: [envite.manos[1], envite.manos[0]] }), [0, "envido"], [1, "quiero"]);
+  const dichos = vistaOnline(pie, 0).cobros[0].comparacionEnvido!.participantes;
+  assert.equal(dichos[0].asiento, 0);
+  assert.deepEqual(dichos[1], { asiento: 1, total: 37 });
+  assert.equal(cantar(iniciarOnline(envite), [0, "envido"], [1, "no-quiero"]).comparacionEnvido, undefined);
+});
+
+test("vocesDelEnvido: el empate gana el más mano y quien calló habla si el otro equipo pasa adelante", () => {
+  // Asientos 0 y 2 contra 1 y 3, mano 0.
+  const dichos = (...totales: number[]) => vocesDelEnvido(totales.map((total, asiento) => ({ asiento: asiento as Asiento, total })));
+  assert.deepEqual(dichos(20, 15, 18, 25), [
+    { asiento: 0, total: 20 }, { asiento: 1, total: null }, { asiento: 3, total: 25 }, { asiento: 2, total: null },
+  ]);
+  assert.deepEqual(dichos(20, 25, 30, 28), [
+    { asiento: 0, total: 20 }, { asiento: 1, total: 25 }, { asiento: 2, total: 30 }, { asiento: 3, total: null },
+  ]);
+  // El 2 iguala al 1, que es más mano: son buenas. El 3 calla porque gana su compañero.
+  assert.deepEqual(dichos(20, 25, 25, 15), [
+    { asiento: 0, total: 20 }, { asiento: 1, total: 25 }, { asiento: 2, total: null },
+  ]);
+  assert.deepEqual(dichos(33, 33), [{ asiento: 0, total: 33 }, { asiento: 1, total: null }]);
 });

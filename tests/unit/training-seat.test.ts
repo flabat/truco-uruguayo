@@ -100,7 +100,7 @@ test("en duelos y parejas V1 reproduce cada decisión del bot y ofrece una acci�
           const expected = elegirAccionOnline(reference);
           // Los resúmenes de presentación y el desglose público no alteran la observación V1.
           const { indiceCobroLateral, resumenTantos, resumenReparto, ...vistaV1 } = reference;
-          const cobrosV1 = reference.cobros.map(({ comparacionFlor, ...cobro }) => cobro);
+          const cobrosV1 = reference.cobros.map(({ comparacionFlor, comparacionEnvido, ...cobro }) => cobro);
           assert.deepEqual(obs.view, { ...vistaV1, cobros: cobrosV1 });
           assert.deepEqual(obs.originalCards, deal.manos[seat]);
           assert.deepEqual(obs.legalActions, reference.legales.flatMap<Move>(type => type === "carta" ? [...reference.cartas] : [type]));

@@ -23,10 +23,12 @@ export function vocesEnAccion(lance: LancePublico, i: number): Voz[] {
   if (!accion || accion.tipo === "carta") return [];
   const voces = [{ asiento: accion.asiento, texto: accion.tipo === "mazo" ? "Me voy al mazo" : canto[accion.tipo], indice: 0 }];
   const cobro = lance.cobros.find(c => c.motivo !== "truco");
-  if (!cobro || i !== (lance.indiceCobroLateral ?? cobro.comparacionFlor?.indiceAccion)) return voces;
-  const cuentas = cobro.comparacionFlor?.participantes ??
-    (cobro.asiento != null && cobro.tantoGanador != null ? [{ asiento: cobro.asiento, total: cobro.tantoGanador }] : []);
-  return [...voces, ...cuentas.map(({ asiento, total }, i) => ({ asiento, texto: total + " de " + cobro.motivo, indice: i + 1 }))];
+  if (!cobro || i !== (lance.indiceCobroLateral ?? (cobro.comparacionFlor ?? cobro.comparacionEnvido)?.indiceAccion)) return voces;
+  const cuentas: readonly { asiento: number; total: number | null }[] = cobro.comparacionFlor?.participantes
+    ?? cobro.comparacionEnvido?.participantes
+    ?? (cobro.asiento != null && cobro.tantoGanador != null ? [{ asiento: cobro.asiento, total: cobro.tantoGanador }] : []);
+  return [...voces, ...cuentas.map(({ asiento, total }, i) =>
+    ({ asiento, texto: total === null ? "Son buenas" : total + " de " + cobro.motivo, indice: i + 1 }))];
 }
 
 /** Al volver se ve la última voz. Un cierre conserva la comparación pública entre quienes cantaron. */

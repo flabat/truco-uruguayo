@@ -14,7 +14,8 @@ test("duelo mixto: la falta aceptada por la computadora paga 40 antes de tirar u
   const despues = reproducirChico(duelo, 1, 3);
   assert.deepEqual(despues.puntos, [40, 0]);
   assert.equal(despues.vista?.acciones.some(a => a.tipo === "carta"), false);
-  assert.deepEqual(despues.vista?.cobros, [{ equipo: 0, tantos: 40, motivo: "envido", asiento: 0, tantoGanador: 33 }]);
+  assert.deepEqual(despues.vista?.cobros, [{ equipo: 0, tantos: 40, motivo: "envido", asiento: 0, tantoGanador: 33,
+    comparacionEnvido: { indiceAccion: 1, participantes: [{ asiento: 0, total: 33 }, { asiento: 1, total: null }] } }]);
 });
 
 test("parejas: la seña y la carta ocupan una sola posición, invisible como gesto para ambos rivales", () => {

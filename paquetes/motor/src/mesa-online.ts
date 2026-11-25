@@ -189,7 +189,7 @@ export interface VistaOnline extends VistaAsiento {
   readonly pendiente: Oferta | null;
   readonly trucoPendiente: EstadoOnline["trucoPendiente"];
   readonly porDeclararFlor: Asiento | null;
-  readonly cobros: readonly (Cobro & Pick<EstadoOnline, "comparacionFlor">)[];
+  readonly cobros: readonly (Cobro & Pick<EstadoOnline, "comparacionFlor" | "comparacionEnvido">)[];
   readonly indiceCobroLateral?: number;
   readonly pruebasDeTantos?: readonly PruebaDeTantos[];
   readonly tantosPropios: ReturnType<typeof tantosPropios>;
@@ -248,10 +248,12 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   }
   const vista = { ...privadaJugable(estado, asiento), ...cantosPublicos(estado),
     resumenTantos: resumirTantos(estado.cobros, estado.puntosInicio, estado.meta) };
-  if (!estado.comparacionFlor) return vista;
+  const { comparacionFlor, comparacionEnvido } = estado;
+  if (!comparacionFlor && !comparacionEnvido) return vista;
   // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
-  const comparacionFlor = structuredClone(estado.comparacionFlor);
-  return { ...vista, cobros: vista.cobros.map(c => c.motivo === "flor" ? { ...c, comparacionFlor } : c) };
+  return { ...vista, cobros: vista.cobros.map(c =>
+    c.motivo === "flor" && comparacionFlor ? { ...c, comparacionFlor: structuredClone(comparacionFlor) }
+    : c.motivo === "envido" && comparacionEnvido ? { ...c, comparacionEnvido: structuredClone(comparacionEnvido) } : c) };
 }
 
 export interface VistaOnlineV1 extends VistaOnline {
