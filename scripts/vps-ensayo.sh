@@ -76,8 +76,18 @@ for service in web api identidad; do
 done
 [[ $(cat "$tmp/estado/manual") == "$main $release" ]] || { echo "Marca inesperada: $(cat "$tmp/estado/manual")" >&2; exit 1; }
 [[ -f "$tmp/raiz/manuales/$release/infra/produccion/Caddyfile" ]]
-https=$(dc port web 443 | sed 's/.*://')
-curl -fsk --resolve "mesa.internal:$https:127.0.0.1" "https://mesa.internal:$https/" -o /dev/null
+# Caddy no tiene healthcheck y cada contenedor nuevo recibe otro puerto aleatorio.
+portada() {
+  local https
+  https=$(dc port web 443 | sed 's/.*://')
+  for _ in $(seq 1 30); do
+    curl -fsk --resolve "mesa.internal:$https:127.0.0.1" "https://mesa.internal:$https/" -o /dev/null && return 0
+    sleep 1
+  done
+  echo "La web no responde por HTTPS" >&2
+  return 1
+}
+portada
 api_id=$(dc ps -q api)
 
 # Sólo la web: un cambio sin commit cambia la etiqueta y no reinicia la API.
@@ -97,5 +107,5 @@ for service in api identidad; do
   docker image inspect "truco-oriental/$service:$web_release" >/dev/null
 done
 [[ $(cat "$tmp/estado/manual") == "$main $web_release" ]]
-curl -fsk --resolve "mesa.internal:$https:127.0.0.1" "https://mesa.internal:$https/" -o /dev/null
+portada
 echo "Ensayo de npm run vps: correcto ($release, web $web_release)"
