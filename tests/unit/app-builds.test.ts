@@ -32,9 +32,9 @@ test("app.config.ts agrega el mismo build a iOS y Android sin perder app.json", 
   }
 });
 
-test("la app no pide micrófono, ubicación, almacenamiento ni Face ID", () => {
+test("la app no pide micrófono, ubicación, almacenamiento ni biometría", () => {
   const { android, plugins } = appJson.expo;
-  for (const permiso of ["RECORD_AUDIO", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW"]) {
+  for (const permiso of ["RECORD_AUDIO", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW", "USE_BIOMETRIC", "USE_FINGERPRINT"]) {
     assert.ok(android.blockedPermissions.includes(`android.permission.${permiso}`), permiso);
   }
   assert.equal(android.permissions, undefined);
