@@ -505,9 +505,12 @@ async function probarEspectador() {
     new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
   });
   await avanzar([luis], id, terminada);
+  // El visor presenta cada jugada a su ritmo, detrás de la API: cuando la API termina la mano, puede seguir
+  // en la primera. Se espera a que el estado cambie.
+  const estados = () => clara.evaluate(() => [...window.estados]);
+  await expect.poll(async () => (await estados()).length, { ...espera, message: "el estado del visor cambió durante la mano" })
+    .toBeGreaterThanOrEqual(2);
   assert.deepEqual(await clara.evaluate(() => window.vistos), [], "el espectador vio cartas para tocar");
-  const estados = await clara.evaluate(() => [...window.estados]);
-  assert.ok(estados.length >= 2, "el estado del visor cambió durante la mano: " + JSON.stringify(estados));
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   await capturar(clara, "espectador-375x760");
   await boton(clara, "Volver al salón").click();
