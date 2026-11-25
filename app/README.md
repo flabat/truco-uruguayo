@@ -102,3 +102,11 @@ xcrun simctl openurl booted "https://eltru.co/jugar/?invitacion=abc"
 ```
 
 Para no esperar la CDN de Apple durante el desarrollo, se puede usar temporalmente `applinks:eltru.co?mode=developer` en un build de desarrollo, con Ajustes → Desarrollador → Associated Domains Development activado en el dispositivo.
+
+## Versión, íconos y pantalla de inicio
+
+- **Versión:** la visible (`version`) está en `app.json` y se cambia a mano. El número de build (`ios.buildNumber` y `android.versionCode`) lo agrega `app.config.ts` con `git rev-list --count HEAD`, así que crece con cada commit de `main`. En un checkout sin historia completa, definí `TRUCO_BUILD=<número>`; sin git (la imagen de Docker de la web) queda en 1 y no se usa.
+- **Íconos:** `npm run app:iconos` (desde la raíz) genera `assets/icono/` a partir de `public/favicon.svg` con `scripts/app-iconos.mjs` y sharp, sin servicios externos. Salen el ícono de iOS (1024×1024, opaco), el adaptativo de Android (frente, fondo y monocromático), el favicon de la web y la carta de la pantalla de inicio. Si cambia la marca, editá el SVG y volvé a generar; `tests/unit/app-builds.test.ts` comprueba tamaños y transparencia.
+- **Pantalla de inicio:** `expo-splash-screen` muestra la carta sobre el papel crema y `src/app/_layout.tsx` la mantiene hasta que cargan las tipografías.
+- **Permisos:** `android.blockedPermissions` saca almacenamiento, superposición, micrófono, cámara, ubicación y biometría; `expo-audio` va sin micrófono ni audio en segundo plano y `expo-secure-store` sin Face ID. En Release, Android queda con `INTERNET`, `ACCESS_NETWORK_STATE`, `WAKE_LOCK`, `VIBRATE` (hápticos) y `MODIFY_AUDIO_SETTINGS` (sonido), que no piden confirmación; el build de depuración agrega los del cliente de desarrollo. Para revisar lo que pide un build: `npx expo prebuild --clean` en una copia descartable y mirá `AndroidManifest.xml` e `Info.plist`.
+- Si `pod install` falla con `Unicode Normalization not appropriate for ASCII-8BIT`, exportá `LANG=en_US.UTF-8`.
