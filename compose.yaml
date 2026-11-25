@@ -87,6 +87,8 @@ services:
   identidad:
     build: {context: ., dockerfile: infra/keycloak/Dockerfile}
     command: ["start-dev", "--import-realm"]
+    # Keycloak calcula el heap como un porcentaje de la memoria disponible: sin límite, toma la de toda la VM de Docker.
+    mem_limit: 768m
     environment:
       - KC_HOSTNAME=http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}
       - KC_BOOTSTRAP_ADMIN_USERNAME
