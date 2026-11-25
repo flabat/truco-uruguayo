@@ -221,6 +221,8 @@ async function main() {
     decir(opciones.recompilar ? "Recompilando por --recompilar." : "No hay build con esta huella: compilo (tarda varios minutos la primera vez).");
     binario = await compilar(opciones, destino, dir);
     decir(`Build guardado en ${dir}`);
+    // La compilación tarda minutos: si en el medio se apagó el simulador, lo vuelve a encender.
+    if (opciones.plataforma === "ios" && !opciones.fisico) await simulador(destino.id);
   }
   instalar(opciones, destino, binario);
   decir("App instalada.");
