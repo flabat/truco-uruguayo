@@ -30,6 +30,16 @@ export function esDesafio(valor: string | null): valor is string {
   return valor !== null && /^[A-Za-z0-9_-]{43}$/.test(valor);
 }
 
+/**
+ * Retorno de bucle local (RFC 8252, 7.3) para el ingreso PKCE de `npm run app:web`: solo
+ * `http://localhost:<puerto>/api/auth/retorno-local` o lo mismo en 127.0.0.1. El código que llega ahí no sirve sin
+ * el verificador, que queda en la máquina que pidió el ingreso.
+ */
+export function esRetornoLocal(valor: string | null): valor is string {
+  const partes = valor === null ? null : /^http:\/\/(?:localhost|127\.0\.0\.1):([1-9][0-9]{0,4})\/api\/auth\/retorno-local$/.exec(valor);
+  return partes !== null && Number(partes[1]) <= 65535;
+}
+
 export function verificadorCorresponde(verificador: string, desafio: string): boolean {
   // Se compara el texto canónico: decodificar aceptaría variantes del último carácter.
   const calculado = Buffer.from(createHash("sha256").update(verificador).digest("base64url"));
