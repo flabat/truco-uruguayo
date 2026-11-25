@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Partida } from "@eltruco/cliente/cliente.ts";
+import type { Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import { pasosDeVueltas } from "@eltruco/cliente/presentacion-vueltas.ts";
 import { entreCartas, vueltaCompleta, type Paso } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { pausaDeVoz } from "@eltruco/cliente/voces.ts";
-import { avanzar, colaInicial, duracion, enPantalla, eventosEntre, recibir } from "../../app/src/mesa/cola.ts";
+import { avanzar, colaInicial, duracion, enPantalla, eventosEnPantalla, eventosEntre, recibir } from "../../app/src/mesa/cola.ts";
 import { partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 type Recibida = Partida | undefined;
@@ -43,6 +43,24 @@ test("tres cartas de computadoras en una actualización se presentan de a una", 
 test("recibir la misma versión no cambia la cola", () => {
   const cola = recibir<Recibida>(colaInicial<Recibida>(antesDeLosBots, false, 0, pasos), despuesDeLosBots, false, 0, pasos);
   assert.equal(recibir<Recibida>(cola, despuesDeLosBots, false, 0, pasos), cola);
+});
+
+test("otra lectura de la misma versión se muestra aunque no cambie la cola", () => {
+  const vista = vistaDe(2, 0, { turno: 0 });
+  const primera = partidaDe(vista);
+  const conPie = partidaDe(vista, { pie: { vuelta: 1 } as Partida["pie"] });
+  const cola = recibir<Recibida>(colaInicial<Recibida>(primera, false, 0, pasos), conPie, false, 0, pasos);
+  assert.equal(cola.recibida, conPie);
+  assert.equal(enPantalla(cola).partida, conPie);
+});
+
+test("un paso al día muestra la lectura más reciente de su versión", () => {
+  const envido = en1v1({ acciones: [{ tipo: "envido", asiento: 1 }] });
+  const cola = recibir<Recibida>(colaInicial<Recibida>(inicio1v1, false, 0, pasos), envido, false, 0, pasos);
+  assert.equal(cola.pasos[0].partida, envido, "la voz del rival muestra la partida recibida");
+  const releida = { ...envido };
+  const nueva = recibir<Recibida>(cola, releida, false, 0, pasos);
+  assert.deepEqual(enPantalla(nueva), { partida: releida, presentando: false, voz: cola.pasos[0].voz });
 });
 
 test("una reconexión vacía la cola y muestra lo recibido", () => {
@@ -188,4 +206,69 @@ test("eventosEntre: para un espectador nada es suyo", () => {
     const suyo = "propia" in e ? e.propia : "paraMi" in e ? e.paraMi : "nuestra" in e ? e.nuestra : "nuestro" in e ? e.nuestro : false;
     assert.equal(suyo, false, e.tipo);
   }
+});
+
+test("eventosEntre: los cantos propios no suenan; las voces que responden, sí", () => {
+  assert.deepEqual(eventosEntre(inicio1v1, en1v1({ acciones: [{ tipo: "truco", asiento: 0 }] }), 0), []);
+  const respondido = en1v1({ acciones: [{ tipo: "truco", asiento: 0 }, { tipo: "retruco", asiento: 1 }] });
+  assert.deepEqual(eventosEntre(inicio1v1, respondido, 0), [{ tipo: "canto", asiento: 1, texto: "Retruco", paraMi: true }]);
+});
+
+test("eventosEnPantalla: un salto sin paso solo avisa el reparto", () => {
+  const vieja = { partida: en1v1({ acciones: [{ tipo: "carta", asiento: 1, carta: "copas-12" }] }) };
+  const nueva = { partida: partidaDe(vistaDe(2, 0, {
+    dador: 0, mano: 1, acciones: [{ tipo: "carta", asiento: 1, carta: "oros-03" }, { tipo: "envido", asiento: 1 }],
+    vueltaActual: { salida: 1, jugadas: [{ asiento: 1, carta: "oros-03" }] },
+  }), { manoNumero: 3, version: 9 }) };
+  assert.deepEqual(eventosEnPantalla(vieja, nueva, false, 0), [{ tipo: "reparto", dador: 0 }]);
+  const enLaMisma = { partida: en1v1({ acciones: [{ tipo: "carta", asiento: 1, carta: "copas-12" },
+    { tipo: "carta", asiento: 0, carta: "espadas-01" }] }, { version: 5 }) };
+  assert.deepEqual(eventosEnPantalla(vieja, enLaMisma, false, 0), [], "las cartas perdidas no se animan");
+  assert.equal(eventosEnPantalla(vieja, enLaMisma, true, 0).length, 1, "con un paso, la carta sí se anima");
+});
+
+test("eventosEnPantalla: sin paso, lo que completa la última jugada mostrada sí suena", () => {
+  const acciones = [{ tipo: "truco", asiento: 1 }, { tipo: "no-quiero", asiento: 0 }] as const;
+  const dicho = en1v1({ acciones: [...acciones] });
+  const cobrado = en1v1({ acciones: [...acciones], cobros: [{ equipo: 1, tantos: 1, motivo: "truco" }] }, { version: 3 });
+  assert.deepEqual(eventosEnPantalla({ partida: dicho }, { partida: cobrado }, false, 0),
+    [{ tipo: "cobro", equipo: 1, tantos: 1, nuestro: false }]);
+  assert.deepEqual(eventosEnPantalla({ partida: en1v1({ acciones: [acciones[0]] }) }, { partida: cobrado }, false, 0),
+    [{ tipo: "cobro", equipo: 1, tantos: 1, nuestro: false }], "el canto propio no es un salto");
+});
+
+test("eventosEnPantalla: las voces que comparten partida suenan una por paso", () => {
+  const acciones = [{ tipo: "envido", asiento: 0 }, { tipo: "quiero", asiento: 1 }] as const;
+  const antes = { partida: en1v1({ acciones: [acciones[0]] }) };
+  // El paso de las voces todavía no muestra el cobro: queda público después de las declaraciones.
+  const parcial = en1v1({ acciones: [...acciones] });
+  const quiero = { asiento: 1, texto: "Quiero", indice: 0 };
+  const tantos = { asiento: 1, texto: "31 de envido", indice: 1 };
+  assert.deepEqual(eventosEnPantalla(antes, { partida: parcial, voz: quiero }, true, 0),
+    [{ tipo: "canto", asiento: 1, texto: "Quiero", paraMi: false }]);
+  assert.deepEqual(eventosEnPantalla({ partida: parcial, voz: quiero }, { partida: parcial, voz: tantos }, true, 0),
+    [{ tipo: "canto", asiento: 1, texto: "31 de envido", paraMi: false }]);
+  assert.deepEqual(eventosEnPantalla({ partida: parcial, voz: tantos }, { partida: parcial, voz: tantos }, true, 0), []);
+});
+
+test("eventosEnPantalla: tu canto seguido de la voz del rival suena solo la del rival", () => {
+  const conRetruco = en1v1({ acciones: [{ tipo: "truco", asiento: 0 }, { tipo: "retruco", asiento: 1 }] });
+  const retruco = { asiento: 1, texto: "Retruco", indice: 0 };
+  assert.deepEqual(eventosEnPantalla({ partida: inicio1v1 }, { partida: conRetruco, voz: retruco }, true, 0),
+    [{ tipo: "canto", asiento: 1, texto: "Retruco", paraMi: true }]);
+});
+
+function tercetos(duelo: 1 | 2, archivados: number, acciones: Partida["vista"]["acciones"], version: number): PartidaTercetos {
+  const base = partidaDe(vistaDe(2, 0, { acciones: [...acciones] }), { version, meta: 30 });
+  return { ...base, formato: "triples", lance: { tipo: "pico-a-pico", duelo, activos: [0, 1] },
+    historialLances: Array(archivados).fill({}), vista: { ...base.vista, estado: "jugando" } } as unknown as PartidaTercetos;
+}
+
+test("eventosEntre en tercetos: un duelo nuevo trae sus propias cartas y archivar el duelo no las repite", () => {
+  const cartas = [{ tipo: "carta", asiento: 0, carta: "espadas-01" }, { tipo: "carta", asiento: 1, carta: "copas-12" }] as const;
+  const duelo1 = tercetos(1, 0, [...cartas], 2);
+  const archivado = tercetos(1, 1, [...cartas], 2);
+  assert.deepEqual(eventosEntre(duelo1, archivado, 0), []);
+  const duelo2 = tercetos(2, 1, [{ tipo: "carta", asiento: 1, carta: "oros-03" }], 3);
+  assert.deepEqual(eventosEntre(archivado, duelo2, 0), [{ tipo: "carta", asiento: 1, carta: "oros-03", propia: false }]);
 });

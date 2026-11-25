@@ -9,7 +9,7 @@ import { textoFrasePie } from "@eltruco/motor/senas-pie.ts";
 export const entreCartasLiviano = 250;
 export const vueltaCompletaLiviana = 1200;
 
-type Versionada = { version: number; manoNumero: number; indicaciones?: readonly unknown[] } | undefined;
+export type Versionada = { version: number; manoNumero: number; indicaciones?: readonly unknown[] } | undefined;
 
 export interface Cola<T> {
   recibida: T;
@@ -24,12 +24,26 @@ export function colaInicial<T extends Versionada>(actual: T, presencio: boolean,
   return { recibida: actual, reconexion, pasos: pasosNuevos(undefined, actual, presencio), cargado: null };
 }
 
-/** Devuelve la misma cola si no llegó nada nuevo, así el gancho puede compararla por identidad. */
+/**
+ * Devuelve la misma cola si no llegó nada nuevo, así el gancho puede compararla por identidad.
+ * Una lectura nueva de la misma versión (por ejemplo, otro `pie`) reemplaza a la recibida
+ * también en los pasos que la mostraban al día.
+ */
 export function recibir<T extends Versionada>(c: Cola<T>, actual: T, presencio: boolean, reconexion: number,
     pasosNuevos: PasosNuevos<T>): Cola<T> {
   if (reconexion !== c.reconexion) return { recibida: actual, reconexion, pasos: [], cargado: null };
   if (actual?.version === c.recibida?.version && actual?.manoNumero === c.recibida?.manoNumero
-      && actual?.indicaciones?.length === c.recibida?.indicaciones?.length) return c;
+      && actual?.indicaciones?.length === c.recibida?.indicaciones?.length) {
+    if (actual === c.recibida) return c;
+    let cargado = c.cargado;
+    const pasos = c.pasos.map(p => {
+      if (p.partida !== c.recibida) return p;
+      const alDia = { ...p, partida: actual };
+      if (p === c.cargado) cargado = alDia;
+      return alDia;
+    });
+    return { ...c, recibida: actual, pasos, cargado };
+  }
   const pasos = pasosNuevos(c.recibida, actual, presencio, c.pasos);
   return { recibida: actual, reconexion, pasos, cargado: pasos[0] === c.cargado ? c.cargado : null };
 }
@@ -75,6 +89,10 @@ function equipoDe(p: Mostrada, asiento: number | null): number | null {
   return asiento == null ? null : p.vista.equipoPorAsiento[asiento] ?? null;
 }
 
+function esPropia(voz: Voz, miAsiento: number | null) {
+  return voz.indice === 0 && voz.asiento === miAsiento;
+}
+
 export function cantoDeVoz(partida: Mostrada, voz: Voz, miAsiento: number | null): Evento {
   const mio = equipoDe(partida, miAsiento);
   const paraMi = mio != null && voz.indice === 0 && pidenRespuesta.has(voz.texto)
@@ -82,13 +100,16 @@ export function cantoDeVoz(partida: Mostrada, voz: Voz, miAsiento: number | null
   return { tipo: "canto", asiento: voz.asiento, texto: voz.texto, paraMi };
 }
 
-function igual(a: unknown, b: unknown) {
-  return JSON.stringify(a) === JSON.stringify(b);
+// En tercetos cada duelo del pico a pico trae sus propias acciones. No se compara el largo
+// de `historialLances`: el paso que cierra un duelo ya lo archiva y todavía muestra sus acciones.
+function mismoLance(antes: Mostrada, despues: Mostrada) {
+  return antes.manoNumero === despues.manoNumero && antes.lance.tipo === despues.lance.tipo
+    && antes.lance.duelo === despues.lance.duelo && antes.vista.acciones.length <= despues.vista.acciones.length;
 }
 
 /**
- * Compara dos estados mostrados. Si las acciones de antes no son el comienzo de las de
- * después, empezó otra mano o lance y todo lo de después es nuevo.
+ * Compara dos estados mostrados. En otra mano o en otro duelo todo lo de después es nuevo.
+ * Los cantos propios no suenan: el jugador ya los tocó (sí sus tantos, que declara el árbitro).
  */
 export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miAsiento: number | null,
     nombre?: Nombre): Evento[] {
@@ -99,10 +120,7 @@ export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miA
   const otraMano = antes.manoNumero !== despues.manoNumero;
   if (otraMano) eventos.push({ tipo: "reparto", dador: vista.dador });
 
-  const previas = antes.vista.acciones;
-  const mismoLance = !otraMano && previas.length <= vista.acciones.length
-    && previas.every((a, i) => igual(a, vista.acciones[i]));
-  const base = mismoLance ? antes.vista : { acciones: [], vueltas: [], cobros: [] };
+  const base = mismoLance(antes, despues) ? antes.vista : { acciones: [], vueltas: [], cobros: [] };
 
   for (let i = base.acciones.length; i < vista.acciones.length; i++) {
     const accion = vista.acciones[i];
@@ -110,7 +128,9 @@ export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miA
       eventos.push({ tipo: "carta", asiento: accion.asiento, carta: accion.carta,
         propia: miAsiento != null && accion.asiento === miAsiento });
     } else {
-      for (const voz of vocesEnAccion(vista, i)) eventos.push(cantoDeVoz(despues, voz, miAsiento));
+      for (const voz of vocesEnAccion(vista, i)) {
+        if (!esPropia(voz, miAsiento)) eventos.push(cantoDeVoz(despues, voz, miAsiento));
+      }
     }
   }
 
@@ -139,6 +159,45 @@ export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miA
 
   if (antes.ganadorPartida == null && despues.ganadorPartida != null) {
     eventos.push({ tipo: "chico", nuestro: mio != null && despues.ganadorPartida === mio });
+  }
+  return eventos;
+}
+
+interface EnPantalla {
+  partida: unknown;
+  voz?: Voz;
+}
+
+function esMostrada(p: unknown): p is Mostrada {
+  return typeof p === "object" && p !== null && "vista" in p && p.vista != null;
+}
+
+// Sin un paso que lo presente, una jugada ajena nueva o un cambio de duelo es un salto al presente.
+function salto(antes: Mostrada, despues: Mostrada, miAsiento: number | null) {
+  if (!mismoLance(antes, despues)) return true;
+  return despues.vista.acciones.slice(antes.vista.acciones.length)
+    .some(a => a.tipo === "carta" || a.asiento !== miAsiento);
+}
+
+/**
+ * Los eventos de un cambio de pantalla. `porPaso` dice si la pantalla nueva la pone un paso
+ * de la cola. Un salto sin paso (mano perdida, reparto no presenciado) no anima el pasado:
+ * solo avisa el reparto y el chico terminado.
+ */
+export function eventosEnPantalla(previo: EnPantalla, actual: EnPantalla, porPaso: boolean,
+    miAsiento: number | null, nombre?: Nombre): Evento[] {
+  const { partida, voz } = actual;
+  if (!esMostrada(partida) || !esMostrada(previo.partida)) return [];
+  if (previo.partida === partida && previo.voz === voz) return [];
+  let eventos = eventosEntre(previo.partida, partida, miAsiento, nombre);
+  if (!porPaso && salto(previo.partida, partida, miAsiento)) {
+    return eventos.filter(e => e.tipo === "reparto" || e.tipo === "chico");
+  }
+  if (voz) {
+    // Las voces de una misma acción tienen un paso cada una: suena la que está en pantalla.
+    const donde = eventos.findIndex(e => e.tipo !== "reparto" && e.tipo !== "carta");
+    eventos = eventos.filter(e => e.tipo !== "canto");
+    if (voz !== previo.voz) eventos.splice(donde < 0 ? eventos.length : donde, 0, cantoDeVoz(partida, voz, miAsiento));
   }
   return eventos;
 }
