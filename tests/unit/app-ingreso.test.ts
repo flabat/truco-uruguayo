@@ -76,7 +76,7 @@ test("rutaDelSistema deja pasar los demás enlaces", () => {
     "/mesa?id=1",
     "/ingresos",
     "eltruco://ingresar",
-    "https://eltru.co/app/?mesa=1",
+    "https://otro.example/jugar/?invitacion=abc",
     "/",
   ]) assert.equal(rutaDelSistema(enlace), enlace, enlace);
 });

@@ -30,5 +30,5 @@ export function textoDeMeta(texto: string): { meta: number; valida: boolean; ayu
 }
 
 export const textoVisibilidad = (publica: boolean) => publica
-  ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas."
+  ? "Mesa pública. Quienes ingresen al salón pueden ver las jugadas y, si la voz está habilitada, entrar al Discord de esta mesa."
   : "Mesa privada por invitación.";

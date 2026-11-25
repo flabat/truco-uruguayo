@@ -12,6 +12,8 @@ export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
 export KEYCLOAK_API_CLIENT_SECRET=secreto-descartable-del-cliente-de-servicio-api APPLE_TOKENS_KEY="$(openssl rand -base64 32)"
 unset KEYCLOAK_ADMIN_TOKEN
+# Datos de cuenta inventados: la imagen genera la asociación con la app (/.well-known/).
+export APPLE_TEAM_ID=EQUIPO1234 ANDROID_CERT_SHA256=$(printf 'AB:%.0s' {1..31})CD
 export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
 
 cleanup() {
@@ -33,12 +35,15 @@ web=$(url web 80)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F '<title>El Truco</title>' >/dev/null
 bash scripts/verificar-app-web.sh "$web"
+node scripts/verificar-enlaces-app.mjs "$web"
 # La misma imagen web con el Caddyfile de producción sirve la app en /app/.
-docker build -q --target produccion -f infra/web.Dockerfile -t "$project-caddy" . >/dev/null
+docker build -q --target produccion -f infra/web.Dockerfile --build-arg APPLE_TEAM_ID --build-arg ANDROID_CERT_SHA256 \
+  -t "$project-caddy" . >/dev/null
 caddy=$(docker run -d -e SITE_HOST=:80 -v "$PWD/infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro" -p 127.0.0.1::80 "$project-caddy")
 caddy_web="http://$(docker port "$caddy" 80/tcp | head -1)"
 for _ in $(seq 40); do curl -fsS -o /dev/null "$caddy_web/" && break; sleep 0.25; done
 bash scripts/verificar-app-web.sh "$caddy_web"
+node scripts/verificar-enlaces-app.mjs "$caddy_web"
 docker rm -f "$caddy" >/dev/null && caddy=
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
@@ -98,6 +103,7 @@ for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api no
 "${compose[@]}" exec -T api node --input-type=module - auditar-bot < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - recuperado < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module - iniciar < scripts/verificar-vivo.mjs
+node scripts/verificar-app-reconexion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-juego-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
 jugadores=$(sql "$consulta_jugadores")

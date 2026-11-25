@@ -20,7 +20,8 @@ export default function Raiz() {
   }, [listas, error]);
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      {/* Iconos oscuros sobre el papel crema; la mesa los pide claros. */}
+      <StatusBar style="dark" />
       {listas || error ? (
         <ProveedorDeSesion>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />

@@ -11,11 +11,56 @@
     "ios": {
       "bundleIdentifier": "co.eltru.app",
       "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:eltru.co"
+      ],
       "icon": "./assets/icono/ios.png"
     },
     "android": {
       "package": "co.eltru.app",
       "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/jugar"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/jugar/"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/volver"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/volver/"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/app"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/app/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/icono/android-frente.png",
         "backgroundImage": "./assets/icono/android-fondo.png",
