@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { calcularMesa } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { colores, fuentes } from "../tema.ts";
-import { CapaLienzo } from "./CapaLienzo";
+import { CapaFestejo, CapaLienzo } from "./CapaLienzo";
 import type { Atajo } from "./atajos.ts";
-import type { EventosDeMesa } from "./eventos.ts";
+import { chicoTrasEvento, type ChicoTerminado, type EventosDeMesa } from "./eventos.ts";
 import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
 import { ManoPropia, type JugarSinGesto } from "./ManoPropia.tsx";
 import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
+import { movimiento } from "./movimiento.ts";
 import type { SenasEnMesa } from "./senas.ts";
 import { useAtajos } from "./useAtajos.ts";
 import { useManoAnimada } from "./useManoAnimada.ts";
@@ -99,6 +100,11 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
   );
   const mano = useManoAnimada(mesa.manoPropia, geometria?.mano ?? []);
   const reparto = useReparto(eventos, geometria, mesa, liviano);
+  // El chico ganado: cuando termina de presentarse (aparece la tarjeta) las cartas se juntan, aparece
+  // el cartel y, salvo en liviano, saltan las partículas sobre él. Se festeja una sola vez.
+  const [chico, cambiarChico] = useState<ChicoTerminado | null>(null);
+  useLayoutEffect(() => eventos?.escuchar(e => cambiarChico(c => chicoTrasEvento(c, e))), [eventos]);
+  const { festejo } = movimiento(liviano);
   // Mientras se reparte, la mano no se toca: sus cartas todavía están volando o de dorso.
   const puedeJugarCarta = mesa.puedeJugarCarta && !reparto;
 
@@ -129,6 +135,14 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
 
   // Con una hoja abierta la mano sube al paño: la tarjeta de fin se oculta para no taparla.
   const conFin = mesa.fin !== null && !abierta;
+  const festejando = chico !== null && !chico.festejado && mesa.fin !== null && festejo !== null;
+  const numeroDeChico = chico?.numero;
+  useEffect(() => {
+    if (!festejando || !conFin) return;
+    const listo = setTimeout(() => cambiarChico(c => c && c.numero === numeroDeChico ? { ...c, festejado: true } : c),
+      festejo.juntar + festejo.cartel + festejo.duracion);
+    return () => clearTimeout(listo);
+  }, [festejando, conFin, numeroDeChico]);
   const tercetos = mesa.modalidad === "3v3";
   const titulos = titulosDePestana(tercetos);
 
@@ -148,11 +162,12 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
-          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto} />
+          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto}
+            juntar={chico !== null && mesa.fin !== null} />
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
-          <Asientos mesa={mesa} geometria={geometria} />
+          <Asientos mesa={mesa} geometria={geometria} liviano={liviano} />
           {/* La tarjeta de fin de mano ya dice quién ganó y por qué. */}
           {conFin ? null : <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />}
           {/* En el escritorio, lo de Más está siempre a la vista en el panel derecho: no hay ☰. */}
@@ -162,11 +177,15 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={puedeJugarCarta}
               jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} hapticos={hapticos} />
           ) : null}
-          <Senas senas={senas} geometria={geometria} />
+          <Senas senas={senas} geometria={geometria} liviano={liviano} />
           {geometria.espectador ? <PieDelEspectador rect={geometria.espectador} salir={acciones.salir} /> : null}
           {mesa.fin && conFin ? (
-            <FinDeMano fin={mesa.fin} rect={geometria.pano}
-              alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir} />
+            <FinDeMano key={"fin-" + (numeroDeChico ?? 0)} fin={mesa.fin} rect={geometria.pano}
+              alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir}
+              aparicion={festejando ? { demora: festejo.juntar, duracion: festejo.cartel } : null}
+              festejo={festejando && chico.nuestro ? (
+                <CapaFestejo cantidad={festejo.particulas} demora={festejo.juntar + festejo.cartel} duracion={festejo.duracion} />
+              ) : null} />
           ) : null}
           {geometria.cantos && hojaCantos ? (
             <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}

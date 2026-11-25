@@ -5,7 +5,7 @@ import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 import type { Geometria } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { MesaVisible } from "../modelo.ts";
-import type { PlanDeReparto } from "../movimiento.ts";
+import { alCentroDelPano, type PlanDeReparto } from "../movimiento.ts";
 import type { RepartoEnCurso } from "../useReparto.ts";
 import type { CartaAnimada } from "../useManoAnimada.ts";
 import { CartaDeMano, CartaDelPano, CartaFija, CartaRepartida, poseDeMano, type Pose } from "./CartaSkia.tsx";
@@ -17,13 +17,15 @@ export interface PropsLienzo {
   liviano: boolean;
   /** Mientras dura, las cartas salen del mazo de a una en lugar de verse los dorsos y la mano. */
   reparto: RepartoEnCurso | null;
+  /** Terminó el chico: las cartas del paño se juntan al centro (en liviano quedan en su lugar). */
+  juntar?: boolean;
 }
 
 const colores = ["#3a614a", "#244936", "#1c392d"];
 const posiciones = [0, 0.67, 1];
 
 /** El paño, el mazo y todas las cartas, dibujados con Skia al fondo de la mesa. Nada de texto. */
-export default function Lienzo({ geometria, mesa, mano, liviano, reparto }: PropsLienzo) {
+export default function Lienzo({ geometria, mesa, mano, liviano, reparto, juntar = false }: PropsLienzo) {
   const { ancho, alto } = geometria.pantalla;
   const claves = mesa.asientos.flatMap(a => (a.jugada ? [a.asiento + ":" + a.jugada] : []));
 
@@ -44,6 +46,8 @@ export default function Lienzo({ geometria, mesa, mano, liviano, reparto }: Prop
   }, [mano]);
 
   const hayGanadora = mesa.asientos.some(a => a.ganadora);
+  const enPano = mesa.asientos.filter(a => a.jugada && geometria.asientos[a.asiento]?.jugada);
+  const pila = juntar ? alCentroDelPano(enPano.map(a => geometria.asientos[a.asiento]!.jugada!), geometria.pano) : null;
 
   // Como `radial-gradient(ellipse at 50% 38%, …)`: la elipse que pasa por la esquina más lejana.
   const centro = { x: ancho / 2, y: alto * 0.38 };
@@ -69,14 +73,13 @@ export default function Lienzo({ geometria, mesa, mano, liviano, reparto }: Prop
       {reparto ? null : geometria.asientos.flatMap(g => g.dorsos.map((dorso, i) => (
         <CartaFija key={"dorso-" + g.asiento + "-" + i} id="reverso" carta={dorso} sombra="pano" />
       )))}
-      {mesa.asientos.map(a => {
-        const lugar = geometria.asientos[a.asiento]?.jugada;
-        if (!a.jugada || !lugar) return null;
+      {enPano.map((a, i) => {
+        const lugar = geometria.asientos[a.asiento]!.jugada!;
         const clave = a.asiento + ":" + a.jugada;
         return (
-          <CartaDelPano key={clave} id={a.jugada} carta={lugar}
-            desde={yaEstaban.current.has(clave) ? null : origenDe(a.asiento, a.jugada)}
-            ganadora={a.ganadora} oscura={hayGanadora && !a.ganadora} liviano={liviano} />
+          <CartaDelPano key={clave} id={a.jugada!} carta={lugar}
+            desde={yaEstaban.current.has(clave) ? null : origenDe(a.asiento, a.jugada!)}
+            ganadora={a.ganadora} oscura={hayGanadora && !a.ganadora} liviano={liviano} alCentro={pila?.[i] ?? null} />
         );
       })}
       {reparto ? (
@@ -112,3 +115,6 @@ function Reparto({ plan, geometria, mesa }: { plan: PlanDeReparto; geometria: Ge
     );
   });
 }
+
+// El festejo viaja en el mismo paquete que el lienzo: en la web, CapaFestejo lo toma del mismo `import()`.
+export { default as Festejo } from "./Festejo.tsx";

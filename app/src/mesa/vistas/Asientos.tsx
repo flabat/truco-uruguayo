@@ -99,7 +99,7 @@ function rotuloDeMuestra({ mazo, columna }: Geometria) {
  * Nombre y papel de cada asiento, los globos de canto que saltan desde su ancla y el rótulo de la
  * muestra. Las cartas las dibuja el lienzo.
  */
-export function Asientos({ mesa, geometria }: { mesa: MesaVisible; geometria: Geometria }) {
+export function Asientos({ mesa, geometria, liviano = false }: { mesa: MesaVisible; geometria: Geometria; liviano?: boolean }) {
   const limites = {
     columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado,
     evitar: cajasDelMazo(geometria),
@@ -128,7 +128,7 @@ export function Asientos({ mesa, geometria }: { mesa: MesaVisible; geometria: Ge
         const nombre = mesa.asientos[voz.asiento]?.nombre ?? "";
         return (
           <Globo key={voz.asiento + ":" + voz.indice + ":" + voz.texto} asiento={geo} posicion="costado"
-            limites={limites} testID={"globo-voz-" + voz.asiento} etiqueta={nombre + ": " + voz.texto}>
+            limites={limites} testID={"globo-voz-" + voz.asiento} etiqueta={nombre + ": " + voz.texto} liviano={liviano}>
             <Text style={estilos.voz}>{voz.texto}</Text>
           </Globo>
         );

@@ -5,7 +5,6 @@ import type { Geometria, GeometriaAsiento, Rect } from "@eltruco/mesa-geometria"
 import { curvaDeGlobo, movimiento } from "../movimiento.ts";
 import { mesaColores } from "./estilo.ts";
 
-const { duracion } = movimiento(false).globo;
 const curva = Easing.bezier(...curvaDeGlobo);
 
 const separacion = 6;
@@ -81,14 +80,16 @@ export function lugarDelGlobo(
 }
 
 /** Un globo de papel que salta desde su asiento. */
-export function Globo({ asiento, posicion, limites, testID, etiqueta, children }: {
+export function Globo({ asiento, posicion, limites, testID, etiqueta, liviano = false, children }: {
   asiento: GeometriaAsiento;
   posicion: "costado" | "debajo";
   limites: Limites;
   testID?: string;
   etiqueta?: string;
+  liviano?: boolean;
   children: ReactNode;
 }) {
+  const { duracion } = movimiento(liviano).globo;
   const [tamano, cambiarTamano] = useState<{ ancho: number; alto: number } | null>(null);
   const escala = useSharedValue(0);
   // Se mide antes de saltar: hasta saber su tamaño no sabe de qué lado está el asiento.

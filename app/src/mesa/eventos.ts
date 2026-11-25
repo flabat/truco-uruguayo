@@ -31,3 +31,17 @@ export function crearEventos(): EventosDeMesa {
     },
   };
 }
+
+/** El chico que terminó a la vista, para festejarlo una sola vez. `nuestro`: lo ganó quien mira. */
+export interface ChicoTerminado {
+  numero: number;
+  nuestro: boolean;
+  festejado: boolean;
+}
+
+/** El chico terminado sigue hasta que se reparte otra mano (otro chico en la misma mesa). */
+export function chicoTrasEvento(c: ChicoTerminado | null, e: Evento): ChicoTerminado | null {
+  if (e.tipo === "reparto") return null;
+  if (e.tipo === "chico") return { numero: (c?.numero ?? 0) + 1, nuestro: e.nuestro, festejado: false };
+  return c;
+}

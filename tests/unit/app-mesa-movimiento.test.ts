@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { crearEventos } from "../../app/src/mesa/eventos.ts";
-import { duracionDelReparto, movimiento, ordenDeReparto, planDeReparto } from "../../app/src/mesa/movimiento.ts";
+import { chicoTrasEvento, crearEventos } from "../../app/src/mesa/eventos.ts";
+import {
+  alCentroDelPano, duracionDelReparto, maximoDeParticulas, movimiento, ordenDeReparto, particulasDelFestejo, planDeReparto,
+  posicionDeParticula,
+} from "../../app/src/mesa/movimiento.ts";
 
 test("las duraciones normales son las de la tabla del diseño", () => {
   assert.deepEqual(movimiento(false), {
@@ -10,16 +13,18 @@ test("las duraciones normales son las de la tabla del diseño", () => {
     ganadora: { duracion: 600 },
     globo: { duracion: 220 },
     contador: { duracion: 500 },
+    festejo: { juntar: 450, cartel: 250, particulas: 24, duracion: 1500 },
   });
 });
 
-test("en modo liviano no hay reparto ni vuelo ni brillo animado ni cuenta", () => {
+test("en modo liviano no hay reparto ni vuelo ni brillo animado ni cuenta ni festejo", () => {
   assert.deepEqual(movimiento(true), {
     reparto: null,
     vuelo: { duracion: 0, rebote: false },
     ganadora: { duracion: 0 },
     globo: { duracion: 220 },
     contador: { duracion: 0 },
+    festejo: null,
   });
 });
 
@@ -86,4 +91,55 @@ test("la espera del reparto nunca es más corta que el reparto de ningún dador 
     }
   }
   assert.equal(duracionDelReparto(true, 4), 0);
+});
+
+test("el festejo tira 24 partículas como máximo, todas dentro del cartel al salir", () => {
+  assert.equal(maximoDeParticulas, 24);
+  assert.equal(particulasDelFestejo(300, 200, 100).length, 24);
+  assert.equal(particulasDelFestejo(300, 200, 10).length, 10);
+  for (const p of particulasDelFestejo(300, 200)) {
+    const { x, y, opacidad } = posicionDeParticula(p, 0, 1500);
+    assert.ok(x >= 0 && x <= 300 && y >= 0 && y <= 200, `${x}, ${y}`);
+    assert.equal(opacidad, 1);
+  }
+});
+
+test("las partículas se apagan a los 1,5 s y no se ven antes de salir", () => {
+  const [p] = particulasDelFestejo(300, 200);
+  assert.equal(posicionDeParticula(p!, 1500, 1500).opacidad, 0);
+  assert.equal(posicionDeParticula(p!, 2000, 1500).opacidad, 0);
+  assert.equal(posicionDeParticula(p!, -10, 1500).opacidad, 0);
+  assert.ok(posicionDeParticula(p!, 750, 1500).opacidad > 0);
+});
+
+test("las partículas son siempre las mismas para el mismo cartel", () => {
+  assert.deepEqual(particulasDelFestejo(300, 200), particulasDelFestejo(300, 200));
+});
+
+test("las cartas del paño se juntan en una pila al centro sin cambiar de tamaño", () => {
+  const pano = { x: 0, y: 100, ancho: 400, alto: 300 };
+  const cartas = [
+    { x: 20, y: 120, ancho: 50, alto: 78, rotacion: 0 },
+    { x: 300, y: 140, ancho: 50, alto: 78, rotacion: 0 },
+    { x: 160, y: 300, ancho: 50, alto: 78, rotacion: 0 },
+  ];
+  const pila = alCentroDelPano(cartas, pano);
+  assert.equal(pila.length, 3);
+  const centroX = pila.reduce((s, c) => s + c.x + c.ancho / 2, 0) / 3;
+  const centroY = pila.reduce((s, c) => s + c.y + c.alto / 2, 0) / 3;
+  assert.ok(Math.abs(centroX - 200) < 0.001 && Math.abs(centroY - 250) < 0.001);
+  pila.forEach((c, i) => {
+    assert.equal(c.ancho, cartas[i]!.ancho);
+    assert.equal(c.alto, cartas[i]!.alto);
+    assert.ok(Math.abs(c.x + c.ancho / 2 - 200) < c.ancho / 2, "se superponen");
+  });
+});
+
+test("el chico ganado se recuerda hasta el próximo reparto y cada chico es otro festejo", () => {
+  const ganado = chicoTrasEvento(null, { tipo: "chico", nuestro: true });
+  assert.deepEqual(ganado, { numero: 1, nuestro: true, festejado: false });
+  assert.equal(chicoTrasEvento(ganado, { tipo: "vuelta", ganador: 0, nuestra: true }), ganado);
+  assert.equal(chicoTrasEvento(ganado, { tipo: "reparto", dador: 1 }), null);
+  assert.deepEqual(chicoTrasEvento({ ...ganado!, festejado: true }, { tipo: "chico", nuestro: false }),
+    { numero: 2, nuestro: false, festejado: false });
 });

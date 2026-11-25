@@ -161,17 +161,18 @@ function mezclar(a: Pose, b: Pose, t: number): Pose {
  * Una carta del paño. Al montarse sale de `desde` hasta su rectángulo; sin `desde`, ya estaba y
  * aparece en su lugar. La propia sale de donde quedó en la mano y se apoya con un rebote leve; la
  * de otro jugador sale del ancla de su asiento y se da vuelta en el aire. La ganadora de la vuelta
- * brilla y las demás se oscurecen.
+ * brilla y las demás se oscurecen. Con `alCentro` (el chico terminó) va a la pila del centro.
  */
-export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano }: {
+export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano, alCentro = null }: {
   id: CardId;
   carta: Carta;
   desde: Pose | Punto | null;
   ganadora: boolean;
   oscura: boolean;
   liviano: boolean;
+  alCentro?: Carta | null;
 }) {
-  const { vuelo, ganadora: brillo } = movimiento(liviano);
+  const { vuelo, ganadora: brillo, festejo } = movimiento(liviano);
   const [origen] = useState<{ pose: Pose; propia: boolean } | null>(() => {
     if (!desde) return null;
     if ("ancho" in desde) return { pose: desde, propia: true };
@@ -187,7 +188,18 @@ export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano }: {
     else avance.value = withTiming(1, { duration: vuelo.duracion, easing: curvaVuelo });
   }, [avance]);
 
-  const pose = useDerivedValue<Pose>(() => (vuela ? mezclar(origen.pose, destino.value, avance.value) : destino.value));
+  // En liviano el festejo no mueve las cartas.
+  const juntar = alCentro !== null && festejo !== null;
+  const junta = useSharedValue(0);
+  const centro = usePose(alCentro ?? carta);
+  useEffect(() => {
+    junta.value = juntar ? withTiming(1, { duration: festejo.juntar, easing: curvaVuelo }) : 0;
+  }, [junta, juntar]);
+
+  const pose = useDerivedValue<Pose>(() => {
+    const lugar = vuela ? mezclar(origen.pose, destino.value, avance.value) : destino.value;
+    return junta.value > 0 ? mezclar(lugar, centro.value, junta.value) : lugar;
+  });
   // La ajena vuela de dorso y se da vuelta en el aire; la propia ya se veía de cara.
   const [gira] = useState(() => vuela && !origen.propia);
 
