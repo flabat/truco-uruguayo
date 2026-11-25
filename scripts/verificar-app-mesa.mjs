@@ -7,7 +7,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect as expectBase } from "@playwright/test";
 import { canto } from "@eltruco/cliente/cantos.ts";
 import { ingresarDesdeIdentidad } from "./ingreso-local-navegador.mjs";
 
@@ -17,6 +17,9 @@ const capturas = process.env.CAPTURAS_MESA;
 if (capturas) mkdirSync(capturas, { recursive: true });
 const browser = await chromium.launch();
 const espera = { timeout: 25_000 };
+// Con la máquina cargada, la mesa tarda más de los 5 s predeterminados en asentarse (por ejemplo, la hoja al
+// cambiar el tamaño de la pantalla): toda aserción espera el estado real hasta el mismo plazo que `espera`.
+const expect = expectBase.configure(espera);
 const boton = (p, name) => p.getByRole("button", { name, exact: true });
 const titulo = (p, name) => p.getByRole("heading", { level: 1, name, exact: true });
 const movil = { width: 375, height: 760 };
@@ -403,15 +406,9 @@ async function tercetosConPico(luis) {
     .filter(a => a.tipo === "carta" && a.asiento === x.vista.asiento).length;
   let jugadas = cartasPropias(fin);
   if (Math.max(...fin.puntos) >= 50) return false;
-  await tocar(luis, id, () => boton(luis, "Repartir otra mano"), fin.version);
-  await expect.poll(async () => (await partida(luis, id)).manoNumero, espera).toBe(2);
-
-  // Pico a pico: tres duelos; mientras espera el suyo, luis ve en qué duelo le toca y la mesa no juega.
-  m = await partida(luis, id);
-  assert.equal(m.lance.tipo, "pico-a-pico");
-  await expect(luis.getByTestId("etiqueta-lance")).toHaveText(/^Pico a pico · Duelo \d de 3$/, espera);
   // Mientras otros duelos se presentan, el estado narra cada jugada: el aviso del duelo propio puede durar
-  // poco. Un observador lo anota aunque dure un instante.
+  // poco. Un observador lo anota aunque dure un instante. Se instala antes de repartir: con la máquina
+  // cargada, el aviso puede aparecer y pasar antes de que la prueba vea la etiqueta del pico a pico.
   await luis.evaluate(() => {
     window.avisosDeDuelo = new Set();
     const revisar = () => {
@@ -421,6 +418,14 @@ async function tercetosConPico(luis) {
     new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
   });
   const avisos = () => luis.evaluate(() => [...window.avisosDeDuelo]);
+  assert.deepEqual(await avisos(), [], "la redondilla no anuncia duelos");
+  await tocar(luis, id, () => boton(luis, "Repartir otra mano"), fin.version);
+  await expect.poll(async () => (await partida(luis, id)).manoNumero, espera).toBe(2);
+
+  // Pico a pico: tres duelos; mientras espera el suyo, luis ve en qué duelo le toca y la mesa no juega.
+  m = await partida(luis, id);
+  assert.equal(m.lance.tipo, "pico-a-pico");
+  await expect(luis.getByTestId("etiqueta-lance")).toHaveText(/^Pico a pico · Duelo \d de 3$/, espera);
   let esperoSuDuelo = false;
   let jugoSuDuelo = false;
   // Los duelos salen de la mano: el 1 lo abre la mano y su frente, el 2 el siguiente, y así.
@@ -449,8 +454,14 @@ async function tercetosConPico(luis) {
     if (!(await jugarTurno(luis, id, m))) await luis.waitForTimeout(300);
   }
   assert.ok(esperoSuDuelo || jugoSuDuelo, "luis esperó o jugó su duelo");
-  // Nunca anuncia otro duelo que el propio, ni en el primero.
-  assert.deepEqual(await avisos(), dueloPropio > 1 ? [`Te toca en el duelo ${dueloPropio} de 3.`] : []);
+  // Nunca anuncia otro duelo que el propio, ni en el primero. Si la prueba vio a luis esperar su duelo, el
+  // aviso tuvo que aparecer. La mesa solo lo muestra cuando no está presentando una jugada (modelo.ts): si
+  // la API pasó esa espera entre dos lecturas, los duelos anteriores pudieron presentarse de corrido hasta el
+  // de luis sin mostrarlo. Aun así, nunca con otro número.
+  const propio = dueloPropio > 1 ? [`Te toca en el duelo ${dueloPropio} de 3.`] : [];
+  const vistos = await avisos();
+  if (esperoSuDuelo || dueloPropio === 1) assert.deepEqual(vistos, propio);
+  else assert.ok(vistos.every(aviso => propio.includes(aviso)), "solo anuncia el duelo propio: " + JSON.stringify(vistos));
   assert.ok(jugadas > 0, "luis jugó cartas tocándolas");
   // Si luis jugó el primer duelo, la mesa le presenta los otros dos a su ritmo: la tarjeta llega más tarde que la API.
   await expect(luis.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", { timeout: 90_000 });
