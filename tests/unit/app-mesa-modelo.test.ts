@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { cajaDeCarta, calcularMesa } from "@eltruco/mesa-geometria";
-import { datosDeHojas, entradaDeGeometria, historialDeMano, mesaDeJugador } from "../../app/src/mesa/modelo.ts";
-import { mesaDe, partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
+import type { ResumenLance } from "@eltruco/motor/mesa-online.ts";
+import { hojaDeCantos } from "../../app/src/mesa/hoja-cantos.ts";
+import {
+  datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador, mesaDeTercetos,
+} from "../../app/src/mesa/modelo.ts";
+import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 const enReposo = { presentando: false };
 
@@ -233,4 +237,110 @@ test("datosDeHojas: vueltas terminadas, la cuenta de la mano y los tantos cobrad
   assert.equal(datos.cobrados.titulo, "Tantos cobrados");
   assert.equal(datos.cobrados.filas[0].equipo, "Rival · 2 tantos");
   assert.match(datos.cobrados.filas[0].texto, /^por .+ \(Diego con 31\)$/);
+});
+
+// Con la mano en 0, el duelo 1 es 0 contra 3, el 2 es 1 contra 4 y el 3 es 2 contra 5.
+const primerDuelo: ResumenLance = {
+  tipo: "pico-a-pico", duelo: 1, activos: [0, 3],
+  resultado: { equipo: 0, tantos: 1, motivo: "vueltas" },
+  acciones: [{ tipo: "carta", asiento: 0, carta: "espadas-01" }, { tipo: "carta", asiento: 3, carta: "copas-12" }],
+  cobros: [{ equipo: 0, tantos: 1, motivo: "truco" }],
+  vueltas: [{ salida: 0, jugadas: [{ asiento: 0, carta: "espadas-01" }, { asiento: 3, carta: "copas-12" }], resultado: { tipo: "ganada", equipo: 0, asiento: 0 } }],
+  puntos: [19, 22],
+};
+
+function picoDelDuelo2() {
+  const vista = vistaDe(6, 2, {
+    mano: 0, dador: 5, turno: 1,
+    vueltaActual: { salida: 1, jugadas: [] },
+  });
+  return partidaTercetosDe(vista, {
+    estado: "esperando", manoNumero: 3, puntos: [19, 22], meta: 40,
+    lance: { tipo: "pico-a-pico", duelo: 2, activos: [1, 4] },
+    historialLances: [primerDuelo],
+  });
+}
+
+test("tercetos en redondilla: cinco círculos, la etiqueta del lance y el tanteador Nos y Ellos", () => {
+  const vista = vistaDe(6, 0, { mano: 1, dador: 0, turno: 1 });
+  const m = mesaDeTercetos(mesaTercetosDe(0, 40), partidaTercetosDe(vista, { manoNumero: 2, puntos: [18, 22], meta: 40 }), enReposo);
+  assert.equal(m.modalidad, "3v3");
+  assert.deepEqual(m.lance, { tipo: "redondilla" });
+  assert.equal(m.etiquetaLance, "Reparto 2 · Redondilla · Vuelta 1");
+  assert.equal(m.tanteador.texto, "Nos 18 · 22 Ellos · a 40");
+  assert.deepEqual(m.asientos.map(a => a.papel), ["Vos", "Rival", "Compañero", "Rival", "Compañero", "Rival"]);
+  assert.deepEqual(m.asientos.map(a => a.estadoPico), [null, null, null, null, null, null]);
+  assert.deepEqual(m.estado, { titulo: "Turno de Diego", indicacion: "Esperando la jugada." });
+  const g = calcularMesa(entradaDeGeometria(m, { ancho: 375, alto: 760 }, null));
+  assert.deepEqual(g.asientos.filter(a => a.asiento !== 0).map(a => a.forma), ["circulo", "circulo", "circulo", "circulo", "circulo"]);
+  assert.ok(g.lance, "hay lugar para la etiqueta del lance");
+});
+
+test("tercetos en pico a pico: esperando el duelo 3 la mano no se juega y los demás muestran su estado", () => {
+  const m = mesaDeTercetos(mesaTercetosDe(2, 40), picoDelDuelo2(), enReposo);
+  assert.deepEqual(m.lance, { tipo: "pico", activos: [1, 4], duelo: 2 });
+  assert.equal(m.etiquetaLance, "Pico a pico · Duelo 2 de 3");
+  assert.equal(m.puedeJugarCarta, false);
+  assert.deepEqual(m.manoPropia, []);
+  assert.deepEqual(m.estado, { titulo: "Turno de Diego", indicacion: "Te toca en el duelo 3 de 3." });
+  assert.deepEqual(m.asientos.map(a => a.estadoPico), ["Ya jugó", "En duelo", "Duelo 3", "Ya jugó", "En duelo", "Duelo 3"]);
+  const g = calcularMesa(entradaDeGeometria(m, { ancho: 375, alto: 760 }, null));
+  assert.deepEqual(g.asientos.map(a => a.forma), ["punto", "completo", "punto", "punto", "completo", "punto"]);
+});
+
+test("tercetos: con la tercera ya jugada, la indicación dice que se espera el próximo reparto", () => {
+  const partida = picoDelDuelo2();
+  const m = mesaDeTercetos(mesaTercetosDe(0, 40), partida, enReposo);
+  assert.equal(m.estado.indicacion, "Ya jugaste tu duelo. Esperá el próximo reparto.");
+});
+
+test("tercetos: el canto del rival que no te toca lo responde tu equipo", () => {
+  const vista = vistaDe(6, 0, { pendiente: { tipo: "truco", asiento: 1 }, acciones: [{ tipo: "truco", asiento: 1 }] });
+  const m = mesaDeTercetos(mesaTercetosDe(0), partidaTercetosDe(vista), enReposo);
+  assert.deepEqual(m.estado, { titulo: "Responde tu equipo", indicacion: "Diego gritó truco." });
+});
+
+test("tercetos: la falta envido de la hoja dice cuánto cobra cada equipo con faltaPorEquipo", () => {
+  const vista = vistaDe(6, 1, { turno: 1, legales: ["carta", "falta-envido"] });
+  const mesa = mesaTercetosDe(1);
+  const hoja = hojaDeCantos(entradaDeHoja(mesa, partidaTercetosDe(vista, { faltaPorEquipo: [12, 18] })));
+  assert.ok(hoja?.notas.includes("Falta envido · Si gana tu equipo, cobra 18 tantos. Si ganan los rivales, cobran 12 tantos."));
+  const parejas = hojaDeCantos(entradaDeHoja(mesaDe("2v2", 1), partidaDe(vistaDe(4, 1, { turno: 1, legales: ["carta", "falta-envido"] }))));
+  assert.ok(!parejas?.notas.some(n => n.startsWith("Falta envido")), "en parejas no hay nota de falta");
+});
+
+test("tercetos: al cerrar el reparto, la tarjeta dice «Tantos de este reparto» con los totales del reparto", () => {
+  const vista = vistaDe(6, 0, {
+    vueltaActual: null,
+    resultado: { equipo: 1, tantos: 2, motivo: "vueltas" },
+    resumenTantos: { totales: [0, 2], cobros: [{ equipo: 1, tantos: 2, motivo: "truco" }] },
+    resumenReparto: { totales: [1, 2], cobros: [{ equipo: 0, tantos: 1, motivo: "truco" }, { equipo: 1, tantos: 2, motivo: "truco" }] },
+  });
+  const partida = partidaTercetosDe(vista, {
+    estado: "terminado", contexto: { versionVista: 1, fase: "reparto-cerrado" },
+    lance: { tipo: "pico-a-pico", duelo: 3, activos: [2, 5] }, historialLances: [primerDuelo],
+  });
+  const m = mesaDeTercetos(mesaTercetosDe(0), partida, enReposo);
+  assert.equal(m.fin?.tituloCobros, "Tantos de este reparto");
+  assert.equal(m.fin?.titulo, "Reparto terminado");
+  assert.equal(m.fin?.motivo, "El cierre fue por las vueltas.");
+  assert.deepEqual(m.fin?.cobros, [{ equipo: "Nos", texto: "+1 tanto" }, { equipo: "Ellos", texto: "+2 tantos" }]);
+  assert.equal(m.fin?.boton, "Repartir otra mano");
+  assert.deepEqual(m.asientos.map(a => a.estadoPico), ["Ya jugó", "Sin jugar", "Sin jugar", "Ya jugó", "Sin jugar", "Sin jugar"]);
+});
+
+test("datosDeTercetos: el encabezado nombra el lance y la hoja Reparto agrupa los duelos cerrados", () => {
+  const mesa = mesaTercetosDe(2, 40);
+  const partida = picoDelDuelo2();
+  const datos = datosDeTercetos(mesa, partida, mesaDeTercetos(mesa, partida, enReposo), enReposo);
+  assert.equal(datos.encabezado, "Reparto 3 · Pico a pico · Duelo 2 de 3 · Vuelta 1");
+  assert.equal(datos.cuenta, null, "sin mano propia no hay tantos propios");
+  assert.deepEqual(datos.reparto, [{
+    titulo: "Duelo 1 de 3",
+    resultado: "Ganó tu equipo por las vueltas · Nos 19 · 22 Ellos",
+    tantos: "Nos +1 tanto · Ellos 0 tantos",
+    historial: ["Clara jugó as de espadas.", "Beto jugó rey de copas."],
+    vueltas: [{ numero: "1.ª vuelta", ganador: "Nos", jugadas: "Clara · As de espadas, Beto · Rey de copas" }],
+    cobros: [{ equipo: "Nos · 1 tanto", texto: "por truco sin cantar" }],
+  }]);
 });

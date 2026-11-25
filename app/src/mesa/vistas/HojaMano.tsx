@@ -4,12 +4,13 @@ import type { DatosDeHojas } from "../modelo.ts";
 import { Apartado, BotonDeHoja, estilosDeHoja, Fila } from "./PartesDeHoja.tsx";
 
 /**
- * Lo que pasó en la mano, las vueltas terminadas y «Reportar esta jugada». Las señas recibidas de
+ * Lo que pasó en la mano, las vueltas terminadas y «Reportar esta jugada». En tercetos es la hoja
+ * Reparto: suma la redondilla o los duelos ya cerrados. Las señas recibidas de
  * las mesas legadas las agrega `MesaPantalla` debajo. «Manos anteriores» no va: la partida que
  * llega a la mesa no trae las manos ya cerradas.
  */
 export function HojaMano({ datos, reportar }: {
-  datos: Pick<DatosDeHojas, "encabezado" | "historial" | "vueltas">;
+  datos: Pick<DatosDeHojas, "encabezado" | "historial" | "vueltas" | "reparto">;
   /** Solo para las cuentas habilitadas a reportar. */
   reportar?: () => Promise<void>;
 }) {
@@ -46,6 +47,20 @@ export function HojaMano({ datos, reportar }: {
           ))}
         </Apartado>
       ) : null}
+      {datos.reparto?.map(lance => (
+        <Apartado key={lance.titulo} titulo={lance.titulo}>
+          <Fila>{lance.resultado}</Fila>
+          <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>Tantos de este lance · {lance.tantos}</Text>
+          {lance.historial.map((entrada, i) => <Fila key={i}>{entrada}</Fila>)}
+          {lance.vueltas.map(v => (
+            <View key={v.numero}>
+              <Fila dato={v.ganador}>{v.numero}</Fila>
+              <Text style={[estilosDeHoja.nota, { marginTop: 2 }]}>{v.jugadas}</Text>
+            </View>
+          ))}
+          {lance.cobros.map((c, i) => <Fila key={i}><Text style={estilosDeHoja.fuerte}>{c.equipo}</Text> {c.texto}</Fila>)}
+        </Apartado>
+      ))}
       {reportar ? (
         <View style={estilosDeHoja.botones}>
           <BotonDeHoja alPresionar={() => void alReportar()} deshabilitado={enviando}
