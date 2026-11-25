@@ -1,12 +1,56 @@
 [
   {
+    "id": "el-juego",
+    "title": "El juego en un minuto",
+    "intro": "El truco uruguayo se juega con baraja española y una muestra que cambia en cada mano. Dos equipos compiten por llegar primero a los tantos del chico.",
+    "blocks": [
+      {
+        "id": "quienes-juegan",
+        "heading": "Quiénes juegan",
+        "text": "Juegan dos equipos: mano a mano, en parejas o en dos equipos de tres. Cada jugador recibe tres cartas y una carta más, la muestra, queda a la vista de todos. La muestra decide cuáles son las cartas más fuertes de esa mano."
+      },
+      {
+        "id": "de-donde-salen-los-tantos",
+        "heading": "De dónde salen los tantos",
+        "text": "En cada mano hay tres lances. Cada uno se anota por separado y pueden cobrarlo equipos distintos.",
+        "items": [
+          "El truco. Lo gana el equipo que se lleva la mano, al mejor de tres vueltas. Vale un tanto, o más si alguien gritó truco y el rival lo quiso.",
+          "El envido. Lo gana el mejor tanto individual de la mesa. Se toca en la primera vuelta, antes de tirar la primera carta.",
+          "La flor. Tres cartas que forman flor dan tantos a su equipo, aunque después pierda la mano."
+        ]
+      },
+      {
+        "id": "como-sigue-una-mano",
+        "heading": "Cómo sigue una mano",
+        "text": "Una mano completa sigue este orden.",
+        "items": [
+          "Quien reparte da tres cartas a cada jugador y da vuelta la muestra.",
+          "Antes de tirar su primera carta, cada jugador puede cantar flor o tocar envido.",
+          "Se juegan hasta tres vueltas. En su turno, cualquiera puede gritar truco.",
+          "Se anotan los tantos de la flor, del envido y del truco, y el mazo pasa al jugador de la derecha."
+        ]
+      },
+      {
+        "id": "hasta-cuando-se-juega",
+        "heading": "Hasta cuándo se juega",
+        "text": "El chico se juega a 40 tantos: 20 malas y 20 buenas. De a seis se juega a 50. Gana el primer equipo que llega a la meta."
+      }
+    ],
+    "sources": [
+      { "title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego" },
+      { "title": "Ludoteka · Objetivo del juego", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas" },
+      { "title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf" }
+    ]
+  },
+  {
     "id": "preparacion",
-    "title": "La mesa y el reparto",
+    "title": "Jugadores, baraja y reparto",
     "intro": "Prepará una baraja española de 40 cartas. Cada jugador recibe tres y una más queda a la vista de todos. Esa carta es la muestra.",
     "blocks": [
       {
-        "heading": "Armar la mesa",
-        "text": "Usá los cuatro palos (oro, copa, espada y basto), cada uno con las cartas del 1 al 7, la sota (10), el caballo (11) y el rey (12). Retirá los ochos, los nueves y los comodines.",
+        "id": "equipos-y-asientos",
+        "heading": "Equipos y asientos",
+        "text": "Siempre juegan dos equipos con la misma cantidad de jugadores. Los compañeros se alternan alrededor de la mesa, de modo que cada jugador tiene un rival a cada lado.",
         "items": [
           "De a dos, jugás mano a mano con tu rival.",
           "De a cuatro, formá dos parejas. Los compañeros se sientan enfrentados.",
@@ -14,28 +58,49 @@
         ]
       },
       {
+        "id": "armar-la-mesa",
+        "heading": "La baraja",
+        "text": "Usá los cuatro palos (oro, copa, espada y basto), cada uno con las cartas del 1 al 7, la sota (10), el caballo (11) y el rey (12). Retirá los ochos, los nueves y los comodines."
+      },
+      {
+        "id": "dar-las-cartas",
         "heading": "Dar las cartas",
         "text": "Quien reparte mezcla y ofrece el mazo para que corte el rival de su izquierda. Empezando por la derecha, reparte una carta boca abajo a cada jugador y sigue en sentido antihorario hasta completar tres vueltas. Para la próxima mano, el mazo pasa un asiento a la derecha."
       },
       {
+        "id": "dar-vuelta-la-muestra",
         "heading": "Dar vuelta la muestra",
-        "text": "La siguiente carta es la muestra. Se suele dejar boca arriba debajo del mazo, con el número y el palo a la vista. Su palo determina las cinco piezas de esta mano. La persona a la derecha de quien repartió es mano y juega primero. Quien repartió es pie y cierra la primera vuelta."
+        "text": "La siguiente carta es la muestra. Dejala boca arriba debajo del mazo, con el número y el palo a la vista. Su palo determina las cinco piezas de esta mano."
+      },
+      {
+        "id": "mano-y-pie",
+        "heading": "Mano y pie",
+        "text": "La persona a la derecha de quien repartió es mano: juega primero y gana los empates de tantos. Quien repartió es pie y cierra la primera vuelta."
       }
     ],
     "variants": [
       {
+        "id": "truco-de-gallo",
         "title": "¿Y si son tres? El truco de gallo",
-        "text": "Roberto J. Bouton describe una variante para tres personas. El gallo juega solo contra los otros dos y recibe cuatro cartas. Elige con cuáles tres se queda y devuelve la cuarta al mazo antes de jugar.",
+        "text": "Con tres personas, el gallo juega solo contra los otros dos y recibe cuatro cartas. Elige con cuáles tres se queda y devuelve la cuarta al mazo antes de jugar.",
         "sources": [
-          {"title": "Roberto J. Bouton · La vida rural en el Uruguay, apartado «Truco»", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/38341/1/VIDARURALred.pdf"},
-          {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+          { "title": "Roberto J. Bouton · La vida rural en el Uruguay, apartado «Truco»", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/38341/1/VIDARURALred.pdf" },
+          { "title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf" },
+          { "title": "Pagat · Uruguayan Truco, juego de tres", "url": "https://pagat.com/put/truco_ur.html" }
         ]
       }
     ],
+    "discrepancias": [
+      {
+        "tema": "Truco oriental o «hasta el dos»",
+        "texto": "Pagat nombra esta variante del juego uruguayo, pero no describe sus reglas. Queda por documentar en qué se diferencia del reglamento.",
+        "sources": [{ "title": "Pagat · Card games in Uruguay", "url": "https://www.pagat.com/national/uruguay.html" }]
+      }
+    ],
     "sources": [
-      {"title": "Gran Aventura · Reparto, arts. 5–8", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego"},
-      {"title": "Quiero Truco · El reparto", "url": "https://quierotruco.com/reglas-del-truco-uruguayo"}
+      { "title": "Gran Aventura · Reparto, arts. 5–8", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego" },
+      { "title": "Quiero Truco · El reparto", "url": "https://quierotruco.com/reglas-del-truco-uruguayo" }
     ]
   },
   {
@@ -44,11 +109,19 @@
     "intro": "Para saber qué carta gana una vuelta, mirá primero la muestra. Hasta el as de espada pierde frente a cualquiera de las cinco piezas.",
     "blocks": [
       {
+        "id": "las-cinco-piezas",
         "heading": "Las cinco piezas",
         "text": "Solo son piezas las cartas de este cuadro que coinciden con el palo de la muestra. Leé de arriba hacia abajo. El caballo vence a la sota en una vuelta, aunque ambos aportan el mismo valor al envido.",
+        "resumen": true,
         "table": {
           "headers": ["Orden", "Pieza", "Valor de envido"],
-          "rows": [["1.ª", "2", "30"], ["2.ª", "4", "29"], ["3.ª", "5", "28"], ["4.ª", "11 · caballo o perico", "27"], ["5.ª", "10 · sota o perica", "27"]]
+          "rows": [
+            ["1.ª", "2", "30"],
+            ["2.ª", "4", "29"],
+            ["3.ª", "5", "28"],
+            ["4.ª", "11 · caballo o perico", "27"],
+            ["5.ª", "10 · sota o perica", "27"]
+          ]
         }
       },
       {
@@ -57,8 +130,10 @@
         "text": "Si la muestra es una de las cinco piezas, el rey de ese palo ocupa exactamente su lugar. Con el 4 de copas de muestra, el 12 de copas vence al 5 de copas, pierde ante el 2 de copas y vale 29 para el envido. Con el 6 de copas de muestra, ese mismo rey conserva su rango común."
       },
       {
+        "id": "las-cartas-que-siguen",
         "heading": "Las cartas que siguen",
         "text": "Después de las piezas viene la siguiente escala. Cada grupo supera al de la fila de abajo. Dentro de cada fila, leé de izquierda a derecha y excluí toda carta que ya sea pieza.",
+        "resumen": true,
         "table": {
           "headers": ["Grupo", "De mayor a menor"],
           "rows": [
@@ -70,14 +145,46 @@
         }
       },
       {
+        "id": "un-empate-de-valor",
         "heading": "Un empate de valor",
         "text": "Un 3 de oros y un 3 de espadas tienen la misma fuerza, sea cual sea la muestra. También empatan entre sí los dos ases que quedan en el grupo de las chicas y los dos sietes de la última fila."
+      },
+      {
+        "id": "valor-para-envido-y-flor",
+        "heading": "Valor para el envido y la flor",
+        "text": "La fuerza en la vuelta y el valor para el envido son cosas distintas. El valor de cada pieza ya incluye los 20 de base: el 2 vale 30 porque son 20 más 10. Por eso, en la flor, cada pieza aporta lo que excede de 20.",
+        "resumen": true,
+        "table": {
+          "headers": ["Carta", "Valor de envido", "Aporte a la flor"],
+          "rows": [
+            ["2 de la muestra", "30", "10"],
+            ["4 de la muestra", "29", "9"],
+            ["5 de la muestra", "28", "8"],
+            ["Caballo o sota de la muestra", "27", "7"],
+            ["Rey de la muestra, si la muestra es pieza", "El de la pieza que reemplaza", "El de la pieza que reemplaza"],
+            ["Otras cartas del 1 al 7", "Su número", "Su número"],
+            ["Otras sotas, caballos y reyes", "0", "0"]
+          ]
+        }
+      }
+    ],
+    "discrepancias": [
+      {
+        "tema": "Cómo se escribe el valor de las piezas",
+        "texto": "Pagat da a las piezas 10, 9, 8 y 7 y suma aparte los 20 de base. Es la misma cuenta que 30, 29, 28 y 27: el reglamento usa la segunda forma porque es la que se dice en la mesa.",
+        "sources": [{ "title": "Pagat · Uruguayan Truco, valores de la muestra", "url": "https://pagat.com/put/truco_ur.html" }]
+      },
+      {
+        "tema": "Valor de la sota de la muestra",
+        "texto": "La Wikipedia en inglés le da 29 a la sota. El reglamento le da 27, como al caballo, igual que Gran Aventura, ConectaGames y Ludoteka.",
+        "sources": [{ "title": "Wikipedia (inglés) · Truco, Card ranking", "url": "https://en.wikipedia.org/wiki/Truco" }]
       }
     ],
     "sources": [
-      {"title": "Ludoteka · Muestra, piezas y jerarquía", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
-      {"title": "ReTruco.com · Las cartas y sus valores, arts. 7–9", "url": "https://web.archive.org/web/20121228153734/http://www.retruco.com/pagina.phtml?pag=ReglamentoRetruco"},
-      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+      { "title": "Ludoteka · Muestra, piezas y jerarquía", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas" },
+      { "title": "ReTruco.com · Las cartas y sus valores, arts. 7–9", "url": "https://web.archive.org/web/20121228153734/http://www.retruco.com/pagina.phtml?pag=ReglamentoRetruco" },
+      { "title": "ConectaGames · Valor de las cartas", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES" },
+      { "title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf" }
     ]
   },
   {
@@ -86,12 +193,15 @@
     "intro": "Con las tres cartas de cada reparto se juegan hasta tres vueltas. Si ganás la primera y la segunda sale parda, ganás la mano.",
     "blocks": [
       {
+        "id": "como-se-juega-una-vuelta",
         "heading": "Cómo se juega una vuelta",
         "text": "Una vuelta, también llamada «baza», es la jugada en la que cada participante que sigue en la mano tira una carta. El mano abre la primera. Quien tira la carta de mayor jerarquía gana esa vuelta para su equipo y abre la siguiente. El equipo que gana dos vueltas cobra el truco. Si gana las dos primeras, la mano termina ahí."
       },
       {
+        "id": "resolver-un-empate",
         "heading": "Resolver un empate",
-        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una vuelta. Si emparda la primera, vuelve a salir el mano, aunque haya tirado una carta menor. Si también emparda la segunda, el mano abre la tercera. En parejas, si las dos cartas de mayor jerarquía son de compañeros y empatan entre sí, su equipo gana la vuelta. Si sigue la mano, sale el compañero que tiró primero una de esas cartas.",
+        "text": "Hay parda cuando ambos equipos alcanzan el mismo valor máximo en una vuelta. Si emparda la primera, vuelve a salir el mano, aunque haya tirado una carta menor. Si también emparda la segunda, el mano abre la tercera.",
+        "resumen": true,
         "table": {
           "headers": ["Qué pasó", "Cómo se decide"],
           "rows": [
@@ -104,110 +214,183 @@
         }
       },
       {
-        "heading": "Pasar e irse al mazo",
-        "text": "En el reglamento de Gran Aventura, decir «paso» al llegar tu turno te retira de la mano y tus compañeros pueden seguir jugando. Si entregás las cartas al mazo sin avisar, comprometés al equipo entero. Cuando el equipo abandona, el rival cobra lo que valía el truco en ese momento."
+        "id": "empate-entre-companeros",
+        "heading": "Empate entre compañeros",
+        "text": "En parejas o en tercetos, si las dos cartas de mayor jerarquía son de compañeros y empatan entre sí, su equipo gana la vuelta. Si sigue la mano, sale el compañero que tiró primero una de esas cartas."
       }
     ],
     "sources": [
-      {"title": "Gran Aventura · Vueltas y salida de juego, arts. 55–59 y 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Truquito · Orden de salida entre compañeros en la implementación uruguaya", "url": "https://github.com/truquito/gotruco/blob/534f9c77441133903021ac11ec1afa1286e884e4/pdt/partida.go#L242-L264"},
-      {"title": "Ludoteka · Truco y pardas", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
-      {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
-      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+      { "title": "Gran Aventura · Vueltas, arts. 55–59", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Truquito · Orden de salida entre compañeros en la implementación uruguaya", "url": "https://github.com/truquito/gotruco/blob/534f9c77441133903021ac11ec1afa1286e884e4/pdt/partida.go#L242-L264" },
+      { "title": "Ludoteka · Truco y pardas", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas" },
+      { "title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos" },
+      { "title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf" }
     ]
   },
   {
-    "id": "puntaje",
-    "title": "El tanteador",
-    "intro": "En El Truco, el chico es a 40 tantos en duelo y en parejas, y a 50 de a seis. Podés acordar otro total par antes de jugar. La primera mitad son las malas y la segunda, las buenas. Gana quien llega primero al total elegido.",
+    "id": "orden-de-los-cantos",
+    "title": "Orden y momento de los cantos",
+    "intro": "Primero va la flor, después el envido y por último el truco. La flor y el envido se cantan en la primera vuelta. El truco se puede gritar en cualquier turno.",
     "blocks": [
       {
-        "heading": "Pasar a buenas",
-        "text": "Cada lado lleva su propia cuenta. En un chico a 40, si vas 19 a 14 y ganás un tanto, completás las 20 malas y entrás en buenas con cero. Si ganás otro, tenés una buena (21 tantos en total). Tu rival sigue con 14 malas."
+        "id": "prelacion",
+        "heading": "Flor, envido y truco",
+        "text": "Los tres lances se resuelven en ese orden. Si se cruzan, primero se liquida la flor, después el envido y al final el truco. Cada lance se anota por separado.",
+        "resumen": true,
+        "table": {
+          "headers": ["Canto", "Cuándo", "Quién"],
+          "rows": [
+            ["Flor", "En la primera vuelta, antes de jugar tu primera carta o de contestar otro canto.", "Quien tiene flor. Corresponde cantarla."],
+            ["Envido", "En la primera vuelta, antes de jugar tu primera carta.", "Cualquier jugador, en su turno."],
+            ["Truco", "En tu turno, en cualquier vuelta, mientras siga la mano.", "Cualquier jugador. Después, sube el equipo al que le gritaron."]
+          ]
+        }
       },
       {
-        "heading": "Qué se anota",
-        "text": "Hay tantos por el truco y, según los cantos de la mano, por el envido o la flor. Pueden cobrarlos equipos distintos. Por ejemplo, si ganás un envido de dos y el rival gana la mano sin haber gritado truco, anotás dos y el rival anota uno."
+        "id": "el-envido-en-primera",
+        "heading": "El envido se toca en primera",
+        "text": "Podés tocar envido cuando te toca jugar, antes de tirar tu primera carta. Una vez que la tiraste, ya no podés tocarlo en esa mano."
       },
       {
-        "heading": "El chico y el partido",
-        "text": "Un chico termina cuando un equipo alcanza el total acordado. Se puede jugar a un solo chico o al mejor de tres. En este último formato gana el partido el primero que consiga dos chicos."
-      }
-    ],
-    "variants": [
+        "id": "la-flor-anula-el-envido",
+        "heading": "La flor anula el envido",
+        "text": "Si tenés flor, cantala antes de jugar tu primera carta o de contestar otro canto. Al cantar flor se anula el envido ordinario que se hubiera tocado. Desde ahí, los envites se hacen con la flor."
+      },
       {
-        "title": "El puntaje cambia según la mesa",
-        "text": "Wikipedia recoge 40 como meta habitual. Ludoteka fija 30 y el Club Canelón Chico jugó su torneo de 2026 a 30 en parejas y a 50 de a seis. Al organizar la partida, elegí el total antes de calcular la falta.",
-        "sources": [
-          {"title": "Wikipedia · Desarrollo del juego", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Desarrollo_del_juego"},
-          {"title": "Ludoteka · Objetivo del juego", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas"},
-          {"title": "Canelonchiqueadas 2026 · Reglamento, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
-        ]
+        "id": "el-envido-esta-primero",
+        "heading": "El envido está primero",
+        "text": "Si te gritan truco antes de que juegues tu primera carta y el envido sigue abierto, podés tocar envido antes de contestar. Primero se resuelve el envido y luego se responde al truco pendiente. Si tenés flor, cantala primero."
       }
     ],
     "sources": [
-      {"title": "ConectaGames · Objetivo y tantos", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
-      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+      { "title": "Gran Aventura · Envites y flores, arts. 14–47", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Ludoteka · Lances de truco y envido", "url": "https://www.ludoteka.com/juegos/truco-uruguayo/reglas" },
+      { "title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos" }
+    ]
+  },
+  {
+    "id": "irse-al-mazo",
+    "title": "Pasar e irse al mazo",
+    "intro": "Si no querés seguir jugando la mano, podés irte al mazo. El rival cobra lo que valía el truco en ese momento.",
+    "blocks": [
+      {
+        "id": "irse-al-mazo",
+        "heading": "Irse al mazo",
+        "text": "Cuando un equipo abandona la mano, el rival cobra el truco: lo que se había querido o, si no se quiso ningún truco, un tanto. Si te gritaron y te vas sin contestar, equivale a no querer. Los tantos de flor y de envido ya ganados en esa mano se conservan."
+      },
+      {
+        "id": "pasar",
+        "heading": "Pasar",
+        "text": "En parejas o en tercetos, decir «paso» al llegar tu turno te retira de la mano. Tus compañeros pueden seguir jugando."
+      },
+      {
+        "id": "entregar-sin-avisar",
+        "heading": "Entregar las cartas sin avisar",
+        "text": "Si entregás las cartas al mazo sin decir nada, comprometés al equipo entero: se entiende que el equipo se fue al mazo."
+      },
+      {
+        "id": "mazo-en-tercetos",
+        "kind": "casa",
+        "heading": "Irse al mazo en los tercetos en línea",
+        "text": "Irse al mazo en turno de carta concede al rival el valor vigente del truco. Primero se liquidan las flores obligatorias."
+      }
+    ],
+    "sources": [
+      { "title": "Gran Aventura · Salida de juego, arts. 88–92", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos" }
     ]
   },
   {
     "id": "seis-jugadores",
     "title": "El juego de a seis",
-    "intro": "Dos equipos de tres juegan por defecto a 50 tantos, con 25 malas y 25 buenas. Con 25 tantos entrás en buenas y con 26 tenés una buena. Podés acordar otra meta antes del reparto. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
+    "intro": "Dos equipos de tres juegan a 50 tantos, con 25 malas y 25 buenas. Con 25 tantos entrás en buenas y con 26 tenés una buena. Podés acordar otra meta antes del reparto. En la redondilla juegan los seis. En el pico a pico, cada jugador se mide con el rival que tiene enfrente.",
     "blocks": [
       {
+        "id": "alternar-las-manos",
         "heading": "Alternar las manos",
-        "text": "Empiecen con una redondilla. En el reparto siguiente se juegan tres duelos con la misma muestra. Juega primero la pareja de rivales que incluye al mano y luego las otras dos por turno. En la modalidad de Gran Aventura, quienes esperan dejan sus cartas sobre la mesa sin mirarlas ni intervenir."
+        "text": "Empiecen con una redondilla. En el reparto siguiente se juegan tres duelos con la misma muestra. Juega primero la pareja de rivales que incluye al mano y luego las otras dos por turno. Quienes esperan dejan sus cartas sobre la mesa sin mirarlas ni intervenir."
       },
       {
+        "id": "anotar-los-duelos",
         "heading": "Anotar los duelos",
         "text": "Al terminar cada duelo, los tantos van al marcador de los equipos. La alternancia entre redondilla y pico a pico se usa mientras los dos equipos estén en malas. Cuando uno llega a buenas, los siguientes repartos son redondillas."
       },
       {
-        "heading": "El chico de tercetos en línea",
-        "text": "La casa propone 50 tantos, con 25 malas y 25 buenas. Si pactan otra meta, la mitad marca la entrada en buenas. Si un equipo entra en buenas durante un duelo, se completan los duelos de ese reparto y la redondilla vuelve en el siguiente. En cuanto un cobro alcanza la meta, gana ese equipo y se cierran los cobros y los duelos pendientes. Irse al mazo en turno de carta concede al rival el valor vigente del truco. Primero se liquidan las flores obligatorias.",
-        "sources": [
-          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"},
-          {"title": "El Truco · Decisiones para los tercetos en línea", "url": "https://github.com/flabat/truco-uruguayo/pull/173"}
-        ]
-      },
-      {
-        "heading": "Una flor por lado en el pico a pico",
-        "text": "Tu equipo lleva 2 tantos y el rival, 4. La muestra es el as de oro. Tenés el 5, el 6 y el 7 de copa (38 de flor). Tu rival tiene el 2, el 3 y el 4 de basto (29 de flor). Los dos cantan flor y se acepta la contraflor al resto sin envites previos. ¿Cuánto anota tu equipo por ganar ese canto?",
+        "id": "cantos-en-el-pico-a-pico",
+        "heading": "La falta y el resto en el pico a pico",
+        "text": "En un duelo de pico a pico, la falta envido querida vale 6 tantos. La contraflor al resto querida vale 12 en total: 6 del resto y 3 por cada una de las dos flores.",
+        "resumen": true,
         "table": {
-          "headers": ["Fuente", "Regla del duelo", "Qué anotás"],
+          "headers": ["Canto querido en el pico a pico", "Tantos"],
           "rows": [
-            ["Wikipedia", "6 tantos de envite y 3 por cada flor.", "6 + 3 + 3 = 12 tantos. Pasás de 2 a 14."],
-            ["Gran Aventura", "Al puntero le faltan 36 para llegar a 40. El resto tiene un tope de 10.", "10 + 3 + 3 = 16 tantos. Pasás de 2 a 18."],
-            ["Canelón Chico (2026)", "15 tantos por la contraflor al resto en el torneo a 50.", "Queda por confirmar si esos 15 incluyen las dos flores o si se suman aparte."]
+            ["Falta envido", "6"],
+            ["Contraflor al resto, con una flor por lado", "12 (6 del resto más 3 por cada flor)"]
           ]
         }
+      },
+      {
+        "id": "una-flor-por-lado",
+        "kind": "ejemplo",
+        "heading": "Una flor por lado en el pico a pico",
+        "text": "Tu equipo lleva 2 tantos y el rival, 4. La muestra es el as de oro. Tenés el 5, el 6 y el 7 de copa (38 de flor). Tu rival tiene el 2, el 3 y el 4 de basto (29 de flor). Los dos cantan flor y se quiere la contraflor al resto sin envites previos. Tu flor es mejor: anotás 6 del resto y 3 por cada flor, 12 tantos en total. Pasás de 2 a 14."
+      },
+      {
+        "id": "el-chico-de-tercetos-en-linea",
+        "kind": "casa",
+        "heading": "El chico de tercetos en línea",
+        "text": "La casa propone 50 tantos, con 25 malas y 25 buenas. Si pactan otra meta, la mitad marca la entrada en buenas. Si un equipo entra en buenas durante un duelo, se completan los duelos de ese reparto y la redondilla vuelve en el siguiente. En cuanto un cobro alcanza la meta, gana ese equipo y se cierran los cobros y los duelos pendientes. En el pico a pico, la contraflor al resto querida vale 15 tantos en total, con las flores incluidas."
       }
     ],
     "variants": [
       {
+        "id": "falta-y-resto-en-el-pico-a-pico",
         "title": "La falta y el resto en el pico a pico",
-        "text": "Si el duelo es sin flor y se quiere una falta envido directa, Wikipedia le asigna 6 tantos y Gran Aventura le pone un tope de 10. En el torneo de a seis de Canelón Chico, quien gana la falta en malas llega a 25. El club menciona los 15 solo al tratar la contraflor al resto en pico a pico. Antes de repartir, acuerden cuánto vale la falta y cómo se cuentan las flores al querer el resto.",
+        "text": "Algunas mesas ponen un tope de 10 tantos a la falta y al resto en los duelos y suman las flores aparte. En el torneo de a seis de Canelón Chico de 2026, la contraflor al resto en pico a pico valía 15. Con el ejemplo de una flor por lado, así queda tu cuenta.",
+        "table": {
+          "headers": ["Regla de la mesa", "Qué anotás", "Cómo quedás"],
+          "rows": [
+            ["Reglamento: 6 del resto y 3 por flor", "6 + 3 + 3 = 12", "De 2 a 14"],
+            ["Tope de 10, flores aparte", "10 + 3 + 3 = 16", "De 2 a 18"],
+            ["15 en total (Canelón Chico 2026)", "15", "De 2 a 17"]
+          ]
+        },
         "sources": [
-          {"title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos"},
-          {"title": "Gran Aventura · Arts. 4, 20, 23–26, 31, 33 y 86 (archivo de 2011)", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-          {"title": "Club Canelón Chico · Canelonchiqueadas 2026, Truco uruguayo, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11"}
+          { "title": "Gran Aventura · Arts. 31 y 83–87", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+          { "title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11" }
+        ]
+      }
+    ],
+    "discrepancias": [
+      {
+        "tema": "Los 15 tantos de Canelón Chico",
+        "texto": "El reglamento del torneo asigna 15 a la contraflor al resto en pico a pico, pero no aclara si incluye las dos flores o si se suman aparte. El Truco en línea los cuenta con las flores incluidas.",
+        "sources": [{ "title": "Club Canelón Chico · Canelonchiqueadas 2026, pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11" }]
+      },
+      {
+        "tema": "Valores del pico a pico",
+        "texto": "El reglamento adopta 6 para la falta y 12 para la contraflor al resto con una flor por lado, como Wikipedia y ServicioTI. Este último también menciona el «chumbo», que limita el total a 6.",
+        "sources": [
+          { "title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos" },
+          { "title": "ServicioTI · Truco uruguayo, reglamento (2026)", "url": "https://www.servicioti.com.uy/2026/04/truco-uruguayo-reglamento.html" }
         ]
       }
     ],
     "sources": [
-      {"title": "ConectaGames · Juego de a seis", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES"},
-      {"title": "Gran Aventura · Partidos entre dos tercetos, arts. 83–87", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"}
+      { "title": "ConectaGames · Juego de a seis", "url": "https://www.conectagames.com/rules/truco_uy?lang=ES" },
+      { "title": "Gran Aventura · Partidos entre dos tercetos, arts. 83–87", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Wikipedia · Rondas y manos", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Rondas_y_manos" }
     ]
   },
   {
     "id": "senas",
     "title": "Las señas",
-    "intro": "Las señas son gestos discretos que usás para contarle a tu compañero qué cartas tenés. Por ejemplo, si tenés el 2 del palo de la muestra, podés alzar ambas cejas. En las parejas y redondillas en línea con señas al pie, cada compañero le pasa sus gestos automáticamente al abrir la vuelta. Solo los ven quien los hace y el pie. El pie puede decir «Vení» para pedir una baja, o «Jugá» y «Voy a vos» para pedir una fuerte. Toda la mesa oye a quién se dirige.",
+    "intro": "Las señas son gestos discretos que usás para contarle a tu compañero qué cartas tenés. Por ejemplo, si tenés el 2 del palo de la muestra, podés alzar ambas cejas.",
     "blocks": [
       {
+        "id": "un-codigo-entre-companeros",
         "heading": "Un código entre compañeros",
-        "text": "Estas son las convenciones recogidas en la guía de Wikipedia. En la mesa física también se pueden acordar señas de flor y de buen tanto. La variante automática usa únicamente las señas de cartas. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
+        "text": "Este es el código tradicional. Algunas señas distinguen una carta y otras, como la de los ases bravos, indican un par de posibilidades.",
+        "resumen": true,
         "table": {
           "headers": ["Carta o jugada", "Gesto"],
           "rows": [
@@ -228,14 +411,111 @@
         }
       },
       {
-        "heading": "Qué significa cada gesto",
-        "text": "Averiguá qué código usa la mesa. Por ejemplo, Gran Aventura agrupa los doses comunes y los ases de copa y oro bajo el mismo gesto de entreabrir la boca. Daniel Vidart también documenta parejas con un código propio."
+        "id": "acordar-el-codigo",
+        "heading": "Acordá el código",
+        "text": "Antes de jugar, averiguá qué código usa la mesa. Hay mesas que reúnen los doses comunes y los ases de copa y de oro bajo el mismo gesto de entreabrir la boca, y parejas que juegan con un código propio."
+      },
+      {
+        "id": "senas-a-la-vista",
+        "heading": "Señas a la vista",
+        "text": "Las señas son parte del juego. Hacelas en silencio, con la cara, mientras los rivales intentan descubrirlas. Una seña que ve el rival le sirve a él tanto como a tu compañero."
+      },
+      {
+        "id": "senas-al-pie",
+        "kind": "casa",
+        "heading": "Señas al pie en la mesa en línea",
+        "text": "En las parejas y redondillas en línea con señas al pie, cada compañero le pasa sus gestos automáticamente al abrir la vuelta. Solo los ven quien los hace y el pie. El pie puede decir «Vení» para pedir una baja, o «Jugá» y «Voy a vos» para pedir una fuerte. Toda la mesa oye a quién se dirige. Esta variante usa únicamente las señas de cartas."
+      }
+    ],
+    "discrepancias": [
+      {
+        "tema": "Gestos de los doses y los ases",
+        "texto": "Gran Aventura agrupa los doses comunes y los ases de copa y oro bajo el gesto de entreabrir la boca. El reglamento conserva gestos separados, como Wikipedia y Pagat.",
+        "sources": [
+          { "title": "Gran Aventura · Señas, art. 102", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+          { "title": "Pagat · Uruguayan Truco, señas", "url": "https://pagat.com/put/truco_ur.html" }
+        ]
       }
     ],
     "sources": [
-      {"title": "Wikipedia · Valores y señas de las cartas", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Valores_y_se%C3%B1as_de_las_cartas"},
-      {"title": "Gran Aventura · Señas, art. 102", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm"},
-      {"title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf"}
+      { "title": "Wikipedia · Valores y señas de las cartas", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Valores_y_se%C3%B1as_de_las_cartas" },
+      { "title": "Gran Aventura · Señas, art. 102", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Daniel Vidart · Genealogía y espíritu del truco", "url": "https://anaforas.fic.edu.uy/jspui/bitstream/123456789/53454/1/genealogiayEspiritudelTruco_19950616.pdf" }
+    ]
+  },
+  {
+    "id": "errores",
+    "title": "Errores, sanciones y reclamos",
+    "intro": "Para cobrar un tanto tenés que acreditarlo. Si un equipo dice mal sus tantos o niega una flor, el rival cobra lo que estaba en juego.",
+    "blocks": [
+      {
+        "id": "acreditar-los-tantos",
+        "heading": "Acreditar los tantos",
+        "text": "Quien gana el envido o la flor muestra las cartas que suman esos tantos antes de mezclarlas con el mazo. Así acredita lo que dijo."
+      },
+      {
+        "id": "canto-errado",
+        "heading": "Canto errado",
+        "text": "Hay canto errado cuando los tantos que dijiste no coinciden con las cartas que mostrás. Por ejemplo, decir 32 y mostrar cartas que suman 31."
+      },
+      {
+        "id": "flor-negada",
+        "heading": "Flor negada",
+        "text": "Niega la flor quien la tiene y no la canta en su momento. Se descubre cuando muestra sus cartas."
+      },
+      {
+        "id": "sancion",
+        "heading": "Qué cobra el rival",
+        "text": "Si un solo equipo canta mal o niega una flor, el rival cobra los tantos envidados, las flores cantadas o negadas y el valor del truco querido, o un tanto si todavía no se había querido. Si los dos equipos incurren en esos errores, la mano se anula."
+      },
+      {
+        "id": "casos-no-previstos",
+        "heading": "Lo que este reglamento no prevé",
+        "text": "Si surge un caso que este reglamento no resuelve, la mesa lo decide antes de seguir y aplica la misma decisión hasta el final del chico."
+      }
+    ],
+    "discrepancias": [
+      {
+        "tema": "Errores de reparto y de turno",
+        "texto": "Ninguna fuente consultada fija qué pasa con una carta dada vuelta, un reparto con cartas de más o de menos, o una carta jugada fuera de turno. Se buscan reglamentos de clubes o torneos que lo documenten."
+      }
+    ],
+    "sources": [
+      { "title": "Gran Aventura · Errores y sanciones, arts. 38–47", "url": "https://web.archive.org/web/20110829054729/http://www.granaventura.com/truco_uruguayo.htm" },
+      { "title": "Wikipedia · Puntos del envido", "url": "https://es.wikipedia.org/wiki/Truco_uruguayo#Puntos_del_envido" }
+    ]
+  },
+  {
+    "id": "etiqueta",
+    "title": "Antes de repartir y en la mesa",
+    "intro": "Las mesas cambian algunas reglas. Acordá la modalidad antes del primer reparto y respetá el orden de la palabra.",
+    "blocks": [
+      {
+        "id": "acordar-la-modalidad",
+        "heading": "Acordá la modalidad",
+        "text": "Antes del primer reparto, la mesa acuerda estos puntos. Si no dicen nada, rige este reglamento.",
+        "items": [
+          "A cuántos tantos se juega el chico y si es un solo chico o al mejor de tres.",
+          "Cómo se calcula la falta y qué cobra la contraflor al resto.",
+          "Quién puede echar los perros.",
+          "Qué código de señas usa cada pareja."
+        ]
+      },
+      {
+        "id": "el-orden-de-la-palabra",
+        "heading": "El orden de la palabra",
+        "text": "Se habla en el orden del reparto. Al comparar tantos, primero dice los suyos el mano. Si tu tanto no alcanza, decí «son buenas» en lugar de mostrar."
+      },
+      {
+        "id": "el-vocabulario",
+        "heading": "El vocabulario de la mesa",
+        "text": "Espadilla, perica, collera, a punto: el glosario reúne las palabras de la mesa y el capítulo donde se explica cada una."
+      }
+    ],
+    "sources": [
+      { "title": "Expo Prado 2018 · Bases del campeonato, «Logística», pág. 1", "url": "https://web.archive.org/web/20240711235721id_/https://www.expoprado.com/wp-content/uploads/2018/08/CAMPEONATO-DE-TRUCO-Bases-y-condiciones-1.pdf#page=1" },
+      { "title": "Canelonchiqueadas 2026 · Reglamento, «Truco uruguayo», pág. 11", "url": "https://canelonchiqueadas.com.uy/reglamento.pdf#page=11" },
+      { "title": "ServicioTI · Truco uruguayo, glosario (2026)", "url": "https://www.servicioti.com.uy/2026/04/truco-uruguayo-reglamento.html" }
     ]
   }
 ]

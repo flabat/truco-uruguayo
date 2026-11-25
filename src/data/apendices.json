@@ -1,0 +1,60 @@
+{
+  "glosario": [
+    { "termino": "A ley de juego", "definicion": "Anuncio con el que un equipo echa los perros antes de que se ponga la muestra.", "capitulo": "perros" },
+    { "termino": "A punto", "definicion": "Respuesta a los perros de quien no tiene flor.", "capitulo": "perros" },
+    { "termino": "Bastillo", "definicion": "El as de basto, segunda de las matas.", "capitulo": "jerarquia" },
+    { "termino": "Baza", "definicion": "Otro nombre de la vuelta.", "capitulo": "bazas" },
+    { "termino": "Buenas", "definicion": "La segunda mitad de los tantos del chico.", "capitulo": "puntaje" },
+    { "termino": "Chicas o fíos", "definicion": "Los treses, los doses que no son pieza y los ases de copa y de oro.", "capitulo": "jerarquia" },
+    { "termino": "Chico", "definicion": "La partida que gana el primer equipo en llegar a la meta acordada.", "capitulo": "puntaje" },
+    { "termino": "Collera", "definicion": "Dos compañeros con flor. Suman 6 si ningún rival tiene flor.", "capitulo": "flor" },
+    { "termino": "Con flor envido", "definicion": "Envite que se hace con flor. Querido, la mejor flor suma 5.", "capitulo": "flor" },
+    { "termino": "Contraflor al resto", "definicion": "Envite con flor por el resto. Querido, la mejor flor cobra el resto y 3 por cada flor.", "capitulo": "flor" },
+    { "termino": "En ley", "definicion": "Respuesta a los perros de quien tiene flor.", "capitulo": "perros" },
+    { "termino": "Envido", "definicion": "Apuesta sobre los tantos de cada jugador. Se toca en la primera vuelta.", "capitulo": "envido" },
+    { "termino": "Espadilla", "definicion": "El as de espada, la mata más fuerte.", "capitulo": "jerarquia" },
+    { "termino": "Falta envido", "definicion": "Envite que vale lo que le falta al puntero para ganar el chico.", "capitulo": "falta-y-resto" },
+    { "termino": "Flor", "definicion": "Tres cartas del mismo palo, o con piezas que completan el palo. Se canta antes de jugar la primera carta.", "capitulo": "flor" },
+    { "termino": "Gallo", "definicion": "En el truco de tres, quien juega solo contra los otros dos.", "capitulo": "preparacion" },
+    { "termino": "Irse al mazo", "definicion": "Abandonar la mano. El rival cobra el truco vigente.", "capitulo": "irse-al-mazo" },
+    { "termino": "Malas", "definicion": "La primera mitad de los tantos del chico.", "capitulo": "puntaje" },
+    { "termino": "Mano", "definicion": "Quien juega primero: la persona a la derecha de quien repartió. Gana los empates de tantos.", "capitulo": "preparacion" },
+    { "termino": "Matas", "definicion": "El as de espada, el as de basto, el 7 de espada y el 7 de oro, que siguen a las piezas.", "capitulo": "jerarquia" },
+    { "termino": "Muestra", "definicion": "La carta que se da vuelta después del reparto. Su palo define las piezas.", "capitulo": "preparacion" },
+    { "termino": "Negras", "definicion": "Los reyes, caballos y sotas que no son pieza.", "capitulo": "jerarquia" },
+    { "termino": "Parda", "definicion": "Empate en una vuelta.", "capitulo": "bazas" },
+    { "termino": "Partido", "definicion": "Serie al mejor de tres chicos.", "capitulo": "puntaje" },
+    { "termino": "Pasar", "definicion": "Retirarse de la mano en parejas o tercetos mientras los compañeros siguen.", "capitulo": "irse-al-mazo" },
+    { "termino": "Perica", "definicion": "La sota del palo de la muestra.", "capitulo": "jerarquia" },
+    { "termino": "Perico", "definicion": "El caballo del palo de la muestra.", "capitulo": "jerarquia" },
+    { "termino": "Perros", "definicion": "Echar los perros: ofrecer de entrada la falta, la contraflor al resto y el truco.", "capitulo": "perros" },
+    { "termino": "Pico a pico", "definicion": "En la mesa de seis, la mano en que cada jugador se mide con el rival de enfrente.", "capitulo": "seis-jugadores" },
+    { "termino": "Pie", "definicion": "Quien repartió. Cierra la primera vuelta.", "capitulo": "preparacion" },
+    { "termino": "Pieza", "definicion": "El 2, el 4, el 5, el caballo y la sota del palo de la muestra.", "capitulo": "jerarquia" },
+    { "termino": "Puntero", "definicion": "El equipo que va primero en el tanteador.", "capitulo": "falta-y-resto" },
+    { "termino": "Real envido", "definicion": "Envite que vale 3 si lo quieren.", "capitulo": "envido" },
+    { "termino": "Redondilla", "definicion": "En la mesa de seis, la mano en que juegan los seis.", "capitulo": "seis-jugadores" },
+    { "termino": "Resto", "definicion": "Lo que le falta al puntero para ganar el chico. Se juega en la contraflor al resto.", "capitulo": "falta-y-resto" },
+    { "termino": "Retruco", "definicion": "Segunda subida del truco. Vale 3 si lo quieren.", "capitulo": "truco" },
+    { "termino": "Señas", "definicion": "Gestos con los que un jugador le cuenta sus cartas al compañero.", "capitulo": "senas" },
+    { "termino": "Son buenas", "definicion": "Lo que dice quien reconoce que el tanto del rival le gana.", "capitulo": "etiqueta" },
+    { "termino": "Tanto", "definicion": "Cada punto del tanteador. También, lo que suma una mano para el envido o la flor.", "capitulo": "envido" },
+    { "termino": "Todo dicho", "definicion": "Fórmula de los perros que ofrece a la vez la falta, la contraflor al resto y el truco.", "capitulo": "perros" },
+    { "termino": "Trillera", "definicion": "Tres compañeros con flor. Suman 9 si el otro equipo no tiene flor.", "capitulo": "flor" },
+    { "termino": "Truco", "definicion": "Desafío que sube el valor de la mano a 2 tantos.", "capitulo": "truco" },
+    { "termino": "Vale cuatro", "definicion": "Última subida del truco. Vale 4 si la quieren.", "capitulo": "truco" },
+    { "termino": "Vuelta", "definicion": "Jugada en que cada participante tira una carta. La mano se juega al mejor de tres vueltas.", "capitulo": "bazas" }
+  ],
+  "historial": [
+    {
+      "fecha": "2026-11-24",
+      "edicion": "Edición 2026",
+      "cambios": [
+        "El reglamento se organiza en seis partes y dieciséis capítulos con artículos numerados.",
+        "Capítulos nuevos: «El juego en un minuto», «Orden y momento de los cantos», «Pasar e irse al mazo», «Echar los perros», «La falta y el resto», «Errores, sanciones y reclamos» y «Antes de repartir y en la mesa».",
+        "Decisiones canónicas: la falta y el resto se cuentan desde el puntero; la contraflor al resto querida suma 3 por cada flor; en el pico a pico la falta vale 6 y la contraflor 12; cualquier equipo puede echar los perros antes de la muestra.",
+        "Las reglas de la mesa en línea, las variantes, los ejemplos y las fuentes pasan a sus apéndices."
+      ]
+    }
+  ]
+}
