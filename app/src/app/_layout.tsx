@@ -2,18 +2,26 @@ import { DMSans_400Regular, DMSans_600SemiBold } from "@expo-google-fonts/dm-san
 import { DMSerifText_400Regular } from "@expo-google-fonts/dm-serif-text";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Cargando } from "../componentes/ui.tsx";
 import { ProveedorDeSesion } from "../ingreso/contexto.tsx";
 import { colores } from "../tema.ts";
 
+// La pantalla de inicio nativa queda hasta que cargan las tipografías.
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export default function Raiz() {
-  const [listas] = useFonts({ DMSerifText_400Regular, DMSans_400Regular, DMSans_600SemiBold });
+  const [listas, error] = useFonts({ DMSerifText_400Regular, DMSans_400Regular, DMSans_600SemiBold });
+  useEffect(() => {
+    if (listas || error) SplashScreen.hideAsync().catch(() => {});
+  }, [listas, error]);
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      {listas ? (
+      {listas || error ? (
         <ProveedorDeSesion>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
         </ProveedorDeSesion>
