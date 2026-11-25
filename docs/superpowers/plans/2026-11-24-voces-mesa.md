@@ -89,14 +89,14 @@ La tabla queda en `scripts/voces/voces.ts` y puede cambiar tras la muestra.
 ### Tarea 3: lote completo, efectos y manifiesto
 
 **Archivos:**
-- Crear: `scripts/voces/efectos.ts`, `app/assets/sonido/voces/**`, `app/assets/sonido/efectos/{naipe,reparto,ficha,festejo}.mp3`, `app/src/sonido/recursos.ts` (generado), `app/assets/sonido/LEEME.md`
+- Crear: `scripts/voces/efectos.ts`, `app/assets/sonido/voces/**`, `app/assets/sonido/efectos/{naipe,reparto,ficha,festejo}.mp3`, `app/src/sonido/recursos.ts` (generado), `app/src/sonido/efectos.ts`
 - Prueba: `tests/unit/sonido-recursos.test.ts`
 
 **Interfaces:**
 - Produce: `type Efecto = "naipe" | "reparto" | "ficha" | "festejo"`; `recursos.ts` exporta `voces: Record<number, Record<string, number>>` y `efectos: Record<Efecto, number>` (módulos de `require`).
 
 - [ ] **Paso 1: prueba que falla.** Cada clave de `clipsDeVoz()` existe en `voces[a]` para los asientos 0–5, el archivo existe y empieza con cabecera MP3; no hay archivos sobrantes; los cuatro efectos existen; el total de `app/assets/sonido` pesa menos de 6 MB.
-- [ ] **Paso 2:** falla. **Paso 3:** generar el lote con la aprobación. Efectos sintetizados en `efectos.ts` (ruido filtrado para naipe y reparto, parciales cortos para la ficha, arpegio breve para el festejo), sin muestras de terceros: no requieren licencia; queda dicho en `LEEME.md`. El script escribe `recursos.ts`. **Paso 4:** pasa.
+- [ ] **Paso 2:** falla. **Paso 3:** generar el lote con la aprobación. Efectos sintetizados en `efectos.ts` (ruido filtrado para naipe y reparto, parciales cortos para la ficha, arpegio breve para el festejo), sin muestras de terceros: no requieren licencia; queda dicho en `app/src/sonido/README.md`. El script escribe `recursos.ts`. **Paso 4:** pasa.
 - [ ] **Paso 5:** commit.
 
 ### Tarea 4: reproductor
