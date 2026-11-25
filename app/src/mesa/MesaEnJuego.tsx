@@ -128,8 +128,8 @@ export function MesaEnJuego({ id }: { id: string }) {
     cantar: (tipo: Canto) => {
       if (!bloqueada) void jugar({ tipo });
     },
-    indicar: (destinatario, frase, vuelta) => {
-      if (!bloqueada && senas.tipo === "pie") void indicar(destinatario, frase, vuelta);
+    indicar: (destinatario, frase, vuelta, carta) => {
+      if (!bloqueada && senas.tipo === "pie") void indicar(destinatario, frase, vuelta, carta);
     },
     repartir: () => {
       if (!bloqueada) void jugar();

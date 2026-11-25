@@ -2,14 +2,14 @@ import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path, Rect as SvgRect } from "react-native-svg";
 import type { Geometria } from "@eltruco/mesa-geometria";
-import { textoFrasePie, type FrasePie } from "@eltruco/motor/senas-pie.ts";
+import { textoFrasePie, type CartaPedida, type FrasePie } from "@eltruco/motor/senas-pie.ts";
 import { colores, fuentes } from "../../tema.ts";
 import type { SenasEnMesa } from "../senas.ts";
 import { CaraSena } from "./CaraSena.tsx";
 import { mesaColores } from "./estilo.ts";
 import { cajasDelMazo, Globo } from "./Globo.tsx";
 
-export type Indicar = (destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number) => void;
+export type Indicar = (destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number, carta?: CartaPedida) => void;
 
 function Candado({ color }: { color: string }) {
   return (
@@ -63,6 +63,14 @@ export function Senas({ senas, geometria, liviano = false }: { senas: SenasEnMes
  * `pairs-private-senas` deja ver: rivales y espectadores reciben `ninguna`.
  */
 export function franjaDeSenas(senas: SenasEnMesa, indicar: Indicar): ReactNode {
+  if (senas.tipo === "companero" && senas.pedido) {
+    // Lo que pidió el pie importa más que recordar lo que se le mostró: queda junto a la mano hasta tirar.
+    return (
+      <View testID="pedido-del-pie" style={[estilos.pildora, estilos.pedido]} accessibilityLabel={senas.pedido.texto}>
+        <Text style={[estilos.textoPildora, estilos.textoPedido]} numberOfLines={1}>{senas.pedido.texto}</Text>
+      </View>
+    );
+  }
   if (senas.tipo === "companero") {
     return (
       <View testID="pildora-senas" style={estilos.pildora} accessibilityLabel={senas.texto}>
@@ -83,6 +91,12 @@ export function franjaDeSenas(senas: SenasEnMesa, indicar: Indicar): ReactNode {
             <Pressable key={frase} accessibilityRole="button" onPress={() => indicar(f.destinatario, frase, senas.vuelta)}
               hitSlop={{ top: 8, bottom: 8 }} style={({ pressed }) => [estilos.chip, pressed && estilos.apretado]}>
               <Text style={estilos.textoChip}>{textoFrasePie[frase]}</Text>
+            </Pressable>
+          ))}
+          {f.pedidas.map(({ carta, texto }) => (
+            <Pressable key={carta} accessibilityRole="button" onPress={() => indicar(f.destinatario, "juga", senas.vuelta, carta)}
+              hitSlop={{ top: 8, bottom: 8 }} style={({ pressed }) => [estilos.chip, pressed && estilos.apretado]}>
+              <Text style={estilos.textoChip}>{texto}</Text>
             </Pressable>
           ))}
           {f.esperando ? (
@@ -135,6 +149,8 @@ const estilos = StyleSheet.create({
     maxWidth: "100%", paddingHorizontal: 10,
   },
   textoPildora: { color: mesaColores.crema, flexShrink: 1, fontFamily: fuentes.texto, fontSize: 11.5, lineHeight: 15 },
+  pedido: { borderColor: mesaColores.brillo, borderWidth: 1 },
+  textoPedido: { color: mesaColores.brillo, fontFamily: fuentes.textoFuerte, fontSize: 12.5, lineHeight: 16 },
   recibidas: { gap: 4, marginTop: 12 },
   tituloRecibidas: {
     color: mesaColores.gris, fontFamily: fuentes.textoFuerte, fontSize: 11, letterSpacing: 0.7, textTransform: "uppercase",

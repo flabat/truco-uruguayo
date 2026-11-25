@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, type RefObject } from "react";
 import { ErrorMesa, idComando, mensajeDe, type Cliente, type Eleccion } from "@eltruco/cliente/cliente.ts";
-import type { FrasePie } from "@eltruco/motor/senas-pie.ts";
+import type { CartaPedida, FrasePie } from "@eltruco/motor/senas-pie.ts";
 
 type Camino = "/acciones" | "/siguiente" | "/indicaciones";
 
@@ -63,8 +63,8 @@ export function useJugadas(cliente: Cliente, ruta: string, refrescar: RefObject<
 
   const jugar = useCallback((accion?: Eleccion & { sena?: undefined }) =>
     mandar(accion ? "/acciones" : "/siguiente", accion ? { accion } : {}), [mandar]);
-  const indicar = useCallback((destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number) =>
-    mandar("/indicaciones", { indicacion: { destinatario, frase, vuelta } }), [mandar]);
+  const indicar = useCallback((destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number, carta?: CartaPedida) =>
+    mandar("/indicaciones", { indicacion: { destinatario, frase, vuelta, ...(carta && { carta }) } }), [mandar]);
 
   return { enviando, aviso: aviso.version === version ? aviso.texto : "", jugar, indicar };
 }

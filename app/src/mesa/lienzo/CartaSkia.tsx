@@ -271,8 +271,12 @@ export function poseDeMano(a: CartaAnimada): Pose {
  * Una carta de la mano propia con los valores que mueve el gesto. Se dibuja dos veces: en la mano y
  * por encima de todo; cada copia se ve según la carta esté quieta o en manos del jugador.
  */
-export function CartaDeMano({ id, carta, encima }: { id: CardId; carta: CartaAnimada; encima: boolean }) {
+export function CartaDeMano({ id, carta, encima, resaltada = false }: {
+  id: CardId; carta: CartaAnimada; encima: boolean; resaltada?: boolean;
+}) {
   const pose = useDerivedValue(() => poseDeMano(carta));
   const opacidad = useDerivedValue<number>(() => ((carta.fase.value !== enMano) === encima ? 1 : 0));
-  return <CartaSkia id={id} pose={pose} sombra="mano" opacidad={opacidad} />;
+  // La carta que nombró el pie lleva el halo de la ganadora mientras está quieta en la mano.
+  const brillo = useDerivedValue<number>(() => (resaltada && carta.fase.value === enMano ? 1 : 0));
+  return <CartaSkia id={id} pose={pose} sombra="mano" opacidad={opacidad} brillo={resaltada ? brillo : undefined} />;
 }

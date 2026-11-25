@@ -159,7 +159,7 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
         if (!cabecera.alPie || mano?.tipo !== "online" || !objeto(i) || !esAsientoOnline(i.emisor)) {
           throw new Error("Indicación fuera de una mano con pie.");
         }
-        const validada = crearIndicacionPie(mano.valor.motor, i.emisor, i.destinatario, i.frase, i.vuelta, indicaciones);
+        const validada = crearIndicacionPie(mano.valor.motor, i.emisor, i.destinatario, i.frase, i.vuelta, indicaciones, i.carta);
         if (!validada || !isDeepStrictEqual(validada, i)) throw new Error("Indicación o posición inválida.");
         indicaciones.push(validada);
       } else if (e.tipo === "decision") {

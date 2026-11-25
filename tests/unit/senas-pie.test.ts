@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { elegirAccionConPie, elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
+import { cartaParaJugar, elegirAccionConPie, elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { aplicarOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento, TresCartas } from "@eltruco/motor/reparto.ts";
-import { catalogoGestosPie, crearIndicacionPie, gestosDeCartas, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { cartasPedidas, catalogoGestosPie, crearIndicacionPie, gestosDeCartas, significadoDeGesto, textoDeIndicacion, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 
 const manos: TresCartas[] = [
   ["copas-02", "bastos-01", "oros-04"], ["bastos-06", "copas-03", "oros-06"],
@@ -169,7 +169,7 @@ test("el pie bot pide fuerza o baja según sus cartas y los gestos que recibió"
     const e = iniciarOnline(reparto);
     return elegirIndicacionesPie(vistaOnline(e,2),vistaDelPie(e,2,[])!);
   };
-  assert.deepEqual(pedir(r), [{destinatario:0,frase:"juga"}]); // Ana señaló la pieza mayor que la de Clara.
+  assert.deepEqual(pedir(r), [{destinatario:0,frase:"juga",carta:"cejas"}]); // Ana señaló la pieza mayor que la de Clara.
   const otras = [...r.manos];
   otras[0] = ["copas-05","bastos-01","oros-04"];
   assert.deepEqual(pedir({...r,manos:otras}), [{destinatario:0,frase:"veni"}]);
@@ -195,4 +195,70 @@ test("el consejo cambia una salida del bot, conserva su elección de canto y ven
   const propia = crearIndicacionPie(segunda,2,0,"voy-a-vos",2,[])!;
   const v = {...vistaOnline(segunda,2),legales:["carta" as const]};
   assert.deepEqual(elegirAccionConPie(v,vistaDelPie(segunda,2,[propia]),[propia]), {tipo:"carta",asiento:2,carta:"espadas-06"});
+});
+
+// El reparto 6 de la mesa ea5ed1d4 (#425): el mano tiene el 2 y el 4 de la muestra y el pie les pidió fuerza a los dos.
+const reparto6: RepartoOnline = { versionReparto: "online-2", reglaFlor: "inmediata-v2", dador: 5, mano: 0, muestra: "espadas-11",
+  manos: [["copas-11","espadas-04","espadas-02"], ["bastos-04","copas-12","oros-06"], ["espadas-10","copas-04","bastos-11"],
+    ["copas-10","bastos-03","copas-03"], ["bastos-01","copas-07","oros-01"], ["bastos-02","bastos-05","copas-01"]] };
+
+test("en tercetos el pie arma un solo plan: juega el más fuerte con la carta nombrada y los demás van chico", () => {
+  const e = iniciarOnline(reparto6);
+  const plan = elegirIndicacionesPie(vistaOnline(e,4), vistaDelPie(e,4,[])!);
+  // El 4 de la muestra gana seguro: la única pieza mayor, el 2, también es del mano.
+  assert.deepEqual(plan, [{destinatario:0,frase:"juga",carta:"beso"},{destinatario:2,frase:"veni"}]);
+  const dichas: IndicacionPie[] = [];
+  for (const p of plan) dichas.push(crearIndicacionPie(e,4,p.destinatario,p.frase,1,dichas,p.carta)!);
+  assert.deepEqual(dichas.map(d => textoDeIndicacion(d)), ["Jugá el 4 de la muestra","Vení"]);
+  assert.equal(textoDeIndicacion(dichas[0], reparto6.muestra), "Jugá el 4 de espadas");
+});
+
+test("si el pie tiene la mejor carta, les dice «Vení» a todos y no nombra cartas", () => {
+  const manosPie = [...reparto6.manos];
+  manosPie[4] = ["espadas-02","copas-07","oros-01"];
+  manosPie[0] = ["copas-11","espadas-04","bastos-06"];
+  const e = iniciarOnline({...reparto6, manos: manosPie});
+  assert.deepEqual(elegirIndicacionesPie(vistaOnline(e,4), vistaDelPie(e,4,[])!),
+    [{destinatario:0,frase:"veni"},{destinatario:2,frase:"veni"}]);
+});
+
+test("la carta nombrada es la pieza más baja que gana seguro, o la mejor que mostró el compañero", () => {
+  assert.equal(cartaParaJugar(["cejas","beso"], new Set(["cejas","beso"])), "beso");
+  assert.equal(cartaParaJugar(["beso","nariz"], new Set(["beso","nariz"])), "beso"); // El 2 puede estar en manos rivales.
+  assert.equal(cartaParaJugar(["beso","nariz"], new Set(["cejas","beso","nariz"])), "nariz");
+  assert.equal(cartaParaJugar(["labios-derecha","labio-inferior"], new Set()), "labios-derecha");
+  assert.equal(cartaParaJugar(["ojos-cerrados"], new Set()), undefined);
+  assert.equal(cartaParaJugar([], new Set()), undefined);
+});
+
+test("la carta sólo acompaña a «Jugá» y tiene que estar entre los gestos del destinatario", () => {
+  const e = iniciarOnline(reparto6);
+  assert.deepEqual(crearIndicacionPie(e,4,0,"juga",1,[],"cejas"),
+    {emisor:4,destinatario:0,frase:"juga",carta:"cejas",vuelta:1,indiceAccion:0});
+  for (const [destinatario, frase, carta] of [[0,"veni","cejas"],[0,"juga","nariz"],[0,"juga","ojos-cerrados"],
+    [0,"juga","sarasa"],[0,"juga","__proto__"],[2,"juga","cejas"],[0,"juga",null]] as const) {
+    assert.equal(crearIndicacionPie(e,4,destinatario,frase,1,[],carta), undefined);
+  }
+  assert.ok(crearIndicacionPie(e,4,2,"juga",1,[],"ojo-izquierdo"));
+  assert.deepEqual(cartasPedidas(reparto6.manos[0], "beso", reparto6.muestra), ["espadas-04"]);
+  assert.deepEqual(cartasPedidas(reparto6.manos[3], "labio-inferior", reparto6.muestra), ["bastos-03","copas-03"]);
+});
+
+test("la computadora que recibe «Jugá» con carta tira esa carta si alcanza para ganar la mesa", () => {
+  const e = iniciarOnline(reparto6);
+  const mano = {...vistaOnline(e,0), legales:["carta" as const]};
+  const pie = vistaDelPie(e,0,[])!;
+  const conCarta = crearIndicacionPie(e,4,0,"juga",1,[],"beso")!;
+  const sinCarta = crearIndicacionPie(e,4,0,"juga",1,[])!;
+  assert.deepEqual(elegirAccionConPie(mano,pie,[conCarta]), {tipo:"carta",asiento:0,carta:"espadas-04"});
+  assert.deepEqual(elegirAccionConPie(mano,pie,[sinCarta]), {tipo:"carta",asiento:0,carta:"espadas-02"});
+});
+
+test("si la muestra es una pieza, el pie nombra el 12 del palo, que es la carta que tiene el compañero", () => {
+  assert.deepEqual(gestosDeCartas(["copas-12"], "copas-10"), ["ojo-izquierdo"]);
+  assert.equal(significadoDeGesto("ojo-izquierdo", "copas-10"), "12 de copas");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-izquierdo" }, "copas-10"), "Jugá el 12 de copas");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-derecho" }, "copas-10"), "Jugá el 11 de copas");
+  assert.equal(significadoDeGesto("labio-inferior", "copas-03"), "Tres");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-izquierdo" }), "Jugá el 10 de la muestra");
 });
