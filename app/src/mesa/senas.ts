@@ -1,10 +1,10 @@
+import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { canto } from "@eltruco/cliente/cantos.ts";
 import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { Mesa, Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
-import { signals } from "@eltruco/motor/contratos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { catalogoGestosPie, versionSenasPie, type FrasePie, type GestoPie } from "@eltruco/motor/senas-pie.ts";
-import { signalVersionFor } from "../../../training/contracts/index.ts";
+import { canSeeSignal, signals, signalVersionFor } from "../../../training/contracts/index.ts";
 import juego from "../../../src/data/juego.json" with { type: "json" };
 
 export type SenasEnMesa =
@@ -44,7 +44,7 @@ export function senasEnMesa({ mesa, partida, espectador }: {
   if (espectador || !partida) return ninguna;
 
   if (jugarEnSilencio(mesa, partida)) {
-    const recibidas = ("turnos" in partida ? partida.turnos ?? [] : []).filter(t => t.signal).map(({ signal, action }) => ({
+    const recibidas = ("turnos" in partida ? partida.turnos ?? [] : []).filter(t => t.signal && canSeeSignal("pairs-private-senas", t.action.asiento, mesa.miAsiento as Asiento)).map(({ signal, action }) => ({
       nombre: mesa.asientos[action.asiento].nombre ?? "",
       sena: textoDeSena.get(signal!)!,
       jugada: action.tipo === "carta" ? cartasPorId.get(action.carta)!.nombre
@@ -60,21 +60,22 @@ export function senasEnMesa({ mesa, partida, espectador }: {
   const equipoPropio = mesa.asientos[mesa.miAsiento]?.equipo;
   if (mesa.asientos[pie.pie]?.equipo !== equipoPropio) return ninguna;
 
+  const delEquipo = (asiento: number) => mesa.asientos[asiento]?.equipo === equipoPropio;
   const nombre = (asiento: number) => mesa.asientos[asiento]?.nombre ?? "";
   const muestra = partida.vista.muestra;
   if (pie.pie === mesa.miAsiento) {
     return {
       tipo: "pie",
       vuelta: pie.vuelta,
-      globos: pie.grupos.map(({ emisor, gestos }) => ({
+      globos: pie.grupos.filter(g => delEquipo(g.emisor)).map(({ emisor, gestos }) => ({
         emisor, nombre: nombre(emisor), gestos: gestos.map(gesto => ({ gesto, significado: significado(gesto, muestra) })),
       })),
-      frases: pie.opciones.map(({ destinatario, frases }) => ({
+      frases: pie.opciones.filter(o => delEquipo(o.destinatario)).map(({ destinatario, frases }) => ({
         destinatario, nombre: nombre(destinatario), frases, esperando: pie.esperando === destinatario,
       })),
     };
   }
-  const grupo = pie.grupos[0];
+  const grupo = pie.grupos.find(g => g.emisor === mesa.miAsiento);
   if (!grupo) return ninguna;
   return {
     tipo: "companero",

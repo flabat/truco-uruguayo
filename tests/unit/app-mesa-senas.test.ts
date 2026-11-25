@@ -5,7 +5,7 @@ import { versionSenasPie, type VistaPie } from "@eltruco/motor/senas-pie.ts";
 import { jugarEnSilencio, senasEnMesa } from "../../app/src/mesa/senas.ts";
 import { mesaDe, partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
-// Asientos 0 y 2 son un equipo; el pie es el 2 (Ana) y sus compañeros son 0 (Clara) y 4.
+// En parejas el equipo es 0 y 2: el pie es el 2 (Ana) y su compañera es 0 (Clara).
 function mesaPie(miAsiento: number): Mesa {
   return { ...mesaDe("2v2", miAsiento), versionSenas: versionSenasPie };
 }
@@ -14,11 +14,30 @@ function partidaPie(pie: VistaPie | undefined, cambios: Partial<Partida> = {}): 
 }
 const vistaDelPie: VistaPie = {
   pie: 2, vuelta: 1, esperando: 0,
+  grupos: [{ emisor: 0, gestos: ["labio-inferior", "cejas"] }],
+  opciones: [{ destinatario: 0, frases: ["juga"] }],
+};
+
+// Tercetos: el equipo 0 es 0, 2 y 4; el pie es el 4 (Eli) y sus compañeros son 0 (Clara) y 2 (Ana).
+const nombres3v3 = ["Clara", "Diego", "Ana", "Beto", "Eli", "Fede"];
+function mesaTercetos(miAsiento: number): Mesa {
+  return {
+    ...mesaDe("2v2", miAsiento), modo: "3v3", formato: "triples", versionSenas: versionSenasPie,
+    asientos: nombres3v3.map((nombre, asiento) => ({ asiento, equipo: (asiento % 2) as 0 | 1, tipo: "humano", nombre })),
+  };
+}
+function partidaTercetos(pie: VistaPie, lance: unknown = { tipo: "redondilla", duelo: null, activos: [0, 1, 2, 3, 4, 5] }) {
+  return {
+    ...partidaDe(vistaDe(4, 4)), formato: "triples", versionSenas: versionSenasPie, pie, lance, historialLances: [],
+  } as unknown as PartidaTercetos;
+}
+const vistaTercetos: VistaPie = {
+  pie: 4, vuelta: 1, esperando: 0,
   grupos: [
     { emisor: 0, gestos: ["labio-inferior", "cejas"] },
-    { emisor: 1, gestos: ["lengua"] },
+    { emisor: 2, gestos: ["lengua"] },
   ],
-  opciones: [{ destinatario: 0, frases: ["juga"] }, { destinatario: 1, frases: ["voy-a-vos"] }],
+  opciones: [{ destinatario: 0, frases: ["juga"] }, { destinatario: 2, frases: ["voy-a-vos"] }],
 };
 
 test("un espectador nunca ve señas aunque la partida traiga el pie", () => {
@@ -50,7 +69,7 @@ test("si las versiones no coinciden con la de pie no se muestra nada", () => {
 });
 
 test("el pie ve un globo por compañero con el palo de la muestra y las frases", () => {
-  const r = senasEnMesa({ mesa: mesaPie(2), partida: partidaPie(vistaDelPie), espectador: false });
+  const r = senasEnMesa({ mesa: mesaTercetos(4), partida: partidaTercetos(vistaTercetos), espectador: false });
   assert.deepEqual(r, {
     tipo: "pie", vuelta: 1,
     globos: [
@@ -58,13 +77,27 @@ test("el pie ve un globo por compañero con el palo de la muestra y las frases",
         { gesto: "labio-inferior", significado: "Tres" },
         { gesto: "cejas", significado: "2 de bastos" },
       ] },
-      { emisor: 1, nombre: "Diego", gestos: [{ gesto: "lengua", significado: "As de copa u oro" }] },
+      { emisor: 2, nombre: "Ana", gestos: [{ gesto: "lengua", significado: "As de copa u oro" }] },
     ],
     frases: [
       { destinatario: 0, nombre: "Clara", frases: ["juga"], esperando: true },
-      { destinatario: 1, nombre: "Diego", frases: ["voy-a-vos"], esperando: false },
+      { destinatario: 2, nombre: "Ana", frases: ["voy-a-vos"], esperando: false },
     ],
   });
+});
+
+test("un grupo o una opción de un rival en la vista nunca aparece", () => {
+  const pie: VistaPie = {
+    ...vistaTercetos,
+    grupos: [...vistaTercetos.grupos, { emisor: 1, gestos: ["ojos-cerrados"] }],
+    opciones: [...vistaTercetos.opciones, { destinatario: 3, frases: ["veni"] }],
+  };
+  const r = senasEnMesa({ mesa: mesaTercetos(4), partida: partidaTercetos(pie), espectador: false });
+  assert.equal(r.tipo, "pie");
+  if (r.tipo === "pie") {
+    assert.deepEqual(r.globos.map(g => g.emisor), [0, 2]);
+    assert.deepEqual(r.frases.map(f => f.destinatario), [0, 2]);
+  }
 });
 
 test("el pie sin opciones ve los globos y ninguna frase", () => {
@@ -72,7 +105,7 @@ test("el pie sin opciones ve los globos y ninguna frase", () => {
   const r = senasEnMesa({ mesa: mesaPie(2), partida: partidaPie(pie), espectador: false });
   assert.equal(r.tipo, "pie");
   if (r.tipo === "pie") {
-    assert.equal(r.globos.length, 2);
+    assert.equal(r.globos.length, 1);
     assert.deepEqual(r.frases, []);
   }
 });
@@ -83,6 +116,14 @@ test("el compañero que no es pie sabe a quién le mostró y qué", () => {
   assert.deepEqual(r, {
     tipo: "companero", pie: 2, texto: "Le mostraste a Ana: Tres · As bravo", gestos: ["labio-inferior", "labios-derecha"],
   });
+});
+
+test("el compañero toma su propio grupo y no el de otro asiento", () => {
+  const pie: VistaPie = { pie: 4, vuelta: 1, grupos: [
+    { emisor: 2, gestos: ["lengua"] }, { emisor: 0, gestos: ["boca"] },
+  ], opciones: [] };
+  const r = senasEnMesa({ mesa: mesaTercetos(0), partida: partidaTercetos(pie), espectador: false });
+  assert.deepEqual(r, { tipo: "companero", pie: 4, texto: "Le mostraste a Eli: Dos común", gestos: ["boca"] });
 });
 
 test("el compañero sin grupo no ve nada", () => {
@@ -105,10 +146,11 @@ test("la mesa legada con seña elegida a mano juega en silencio y lista las señ
   const mesa: Mesa = { ...mesaDe("2v2", 2), formato: "pairs-private-senas" };
   const vista = vistaDe(4, 2);
   const partida = partidaDe(vista, {
-    formato: "pairs-private-senas",
+    formato: "pairs-private-senas", versionSenas: "senas-equipo-v1",
     turnos: [
       { action: { tipo: "carta", asiento: 0, carta: "espadas-01" }, awards: [], signal: "labio-inferior" as never },
       { action: { tipo: "truco", asiento: 1 } as never, awards: [] },
+      { action: { tipo: "carta", asiento: 1, carta: "oros-07" }, awards: [], signal: "cejas" as never },
       { action: { tipo: "paso-flor", asiento: 0 } as never, awards: [], signal: "ojos-cerrados" as never },
     ],
   });
@@ -121,6 +163,11 @@ test("la mesa legada con seña elegida a mano juega en silencio y lista las señ
       { nombre: "Clara", sena: "Cerrar los dos ojos", jugada: "Yo no canto" },
     ],
   });
+});
+
+test("una partida legada con otra versión de señas no es silencio", () => {
+  const mesa: Mesa = { ...mesaDe("2v2", 2), formato: "pairs-private-senas" };
+  assert.equal(jugarEnSilencio(mesa, partidaDe(vistaDe(4, 2), { versionSenas: "otra" })), false);
 });
 
 test("las mesas con señas de pie, sin señas o de tercetos no juegan en silencio", () => {
