@@ -536,7 +536,7 @@ function resumenDeLaMano(m: MesaObservada, nombre: Nombre) {
  * La mesa del espectador: la de un jugador sin mano propia, vista desde el asiento 0. Los equipos
  * se nombran por sus jugadores. La frase del pie es pública; los gestos nunca llegan al tablero.
  */
-export function mesaDeEspectador(m: MesaObservada): MesaVisible {
+export function mesaDeEspectador(m: MesaObservada, p: { voz?: Voz } = {}): MesaVisible {
   const t = m.tablero;
   const nombre: Nombre = a => m.asientos[a]?.nombre ?? "";
   const { cerrada, vuelta, numeroVuelta } = vueltaEnMesa(t, m.asientos.length, nombre);
@@ -586,9 +586,10 @@ export function mesaDeEspectador(m: MesaObservada): MesaVisible {
     lance: null,
     etiquetaLance: null,
     vuelta: numeroVuelta,
+    // La frase del pie en el aire, la voz del paso que se presenta o la última en reposo.
     voces: frase
       ? [{ asiento: frase.emisor, texto: vozDeIndicacion(frase, nombre), indice: 0 }]
-      : vocesEnReposo(t as Parameters<typeof vocesEnReposo>[0]),
+      : p.voz ? [p.voz] : vocesEnReposo(t as Parameters<typeof vocesEnReposo>[0]),
     fin: null,
   };
 }

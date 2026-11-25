@@ -1,5 +1,4 @@
 import "./polyfill.ts";
-import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { useConsulta } from "../salon/useConsulta.ts";
@@ -8,6 +7,7 @@ import {
   datosDelEspectador, mesaDeEspectador, pasosDelEspectador, seguimientoInicial, seguirConsulta, versionarObservada,
   type MesaObservada,
 } from "./modelo.ts";
+import { volverAlSalon } from "./salir.ts";
 import { useColaDePresentacion } from "./useCola.ts";
 import { usePreferencias } from "./usePreferencias.ts";
 import { HojaMano } from "./vistas/HojaMano.tsx";
@@ -15,8 +15,6 @@ import { HojaMas } from "./vistas/HojaMas.tsx";
 import { HojaTantos } from "./vistas/HojaTantos.tsx";
 import { HojaVoz } from "./vistas/HojaVoz.tsx";
 
-// No se importa de entrada.tsx: esa entrada importa este archivo.
-const volverAlSalon = () => router.replace("/");
 const nada = () => {};
 const sinSenas = { tipo: "ninguna" } as const;
 // El espectador no juega: la mesa no ofrece ninguna jugada, solo la salida.
@@ -36,7 +34,7 @@ export function Visor({ id }: { id: string }) {
   const [guardado, guardar] = useState(seguimientoInicial);
   const seguimiento = seguirConsulta(guardado, estado, datos?.manoNumero);
   if (seguimiento !== guardado) guardar(seguimiento);
-  const { partida } = useColaDePresentacion(recibida, false, seguimiento.reconexion, pasosDelEspectador,
+  const { partida, voz } = useColaDePresentacion(recibida, false, seguimiento.reconexion, pasosDelEspectador,
     { liviano: false, alEvento: nada, miAsiento: null, nombre });
 
   if (estado === "cargando" && !datos) return <Cargando />;
@@ -51,7 +49,7 @@ export function Visor({ id }: { id: string }) {
   }
 
   const mesa = partida.mesa;
-  const visible = mesaDeEspectador(mesa);
+  const visible = mesaDeEspectador(mesa, { voz });
   const hojas = datosDelEspectador(mesa, visible);
   const extra = {
     mano: <HojaMano datos={hojas} />,

@@ -7,6 +7,7 @@ import { anotarPresenciada } from "./presenciadas.ts";
 
 export { MesaEnJuego } from "./MesaEnJuego.tsx";
 export { Visor as VisorDeEspectador } from "./Visor.tsx";
+export { volverAlSalon } from "./salir.ts";
 
 registrarPrecargaWeb(cargarCanvasKit);
 
@@ -19,5 +20,3 @@ export function entrarALaMesa(id: string) {
 export function mirarMesa(id: string) {
   router.push(`/mirar/${encodeURIComponent(id)}` as Href);
 }
-
-export const volverAlSalon = () => router.replace("/");

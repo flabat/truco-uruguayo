@@ -560,3 +560,25 @@ test("seguirConsulta: tras un corte o una mano salteada, la reconexión sube y l
   assert.equal(seguirConsulta(vuelta, "listo", 5).reconexion, 2);
   assert.equal(seguirConsulta(seguimientoInicial, "cargando", undefined), seguimientoInicial);
 });
+
+test("espectador: un envido querido que llega junto muestra en cada paso su voz, y la frase del pie manda", () => {
+  const antes = versionarObservada(observadaDe({ vueltaActual: vueltaDeDos, acciones: accionesDeDos }));
+  const ahora = versionarObservada(observadaDe({
+    vueltaActual: vueltaDeDos,
+    acciones: [...accionesDeDos, { tipo: "envido", asiento: 3 }, { tipo: "quiero", asiento: 0 }],
+    cobros: [{ equipo: 0, tantos: 2, motivo: "envido", asiento: 0, tantoGanador: 27 }],
+  }));
+  const pasos = pasosDelEspectador(antes, ahora, false);
+  const mostradas = pasos.map(p => mesaDeEspectador(p.partida!.mesa, { voz: p.voz }).voces);
+  assert.deepEqual(mostradas, [
+    [{ asiento: 3, texto: "Envido", indice: 0 }],
+    [{ asiento: 0, texto: "Quiero", indice: 0 }],
+  ]);
+  const cuenta = { asiento: 0, texto: "27 de envido", indice: 1 };
+  assert.deepEqual(mesaDeEspectador(ahora.mesa, { voz: cuenta }).voces, [cuenta]);
+  const conFrase = observadaDe({
+    vueltaActual: vueltaDeDos, acciones: accionesDeDos,
+    indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 2 }],
+  });
+  assert.deepEqual(mesaDeEspectador(conFrase, { voz: cuenta }).voces, [{ asiento: 2, texto: "Ana, vení", indice: 0 }]);
+});
