@@ -61,8 +61,8 @@ export function MesaEnJuego({ id }: { id: string }) {
   const colaSimple = useColaDePresentacion(simple, presencio, reconexion, pasosDeVueltas, opcionesDeCola);
   const colaTercetos = useColaDePresentacion(tercetos, presencio, reconexion, pasosDeLosTercetos, opcionesDeCola);
   const { partida, presentando, voz } = tercetos ? colaTercetos : colaSimple;
-  // Tercetos: el servidor no manda cartas a quien espera su duelo; la app recuerda las del reparto.
-  // Al recargar mientras se espera, la mano queda vacía.
+  // Tercetos: quien espera su duelo no tiene cartas, porque el servidor se las manda al abrirse su
+  // duelo. Después de jugarlo, la app recuerda las que le sobraron; al recargar, la mano queda vacía.
   const recordadas = useRef<CartasRecordadas | null>(null);
   if (partida?.formato === "triples") recordadas.current = recordarCartas(recordadas.current, partida);
   const { enviando, aviso, jugar, indicar } = useJugadas(cliente, ruta, refrescar, partida?.version);

@@ -1,11 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
-import { atajoDeTecla, type Atajo, type EstadoDeAtajos } from "./atajos.ts";
+import { atajoDeTecla, escribiendo, type Atajo, type EstadoDeAtajos } from "./atajos.ts";
 
-function escribiendo(destino: EventTarget | null) {
-  if (!(destino instanceof HTMLElement)) return false;
-  return destino.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(destino.tagName);
-}
+const destinoDe = (destino: EventTarget | null) => destino instanceof HTMLElement
+  ? { tagName: destino.tagName, isContentEditable: destino.isContentEditable, type: destino instanceof HTMLInputElement ? destino.type : undefined }
+  : null;
 
 /**
  * Los atajos de teclado de la mesa. Solo en la web: React Native Web no tiene teclado propio, así
@@ -21,7 +20,7 @@ export function useAtajos(aplicar: (a: Atajo) => void, estado: EstadoDeAtajos) {
   useEffect(() => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
     const alApretar = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.altKey || e.metaKey || e.repeat || e.defaultPrevented || escribiendo(e.target)) return;
+      if (e.ctrlKey || e.altKey || e.metaKey || e.repeat || e.defaultPrevented || escribiendo(destinoDe(e.target))) return;
       const atajo = atajoDeTecla(e.key, ultimo.current.estado);
       if (!atajo) return;
       e.preventDefault();

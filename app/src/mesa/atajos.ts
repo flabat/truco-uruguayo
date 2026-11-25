@@ -35,3 +35,20 @@ export function atajoDeTecla(tecla: string, e: EstadoDeAtajos): Atajo | null {
   if (canto) return e.hoja?.respuestas.includes(canto) ? { tipo: "canto", canto } : null;
   return null;
 }
+
+/** Lo mínimo del destino de un `keydown` para saber si se está escribiendo. */
+export interface DestinoDeTecla {
+  tagName: string;
+  type?: string;
+  isContentEditable?: boolean;
+}
+
+// Inputs que no reciben texto: el Switch de react-native-web es un checkbox.
+const sinTexto = new Set(["checkbox", "radio", "range", "button", "submit", "reset"]);
+
+/** Si el foco está en un campo de texto: ahí las teclas escriben y los atajos no corren. */
+export function escribiendo(destino: DestinoDeTecla | null): boolean {
+  if (!destino) return false;
+  if (destino.isContentEditable || destino.tagName === "TEXTAREA" || destino.tagName === "SELECT") return true;
+  return destino.tagName === "INPUT" && !sinTexto.has((destino.type ?? "").toLowerCase());
+}

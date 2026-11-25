@@ -281,7 +281,10 @@ async function probarEnvido() {
     await expect(boton(hoja, "Quiero")).toBeVisible();
     const pendiente = await partida(responde, id);
     assert.deepEqual(pendiente.vista.pendiente, { tipo: "envido", asiento: manos[i].vista.asiento });
+    const respuestas = [];
+    responde.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") respuestas.push(r.postDataJSON()); });
     await teclear(responde, id, "q", pendiente.version);
+    assert.deepEqual(respuestas.map(r => r.accion?.tipo), ["quiero"], "Q envía «Quiero»");
     assert.ok(!(await partida(responde, id)).vista.pendiente, "Q quiso el envido");
     const cobrada = await avanzar(paginas, id, m => terminada(m) || m.vista.cobros.some(c => c.motivo === "envido"));
     const fin = terminada(cobrada) ? cobrada : await avanzar(paginas, id, terminada);
@@ -368,7 +371,19 @@ async function probarTercetos() {
   const { modos } = await api(luis, "/api/modalidades");
   assert.ok(modos.includes("3v3"),
     "La pila no ofrece 3 contra 3 a luis: Tercetos tiene que estar habilitado para todos (lo hace verificar-gestion.mjs). Modalidades: " + modos.join(", "));
-  // A 100 tantos, el segundo reparto es pico a pico salvo que alguien llegue a 50 en la primera redondilla.
+  // A 100 tantos, el segundo reparto es pico a pico salvo que alguien llegue a 50 en la primera redondilla
+  // (una falta envido querida): entonces se prueba en otra mesa.
+  for (let mesa = 1; ; mesa++) {
+    assert.ok(mesa <= 3, "En 3 mesas nunca hubo pico a pico");
+    if (await tercetosConPico(luis)) break;
+    await luis.goto("/app/");
+    await expect(titulo(luis, "Mesas en juego")).toBeVisible(espera);
+  }
+  await luis.context().close();
+}
+
+/** Una mesa de tercetos hasta el fin del pico a pico; false si la redondilla no dejó jugarlo. */
+async function tercetosConPico(luis) {
   await crearMesa(luis, "3 contra 3", true, 100);
   const id = await enLaMesa(luis);
   let m = await partida(luis, id);
@@ -386,7 +401,7 @@ async function probarTercetos() {
   const cartasPropias = x => x.historialLances.flatMap(l => l.acciones)
     .filter(a => a.tipo === "carta" && a.asiento === x.vista.asiento).length;
   let jugadas = cartasPropias(fin);
-  assert.ok(Math.max(...fin.puntos) < 50, "nadie llegó a 50 en la redondilla: " + fin.puntos);
+  if (Math.max(...fin.puntos) >= 50) return false;
   await tocar(luis, id, () => boton(luis, "Repartir otra mano"), fin.version);
   await expect.poll(async () => (await partida(luis, id)).manoNumero, espera).toBe(2);
 
@@ -394,8 +409,6 @@ async function probarTercetos() {
   m = await partida(luis, id);
   assert.equal(m.lance.tipo, "pico-a-pico");
   await expect(luis.getByTestId("etiqueta-lance")).toHaveText(/^Pico a pico · Duelo \d de 3$/, espera);
-  const enviadas = [];
-  luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.url()); });
   // Mientras otros duelos se presentan, el estado narra cada jugada: el aviso del duelo propio puede durar
   // poco. Un observador lo anota aunque dure un instante.
   await luis.evaluate(() => {
@@ -423,11 +436,10 @@ async function probarTercetos() {
       if (dueloPropio > m.lance.duelo) {
         await expect.poll(avisos, espera).toContain(`Te toca en el duelo ${dueloPropio} de 3.`);
         await capturar(luis, "tercetos-pico-375x760");
-        // El servidor no manda cartas a quien espera su duelo: si la mesa muestra alguna, no se juega.
-        const antes = enviadas.length;
-        for (const carta of await cartasEnMano(luis).all()) await carta.click({ timeout: 2_000 }).catch(() => {});
-        await luis.waitForTimeout(1_000);
-        assert.equal(enviadas.length, antes, "la mano en espera no juega");
+        // Quien espera su duelo no tiene cartas: el servidor se las manda al abrirse su duelo.
+        // La mesa presenta detrás de la API: si la API sigue antes de su duelo, la mesa también.
+        const cartasEnEspera = await cartasEnMano(luis).count();
+        if ((await partida(luis, id)).lance.duelo < dueloPropio) assert.equal(cartasEnEspera, 0, "quien espera su duelo no tiene cartas");
         esperoSuDuelo = true;
         continue;
       }
@@ -441,8 +453,8 @@ async function probarTercetos() {
   assert.ok(jugadas > 0, "luis jugó cartas tocándolas");
   // Si luis jugó el primer duelo, la mesa le presenta los otros dos a su ritmo: la tarjeta llega más tarde que la API.
   await expect(luis.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", { timeout: 90_000 });
-  await luis.context().close();
   console.log(`3v3 con cinco computadoras: redondilla, pico a pico (luis en el duelo ${dueloPropio} de 3), ${jugadas} cartas tocadas y tantos del reparto.`);
+  return true;
 }
 
 async function probarEspectador() {
@@ -459,10 +471,22 @@ async function probarEspectador() {
   const { asientos, meta } = await api(clara, "/api/salon/mesas/" + id);
   const pareja = e => asientos.filter(a => a.equipo === e).map(a => a.nombre).join(" y ");
   await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(`^${pareja(0)} \\d+ · \\d+ ${pareja(1)} · a ${meta}$`), espera);
-  // Una mano entera: el espectador nunca tiene cartas propias ni Cantos.
+  // Una mano entera: el espectador nunca tiene cartas propias ni Cantos, y el estado sigue la mano.
   await observar(clara, '[data-testid^="carta-"]');
+  await clara.evaluate(() => {
+    window.estados = new Set();
+    const revisar = () => {
+      for (const h of document.querySelectorAll('[data-testid="mesa"] [role="heading"][aria-level="2"]')) {
+        window.estados.add(h.parentElement.textContent);
+      }
+    };
+    revisar();
+    new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
+  });
   await avanzar([luis], id, terminada);
   assert.deepEqual(await clara.evaluate(() => window.vistos), [], "el espectador vio cartas para tocar");
+  const estados = await clara.evaluate(() => [...window.estados]);
+  assert.ok(estados.length >= 2, "el estado del visor cambió durante la mano: " + JSON.stringify(estados));
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   await capturar(clara, "espectador-375x760");
   await boton(clara, "Volver al salón").click();
@@ -498,6 +522,11 @@ async function probarEscritorio() {
   }
   await capturar(luis, "escritorio-1280x800");
 
+  // Tocar un interruptor del panel (un checkbox en la web) deja el foco ahí: los atajos siguen andando.
+  const sonido = luis.getByRole("switch", { name: "Sonido" });
+  await sonido.click();
+  await expect(sonido).toBeFocused();
+
   // «1» y enseguida «2»: sale una sola jugada, la de la primera carta de la izquierda.
   const enviadas = [];
   luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
@@ -514,7 +543,7 @@ async function probarEscritorio() {
   await luis.waitForTimeout(1_000);
   assert.equal(enviadas.length, 1);
   await luis.context().close();
-  console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}1 y 2 seguidos juegan una sola carta.`);
+  console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}tras tocar Sonido, 1 y 2 seguidos juegan una sola carta.`);
 }
 
 async function probarPrivacidad() {

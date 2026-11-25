@@ -257,7 +257,6 @@ const motivoDelCierre = { vueltas: "las vueltas", rechazo: "el rechazo", envido:
 const nombreDelLance = (lance: LanceTercetos) => lance.tipo === "redondilla" ? "Redondilla" : `Duelo ${lance.duelo} de 3`;
 const esElLance = (a: LanceTercetos, b: LanceTercetos) => a.tipo === b.tipo && a.duelo === b.duelo;
 
-/** La mesa común de un lance: la redondilla o el duelo, con sus participantes y sin el pie en el pico a pico. */
 /** Las cartas propias de la última vista «jugando» de un reparto, que la app recuerda. */
 export interface CartasRecordadas {
   manoNumero: number;
@@ -274,8 +273,8 @@ export function recordarCartas(previa: CartasRecordadas | null, partida: Partida
 }
 
 /**
- * El servidor no manda cartas a quien espera su duelo. La mano que se ve (y no se juega) son las
- * recordadas del mismo reparto, menos las que ese asiento ya jugó.
+ * Quien espera su duelo no tiene cartas: el servidor se las manda al abrirse su duelo. Lo recordado
+ * solo muestra (sin poder jugarlas) las que le sobraron después de jugar el propio duelo.
  */
 export function cartasDeLaEspera(recordadas: CartasRecordadas | null, partida: PartidaTercetos, asiento: number): CardId[] {
   const v = partida.vista;
@@ -285,6 +284,7 @@ export function cartasDeLaEspera(recordadas: CartasRecordadas | null, partida: P
   return recordadas.cartas.filter(c => !jugadas.has(c));
 }
 
+/** La mesa común de un lance: la redondilla o el duelo, con sus participantes y sin el pie en el pico a pico. */
 function lanceComoPartida(partida: PartidaTercetos, cartasEnEspera: readonly CardId[] = []): Partida {
   const { formato: _formato, historialLances: _historial, lance, vista, ...resto } = partida;
   return {
@@ -617,7 +617,7 @@ export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = 
   if (!actual || !anterior || anterior.manoNumero !== actual.manoNumero) return [];
   const previo = anterior.mesa.tablero;
   const t = actual.mesa.tablero;
-  if (t.acciones.length <= previo.acciones.length) return [];
+  if (t.acciones.length <= previo.acciones.length) return pendientes;
   const vueltas = [...t.vueltas, ...(t.vueltaActual ? [t.vueltaActual] : [])];
   const enPaso = (tablero: Tablero): ObservadaVersionada => ({
     ...actual,
