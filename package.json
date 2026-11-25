@@ -12,7 +12,7 @@
     "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
-    "test:unit": "node --test \"tests/unit/*.test.ts\"",
+    "test:unit": "node --test \"tests/unit/*.test.ts\" \"paquetes/*/test/*.test.ts\"",
     "app:tipos": "npm --workspace app run tipos",
     "app:exportar": "npm --workspace app run exportar",
     "check": "bash .github/scripts/check_site.sh",
