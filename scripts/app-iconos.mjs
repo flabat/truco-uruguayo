@@ -25,10 +25,13 @@ export async function cartaDeLaMarca() {
 const lienzo = (contenido) =>
   `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${LADO}" height="${LADO}" viewBox="0 0 ${LADO} ${LADO}">${contenido}</svg>`;
 
-/** La carta de 80×80 unidades, escalada a `lado` píxeles y centrada. */
+/**
+ * La carta de 80×80 unidades, escalada a `lado` píxeles y centrada. Girada, la
+ * carta asoma medio punto por arriba y por abajo de la caja: se deja ver.
+ */
 const carta = (cuerpo, lado) => {
   const borde = (LADO - lado) / 2;
-  return `<svg x="${borde}" y="${borde}" width="${lado}" height="${lado}" viewBox="0 0 80 80">${cuerpo}</svg>`;
+  return `<svg x="${borde}" y="${borde}" width="${lado}" height="${lado}" viewBox="0 0 80 80" overflow="visible">${cuerpo}</svg>`;
 };
 
 const pano = `<defs><radialGradient id="pano" cx="50%" cy="42%" r="70%">
@@ -37,7 +40,7 @@ const pano = `<defs><radialGradient id="pano" cx="50%" cy="42%" r="70%">
 
 // Silueta de una sola tinta para el ícono monocromático de Android 13: la carta
 // llena y, calados, el filete, los dos oros y los dos números.
-const silueta = `<defs><mask id="calado" maskUnits="userSpaceOnUse" x="0" y="0" width="80" height="80">
+const silueta = `<defs><mask id="calado" maskUnits="userSpaceOnUse" x="-5" y="-5" width="90" height="90">
   <g transform="rotate(-8 40 40)">
     <rect x="12.2" y="2.2" width="55.6" height="75.6" rx="6.8" fill="#fff"/>
     <rect x="18" y="8" width="44" height="64" rx="1.7" fill="none" stroke="#000" stroke-width="1.6"/>
@@ -48,7 +51,7 @@ const silueta = `<defs><mask id="calado" maskUnits="userSpaceOnUse" x="0" y="0" 
       <path d="M20.5 13.2c.2-3.4 5.1-3.7 5.1-.4 0 1.9-2.5 3.7-5.1 6h5.4" transform="rotate(180 40 40)"/>
     </g>
   </g>
-</mask></defs><rect width="80" height="80" fill="#fff" mask="url(#calado)"/>`;
+</mask></defs><rect x="-5" y="-5" width="90" height="90" fill="#fff" mask="url(#calado)"/>`;
 
 /**
  * Cada archivo de app/assets/icono. `lado` es el tamaño de la caja de 80×80 de
@@ -61,8 +64,8 @@ export function iconos(cuerpo) {
     { archivo: "android-fondo.png", svg: lienzo(pano), opaco: true },
     { archivo: "android-frente.png", svg: lienzo(carta(cuerpo, 560)) },
     { archivo: "android-monocromo.png", svg: lienzo(carta(silueta, 560)) },
-    { archivo: "inicio.png", svg: lienzo(carta(cuerpo, LADO)) },
-    { archivo: "favicon.png", svg: lienzo(carta(cuerpo, LADO)), lado: 196 },
+    { archivo: "inicio.png", svg: lienzo(carta(cuerpo, 980)) },
+    { archivo: "favicon.png", svg: lienzo(carta(cuerpo, 980)), lado: 196 },
   ];
 }
 
