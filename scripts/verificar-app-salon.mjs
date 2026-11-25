@@ -126,8 +126,9 @@ async function probarParejas() {
   await expect(clara.getByText("👁 Mirando")).toBeVisible();
   await expect(boton(clara, "Volver al salón")).toBeVisible();
   await expect(boton(clara, "Cantos")).toHaveCount(0);
-  // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba.
-  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador 1 y Computadora 3 \d+ · \d+ Jugador 2 y Computadora 4 · a \d+$/);
+  // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba. Entre las piezas del
+  // tanteador van espacios duros (\u00a0): `\s` los acepta.
+  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador\s1\sy\sComputadora\s3\s\d+\s·\s\d+\sJugador\s2\sy\sComputadora\s4\s·\sa\s\d+$/);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
   await clara.goto(`/app/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/app/mirar/${id}`, espera);
