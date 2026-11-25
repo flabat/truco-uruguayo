@@ -4,7 +4,7 @@ import test from "node:test";
 import { esDesafio, verificadorCorresponde } from "../../api/sesion.ts";
 import { crearAlmacenSesion, type Guardado } from "../../app/src/ingreso/almacen.ts";
 import { base64url, crearPar } from "../../app/src/ingreso/pkce.ts";
-import { codigoDeRetorno } from "../../app/src/ingreso/retorno.ts";
+import { codigoDeRetorno, rutaDelSistema } from "../../app/src/ingreso/retorno.ts";
 import { ErrorMesa } from "@eltruco/cliente/cliente.ts";
 import { crearClienteApp as crearCliente } from "../../app/src/api/cliente.ts";
 import { cargarJugador, cerrarSesion, completarIngreso, eliminarCuenta } from "../../app/src/ingreso/sesion.ts";
@@ -48,6 +48,37 @@ test("codigoDeRetorno solo acepta eltruco://ingreso con un código de canje", ()
     "no es una url",
     "",
   ]) assert.equal(codigoDeRetorno(ajeno), null, ajeno);
+});
+
+test("codigoDeRetorno ignora el fragmento que agrega el navegador", () => {
+  // iOS devuelve eltruco://ingreso?codigo=…# después del ingreso con Google.
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=" + codigo + "#"), codigo);
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=" + codigo + "#_=_"), codigo);
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=corto#"), null);
+  assert.equal(codigoDeRetorno("eltruco://ingreso#codigo=" + codigo), null);
+});
+
+test("rutaDelSistema lleva el retorno del ingreso al inicio, sin el código", () => {
+  // Android entrega el retorno a la app como un enlace más; Expo Router no tiene la ruta /ingreso.
+  for (const retorno of [
+    "eltruco://ingreso?codigo=" + codigo,
+    "eltruco:///ingreso?codigo=" + codigo,
+    "/ingreso?codigo=" + codigo,
+    "ingreso?codigo=" + codigo,
+    "eltruco://ingreso",
+    "/ingreso/",
+  ]) assert.equal(rutaDelSistema(retorno), "/", retorno);
+});
+
+test("rutaDelSistema deja pasar los demás enlaces", () => {
+  for (const enlace of [
+    "eltruco://invitacion/abc",
+    "/mesa?id=1",
+    "/ingresos",
+    "eltruco://ingresar",
+    "https://eltru.co/app/?mesa=1",
+    "/",
+  ]) assert.equal(rutaDelSistema(enlace), enlace, enlace);
 });
 
 function guardadoEnMemoria() {
