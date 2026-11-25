@@ -62,8 +62,11 @@ export function hojaDeCantos(e: EntradaHoja): HojaCantos | null {
   const legal = (t: Canto) => legales.includes(t);
 
   const tocaDeclarar = e.porDeclararFlor === e.miAsiento;
-  const deFlor = tocaDeclarar && (legal("flor") || legal("con-flor-quiero") || legal("paso-flor"));
   const deOtro = e.pendiente !== null && e.pendiente.asiento !== e.miAsiento;
+  const conFlor = legal("flor") || legal("con-flor-quiero") || legal("paso-flor");
+  // Con flor sin declarar, el canto del rival solo se responde cantándola: no hay quiero ni no quiero.
+  const soloFlor = deOtro && !legal("quiero") && !legal("no-quiero");
+  const deFlor = (tocaDeclarar || soloFlor) && conFlor;
   const modo: HojaCantos["modo"] = deFlor ? "flor" : deOtro && (legal("quiero") || legal("no-quiero")) ? "respuesta" : "propia";
   if (modo === "propia" && e.pendiente && !tocaDeclarar) return null;
 

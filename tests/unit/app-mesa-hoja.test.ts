@@ -146,3 +146,17 @@ test("si te toca declarar pero no hay respuestas de flor legales, queda la hoja 
   assert.equal(h?.mazo, true);
   assert.deepEqual(h?.respuestas, []);
 });
+
+test("si te gritan truco y tenés flor sin declarar, la hoja sube para cantarla", () => {
+  // El motor solo deja cantar la flor: sin esta hoja la mesa quedaba sin ninguna jugada posible.
+  const h = hojaDeCantos({
+    ...base,
+    legales: ["flor", "con-flor-envido", "contraflor-al-resto"],
+    pendiente: { asiento: 1, tipo: "truco" },
+    trucoPendiente: { asiento: 1, tipo: "truco" },
+  });
+  assert.equal(h?.modo, "flor");
+  assert.equal(h?.cerrable, false);
+  assert.deepEqual(h?.respuestas, ["flor"]);
+  assert.deepEqual(h?.grupos, [{ nombre: "Flor", opciones: ["con-flor-envido", "contraflor-al-resto"] }]);
+});
