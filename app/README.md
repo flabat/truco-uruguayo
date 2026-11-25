@@ -19,8 +19,14 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 ```sh
 npm run app:tipos      # TypeScript
 npm run app:exportar   # exportación web en app/dist, con base /app
-npm --workspace app run ios       # build de desarrollo en el simulador (requiere Xcode)
-npm --workspace app run android   # build de desarrollo en Android (requiere Android Studio)
+npm run app:nativo -- ios                  # cliente de desarrollo en el simulador de iOS, API de eltru.co
+npm run app:nativo -- android --api local  # en el emulador de Android, API de la pila local
 ```
 
-En las apps, la API es `https://eltru.co`. Para la pila local, definí `EXPO_PUBLIC_API_URL=http://localhost:8081` (en Android, `http://10.0.2.2:8081`) y usá otro puerto para Metro, que también toma el 8081: `npm --workspace app run ios -- --port 8082`. La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/app/`.
+`app:nativo` calcula la huella nativa con `@expo/fingerprint` (dependencias nativas, `app.json`, plugins). Si ya hay un build con esa huella en `~/.cache/truco/builds/<plataforma>-<huella>`, lo instala en segundos; si no, compila con `expo run:<plataforma>` (requiere Xcode o Android Studio) y lo guarda. Cambios solo de JavaScript no cambian la huella. Después arranca Metro y abre la app contra él.
+
+- **Dispositivo:** usa el simulador de iPhone encendido o el primero disponible, y el emulador de Android en marcha o el primer AVD. Para elegir uno, `--dispositivo "iPhone 17"` (nombre o UDID) o `--dispositivo Pixel_API_36` (AVD o serie de adb). `--recompilar` compila aunque haya un build guardado.
+- **API:** `--api vps` (predeterminado) usa `https://eltru.co`; `--api local` usa la pila de `docker compose up --build` en `http://localhost:8081` (o `WEB_PORT` de `.env.trabajo`). Llega a la app por `EXPO_PUBLIC_API_URL`, que Metro incrusta en el JavaScript: no cambia la huella. En Android la app traduce `localhost` a `10.0.2.2`, así un mismo Metro sirve las dos plataformas.
+- **Metro:** escucha en `METRO_PORT` de `.env.trabajo` o en el 8082, porque la web local ocupa el 8081. Si ya hay un Metro en ese puerto, el comando lo reusa (con la API con la que arrancó) y solo instala y abre la app. Ese mismo Metro sirve la web en `http://localhost:8082`.
+
+La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/app/`.
