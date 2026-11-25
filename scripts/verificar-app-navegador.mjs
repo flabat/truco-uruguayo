@@ -18,6 +18,8 @@ async function jugador(p) {
 
 async function ingresar(p) {
   await expect(titulo(p, "Entrá a jugar")).toBeVisible(espera);
+  // Sin la sesión de Keycloak del ingreso anterior, que pediría solo la contraseña.
+  await p.context().clearCookies();
   await boton(p, "Ingresar").click();
   await ingresarDesdeIdentidad(p, usuario);
 }
