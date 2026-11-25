@@ -124,8 +124,11 @@ async function cantoEnHoja(p, nombre) {
 }
 
 const basicas = ["flor", "paso-flor", "quiero", "carta"];
+// Querer una falta envido o una contraflor al resto puede cerrar el chico, y las pruebas necesitan repartir otra.
+const alResto = ["falta-envido", "contraflor-al-resto"];
 async function jugarTurno(p, id, m, preferencias = basicas) {
-  const tipo = preferencias.find(t => m.vista.legales.includes(t));
+  const rechazar = alResto.includes(m.vista.pendiente?.tipo) && m.vista.legales.includes("no-quiero");
+  const tipo = rechazar ? "no-quiero" : preferencias.find(t => m.vista.legales.includes(t));
   if (!tipo) return false;
   const control = tipo === "carta" ? () => cartasEnMano(p).first()
     : () => cantoEnHoja(p, tipo === "mazo" ? "Irme al mazo" : canto[tipo]);
@@ -178,17 +181,38 @@ async function probarDueloConComputadora() {
   await expect(cartasEnMano(eva)).toHaveCount(3, espera);
   await capturar(eva, "duelo-375x760");
   const enviadas = [];
+  let respondida = Infinity;
   eva.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
+  eva.on("response", r => {
+    if (/\/acciones$/.test(r.url()) && r.request().method() === "POST") respondida = Math.min(respondida, Date.now());
+  });
+  // La ruta retiene el envío: el segundo toque llega mientras el primero sigue en viaje.
+  let soltar;
+  const retenida = new Promise(listo => { soltar = listo; });
   await eva.route("**/acciones", async r => {
-    await new Promise(listo => setTimeout(listo, 1_500));
+    await Promise.race([retenida, new Promise(listo => setTimeout(listo, 4_000))]);
     await r.continue();
   });
+  const lugar = async carta => {
+    const caja = await carta.boundingBox();
+    return caja && { x: Math.round(caja.x), y: Math.round(caja.y) };
+  };
   for (let intento = 0; enviadas.length === 0 && intento < 20; intento++) {
-    const [primera, segunda] = [cartasEnMano(eva).nth(0), cartasEnMano(eva).nth(1)];
-    await primera.click();
+    const [primeraId, segundaId] = await cartasEnMano(eva).evaluateAll(cs => cs.map(c => c.dataset.testid));
+    const segunda = eva.getByTestId(segundaId);
+    const antes = await lugar(segunda);
+    await eva.getByTestId(primeraId).click();
     await segunda.click();
-    await eva.waitForTimeout(2_500);
+    const segundoToque = Date.now();
+    await eva.waitForTimeout(1_000);
+    if (enviadas.length === 0) continue;
+    assert.equal("carta-" + enviadas[0].accion?.carta, primeraId, "sale la carta del primer toque");
+    assert.ok(segundoToque < respondida, "el segundo toque terminó antes de la respuesta del primero");
+    // Con el envío retenido, la segunda carta volvió a su lugar en la mano.
+    await expect.poll(() => lugar(segunda), espera).toEqual(antes);
+    soltar();
   }
+  await expect.poll(() => respondida < Infinity, espera).toBe(true);
   await eva.unroute("**/acciones");
   assert.equal(enviadas.length, 1, "dos toques rápidos envían una sola carta: " + JSON.stringify(enviadas));
   const tras = await partida(eva, id);
@@ -238,9 +262,8 @@ async function probarEnvido() {
     await expect(cartasEnMano(responde).first()).toBeInViewport();
     await capturar(responde, "hoja-respuesta-360x640");
     await responde.setViewportSize(movil);
-    await responde.keyboard.press("Escape");
-    await responde.waitForTimeout(500);
-    await expect(hoja.getByRole("heading", { name: encabezado, exact: true })).toBeVisible();
+    // La hoja forzada no ofrece cerrarse: ni el asa ni el paño. La tarea 14 suma Escape a esta prueba.
+    await expect(responde.getByLabel("Cerrar la hoja", { exact: true })).toHaveCount(0);
     const pendiente = await partida(responde, id);
     assert.deepEqual(pendiente.vista.pendiente, { tipo: "envido", asiento: manos[i].vista.asiento });
     await tocar(responde, id, () => boton(responde, "Quiero"), pendiente.version);
@@ -328,21 +351,43 @@ async function probarPrivacidad() {
     new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
   }, { selector: ajenos, nombres: delEquipoDeEva.map(a => a.nombre) });
 
+  // Control positivo en la misma mesa: el compañero de eva es una computadora, así que el equipo de eva
+  // sí hace señas. Si eva no las recibiera ni las viera, la ausencia en la página de diego no probaría nada.
+  await eva.evaluate(() => {
+    window.senasPropias = 0;
+    const revisar = () => {
+      if (document.querySelector('[data-testid^="globo-senas-"], [data-testid="pildora-senas"]')) window.senasPropias++;
+    };
+    revisar();
+    new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true });
+  });
+  let gestosDeEva = 0;
+
   let muestras = 0;
   const vigilar = async () => {
+    const deEva = await partida(eva, id);
+    gestosDeEva += (deEva.pie?.grupos ?? [])
+      .filter(g => delEquipoDeEva.some(a => a.asiento === g.emisor) && g.gestos.length > 0).length;
     sinGestosAjenos(await partida(diego, id));
     // Provisorio: el visor de espectador de la 4c no dibuja la mesa. La tarea 15 lo endurece con la mesa nueva.
     for (const testid of ["cara-sena", "pildora-senas", "frases-pie"]) assert.equal(await clara.getByTestId(testid).count(), 0);
     assert.equal(await clara.locator('[data-testid^="globo-senas-"]').count(), 0);
     muestras++;
   };
-  await avanzar([eva, diego], id, terminada, { antes: vigilar });
-  await vigilar();
+  for (let mano = 1; mano <= 3; mano++) {
+    const fin = await avanzar([eva, diego], id, terminada, { antes: vigilar });
+    await vigilar();
+    if (gestosDeEva > 0 && await eva.evaluate(() => window.senasPropias) > 0) break;
+    await tocar(eva, id, () => boton(eva, "Repartir otra mano"), fin.version);
+    await expect.poll(async () => (await partida(eva, id)).manoNumero, espera).toBe(fin.manoNumero + 1);
+  }
+  assert.ok(gestosDeEva > 0, "la /partida de eva trajo gestos de su equipo");
+  assert.ok(await eva.evaluate(() => window.senasPropias) > 0, "la mesa de eva mostró sus señas");
   assert.deepEqual(await diego.evaluate(() => window.senasAjenas), [], "diego vio señas del equipo de eva");
   assert.ok(recibidas.length > 0, "la mesa de diego pidió /partida");
   for (const m of await Promise.all(recibidas)) sinGestosAjenos(m);
   await Promise.all([eva, diego, clara].map(p => p.context().close()));
-  console.log(`2v2 rivales con dos computadoras: ${recibidas.length} lecturas de diego y ${muestras} miradas sin señas ajenas.`);
+  console.log(`2v2 rivales con dos computadoras: eva vio sus señas (${gestosDeEva} grupos) y diego, en ${recibidas.length} lecturas y ${muestras} miradas, ninguna.`);
 }
 
 const todos = { probarDueloConComputadora, probarEnvido, probarParejasConPie, probarPrivacidad };
