@@ -30,7 +30,16 @@ services:
 
   api:
     <<: *servicio
-    build: {context: ., dockerfile: api/Dockerfile}
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      # La versión que publica GET /api/version (node scripts/version.mjs --exportar).
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        TRUCO_RAMA: ${TRUCO_RAMA:-}
+        TRUCO_FECHA: ${TRUCO_FECHA:-}
+        TRUCO_SUCIO: ${TRUCO_SUCIO:-}
+        TRUCO_ETIQUETA: ${TRUCO_ETIQUETA:-}
     environment:
       PGHOST: db
       PGDATABASE: truco

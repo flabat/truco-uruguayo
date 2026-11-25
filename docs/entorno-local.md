@@ -3,8 +3,10 @@
 Desde la raíz del repositorio, con Docker y Compose disponibles, levantá el sitio, la API, PostgreSQL y Keycloak con un solo comando. La primera ejecución descarga las imágenes, compila el sitio e importa el entorno de identidad de prueba. El comando termina cuando los cuatro servicios están disponibles.
 
 ```sh
-TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
+eval "$(node scripts/version.mjs --exportar)" && docker compose up --build --wait
 ```
+
+`scripts/version.mjs` exporta el commit, la rama, la fecha y si hay cambios sin commit. La API los publica en [la versión](http://localhost:3001/api/version) y la web y la app los muestran en un pie discreto, por ejemplo `codex/issue-382 · 0123abcd-sucio`. En un commit con una etiqueta de lanzamiento y sin cambios, el pie no aparece.
 
 | Servicio | Cómo probarlo |
 | --- | --- |

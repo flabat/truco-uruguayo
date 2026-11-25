@@ -4,6 +4,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { PieVersion } from "../componentes/PieVersion.tsx";
 import { Cargando } from "../componentes/ui.tsx";
 import { ProveedorDeSesion } from "../ingreso/contexto.tsx";
 import { colores } from "../tema.ts";
@@ -16,6 +17,7 @@ export default function Raiz() {
       {listas ? (
         <ProveedorDeSesion>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
+          <PieVersion />
         </ProveedorDeSesion>
       ) : <Cargando />}
     </SafeAreaProvider>

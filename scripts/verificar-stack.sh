@@ -13,6 +13,8 @@ export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=c
 export KEYCLOAK_API_CLIENT_SECRET=secreto-descartable-del-cliente-de-servicio-api APPLE_TOKENS_KEY="$(openssl rand -base64 32)"
 unset KEYCLOAK_ADMIN_TOKEN
 export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
+# Rama, commit, fecha y cambios sin commit para GET /api/version y el pie.
+eval "$(node scripts/version.mjs --exportar)"
 
 cleanup() {
   local status=$?
@@ -41,6 +43,7 @@ for _ in $(seq 40); do curl -fsS -o /dev/null "$caddy_web/" && break; sleep 0.25
 bash scripts/verificar-app-web.sh "$caddy_web"
 docker rm -f "$caddy" >/dev/null && caddy=
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
+node scripts/verificar-version.mjs "$web"
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)

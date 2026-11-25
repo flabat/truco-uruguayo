@@ -490,6 +490,9 @@ footer {
   column-gap: 4px;
   max-width: 100%;
 }
+.footer-versiones > div[hidden] {
+  display: none;
+}
 .footer-versiones a {
   text-decoration: underline;
 }

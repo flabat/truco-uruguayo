@@ -13,6 +13,7 @@ import { atenderPerfil } from "./perfil.ts";
 import { atenderReporte, rutaReporte } from "./reportes.ts";
 import { crearCuenta, rutaEliminarCuenta } from "./cuenta.ts";
 import { crearCapturaApple, crearServiciosBaja, procesarBajas } from "./bajas.ts";
+import { crearVersion, rutaVersion } from "./version.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
 import { crearVoz } from "./voz-discord.ts";
@@ -37,12 +38,14 @@ const auth = crearAuth(pool, {
 const serviciosBaja = crearServiciosBaja(process.env, pool);
 if (!serviciosBaja) console.warn("Sin KEYCLOAK_API_CLIENT_SECRET: las bajas vencidas no se completan.");
 
+const version = crearVersion();
 const server = createServer(async (request, response) => {
   if (request.url?.startsWith("/api/")) {
     try {
       const ruta = request.url.split("?")[0];
       const reporte = rutaReporte.exec(ruta);
-      if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
+      if (ruta === rutaVersion) version(request.method, response);
+      else if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
       else if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
       else if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
