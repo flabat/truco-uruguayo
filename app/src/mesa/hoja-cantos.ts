@@ -61,10 +61,11 @@ export function hojaDeCantos(e: EntradaHoja): HojaCantos | null {
   if (legales.length === 0) return null;
   const legal = (t: Canto) => legales.includes(t);
 
-  const deFlor = e.porDeclararFlor === e.miAsiento;
+  const tocaDeclarar = e.porDeclararFlor === e.miAsiento;
+  const deFlor = tocaDeclarar && (legal("flor") || legal("con-flor-quiero") || legal("paso-flor"));
   const deOtro = e.pendiente !== null && e.pendiente.asiento !== e.miAsiento;
   const modo: HojaCantos["modo"] = deFlor ? "flor" : deOtro && (legal("quiero") || legal("no-quiero")) ? "respuesta" : "propia";
-  if (modo === "propia" && e.pendiente) return null;
+  if (modo === "propia" && e.pendiente && !tocaDeclarar) return null;
 
   const respuestas: Canto[] = modo === "respuesta"
     ? (["quiero", "no-quiero"] as const).filter(legal)
@@ -96,7 +97,9 @@ export function hojaDeCantos(e: EntradaHoja): HojaCantos | null {
 /** La hoja sube sola, y avisa una vez, al entrar en respuesta o flor; si desaparece se cierra. */
 export function transicionDeHoja(anterior: HojaCantos | null, actual: HojaCantos | null, abierta: boolean) {
   if (!actual) return { abierta: false, avisar: false };
-  if (actual.modo === "propia") return { abierta, avisar: false };
+  if (actual.modo === "propia")
+    return { abierta: anterior?.modo === "respuesta" || anterior?.modo === "flor" ? false : abierta, avisar: false };
+  // Un canto nuevo (un real envido después de tu envido) cambia el encabezado y vuelve a avisar.
   const mismo = anterior?.modo === actual.modo && anterior.encabezado === actual.encabezado;
   return { abierta: true, avisar: !mismo };
 }

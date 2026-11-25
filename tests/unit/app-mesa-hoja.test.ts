@@ -131,3 +131,18 @@ test("la hoja sube sola y avisa una vez al entrar en respuesta o flor", () => {
   assert.deepEqual(transicionDeHoja(propia, propia, true), { abierta: true, avisar: false });
   assert.deepEqual(transicionDeHoja(propia, propia, false), { abierta: false, avisar: false });
 });
+
+test("al responder, la hoja forzada se cierra aunque siga tu turno", () => {
+  const propia = hojaDeCantos({ ...base, legales: ["truco"] });
+  const respuesta = hojaDeCantos({ ...base, legales: ["quiero", "no-quiero"], pendiente: { asiento: 1, tipo: "envido" } });
+  const flor = hojaDeCantos({ ...base, legales: ["flor", "paso-flor"], porDeclararFlor: 0 });
+  assert.deepEqual(transicionDeHoja(respuesta, propia, true), { abierta: false, avisar: false });
+  assert.deepEqual(transicionDeHoja(flor, propia, true), { abierta: false, avisar: false });
+});
+
+test("si te toca declarar pero no hay respuestas de flor legales, queda la hoja propia con el mazo", () => {
+  const h = hojaDeCantos({ ...base, legales: ["mazo"], porDeclararFlor: 0, pendiente: { asiento: 1, tipo: "envido" } });
+  assert.equal(h?.modo, "propia");
+  assert.equal(h?.mazo, true);
+  assert.deepEqual(h?.respuestas, []);
+});
