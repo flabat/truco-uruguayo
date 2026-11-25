@@ -1,4 +1,4 @@
-// Desde el host, contra la web del stack descartable: la exportación web de la app en /app/ ingresa con la
+// Desde el host, contra la web del stack descartable: la exportación web de la app en /jugar/ ingresa con la
 // cookie, muestra el salón y el perfil, cierra la sesión y pide (y cancela) la eliminación.
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
@@ -36,18 +36,18 @@ async function recorrer(viewport, completo) {
   const context = await browser.newContext({ baseURL: web, viewport });
   const p = await context.newPage();
   p.setDefaultTimeout(20_000);
-  await p.goto("/app/");
+  await p.goto("/jugar/");
   await ingresar(p);
-  await p.waitForURL(url => url.pathname === "/app/");
+  await p.waitForURL(url => url.pathname === "/jugar/");
   const yo = await jugador(p);
-  assert.ok(yo?.id, "el ingreso desde /app/ deja la cookie de sesión");
+  assert.ok(yo?.id, "el ingreso desde /jugar/ deja la cookie de sesión");
   await verPerfil(p, yo);
 
   // El perfil, también al recargar su dirección; sin id, la mesa vuelve al salón.
-  assert.equal(new URL(p.url()).pathname, "/app/perfil");
+  assert.equal(new URL(p.url()).pathname, "/jugar/perfil");
   await p.reload();
   await expect(titulo(p, "Tu perfil")).toBeVisible(espera);
-  await p.goto("/app/mesa");
+  await p.goto("/jugar/mesa");
   await expect(titulo(p, "Mesas en juego")).toBeVisible(espera);
   await verPerfil(p, yo);
 
@@ -75,7 +75,7 @@ async function recorrer(viewport, completo) {
   // Volver a ingresar dentro de los 30 días cancela la baja.
   await ingresar(p);
   await p.waitForURL(url => url.pathname === "/perfil/" && url.searchParams.get("baja") === "cancelada");
-  await p.goto("/app/");
+  await p.goto("/jugar/");
   await verPerfil(p, yo);
   await boton(p, "Cerrar sesión").click();
   await expect(titulo(p, "Entrá a jugar")).toBeVisible(espera);

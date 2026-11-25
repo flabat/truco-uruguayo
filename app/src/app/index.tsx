@@ -24,7 +24,7 @@ export default function Inicio() {
   const ocupado = (accion: Promise<void>) => { setIngresando(true); accion.finally(() => setIngresando(false)); };
   const retomado = useRef<Destino | null | undefined>(undefined);
 
-  // Sin sesión, el destino se guarda: en la web el ingreso sale de la app y vuelve a /app/.
+  // Sin sesión, el destino se guarda: en la web el ingreso sale de la app y vuelve a /jugar/.
   const fuera = estado.tipo === "fuera";
   useEffect(() => {
     if (fuera && destino) destinoPendiente(guardadoDeDestino, destino);

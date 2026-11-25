@@ -12,14 +12,14 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 ## Ingreso
 
 - **iOS y Android:** abre `/api/auth/login?app=<desafío>` en el navegador del sistema, vuelve por `eltruco://ingreso?codigo=…`, canjea el código con `POST /api/auth/canje` y guarda la sesión en el almacenamiento seguro. Cada pedido lleva `Authorization: Bearer`.
-- **Web:** se sirve en `/app/` del mismo origen que la API y usa la cookie `truco_sesion`.
+- **Web:** se sirve en `/jugar/` del mismo origen que la API y usa la cookie `truco_sesion`.
 - **Ingreso de prueba:** si la API anuncia `GET /api/auth/dev` (`AUTH_DEV=1`, activo en la pila local), la pantalla de ingreso muestra **Entrar como…** con los seis jugadores del realm local. En iOS y Android pide el código con el desafío y lo canjea en `/api/auth/canje`; en la web recibe la cookie. Ver [el entorno local](../docs/entorno-local.md#ingreso-de-prueba-sin-keycloak).
 
 ## Comandos (desde la raíz)
 
 ```sh
 npm run app:tipos      # TypeScript
-npm run app:exportar   # exportación web en app/dist, con base /app
+npm run app:exportar   # exportación web en app/dist, con base /jugar
 npm run app:nativo -- ios                  # cliente de desarrollo en el simulador de iOS, API de eltru.co
 npm run app:nativo -- android --api local  # en el emulador de Android, API de la pila local
 ```
@@ -30,7 +30,7 @@ npm run app:nativo -- android --api local  # en el emulador de Android, API de l
 - **API:** `--api vps` (predeterminado) usa `https://eltru.co`; `--api local` usa la pila de `docker compose up --build` en `http://localhost:8081` (o `WEB_PORT` de `.env.trabajo`). Llega a la app por `EXPO_PUBLIC_API_URL`, que Metro incrusta en el JavaScript: no cambia la huella. En Android la app traduce `localhost` a `10.0.2.2`, así un mismo Metro sirve las dos plataformas.
 - **Metro:** escucha en `METRO_PORT` de `.env.trabajo` o en el 8082, porque la web local ocupa el 8081. Si ya hay un Metro en ese puerto, el comando lo reusa (con la API con la que arrancó) y solo instala y abre la app. Ese mismo Metro sirve la web en `http://localhost:8082`.
 
-La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/app/`.
+La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/jugar/`.
 
 ## Enlaces que abren la app
 

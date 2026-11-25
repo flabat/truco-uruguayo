@@ -1,4 +1,4 @@
-// Enlaces de la app: `?invitacion=`, `?mesa=`, `?mirar=` y `?crear=1`, iguales a los de /jugar/.
+// Enlaces de la app: `?invitacion=`, `?mesa=`, `?mirar=` y `?crear=1`, los mismos que comparte el servidor en /jugar/.
 const esId = (valor: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor);
 const esToken = (valor: string) => /^[A-Za-z0-9_-]{1,80}$/.test(valor);
 
@@ -48,17 +48,17 @@ export function tokenDeInvitacion(enlace: string): string | null {
 }
 
 /**
- * En la web se comparte la dirección de la app en el mismo origen. En las apps, sin universal links,
- * se comparte el enlace del servidor (/jugar/), que cualquiera abre en el navegador.
+ * En la web se comparte la dirección /jugar/ del mismo origen. En las apps, sin universal links,
+ * se comparte el enlace del servidor (también /jugar/), que cualquiera abre en el navegador.
  */
 export function enlaceParaCompartir(invitacion: string, origenWeb: string | null): string {
   const token = tokenDeInvitacion(invitacion);
   if (!origenWeb || !token) return invitacion;
-  return origenWeb.replace(/\/+$/, "") + "/app/?invitacion=" + encodeURIComponent(token);
+  return origenWeb.replace(/\/+$/, "") + "/jugar/?invitacion=" + encodeURIComponent(token);
 }
 
 /**
- * En la web el ingreso sale de la app y vuelve a /app/: el destino del enlace se guarda antes y se
+ * En la web el ingreso sale de la app y vuelve a /jugar/: el destino del enlace se guarda antes y se
  * retoma una sola vez al volver.
  */
 export function destinoPendiente(

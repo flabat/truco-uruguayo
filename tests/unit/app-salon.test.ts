@@ -79,7 +79,7 @@ test("la invitación se comparte con la dirección de la app en la web", () => {
   const delServidor = "https://eltru.co/jugar/?invitacion=Tok_en-1";
   assert.equal(tokenDeInvitacion(delServidor), "Tok_en-1");
   assert.equal(tokenDeInvitacion("no es un enlace"), null);
-  assert.equal(enlaceParaCompartir(delServidor, "http://localhost:18081"), "http://localhost:18081/app/?invitacion=Tok_en-1");
+  assert.equal(enlaceParaCompartir(delServidor, "http://localhost:18081"), "http://localhost:18081/jugar/?invitacion=Tok_en-1");
   assert.equal(enlaceParaCompartir(delServidor, null), delServidor);
 });
 
@@ -255,7 +255,7 @@ test("reintentar retoma una consulta detenida por falta de sesión", async () =>
 });
 
 test("compartir la invitación usa la hoja del sistema y copia si no hay", async () => {
-  const enlace = "http://localhost/app/?invitacion=t";
+  const enlace = "http://localhost/jugar/?invitacion=t";
   const copiados: string[] = [];
   const copiar = async (e: string) => { copiados.push(e); };
   assert.equal(await compartirInvitacion({ enlace, compartir: async () => "compartida", copiar }), "");

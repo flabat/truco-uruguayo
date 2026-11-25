@@ -41,7 +41,7 @@ issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F '<title>El Truco</title>' >/dev/null
 bash scripts/verificar-app-web.sh "$web"
 node scripts/verificar-enlaces-app.mjs "$web"
-# La misma imagen web con el Caddyfile de producción sirve la app en /app/.
+# La misma imagen web con el Caddyfile de producción sirve la app en /jugar/.
 docker build -q --target produccion -f infra/web.Dockerfile --build-arg APPLE_TEAM_ID --build-arg ANDROID_CERT_SHA256 \
   -t "$project-caddy" . >/dev/null
 caddy=$(docker run -d -e SITE_HOST=:80 -v "$PWD/infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro" -p 127.0.0.1::80 "$project-caddy")
@@ -112,7 +112,6 @@ for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api no
 "${compose[@]}" exec -T api node --input-type=module - recuperado < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module - iniciar < scripts/verificar-vivo.mjs
 node scripts/verificar-app-reconexion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
-node scripts/verificar-juego-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 consulta_jugadores="SELECT string_agg(id::text, ',' ORDER BY id) FROM juego.jugadores"
 jugadores=$(sql "$consulta_jugadores")
 

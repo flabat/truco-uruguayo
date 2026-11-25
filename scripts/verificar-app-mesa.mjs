@@ -1,4 +1,4 @@
-// Desde el host, contra la web del stack descartable: la mesa nueva de la app (/app/mesa) jugada en Chromium
+// Desde el host, contra la web del stack descartable: la mesa nueva de la app (/jugar/mesa) jugada en Chromium
 // con la API, PostgreSQL y el proveedor de identidad locales. Cada jugada sale de tocar la mesa (una carta,
 // un botón de la hoja de Cantos, «Dejar jugar», «Repartir otra mano»); la API dice a quién le toca y qué es
 // legal. También tercetos (redondilla y pico a pico), el visor de espectador y la mesa de escritorio con
@@ -48,7 +48,7 @@ const partida = (p, id) => api(p, `/api/mesas/${id}/partida`);
 
 async function entrar(usuario, viewport, opciones) {
   const p = await pagina(viewport, opciones);
-  await p.goto("/app/");
+  await p.goto("/jugar/");
   await expect(titulo(p, "Entrá a jugar")).toBeVisible(espera);
   await boton(p, "Ingresar").click();
   await ingresarDesdeIdentidad(p, usuario);
@@ -66,7 +66,7 @@ async function crearMesa(p, modalidad, computadoras, meta = 30) {
 
 /** Abre la mesa en juego: la ruta, la mesa nueva y el lienzo de CanvasKit. */
 async function enLaMesa(p) {
-  await p.waitForURL(/\/app\/mesa\?id=[a-f0-9-]{36}$/, espera);
+  await p.waitForURL(/\/jugar\/mesa\?id=[a-f0-9-]{36}$/, espera);
   await expect(p.getByTestId("mesa")).toBeVisible(espera);
   await expect(p.locator('[data-testid="mesa"] canvas')).toBeVisible(espera);
   return new URL(p.url()).searchParams.get("id");
@@ -75,12 +75,12 @@ async function enLaMesa(p) {
 /** eva crea la mesa entre personas y los invitados ocupan su asiento por el enlace. */
 async function mesaConInvitados(anfitrion, modalidad, invitados, asientosDeComputadora = []) {
   await crearMesa(anfitrion, modalidad, false);
-  await anfitrion.waitForURL(/\/app\/sala\//, espera);
+  await anfitrion.waitForURL(/\/jugar\/sala\//, espera);
   const enlace = await anfitrion.getByRole("textbox", { name: "Enlace de invitación" }).inputValue();
   for (const p of invitados) {
     await p.goto(enlace);
     await boton(p, "Ocupar mi asiento").click();
-    await p.waitForURL(/\/app\/(sala|mesa)/, espera);
+    await p.waitForURL(/\/jugar\/(sala|mesa)/, espera);
   }
   for (const asiento of asientosDeComputadora) await boton(anfitrion, `Agregar computadora al asiento ${asiento}`).click();
   const ids = await Promise.all([anfitrion, ...invitados].map(enLaMesa));
@@ -333,7 +333,7 @@ async function probarParejasConPie() {
       // Si el chico terminó antes, se sigue en una mesa nueva.
       await boton(luis, "Crear otra mesa").click();
       await expect(titulo(luis, "Crear una mesa")).toBeVisible(espera);
-      await luis.goto("/app/");
+      await luis.goto("/jugar/");
       await expect(titulo(luis, "Mesas en juego")).toBeVisible(espera);
       await nuevaMesa();
       continue;
@@ -377,7 +377,7 @@ async function probarTercetos() {
   for (let mesa = 1; ; mesa++) {
     assert.ok(mesa <= 3, "En 3 mesas nunca hubo pico a pico");
     if (await tercetosConPico(luis)) break;
-    await luis.goto("/app/");
+    await luis.goto("/jugar/");
     await expect(titulo(luis, "Mesas en juego")).toBeVisible(espera);
   }
   await luis.context().close();
@@ -463,7 +463,7 @@ async function probarEspectador() {
   await crearMesa(luis, "2 contra 2", true);
   const id = await enLaMesa(luis);
   const clara = await entrar("clara");
-  await clara.goto(`/app/mirar/${id}`);
+  await clara.goto(`/jugar/mirar/${id}`);
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
   await expect(clara.locator('[data-testid="mesa"] canvas')).toBeVisible(espera);
   await expect(clara.getByText("👁 Mirando", { exact: true })).toBeVisible(espera);
@@ -648,7 +648,7 @@ async function probarPrivacidad() {
   const ajenos = delEquipoDeEva.map(a => `[data-testid="globo-senas-${a.asiento}"]`).join(", ");
 
   const clara = await entrar("clara");
-  await clara.goto(`/app/mirar/${id}`);
+  await clara.goto(`/jugar/mirar/${id}`);
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
   await expect(clara.getByText("👁 Mirando", { exact: true })).toBeVisible(espera);
   // El visor nunca muestra señas: ni caras, ni globos, ni la píldora, ni las frases del pie, en toda la mano.

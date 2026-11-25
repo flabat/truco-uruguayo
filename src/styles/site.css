@@ -504,9 +504,6 @@ footer {
   overflow-wrap: anywhere;
   color: var(--ink);
 }
-#version-modelo-mesa:not(:empty) + span {
-  display: none;
-}
 .ficha-modelo summary {
   width: fit-content;
   cursor: pointer;

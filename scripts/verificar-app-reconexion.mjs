@@ -1,5 +1,5 @@
 // Desde el host, contra la pila descartable de verificar-stack: cuatro personas en una mesa de parejas de la
-// app (/app/), con lo que cubría la pantalla Astro que retira #412 (#403):
+// app (/jugar/), con lo que cubría la pantalla Astro que retira #412 (#403):
 // - el ingreso por invitación cuenta `ingreso-mesa` sin el token y no muestra el aviso de la comunidad;
 // - ninguna página tiene en el DOM ni en /partida las cartas de otro jugador;
 // - la hoja «Más» muestra la versión de reglas y el modelo que trae la mesa;
@@ -75,14 +75,14 @@ const mencion = (texto, carta) =>
 
 try {
   const [ana, bruno, clara, diego] = await Promise.all([1, 2, 3, 4].map(pagina));
-  await ana.goto("/app/");
+  await ana.goto("/jugar/");
   await expect(titulo(ana, "Entrá a jugar")).toBeVisible(espera);
   await boton(ana, "Ingresar").click();
   await ingresarDesdeIdentidad(ana, "ana");
   await expect(titulo(ana, "Mesas en juego")).toBeVisible(espera);
   // Parejas sin señas: la mesa entre cuatro personas no espera las frases de ningún pie.
   const { id } = await api(ana, "/api/mesas", { modo: "2v2", publica: false });
-  await ana.goto(`/app/sala/${id}`);
+  await ana.goto(`/jugar/sala/${id}`);
   const enlace = await ana.getByRole("textbox", { name: "Enlace de invitación" }).inputValue();
   const token = new URL(enlace).searchParams.get("invitacion");
   assert.ok(token);
@@ -96,7 +96,7 @@ try {
     // Una invitación no muestra el aviso de la comunidad.
     await expect(p.getByRole("region", { name: "Comunidad de Discord" })).toHaveCount(0);
     await boton(p, "Ocupar mi asiento").click();
-    await p.waitForURL(/\/app\/(sala|mesa)/, espera);
+    await p.waitForURL(/\/jugar\/(sala|mesa)/, espera);
     await expect.poll(() => p.eventos.filter(u => u.includes("ingreso-mesa"))).toHaveLength(1);
     for (const u of p.eventos) {
       assert.equal(new URL(u).search, "", "un conteo sin consulta");
@@ -104,7 +104,7 @@ try {
     }
   }
   const paginas = [ana, bruno, clara, diego];
-  await Promise.all(paginas.map(p => p.waitForURL(`/app/mesa?id=${id}`, espera)));
+  await Promise.all(paginas.map(p => p.waitForURL(`/jugar/mesa?id=${id}`, espera)));
   await Promise.all(paginas.map(p => expect(p.locator('[data-testid="mesa"] canvas')).toBeVisible(espera)));
 
   // Cada página tiene solo sus tres cartas: ni el DOM ni /partida nombran las de los demás.
