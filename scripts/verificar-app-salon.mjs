@@ -109,7 +109,8 @@ async function probarParejas() {
     if (asiento === 3) await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
   }
   await Promise.all([eva, diego].map(p => p.waitForURL(`/app/mesa?id=${id}`, espera)));
-  await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible()));
+  // La mesa carga CanvasKit: con la máquina cargada tarda más que el plazo por defecto.
+  await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible(espera)));
 
   // clara la ve en el salón y la mira.
   const clara = await pagina();
