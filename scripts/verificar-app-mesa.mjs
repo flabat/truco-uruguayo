@@ -2,7 +2,8 @@
 // con la API, PostgreSQL y el proveedor de identidad locales. Cada jugada sale de tocar la mesa (una carta,
 // un botón de la hoja de Cantos, «Dejar jugar», «Repartir otra mano»); la API dice a quién le toca y qué es
 // legal. También tercetos (redondilla y pico a pico), el visor de espectador y la mesa de escritorio con
-// atajos de teclado. Con `CAPTURAS_MESA` guarda capturas a 375 × 760, 360 × 640 y 1280 × 800.
+// atajos de teclado, las animaciones con reducir movimiento y el modo liviano guardado. Con `CAPTURAS_MESA`
+// guarda capturas a 375 × 760, 360 × 640 y 1280 × 800.
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -23,17 +24,17 @@ const minima = { width: 360, height: 640 };
 const escritorio = { width: 1280, height: 800 };
 const cartasEnMano = p => p.locator('[data-testid^="carta-"]');
 
-async function pagina(viewport = movil) {
-  const context = await browser.newContext({ baseURL: web, viewport });
+async function pagina(viewport = movil, opciones = {}) {
+  const context = await browser.newContext({ baseURL: web, viewport, ...opciones });
   const p = await context.newPage();
   p.setDefaultTimeout(25_000);
   return p;
 }
 
-async function capturar(p, nombre) {
+async function capturar(p, nombre, { asentar = true } = {}) {
   if (!capturas) return;
-  // El reparto y la hoja se animan: la captura espera a que se asienten.
-  await p.waitForTimeout(1_200);
+  // El reparto y la hoja se animan: la captura espera a que se asienten, salvo la que quiere el movimiento.
+  if (asentar) await p.waitForTimeout(1_200);
   await p.screenshot({ path: join(capturas, nombre + ".png") });
 }
 
@@ -45,8 +46,8 @@ async function api(p, ruta) {
 
 const partida = (p, id) => api(p, `/api/mesas/${id}/partida`);
 
-async function entrar(usuario, viewport) {
-  const p = await pagina(viewport);
+async function entrar(usuario, viewport, opciones) {
+  const p = await pagina(viewport, opciones);
   await p.goto("/app/");
   await expect(titulo(p, "Entrá a jugar")).toBeVisible(espera);
   await boton(p, "Ingresar").click();
@@ -548,6 +549,89 @@ async function probarEscritorio() {
   console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}tras tocar Sonido, 1 y 2 seguidos juegan una sola carta.`);
 }
 
+/** El interruptor «Modo liviano» de la hoja Más (en el teléfono, el ☰ de la barra). */
+async function abrirModoLiviano(p) {
+  await boton(p, "Más").click();
+  await expect(p.getByTestId("hoja-mas")).toBeVisible(espera);
+  return p.getByRole("switch", { name: "Modo liviano" });
+}
+
+async function cerrarHoja(p) {
+  await boton(p, "Cerrar la hoja").first().click();
+  await expect(p.getByTestId("hoja-mas")).toHaveCount(0, espera);
+}
+
+/**
+ * luis juega una mano 1 contra 1 con la computadora hasta la tarjeta del fin de mano y reparte otra. La
+ * tarjeta, el tanteador y la mano nueva tienen que llegar igual con animaciones o sin ellas. `enElFin` corre
+ * con la tarjeta a la vista: después de repartir, un canto de la computadora puede subir una hoja forzada
+ * que no deja abrir Más.
+ */
+async function dueloHastaElFin(luis, sufijo, enElFin = async () => {}) {
+  await crearMesa(luis, "1 contra 1", true);
+  const id = await enLaMesa(luis);
+  const fin = await avanzar([luis], id, terminada);
+  await expect(luis.getByTestId("fin-de-mano")).toBeVisible(espera);
+  await expect(boton(luis, "Repartir otra mano")).toBeVisible(espera);
+  const { puntos, vista } = await partida(luis, id);
+  const equipo = vista.asiento % 2;
+  // El tanteador termina en los tantos de la API, aunque cuente de a uno.
+  await expect(luis.getByLabel("Tanteador"))
+    .toHaveText(new RegExp(`\\s${puntos[equipo]}\\s·\\s${puntos[1 - equipo]}\\s`), espera);
+  await capturar(luis, "fin-de-mano-" + sufijo);
+  await enElFin(id);
+  const repartida = luis.waitForResponse(r => esAccion(r) && r.status() === 200, espera);
+  await tocar(luis, id, () => boton(luis, "Repartir otra mano"), fin.version);
+  await repartida;
+  // A mitad del reparto: el mazo ya está repartiendo y la mano nueva todavía no se toca.
+  await luis.waitForTimeout(500);
+  await capturar(luis, "reparto-" + sufijo, { asentar: false });
+  await expect.poll(async () => (await partida(luis, id)).manoNumero, espera).toBe(2);
+  await expect(cartasEnMano(luis)).toHaveCount(3, espera);
+  return { id, puntos };
+}
+
+async function probarAnimaciones() {
+  // Con animaciones, en el teléfono y en el escritorio: cuadros del fin de mano y del reparto. En el
+  // teléfono, además, el interruptor «Modo liviano» de la hoja Más se guarda en el dispositivo (en la web,
+  // localStorage) y sigue al recargar. Se vuelve a apagar antes de repartir, para ver el reparto animado.
+  const luis = await entrar("luis");
+  await dueloHastaElFin(luis, "375x760", async () => {
+    let liviano = await abrirModoLiviano(luis);
+    await expect(liviano).not.toBeChecked();
+    await expect(luis.getByText("Sin brillos ni partículas.")).toBeVisible();
+    await liviano.click();
+    await expect(liviano).toBeChecked();
+    const guardado = () => luis.evaluate(() => JSON.parse(localStorage.getItem("truco.preferencias-mesa") ?? "{}").liviano);
+    await expect.poll(guardado).toBe(true);
+    await luis.reload();
+    await enLaMesa(luis);
+    await expect(luis.getByTestId("fin-de-mano")).toBeVisible(espera);
+    liviano = await abrirModoLiviano(luis);
+    await expect(liviano).toBeChecked();
+    await liviano.click();
+    await expect(liviano).not.toBeChecked();
+    await expect.poll(guardado).toBe(false);
+    await cerrarHoja(luis);
+  });
+  await luis.context().close();
+  const enEscritorio = await entrar("luis", escritorio);
+  await dueloHastaElFin(enEscritorio, "1280x800");
+  await enEscritorio.context().close();
+
+  // Reducir movimiento del sistema: la mesa va en liviano (sin poder apagarlo) y la mano llega igual al fin.
+  const quieto = await entrar("luis", movil, { reducedMotion: "reduce" });
+  await dueloHastaElFin(quieto, "liviano-375x760", async () => {
+    const forzado = await abrirModoLiviano(quieto);
+    await expect(forzado).toBeChecked();
+    await expect(forzado).toBeDisabled();
+    await expect(quieto.getByText("Lo activa la opción de reducir movimiento del sistema.")).toBeVisible();
+    await cerrarHoja(quieto);
+  });
+  await quieto.context().close();
+  console.log("Animaciones: fin de mano y otra mano con animaciones y con reducir movimiento (liviano forzado), y Modo liviano guardado al recargar.");
+}
+
 async function probarPrivacidad() {
   const eva = await entrar("eva");
   const diego = await entrar("diego");
@@ -632,12 +716,13 @@ async function probarPrivacidad() {
 
 const todos = {
   probarDueloConComputadora, probarEnvido, probarParejasConPie, probarPrivacidad, probarTercetos, probarEspectador, probarEscritorio,
+  probarAnimaciones,
 };
 try {
   for (const [nombre, caso] of Object.entries(todos)) {
     if (casos.length === 0 || casos.includes(nombre)) await caso();
   }
-  console.log("Mesa nueva de la app verificada contra la pila local · duelo, envido, señas al pie, privacidad, tercetos, espectador y escritorio.");
+  console.log("Mesa nueva de la app verificada contra la pila local · duelo, envido, señas al pie, privacidad, tercetos, espectador, escritorio y animaciones.");
 } catch (error) {
   // Con una falla, la captura de cada página abierta muestra en qué quedó la mesa.
   const abiertas = browser.contexts().flatMap(c => c.pages());
