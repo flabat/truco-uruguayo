@@ -76,6 +76,29 @@ test("una consulta de flor histórica se omite sin cambiar la posición de las j
   assert.match(texto, /2\. V1 · A0 · Flor/);
 });
 
+test("en el pico, la flor que rechaza la contraflor rival se anota como «Con flor me achico»", async () => {
+  const acciones = [
+    { tipo: "contraflor-al-resto", asiento: 2, duelo: 1 },
+    { tipo: "flor", asiento: 5, duelo: 1 },
+    { tipo: "truco", asiento: 2, duelo: 1 },
+    { tipo: "contraflor-al-resto", asiento: 3, duelo: 2 },
+    { tipo: "flor", asiento: 3, duelo: 3 },
+  ];
+  const { db } = lectura({ ...mano, modo: "3v3", acciones, tipo_reparto: "pico-a-pico" });
+  const borrador = await prepararReporte(db, mesa, 0, { ...cursor, posicion: 5, duelo: 3 }, web, reporte);
+  const texto = new URL(borrador!.url).searchParams.get("body")!;
+  assert.match(texto, /2\. D1 · V1 · A5 · Con flor me achico\n3\. D1 · V1 · A2 · Truco/);
+  assert.match(texto, /5\. D3 · V1 · A3 · Flor$/m);
+});
+
+test("con la regla de flor anterior, «Flor» ante una subida no se anota como rechazo", async () => {
+  const acciones = [{ ...flor, tipo: "contraflor-al-resto" }, { ...flor, asiento: 1 }];
+  const { db } = lectura({ ...mano, regla_flor: "inmediata", acciones });
+  const borrador = await prepararReporte(db, mesa, 0, { ...cursor, posicion: 2 }, web, reporte);
+  const texto = new URL(borrador!.url).searchParams.get("body")!;
+  assert.match(texto, /2\. V1 · A1 · Flor$/m);
+});
+
 test("el reporte incluye «Yo no canto» solo cuando el reparto hace pública la respuesta de ese asiento", async () => {
   const acciones = [flor, { tipo: "paso-flor", asiento: 1, duelo: null }];
   for (const asientos of [[1], [0], null]) {

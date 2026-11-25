@@ -95,6 +95,19 @@ test("las voces de una flor querida muestran las cuentas al volver", () => {
 test("los textos de jugadas nombran cartas y tantos", () => {
   assert.equal(nombrar("bastos-11"), "Caballo de bastos");
   assert.equal(tantos(1), "1 tanto");
-  assert.equal(descripcionDeJugada({ tipo: "mazo", asiento: 1 }, nombre), "Beto se fue al mazo.");
-  assert.equal(descripcionDeJugada({ tipo: "carta", asiento: 0, carta: "oros-12" }, nombre), "Ana jugó rey de oros.");
+  assert.equal(descripcionDeJugada([{ tipo: "mazo", asiento: 1 }], 0, nombre), "Beto se fue al mazo.");
+  assert.equal(descripcionDeJugada([{ tipo: "carta", asiento: 0, carta: "oros-12" }], 0, nombre), "Ana jugó rey de oros.");
+});
+
+test("la flor que contesta una subida rival sin quererla se anota como «Con flor me achico»", () => {
+  const rechazo = [{ tipo: "contraflor-al-resto", asiento: 0 }, { tipo: "flor", asiento: 1 }] as const;
+  assert.equal(descripcionDeJugada(rechazo, 1, nombre), "Beto dijo «Con flor me achico».");
+  assert.equal(descripcionDeJugada([{ tipo: "con-flor-envido", asiento: 0 }, { tipo: "flor", asiento: 1 }], 1, nombre),
+    "Beto dijo «Con flor me achico».");
+  // Sin subida, del mismo equipo o ya querida, «Flor» solo declara la flor.
+  assert.equal(descripcionDeJugada([{ tipo: "flor", asiento: 0 }, { tipo: "flor", asiento: 1 }], 1, nombre), "Beto dijo «Flor».");
+  assert.equal(descripcionDeJugada([{ tipo: "contraflor-al-resto", asiento: 0 }, { tipo: "flor", asiento: 2 }], 1, nombre),
+    "Caro dijo «Flor».");
+  assert.equal(descripcionDeJugada([{ tipo: "contraflor-al-resto", asiento: 0 }, { tipo: "con-flor-quiero", asiento: 1 },
+    { tipo: "flor", asiento: 3 }], 2, nombre), "Dani dijo «Flor».");
 });

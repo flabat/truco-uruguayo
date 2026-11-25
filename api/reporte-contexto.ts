@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import { textoDeIndicacion, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
-import { canto } from "@eltruco/cliente/cantos.ts";
+import { canto, cantoEnHistorial } from "@eltruco/cliente/cantos.ts";
 import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
 import type { AccionOnline, Cobro } from "@eltruco/motor/cantos-online.ts";
@@ -72,7 +72,7 @@ function jugadasDeMano(mano: ManoReporte, indicaciones: readonly IndicacionPie[]
       jugada = cartasPorId.get(accion.carta)!.nombre;
       cartasJugadas++;
     } else if (Object.hasOwn(canto, accion.tipo)) {
-      jugada = canto[accion.tipo as keyof typeof canto];
+      jugada = mano.regla_flor === "inmediata-v2" ? cantoEnHistorial(mano.acciones, indice) : canto[accion.tipo as keyof typeof canto];
     }
     entradas.push(`${indice + 1}. ${lance}V${vuelta} · A${accion.asiento} · ${jugada}`);
   });
