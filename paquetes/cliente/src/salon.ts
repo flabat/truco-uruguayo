@@ -1,4 +1,4 @@
-import type { Format } from "../../../training/contracts/index";
+import type { Format } from "@eltruco/motor/contratos.ts";
 
 export interface ResumenMesa {
   id: string;

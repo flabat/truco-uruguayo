@@ -9,7 +9,7 @@ import { Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
 import type { VersionesMesa } from "./cliente";
 import PieMesa from "./PieMesa";
-import { participantesMesa, type ResumenMesa } from "./resumen-salon";
+import { participantesMesa, type ResumenMesa } from "@eltruco/cliente/salon.ts";
 import { useConsultaSalon } from "./useConsultaSalon";
 import "./visor.css";
 

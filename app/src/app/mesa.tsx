@@ -1,30 +1,12 @@
-import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
-import { Boton, Pantalla, Parrafo } from "../componentes/ui.tsx";
-import { colores, fuentes } from "../tema.ts";
+import { Redirect, useLocalSearchParams } from "expo-router";
+import { MesaEnJuego } from "../mesa/entrada.tsx";
+import { destinoDeEnlace } from "../salon/enlaces.ts";
+import { RequiereJugador } from "../salon/RequiereJugador.tsx";
 
-/** Ruta provisoria: la mesa del diseño llega en la parte 4d y reemplaza esta pantalla. */
-export default function MesaDePrueba() {
-  return (
-    <Pantalla titulo="Mesa de prueba">
-      <View style={estilos.pano}>
-        <Text style={estilos.texto}>Acá va la mesa</Text>
-      </View>
-      <Parrafo suave>Esta pantalla es provisoria. La mesa nueva llega en una próxima versión de la app.</Parrafo>
-      <Boton variante="secundario" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}>Volver</Boton>
-    </Pantalla>
-  );
+/** Ruta de la mesa en juego (`/mesa?id=<mesa>`). Lo que muestra vive en mesa/entrada.tsx, que reemplaza 4d. */
+export default function PantallaMesa() {
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const destino = id ? destinoDeEnlace({ mesa: id }) : null;
+  if (!destino || destino.tipo !== "mesa") return <Redirect href="/" />;
+  return <RequiereJugador destino={destino}>{() => <MesaEnJuego key={destino.id} id={destino.id} />}</RequiereJugador>;
 }
-
-const estilos = StyleSheet.create({
-  pano: {
-    alignItems: "center",
-    aspectRatio: 1.4,
-    backgroundColor: colores.panoClaro,
-    borderColor: colores.panoOscuro,
-    borderRadius: 24,
-    borderWidth: 6,
-    justifyContent: "center",
-  },
-  texto: { color: colores.papel, fontFamily: fuentes.titulo, fontSize: 22 },
-});
