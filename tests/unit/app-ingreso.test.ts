@@ -50,6 +50,14 @@ test("codigoDeRetorno solo acepta eltruco://ingreso con un código de canje", ()
   ]) assert.equal(codigoDeRetorno(ajeno), null, ajeno);
 });
 
+test("codigoDeRetorno ignora el fragmento que agrega el navegador", () => {
+  // iOS devuelve eltruco://ingreso?codigo=…# después del ingreso con Google.
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=" + codigo + "#"), codigo);
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=" + codigo + "#_=_"), codigo);
+  assert.equal(codigoDeRetorno("eltruco://ingreso?codigo=corto#"), null);
+  assert.equal(codigoDeRetorno("eltruco://ingreso#codigo=" + codigo), null);
+});
+
 test("rutaDelSistema lleva el retorno del ingreso al inicio, sin el código", () => {
   // Android entrega el retorno a la app como un enlace más; Expo Router no tiene la ruta /ingreso.
   for (const retorno of [
