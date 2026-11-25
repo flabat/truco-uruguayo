@@ -16,6 +16,12 @@ function sinCuerpo(error: unknown) {
   if (!(error instanceof SyntaxError)) throw error;
 }
 
+/** Un jugador del realm local para el ingreso de prueba (AUTH_DEV). */
+export interface JugadorDePrueba {
+  usuario: string;
+  nombre: string;
+}
+
 export type ClienteApp = ReturnType<typeof crearClienteApp>;
 
 export function crearClienteApp(opciones: OpcionesCliente & { base: string }) {
@@ -55,6 +61,20 @@ export function crearClienteApp(opciones: OpcionesCliente & { base: string }) {
     },
 
     canjear: (codigo: string, verificador: string) => pedir<Canje>("/api/auth/canje", { codigo, verificador }),
+
+    /** Los jugadores del ingreso de prueba si la API anuncia el modo; si no (404, error o sin red), ninguno. */
+    async jugadoresDePrueba(): Promise<JugadorDePrueba[]> {
+      try {
+        const { usuarios } = await pedir<{ usuarios: JugadorDePrueba[] }>("/api/auth/dev");
+        return Array.isArray(usuarios) ? usuarios : [];
+      } catch {
+        return [];
+      }
+    },
+
+    /** Con desafío, un código para /api/auth/canje (la app); sin desafío, la cookie de sesión (la web). */
+    entrarDePrueba: (usuario: string, desafio?: string) =>
+      pedir<{ codigo?: string; jugador?: Jugador; bajaCancelada?: boolean }>("/api/auth/dev", desafio ? { usuario, app: desafio } : { usuario }),
 
     async cerrarSesion(): Promise<void> {
       await pedir("/api/auth/logout", {}).catch(sinCuerpo);

@@ -15,7 +15,7 @@ import { faltanParaRepartir, papelDelAsiento } from "../../salon/asientos.ts";
 import { compartirInvitacion } from "../../salon/compartir.ts";
 import { destinoDeEnlace, enlaceParaCompartir } from "../../salon/enlaces.ts";
 import { textoVisibilidad } from "../../salon/mesa-nueva.ts";
-import { avisosDeApp, compartirConElSistema, copiarEnlace, memoriaDeMesa, origenWeb } from "../../salon/plataforma.ts";
+import { avisosDeApp, compartirConElSistema, contar, copiarEnlace, memoriaDeMesa, origenWeb } from "../../salon/plataforma.ts";
 import { RequiereJugador } from "../../salon/RequiereJugador.tsx";
 import { colores, fuentes } from "../../tema.ts";
 
@@ -146,7 +146,10 @@ function Invitacion({ enlace }: { enlace: string }) {
         value={enlace}
         style={estilos.enlace}
       />
-      <Boton onPress={() => void compartirInvitacion({ enlace, compartir: compartirConElSistema, copiar: copiarEnlace }).then(setMensaje)}>
+      <Boton onPress={() => {
+        contar("compartir-mesa");
+        void compartirInvitacion({ enlace, compartir: compartirConElSistema, copiar: copiarEnlace }).then(setMensaje);
+      }}>
         Compartir invitación
       </Boton>
       {mensaje ? <Text role="status" style={estilos.mensaje}>{mensaje}</Text> : null}

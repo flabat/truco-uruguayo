@@ -8,6 +8,7 @@ import { scheduleOnRN, scheduleOnUI } from "react-native-worklets";
 import type { Punto, Rect } from "@eltruco/mesa-geometria";
 import { nombrar } from "@eltruco/cliente/textos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
+import { vibrar } from "./hapticos.ts";
 import { soltarCarta } from "./gesto-carta.ts";
 import { arrastrando, enMano, soltada, volverALaMano, type CartaAnimada } from "./useManoAnimada.ts";
 
@@ -33,17 +34,20 @@ interface Props {
    * si la mano está habilitada y no trabada, la levanta, traba la mano y llama a `jugar`.
    */
   sinGesto?: RefObject<JugarSinGesto | null>;
+  /** Vibra al levantar (liviano) y al apoyar para jugar (medio). */
+  hapticos?: boolean;
 }
 
 /**
  * Las vistas transparentes que reciben el toque y el arrastre de la mano propia. Las cartas las
  * dibuja el lienzo con los mismos valores compartidos.
  */
-export function ManoPropia({ mano, pano, habilitada, jugar, rechazos, sinGesto }: Props) {
+export function ManoPropia({ mano, pano, habilitada, jugar, rechazos, sinGesto, hapticos = false }: Props) {
   const contenedor = useAnimatedRef<Animated.View>();
   // El gesto decide en el hilo de la interfaz con el paño y el permiso vigentes al soltar.
   const panoVivo = useSharedValue(pano);
   const habilitadaViva = useSharedValue(habilitada);
+  const hapticosVivos = useSharedValue(hapticos);
   const { x, y, ancho, alto } = pano;
   useEffect(() => {
     panoVivo.value = { x, y, ancho, alto };
@@ -51,6 +55,9 @@ export function ManoPropia({ mano, pano, habilitada, jugar, rechazos, sinGesto }
   useEffect(() => {
     habilitadaViva.value = habilitada;
   }, [habilitadaViva, habilitada]);
+  useEffect(() => {
+    hapticosVivos.value = hapticos;
+  }, [hapticosVivos, hapticos]);
 
   // Con una carta soltada la mano queda trabada, para que dos toques rápidos no manden dos jugadas.
   const trabada = useSharedValue(false);
@@ -103,7 +110,7 @@ export function ManoPropia({ mano, pano, habilitada, jugar, rechazos, sinGesto }
     <Animated.View ref={contenedor} style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {[...mano].map(([id, carta]) => (
         <CartaTocable key={id} id={id} carta={carta} contenedor={contenedor} pano={panoVivo}
-          habilitada={habilitadaViva} trabada={trabada} activa={habilitada} jugar={avisar} />
+          habilitada={habilitadaViva} trabada={trabada} hapticos={hapticosVivos} activa={habilitada} jugar={avisar} />
       ))}
     </Animated.View>
   );
@@ -116,11 +123,12 @@ interface PropsCarta {
   pano: SharedValue<Rect>;
   habilitada: SharedValue<boolean>;
   trabada: SharedValue<boolean>;
+  hapticos: SharedValue<boolean>;
   activa: boolean;
   jugar: (carta: CardId) => void;
 }
 
-function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, activa, jugar }: PropsCarta) {
+function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, hapticos, activa, jugar }: PropsCarta) {
   // Dónde apoyó el dedo y el origen del contenedor en la ventana, para pasar a puntos de la mesa.
   const inicio = useSharedValue<Punto>({ x: 0, y: 0 });
   const origen = useSharedValue<Punto>({ x: 0, y: 0 });
@@ -138,6 +146,7 @@ function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, activa
       carta.dx.value = 0;
       carta.dy.value = 0;
       carta.levantada.value = withTiming(1, { duration: 120 });
+      if (hapticos.value) scheduleOnRN(vibrar, "liviano");
     },
     onUpdate: e => {
       "worklet";
@@ -164,6 +173,7 @@ function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, activa
       if (decision === "jugar") {
         carta.fase.value = soltada;
         trabada.value = true;
+        if (hapticos.value) scheduleOnRN(vibrar, "medio");
         scheduleOnRN(jugar, id);
       } else {
         volverALaMano(carta);
