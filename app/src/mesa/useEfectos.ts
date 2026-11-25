@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { efectosDe } from "./efectos.ts";
+import { despacharEfectos } from "./efectos.ts";
 import type { EventosDeMesa } from "./eventos.ts";
 import { vibrar } from "./hapticos.ts";
 import type { Preferencias } from "./preferencias.ts";
@@ -11,10 +11,7 @@ export function useEfectos(eventos: EventosDeMesa, { sonido: conSonido, hapticos
     configurarSonido(conSonido);
   }, [conSonido]);
 
-  useEffect(() => eventos.escuchar(e => {
-    const { vibracion, efecto, voz } = efectosDe(e);
-    if (hapticos && vibracion) vibrar(vibracion);
-    if (efecto) sonido.reproducirEfecto(efecto);
-    if (voz) sonido.reproducirVoz(voz.asiento, voz.frase);
-  }), [eventos, hapticos]);
+  useEffect(() => eventos.escuchar(e => despacharEfectos(e, hapticos, {
+    vibrar, reproducirEfecto: sonido.reproducirEfecto, reproducirVoz: sonido.reproducirVoz,
+  })), [eventos, hapticos]);
 }

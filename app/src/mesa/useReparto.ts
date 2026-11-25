@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Geometria } from "@eltruco/mesa-geometria";
 import type { EventosDeMesa } from "./eventos.ts";
 import type { MesaVisible } from "./modelo.ts";
+import { sonido } from "./sonido.ts";
 import { movimiento, planDeReparto, type PlanDeReparto } from "./movimiento.ts";
 
 export interface RepartoEnCurso {
@@ -33,6 +34,18 @@ export function useReparto(eventos: EventosDeMesa | undefined, geometria: Geomet
       cambiarReparto(r => (plan.vuelos.length ? { numero: (r?.numero ?? 0) + 1, plan } : null));
     });
   }, [eventos]);
+  // Un roce de naipe por carta, a la hora en que sale del mazo.
+  useEffect(() => {
+    if (!reparto) return;
+    const roces = reparto.plan.vuelos.map(v => setTimeout(() => {
+      try {
+        sonido.reproducirEfecto("roce");
+      } catch (error) {
+        console.warn("Falló el roce del reparto", error);
+      }
+    }, v.sale));
+    return () => roces.forEach(clearTimeout);
+  }, [reparto]);
   useEffect(() => {
     if (!reparto) return;
     const listo = setTimeout(() => cambiarReparto(r => (r === reparto ? null : r)), reparto.plan.fin);

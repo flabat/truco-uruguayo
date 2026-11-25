@@ -11,7 +11,8 @@ export interface Sonido {
 }
 
 let registrado: Sonido | null = null;
-let encendido = true;
+// Apagado hasta que `useEfectos` lee la preferencia: así no suena nada antes de saber si se pidió.
+let encendido = false;
 
 export function registrarSonido(s: Sonido | null) {
   registrado = s;

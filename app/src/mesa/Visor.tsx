@@ -66,6 +66,6 @@ export function Visor({ id }: { id: string }) {
   };
   return (
     <MesaPantalla mesa={visible} senas={sinSenas} hojaCantos={null} acciones={acciones} extra={extra}
-      rechazos={0} conectada={estado !== "error"} eventos={eventos} liviano={liviano} hapticos={preferencias.hapticos} />
+      rechazos={0} conectada={estado !== "error"} eventos={eventos} liviano={liviano} />
   );
 }

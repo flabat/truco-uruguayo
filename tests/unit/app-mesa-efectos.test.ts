@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Evento } from "../../app/src/mesa/cola.ts";
-import { efectosDe } from "../../app/src/mesa/efectos.ts";
+import { despacharEfectos, efectosDe, type DestinoDeEfectos } from "../../app/src/mesa/efectos.ts";
 
 const carta = "1e" as never;
 
-test("el reparto suena como roce de naipe, sin vibrar", () => {
-  assert.deepEqual(efectosDe({ tipo: "reparto", dador: 2 }), { efecto: "roce" });
+test("el reparto no suena acá: el roce por carta sale del plan de reparto", () => {
+  assert.deepEqual(efectosDe({ tipo: "reparto", dador: 2 }), {});
 });
 
 test("la carta propia suena naipe y la ajena naipe bajo, sin vibrar desde acá", () => {
@@ -68,4 +68,35 @@ test("un espectador nunca recibe vibración de aviso ni de éxito", () => {
     const { vibracion } = efectosDe(e);
     assert.ok(vibracion !== "aviso" && vibracion !== "exito", e.tipo);
   }
+});
+
+function destinoContador() {
+  const llamadas: string[] = [];
+  const destino: DestinoDeEfectos = {
+    vibrar: v => llamadas.push("vibrar:" + v),
+    reproducirEfecto: n => llamadas.push("efecto:" + n),
+    reproducirVoz: (a, f) => llamadas.push(`voz:${a}:${f}`),
+  };
+  return { llamadas, destino };
+}
+
+test("con los hápticos apagados no vibra pero sí suena", () => {
+  const { llamadas, destino } = destinoContador();
+  despacharEfectos({ tipo: "cobro", equipo: 0, tantos: 1, nuestro: true }, false, destino);
+  assert.deepEqual(llamadas, ["efecto:ficha"]);
+  despacharEfectos({ tipo: "cobro", equipo: 0, tantos: 1, nuestro: true }, true, destino);
+  assert.deepEqual(llamadas.slice(1), ["vibrar:exito", "efecto:ficha"]);
+});
+
+test("si vibrar falla, el sonido igual se despacha", () => {
+  const { llamadas, destino } = destinoContador();
+  const aviso = console.warn;
+  console.warn = () => {};
+  try {
+    despacharEfectos({ tipo: "canto", asiento: 1, texto: "Truco", paraMi: true }, true,
+      { ...destino, vibrar: () => { throw new Error("sin motor"); } });
+  } finally {
+    console.warn = aviso;
+  }
+  assert.deepEqual(llamadas, ["voz:1:Truco"]);
 });

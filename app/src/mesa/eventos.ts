@@ -14,7 +14,14 @@ export function crearEventos(): EventosDeMesa {
   const oyentes = new Set<(e: Evento) => void>();
   return {
     emitir: e => {
-      for (const oyente of [...oyentes]) oyente(e);
+      // Un oyente que falla no corta a los demás.
+      for (const oyente of [...oyentes]) {
+        try {
+          oyente(e);
+        } catch (error) {
+          console.warn("Falló un oyente de la mesa", error);
+        }
+      }
     },
     escuchar: oyente => {
       oyentes.add(oyente);

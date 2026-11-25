@@ -12,6 +12,28 @@ export interface Efectos {
 // «33 de envido»: la declaración de tantos que hace el árbitro. Un canto lleva solo letras.
 const esDeclaracionDeTantos = (texto: string) => /^\d+ de /.test(texto);
 
+/** A dónde van las vibraciones, los efectos y las voces; `useEfectos` pone los reales. */
+export interface DestinoDeEfectos {
+  vibrar(v: Vibracion): void;
+  reproducirEfecto(nombre: NombreEfecto): void;
+  reproducirVoz(asiento: number, frase: string): void;
+}
+
+/** Despacha lo de `efectosDe`: solo vibra con los hápticos encendidos y aísla cada falla. */
+export function despacharEfectos(e: Evento, hapticos: boolean, destino: DestinoDeEfectos) {
+  const { vibracion, efecto, voz } = efectosDe(e);
+  const aislar = (hacer: () => void) => {
+    try {
+      hacer();
+    } catch (error) {
+      console.warn("Falló un efecto de la mesa", error);
+    }
+  };
+  if (hapticos && vibracion) aislar(() => destino.vibrar(vibracion));
+  if (efecto) aislar(() => destino.reproducirEfecto(efecto));
+  if (voz) aislar(() => destino.reproducirVoz(voz.asiento, voz.frase));
+}
+
 /**
  * Lo que debe sentirse y oírse con cada evento de la cola (tabla «Movimiento, hápticos y sonido»
  * del diseño). La vibración liviana al levantar una carta y la media al apoyarla las dispara
@@ -20,7 +42,7 @@ const esDeclaracionDeTantos = (texto: string) => /^\d+ de /.test(texto);
 export function efectosDe(e: Evento): Efectos {
   switch (e.tipo) {
     case "reparto":
-      return { efecto: "roce" };
+      return {}; // un roce por carta: lo programa `useReparto` con el plan
     case "carta":
       return { efecto: e.propia ? "naipe" : "naipe-bajo" };
     case "canto": {

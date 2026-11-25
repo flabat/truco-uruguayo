@@ -9,7 +9,6 @@ import type { Punto, Rect } from "@eltruco/mesa-geometria";
 import { nombrar } from "@eltruco/cliente/textos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { vibrar } from "./hapticos.ts";
-import type { Vibracion } from "./efectos.ts";
 import { soltarCarta } from "./gesto-carta.ts";
 import { arrastrando, enMano, soltada, volverALaMano, type CartaAnimada } from "./useManoAnimada.ts";
 
@@ -147,7 +146,7 @@ function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, haptic
       carta.dx.value = 0;
       carta.dy.value = 0;
       carta.levantada.value = withTiming(1, { duration: 120 });
-      if (hapticos.value) scheduleOnRN(vibrar, "liviano" as Vibracion);
+      if (hapticos.value) scheduleOnRN(vibrar, "liviano");
     },
     onUpdate: e => {
       "worklet";
@@ -174,7 +173,7 @@ function CartaTocable({ id, carta, contenedor, pano, habilitada, trabada, haptic
       if (decision === "jugar") {
         carta.fase.value = soltada;
         trabada.value = true;
-        if (hapticos.value) scheduleOnRN(vibrar, "medio" as Vibracion);
+        if (hapticos.value) scheduleOnRN(vibrar, "medio");
         scheduleOnRN(jugar, id);
       } else {
         volverALaMano(carta);
