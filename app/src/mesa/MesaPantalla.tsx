@@ -6,10 +6,12 @@ import { calcularMesa } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { colores, fuentes } from "../tema.ts";
 import { CapaLienzo } from "./CapaLienzo";
+import type { Atajo } from "./atajos.ts";
 import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
-import { ManoPropia } from "./ManoPropia.tsx";
+import { ManoPropia, type JugarSinGesto } from "./ManoPropia.tsx";
 import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
 import type { SenasEnMesa } from "./senas.ts";
+import { useAtajos } from "./useAtajos.ts";
 import { useManoAnimada } from "./useManoAnimada.ts";
 import { Asientos } from "./vistas/Asientos.tsx";
 import { Barra } from "./vistas/Barra.tsx";
@@ -17,6 +19,7 @@ import { Estado } from "./vistas/Estado.tsx";
 import { FinDeMano } from "./vistas/FinDeMano.tsx";
 import { enRect } from "./vistas/estilo.ts";
 import { Hoja } from "./vistas/Hoja.tsx";
+import { Paneles } from "./vistas/Paneles.tsx";
 import { HojaCantos } from "./vistas/HojaCantos.tsx";
 import { franjaDeSenas, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
 import { Tira, titulosDePestana, type Pestana } from "./vistas/Tira.tsx";
@@ -96,6 +99,18 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     if (!forzada) elegir(null);
     acciones.cantar(tipo);
   }, [acciones, forzada]);
+  // Atajos de teclado (solo web). La carta va por `ManoPropia`, que traba la mano como el toque.
+  const jugarSinGesto = useRef<JugarSinGesto | null>(null);
+  const aplicarAtajo = useCallback((a: Atajo) => {
+    if (a.tipo === "carta") jugarSinGesto.current?.(a.carta);
+    else if (a.tipo === "abrir-cantos") abrir("cantos");
+    else if (a.tipo === "canto") cantar(a.canto);
+    else cerrar();
+  }, [abrir, cantar, cerrar]);
+  useAtajos(aplicarAtajo, {
+    mano: mesa.manoPropia, puedeJugarCarta: mesa.propio != null && mesa.puedeJugarCarta, hoja: hojaCantos, hojaAbierta: abierta !== null,
+  });
+
   const medir = useCallback((h: number) => cambiarMedida(m => (
     m.hoja === abierta && Math.abs(m.alto - h) < 1 ? m : { hoja: abierta, alto: h }
   )), [abierta]);
@@ -128,10 +143,12 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
           <Asientos mesa={mesa} geometria={geometria} />
           {/* La tarjeta de fin de mano ya dice quién ganó y por qué. */}
           {conFin ? null : <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />}
-          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} abrirMas={() => abrir("mas")} />
+          {/* En el escritorio, lo de Más está siempre a la vista en el panel derecho: no hay ☰. */}
+          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada}
+            abrirMas={geometria.paneles ? undefined : () => abrir("mas")} />
           {mesa.propio != null ? (
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
-              jugar={acciones.jugarCarta} rechazos={rechazos} />
+              jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} />
           ) : null}
           <Senas senas={senas} geometria={geometria} />
           {mesa.fin && conFin ? (
@@ -143,6 +160,10 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
               style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>
               <Text style={estilos.textoCantos}>Cantos</Text>
             </Pressable>
+          ) : null}
+          {geometria.paneles ? (
+            <Paneles paneles={geometria.paneles} titulos={titulos} extra={extra}
+              recibidas={senas.tipo === "silencio" ? <SenasRecibidas recibidas={senas.recibidas} /> : null} />
           ) : null}
           {geometria.tira && !abierta ? <Tira rect={geometria.tira} tercetos={tercetos} abierta={abierta} abrir={abrir} /> : null}
           <Hoja key={abierta ?? "cerrada"} abierta={abierta !== null} cerrable={cerrable} alCerrar={cerrar} alMedir={medir}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { StyleSheet } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";
 import Animated, {
@@ -10,6 +10,9 @@ import { nombrar } from "@eltruco/cliente/textos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { soltarCarta } from "./gesto-carta.ts";
 import { arrastrando, enMano, soltada, volverALaMano, type CartaAnimada } from "./useManoAnimada.ts";
+
+/** Juega una carta sin gesto (los atajos de teclado). */
+export type JugarSinGesto = (carta: CardId) => void;
 
 const subida = 18;
 const escalaLevantada = 0.06;
@@ -25,13 +28,18 @@ interface Props {
    * paño) o cambia este número: entonces vuelve a la mano y la mano se destraba.
    */
   rechazos: number;
+  /**
+   * `ManoPropia` deja acá una función que juega una carta por el mismo camino que el toque: solo
+   * si la mano está habilitada y no trabada, la levanta, traba la mano y llama a `jugar`.
+   */
+  sinGesto?: RefObject<JugarSinGesto | null>;
 }
 
 /**
  * Las vistas transparentes que reciben el toque y el arrastre de la mano propia. Las cartas las
  * dibuja el lienzo con los mismos valores compartidos.
  */
-export function ManoPropia({ mano, pano, habilitada, jugar, rechazos }: Props) {
+export function ManoPropia({ mano, pano, habilitada, jugar, rechazos, sinGesto }: Props) {
   const contenedor = useAnimatedRef<Animated.View>();
   // El gesto decide en el hilo de la interfaz con el paño y el permiso vigentes al soltar.
   const panoVivo = useSharedValue(pano);
@@ -71,6 +79,25 @@ export function ManoPropia({ mano, pano, habilitada, jugar, rechazos }: Props) {
     ultimoJugar.current = jugar;
   }, [jugar]);
   const avisar = useCallback((id: CardId) => ultimoJugar.current(id), []);
+
+  useLayoutEffect(() => {
+    if (!sinGesto) return;
+    sinGesto.current = id => {
+      const carta = mano.get(id);
+      if (!carta) return;
+      scheduleOnUI(() => {
+        "worklet";
+        if (!habilitadaViva.value || trabada.value || carta.fase.value !== enMano) return;
+        carta.fase.value = soltada;
+        carta.levantada.value = withTiming(1, { duration: 120 });
+        trabada.value = true;
+        scheduleOnRN(avisar, id);
+      });
+    };
+    return () => {
+      sinGesto.current = null;
+    };
+  }, [sinGesto, mano, habilitadaViva, trabada, avisar]);
 
   return (
     <Animated.View ref={contenedor} style={StyleSheet.absoluteFill} pointerEvents="box-none">
