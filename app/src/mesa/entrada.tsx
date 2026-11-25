@@ -9,7 +9,11 @@ import { Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { baseDeLaApi } from "../configuracion.ts";
 import { esWeb } from "../ingreso/plataforma.ts";
 import { useConsulta } from "../salon/useConsulta.ts";
+import { registrarPrecargaWeb } from "../precarga/usePrecargaDeMesa.ts";
 import { colores, fuentes } from "../tema.ts";
+import { cargarCanvasKit } from "./canvaskit.ts";
+
+registrarPrecargaWeb(cargarCanvasKit);
 
 /** Cuando la mesa empieza, la sala de espera deja su lugar a la mesa. */
 export function entrarALaMesa(id: string) {

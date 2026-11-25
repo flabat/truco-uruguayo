@@ -16,6 +16,7 @@ COPY app/app.json app/tsconfig.json ./app/
 # Las cartas Tatú se empaquetan como recursos de la app.
 COPY public/img/cartas/tatu ./public/img/cartas/tatu
 COPY app/src ./app/src
+COPY scripts/copiar-canvaskit.mjs ./scripts/copiar-canvaskit.mjs
 RUN npm run app:exportar
 
 FROM dependencias AS build
