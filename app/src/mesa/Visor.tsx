@@ -10,6 +10,7 @@ import {
 import { crearEventos } from "./eventos.ts";
 import { volverAlSalon } from "./salir.ts";
 import { useColaDePresentacion } from "./useCola.ts";
+import { useEfectos } from "./useEfectos.ts";
 import { usePreferencias } from "./usePreferencias.ts";
 import { HojaMano } from "./vistas/HojaMano.tsx";
 import { HojaMas } from "./vistas/HojaMas.tsx";
@@ -29,6 +30,7 @@ export function Visor({ id }: { id: string }) {
   const { datos, estado, reintentar } = useConsulta<MesaObservada>(ruta, 2000);
   const { preferencias, cambiar, reducirMovimiento, liviano } = usePreferencias();
   const [eventos] = useState(crearEventos);
+  useEfectos(eventos, preferencias);
   // La cola compara por identidad: la versión se arma una vez por lectura.
   const recibida = useMemo(() => datos ? versionarObservada(datos) : undefined, [datos]);
   const nombre = useCallback((asiento: number) => datos?.asientos[asiento]?.nombre ?? "", [datos]);
@@ -64,6 +66,6 @@ export function Visor({ id }: { id: string }) {
   };
   return (
     <MesaPantalla mesa={visible} senas={sinSenas} hojaCantos={null} acciones={acciones} extra={extra}
-      rechazos={0} conectada={estado !== "error"} eventos={eventos} liviano={liviano} />
+      rechazos={0} conectada={estado !== "error"} eventos={eventos} liviano={liviano} hapticos={preferencias.hapticos} />
   );
 }

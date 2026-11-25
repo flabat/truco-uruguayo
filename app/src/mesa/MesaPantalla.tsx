@@ -54,6 +54,8 @@ interface Props {
   eventos?: EventosDeMesa;
   /** Modo liviano: `livianoActivo(preferencias, reducirMovimiento)`. */
   liviano?: boolean;
+  /** Hápticos al levantar y apoyar una carta. */
+  hapticos?: boolean;
 }
 
 type HojaAbierta = "cantos" | Pestana | null;
@@ -62,7 +64,7 @@ type HojaAbierta = "cantos" | Pestana | null;
  * La mesa entera. Una sola geometría (`calcularMesa`) ubica el lienzo del fondo, la mano que se
  * toca y las vistas de texto. Con una hoja abierta, la geometría recibe su alto y la mano sube.
  */
-export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false }: Props) {
+export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false, hapticos = false }: Props) {
   const ventana = useWindowDimensions();
   const area = useSafeAreaInsets();
   const ancho = Math.max(0, ventana.width - area.left - area.right);
@@ -158,7 +160,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
             abrirMas={geometria.paneles ? undefined : () => abrir("mas")} />
           {mesa.propio != null ? (
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={puedeJugarCarta}
-              jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} />
+              jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} hapticos={hapticos} />
           ) : null}
           <Senas senas={senas} geometria={geometria} />
           {geometria.espectador ? <PieDelEspectador rect={geometria.espectador} salir={acciones.salir} /> : null}
