@@ -18,6 +18,10 @@
 !paquetes/motor/package.json
 !paquetes/motor/src/
 !paquetes/motor/src/*.ts
+!paquetes/cliente/
+!paquetes/cliente/package.json
+!paquetes/cliente/src/
+!paquetes/cliente/src/*.ts
 !app/
 !app/package.json
 !app/app.json

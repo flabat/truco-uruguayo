@@ -1,4 +1,4 @@
-import { cartasPorId } from "../../lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import { pieza, rangoDe, type CardId } from "@eltruco/motor/cartas.ts";
 import { compararCartas } from "@eltruco/motor/jerarquia.ts";
 import { evaluarTantos, type ResultadoTantos } from "@eltruco/motor/tantos.ts";

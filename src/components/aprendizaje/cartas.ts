@@ -1,4 +1,4 @@
-import { cartasPorId } from "../../lib/cartas";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 
 export function mostrarCarta(base: string, id: CardId, elegir?: () => void): HTMLElement {

@@ -1,8 +1,8 @@
-import type { Partida } from "./cliente";
-import { pausaDeVoz, vocesEnAccion } from "./Voz";
-import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type Paso } from "./secuencia-de-mesa";
+import type { Partida } from "./cliente.ts";
+import { pausaDeVoz, vocesEnAccion } from "./voces.ts";
+import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type EsperaDeNaipes, type Paso } from "./secuencia-de-mesa.ts";
 
-function pasosNuevos(
+export function pasosDeVueltas(
   anterior: Partida | undefined,
   actual: Partida | undefined,
   presencioReparto: boolean,
@@ -89,6 +89,7 @@ function pasosNuevos(
   return pasos;
 }
 
-export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean, reconexion: number) {
-  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, pasosNuevos);
+export function usePresentacionVueltas(actual: Partida | undefined, presencioReparto: boolean, reconexion: number,
+    esperar?: EsperaDeNaipes) {
+  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, pasosDeVueltas, esperar);
 }

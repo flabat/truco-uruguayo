@@ -1,7 +1,5 @@
-export interface EdicionModelo {
-  nombre: string;
-  publicado: string | null;
-}
+import type { EdicionModelo } from "@eltruco/cliente/cliente.ts";
+export type { EdicionModelo };
 
 const ediciones = new Map<string, EdicionModelo>([
   ["d2146e8dd1b79dd3ca50c38029b0f35f7377a0c627d4b3078a1475d2f9043ac3", { nombre: "Ceibo Duelo", publicado: "2026-11-20" }],

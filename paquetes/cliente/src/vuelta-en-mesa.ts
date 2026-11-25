@@ -1,5 +1,5 @@
 import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
-import { nombrar } from "./HistorialDeMano";
+import { nombrar } from "./textos.ts";
 
 export function vueltaEnMesa(v: Pick<VistaOnline, "vueltaActual" | "vueltas" | "resultado">,
     participantes: number, nombre: (asiento: number) => string) {

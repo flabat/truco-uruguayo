@@ -1,8 +1,9 @@
 FROM node:24-bookworm-slim AS dependencias
 WORKDIR /app
 COPY package.json package-lock.json ./
-# npm ci enlaza los workspaces @eltruco/motor y @eltruco/app a partir de sus package.json.
+# npm ci enlaza los workspaces @eltruco/motor, @eltruco/cliente y @eltruco/app a partir de sus package.json.
 COPY paquetes/motor/package.json ./paquetes/motor/package.json
+COPY paquetes/cliente/package.json ./paquetes/cliente/package.json
 COPY app/package.json ./app/package.json
 RUN npm ci
 
@@ -10,12 +11,14 @@ RUN npm ci
 FROM dependencias AS app
 ENV EXPO_NO_TELEMETRY=1
 COPY paquetes/motor/src ./paquetes/motor/src
+COPY paquetes/cliente/src ./paquetes/cliente/src
 COPY app/app.json app/tsconfig.json ./app/
 COPY app/src ./app/src
 RUN npm run app:exportar
 
 FROM dependencias AS build
 COPY paquetes/motor/src ./paquetes/motor/src
+COPY paquetes/cliente/src ./paquetes/cliente/src
 COPY astro.config.mjs ./
 COPY src ./src
 COPY training/contracts/index.ts ./training/contracts/index.ts

@@ -1,0 +1,84 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;background:#1e1e1e;color:#eee;padding:24px}.cards{display:flex;flex-wrap:wrap;gap:24px}.card{width:320px}.subtitle{opacity:.8}</style>
+<style>
+  .tel{width:300px;height:640px;border-radius:34px;border:8px solid #111;overflow:hidden;position:relative;
+    background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7;font:13px "DM Sans",Arial,sans-serif;margin:0 auto;user-select:none}
+  .tel *{box-sizing:border-box}
+  .barra{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px;font-size:12px}
+  .pill{background:rgba(0,0,0,.28);border-radius:999px;padding:4px 10px}
+  .pill b{font-size:15px;display:inline-block;transition:transform .25s}
+  .pill b.salta{transform:scale(1.5)}
+  .c{position:absolute;width:88px;border-radius:6px;box-shadow:0 4px 10px #0008;background:#fff;cursor:pointer;
+     transition:transform .32s cubic-bezier(.2,.8,.2,1.15), left .32s cubic-bezier(.2,.8,.2,1), top .32s cubic-bezier(.2,.8,.2,1), width .32s;transform-origin:50% 100%}
+  .c.jugada{width:46px;cursor:default;box-shadow:0 2px 6px #0007}
+  .c.ganadora{box-shadow:0 0 0 3px #ffe884,0 0 18px 6px #ffe88488}
+  .rival{position:absolute;top:56px;left:0;right:0;text-align:center;font-size:12px}
+  .rival small{opacity:.7}
+  .globo{position:absolute;top:96px;left:50%;transform:translateX(-50%) scale(0);background:#fff8e7;color:#233d31;border-radius:14px;padding:6px 12px;font-weight:700;
+     transition:transform .22s cubic-bezier(.2,.8,.2,1.4)}
+  .globo.ver{transform:translateX(-50%) scale(1)}
+  .ctl{display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap}
+  .ctl button{border:1px solid #888;border-radius:8px;padding:8px 12px;background:transparent;color:inherit;font-weight:700;cursor:pointer}
+  .nota{font-size:13px;opacity:.8}
+  table.ev{border-collapse:collapse;font-size:13px;width:100%}
+  table.ev td,table.ev th{border-bottom:1px solid #8884;padding:6px 8px;text-align:left;vertical-align:top}
+  .wrapx{display:grid;grid-template-columns:320px 1fr;gap:24px;align-items:start}
+  @media (max-width:800px){.wrapx{grid-template-columns:1fr}}
+</style>
+
+<h2>Lo que se mueve, vibra y suena</h2>
+<p class="subtitle">Prototipo: tocá una de tus cartas. También podés probar "Repartir" y "Rival canta truco". Es CSS puro. En la app lo hace Reanimated, a 60 cuadros, y suma hápticos y sonido.</p>
+
+<div class="wrapx">
+<div>
+  <div class="tel" id="t">
+    <div class="barra"><span class="pill">Nos <b id="nos">12</b> · <b>9</b> Ellos</span></div>
+    <div class="rival"><b>Diego</b><br><small>Rival · Mano</small></div>
+    <div class="globo" id="g">¡Truco!</div>
+  </div>
+  <div class="ctl"><button onclick="repartir()">Repartir</button><button onclick="canta()">Rival canta truco</button></div>
+</div>
+<div>
+<table class="ev">
+<tr><th>Momento</th><th>Movimiento</th><th>Háptico</th><th>Sonido</th></tr>
+<tr><td>Reparto</td><td>Las cartas salen del mazo del dador, de a una, en el orden real (0,08 s entre carta y carta). Al final se dan vuelta las tuyas.</td><td>Ninguno</td><td>Roce de naipe suave por carta</td></tr>
+<tr><td>Tocás o arrastrás una carta</td><td>Se levanta al tocarla. Al soltar, vuela al paño con un leve rebote y se achica. Si el arrastre no llega al paño, vuelve a la mano.</td><td>Toque liviano al levantar y medio al apoyar</td><td>Naipe sobre paño</td></tr>
+<tr><td>Carta del rival</td><td>Sale desde su asiento y se da vuelta en el aire.</td><td>Ninguno</td><td>Naipe sobre paño, más bajo</td></tr>
+<tr><td>Te cantan</td><td>El globo con el canto salta desde el asiento y sube la hoja de respuesta.</td><td>Aviso (doble)</td><td>Voz del canto: "¡Truco!", "¡Envido!"…</td></tr>
+<tr><td>Gana la vuelta</td><td>La carta ganadora brilla y las demás se oscurecen 0,6 s.</td><td>Liviano, solo si ganaste vos o tu equipo</td><td>Ninguno</td></tr>
+<tr><td>Se cobran tantos</td><td>El número del tanteador salta y cuenta hacia arriba.</td><td>Éxito si son tuyos</td><td>Ficha corta</td></tr>
+<tr><td>Ganás el chico</td><td>Las cartas se juntan al centro, aparece el cartel y suena un festejo breve.</td><td>Éxito</td><td>Festejo breve</td></tr>
+<tr><td>Frase del pie para vos</td><td>Globo de voz en el asiento del pie.</td><td>Liviano</td><td>Voz: "Vení", "Jugá"…</td></tr>
+</table>
+<p class="nota">Con "reducir movimiento" activado en el sistema, las cartas aparecen en su lugar sin volar. El sonido y los hápticos se apagan desde ☰, y la app recuerda esa elección. En la web no hay hápticos y el sonido arranca después del primer toque, como exigen los navegadores.</p>
+</div>
+</div>
+
+<script>
+const T=document.getElementById('t');
+const mano=['espadas-03','bastos-02','espadas-01'];
+let cartas=[];
+function pos(i,n){const w=88,gap=-14,total=n*w+(n-1)*gap;const x0=(300-16-total)/2;return {l:x0+i*(w+gap),t:420,r:(i-(n-1)/2)*10};}
+function ubicar(){const libres=cartas.filter(c=>!c.dataset.jugada);libres.forEach((c,i)=>{const p=pos(i,libres.length);c.style.left=p.l+'px';c.style.top=p.t+'px';c.style.transform='rotate('+p.r+'deg)';c.style.zIndex=10+i;});}
+function repartir(){
+  cartas.forEach(c=>c.remove());cartas=[];
+  mano.forEach((id,i)=>{const c=document.createElement('img');c.className='c';c.src='../../../../public/img/cartas/tatu/reverso.webp';
+    c.style.left='40px';c.style.top='130px';c.style.width='34px';c.style.transform='rotate(90deg)';T.appendChild(c);cartas.push(c);
+    setTimeout(()=>{const p=pos(i,3);c.style.width='88px';c.style.left=p.l+'px';c.style.top=p.t+'px';c.style.transform='rotate('+p.r+'deg)';},120+i*160);
+    setTimeout(()=>{c.style.transform+=' rotateY(90deg)';setTimeout(()=>{c.src='../../../../public/img/cartas/tatu/'+id+'.webp';const p=pos(i,3);c.style.transform='rotate('+p.r+'deg)';},160);},700+i*90);
+    c.onpointerdown=()=>{if(!c.dataset.jugada)c.style.transform+=' translateY(-14px) scale(1.06)';};
+    c.onclick=()=>jugar(c);
+  });
+}
+function jugar(c){
+  if(c.dataset.jugada)return;c.dataset.jugada=1;c.classList.add('jugada');
+  c.style.width='46px';c.style.left='127px';c.style.top='250px';c.style.transform='rotate('+(Math.random()*8-4)+'deg)';c.style.zIndex=5;
+  ubicar();
+  setTimeout(()=>{const r=document.createElement('img');r.className='c jugada';r.src='../../../../public/img/cartas/tatu/reverso.webp';r.style.left='127px';r.style.top='80px';r.style.transform='rotateY(0)';T.appendChild(r);cartas.push(r);r.dataset.jugada=1;
+    setTimeout(()=>{r.style.top='186px';r.style.transform='rotate(3deg) rotateY(90deg)';},30);
+    setTimeout(()=>{r.src='../../../../public/img/cartas/tatu/oros-07.webp';r.style.transform='rotate(3deg)';},360);
+    setTimeout(()=>{c.classList.add('ganadora');const n=document.getElementById('nos');n.classList.add('salta');n.textContent=+n.textContent+1;setTimeout(()=>n.classList.remove('salta'),260);},1000);
+  },500);
+}
+function canta(){const g=document.getElementById('g');g.classList.remove('ver');void g.offsetWidth;g.classList.add('ver');setTimeout(()=>g.classList.remove('ver'),1800);}
+repartir();
+</script>

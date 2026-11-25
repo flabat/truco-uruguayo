@@ -1,17 +1,20 @@
 import { ResumenDeTantos } from "./ResumenDeTantos";
 import { resumirTantos } from "@eltruco/motor/resumen-tantos.ts";
-import { canto, respuestaConFlor } from "../../lib/cantos";
+import { canto, respuestaConFlor } from "@eltruco/cliente/cantos.ts";
 import { ZonaJugador } from "./ZonaJugador";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "@eltruco/motor/mesa-online.ts";
-import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
-import { controlesDeCantos, Continuacion, ManoJugador, PruebaEnMesa, Tanteador, tituloDeRespuesta } from "./Tablero";
+import { AvisoFlor, HistorialDeMano } from "./HistorialDeMano";
+import { descripcionDeJugada, tantos } from "@eltruco/cliente/textos.ts";
+import { controlesDeCantos, Continuacion, ManoJugador, PruebaEnMesa, Tanteador } from "./Tablero";
+import { palabraDeTercetos } from "@eltruco/cliente/turno.ts";
 import { Tapete } from "./Tapete";
 import { AccionesDelPie, esperaDelCompanero, SenasEnviadas, type ElegirIndicacion } from "./GloboDelCompanero";
 import { ReporteDeJugada } from "./ReporteDeJugada";
 import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
-import { GloboDeVoz, PalabraDelPie, useVozDelPie, vocesEnReposo } from "./Voz";
-import { vueltaEnMesa } from "./vuelta-en-mesa";
-import { usePresentacionTercetos } from "./presentacion-cantos-tercetos";
+import { GloboDeVoz, PalabraDelPie } from "./Voz";
+import { useVozDelPie, vocesEnReposo } from "@eltruco/cliente/voces.ts";
+import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
+import { usePresentacionTercetos } from "./presentacion";
 import "./tercetos.css";
 
 type Props = {
@@ -31,20 +34,6 @@ type Props = {
 const nombreDelLance = (lance: LanceTercetos) =>
   lance.tipo === "redondilla" ? "Redondilla" : `Duelo ${lance.duelo} de 3`;
 const motivoDelCierre = { vueltas: "las vueltas", rechazo: "el rechazo", envido: "el envido", flor: "la flor", mazo: "el retiro al mazo" };
-
-function palabra(mesa: Mesa, partida: PartidaTercetos) {
-  const { vista, lance, contexto, ganadorPartida } = partida;
-  const propio = mesa.asientos[mesa.miAsiento].equipo;
-  const nombre = (a: number) => mesa.asientos[a].nombre;
-  if (contexto.fase === "chico-terminado") return ganadorPartida === propio ? "Tu equipo ganó el chico" : "El rival ganó el chico";
-  if (contexto.fase === "reparto-cerrado") return "Reparto terminado";
-  if (vista.porDeclararFlor != null) {
-    return vista.porDeclararFlor === mesa.miAsiento ? "Te toca declarar" : `Declara ${nombre(vista.porDeclararFlor)}`;
-  }
-  if (vista.pendiente) return tituloDeRespuesta(mesa, vista, lance.activos);
-  if (vista.turno === mesa.miAsiento) return "Tu turno";
-  return vista.turno == null ? "Esperando la jugada" : "Turno de " + nombre(vista.turno);
-}
 
 function DetallesDelLance({ acciones = [], cobros, vueltas, nombre }: Pick<VistaTercetos, "cobros" | "vueltas"> & {
   acciones?: VistaTercetos["acciones"]; nombre: (asiento: number) => string;
@@ -87,7 +76,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
   const espera = presentando ? undefined : esperaDelCompanero(pie, nombre);
   const titulo = presentando && !vista.resultado
     ? voz ? nombre(voz.asiento) : "Vuelta " + numeroVuelta
-    : espera?.titulo ?? palabra(mesa, partida);
+    : espera?.titulo ?? palabraDeTercetos(mesa, partida);
   const indicaciones = esPico ? undefined : partida.indicaciones;
   const frase = useVozDelPie(partida.manoNumero, indicaciones, vista.acciones.length, partida);
   const numeroDeDuelo = (asiento: number) => 1 + ((asiento - vista.mano + 6) % 3);

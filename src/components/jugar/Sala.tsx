@@ -24,7 +24,7 @@ import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
 import type { ElegirIndicacion } from "./GloboDelCompanero";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { MesaConSenas } from "./Senas";
-import { usePresentacionVueltas } from "./presentacion-vueltas";
+import { usePresentacionVueltas } from "./presentacion";
 import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 
 const modalidades = {
