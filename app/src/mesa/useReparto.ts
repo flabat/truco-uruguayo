@@ -43,7 +43,7 @@ export function useReparto(eventos: EventosDeMesa | undefined, geometria: Geomet
     if (!reparto) return;
     const roces = reparto.plan.vuelos.map(v => setTimeout(() => {
       try {
-        sonido.reproducirEfecto("roce");
+        sonido.reproducirEfecto("reparto");
       } catch (error) {
         console.warn("Falló el roce del reparto", error);
       }

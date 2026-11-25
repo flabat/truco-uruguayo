@@ -4,7 +4,7 @@ import { entreCartas, vueltaCompleta, type Paso, type PasosNuevos } from "@eltru
 import { vozDeIndicacion, type Nombre } from "@eltruco/cliente/textos.ts";
 import { vocesEnAccion, type Voz } from "@eltruco/cliente/voces.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
-import { textoFrasePie } from "@eltruco/motor/senas-pie.ts";
+import { textoFrasePie, type FrasePie } from "@eltruco/motor/senas-pie.ts";
 import { duracionDelReparto } from "./movimiento.ts";
 
 export const entreCartasLiviano = 250;
@@ -85,7 +85,7 @@ export type Evento =
   | { tipo: "reparto"; dador: number }
   | { tipo: "carta"; asiento: number; carta: CardId; propia: boolean }
   | { tipo: "canto"; asiento: number; texto: string; paraMi: boolean }
-  | { tipo: "frase"; emisor: number; destinatario: number; texto: string; paraMi: boolean }
+  | { tipo: "frase"; emisor: number; destinatario: number; pie: FrasePie; texto: string; paraMi: boolean }
   | { tipo: "vuelta"; ganador: number | null; nuestra: boolean }
   | { tipo: "cobro"; equipo: number; tantos: number; nuestro: boolean }
   | { tipo: "chico"; nuestro: boolean };
@@ -148,7 +148,7 @@ export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miA
 
   const dichas = otraMano ? 0 : antes.indicaciones?.length ?? 0;
   for (const d of despues.indicaciones?.slice(dichas) ?? []) {
-    eventos.push({ tipo: "frase", emisor: d.emisor, destinatario: d.destinatario,
+    eventos.push({ tipo: "frase", emisor: d.emisor, destinatario: d.destinatario, pie: d.frase,
       texto: nombre ? vozDeIndicacion(d, nombre) : textoFrasePie[d.frase],
       paraMi: miAsiento != null && d.destinatario === miAsiento });
   }

@@ -30,7 +30,7 @@ export function Visor({ id }: { id: string }) {
   const { datos, estado, reintentar } = useConsulta<MesaObservada>(ruta, 2000);
   const { preferencias, cargadas, cambiar, reducirMovimiento, liviano } = usePreferencias();
   const [eventos] = useState(crearEventos);
-  useEfectos(eventos, preferencias, cargadas);
+  useEfectos(eventos, cargadas && preferencias.hapticos, datos?.asientos.length ?? 0);
   // La cola compara por identidad: la versión se arma una vez por lectura.
   const recibida = useMemo(() => datos ? versionarObservada(datos) : undefined, [datos]);
   const nombre = useCallback((asiento: number) => datos?.asientos[asiento]?.nombre ?? "", [datos]);

@@ -48,10 +48,10 @@ export function MesaEnJuego({ id }: { id: string }) {
   const { preferencias, cargadas, cambiar, reducirMovimiento, liviano } = usePreferencias();
   // La cola anuncia aquí lo que se presenta; el lienzo y el tanteador lo escuchan para animarlo.
   const [eventos] = useState(crearEventos);
-  useEfectos(eventos, preferencias, cargadas);
   // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
   const [presencio] = useState(() => presencioElReparto(id));
   const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
+  useEfectos(eventos, cargadas && preferencias.hapticos, mesa?.asientos.length ?? 0);
   const recibida = lectura?.vista ? lectura : undefined;
   const simple: Partida | undefined = recibida && recibida.formato !== "triples" ? recibida as Partida : undefined;
   const tercetos: PartidaTercetos | undefined = recibida?.formato === "triples" ? recibida as PartidaTercetos : undefined;

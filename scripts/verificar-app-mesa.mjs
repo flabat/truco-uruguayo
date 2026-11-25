@@ -527,8 +527,12 @@ async function probarEscritorio() {
 
   // Tocar un interruptor del panel (un checkbox en la web) deja el foco ahí: los atajos siguen andando.
   const sonido = luis.getByRole("switch", { name: "Sonido" });
+  await expect(sonido).toBeChecked();
   await sonido.click();
   await expect(sonido).toBeFocused();
+  // El interruptor es el de la 4e: apaga las voces y lo recuerda en `truco.sonido`.
+  await expect(sonido).not.toBeChecked();
+  assert.equal(await luis.evaluate(() => localStorage.getItem("truco.sonido")), "0");
 
   // «1» y enseguida «2»: sale una sola jugada, la de la primera carta de la izquierda.
   const enviadas = [];

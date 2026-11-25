@@ -1,22 +1,42 @@
+import { canto } from "@eltruco/cliente/cantos.ts";
+import type { Efecto } from "../sonido/efectos.ts";
+import type { CantoVoz, FraseVoz, MotivoTantos } from "../sonido/frases.ts";
 import type { Evento } from "./cola.ts";
 
 export type Vibracion = "liviano" | "medio" | "aviso" | "exito";
-export type NombreEfecto = "roce" | "naipe" | "naipe-bajo" | "ficha" | "festejo";
+
+/** Un efecto de la parte 4e. La carta de otro jugador suena a la mitad. */
+export interface EfectoSonoro {
+  nombre: Efecto;
+  volumen?: number;
+}
 
 export interface Efectos {
   vibracion?: Vibracion;
-  efecto?: NombreEfecto;
-  voz?: { asiento: number; frase: string };
+  efecto?: EfectoSonoro;
+  voz?: { asiento: number; frase: FraseVoz };
 }
 
-// «33 de envido»: la declaración de tantos que hace el árbitro. Un canto lleva solo letras.
-const esDeclaracionDeTantos = (texto: string) => /^\d+ de /.test(texto);
+// El texto de cada canto, tal como lo muestran los globos, de vuelta a su acción.
+const cantoPorTexto = new Map<string, CantoVoz>(Object.entries(canto).map(([tipo, texto]) => [texto, tipo as CantoVoz]));
+cantoPorTexto.set("Me voy al mazo", "mazo");
+
+/**
+ * La frase que dice la voz de un globo de canto: un canto («Truco», «Me voy al mazo») o la declaración
+ * de tantos que hace el árbitro («33 de envido»). Un texto que no es ninguna de las dos no suena.
+ */
+export function fraseDeCanto(texto: string): FraseVoz | null {
+  const tantos = /^(\d+) de (envido|flor)$/.exec(texto);
+  if (tantos) return { tipo: "tantos", motivo: tantos[2] as MotivoTantos, total: Number(tantos[1]) };
+  const accion = cantoPorTexto.get(texto);
+  return accion ? { tipo: "canto", canto: accion } : null;
+}
 
 /** A dónde van las vibraciones, los efectos y las voces; `useEfectos` pone los reales. */
 export interface DestinoDeEfectos {
   vibrar(v: Vibracion): void;
-  reproducirEfecto(nombre: NombreEfecto): void;
-  reproducirVoz(asiento: number, frase: string): void;
+  reproducirEfecto(nombre: Efecto, opciones?: { volumen?: number }): void;
+  reproducirVoz(asiento: number, frase: FraseVoz): void;
 }
 
 /** Despacha lo de `efectosDe`: solo vibra con los hápticos encendidos y aísla cada falla. */
@@ -30,7 +50,9 @@ export function despacharEfectos(e: Evento, hapticos: boolean, destino: DestinoD
     }
   };
   if (hapticos && vibracion) aislar(() => destino.vibrar(vibracion));
-  if (efecto) aislar(() => destino.reproducirEfecto(efecto));
+  if (efecto) aislar(() => efecto.volumen == null
+    ? destino.reproducirEfecto(efecto.nombre)
+    : destino.reproducirEfecto(efecto.nombre, { volumen: efecto.volumen }));
   if (voz) aislar(() => destino.reproducirVoz(voz.asiento, voz.frase));
 }
 
@@ -42,21 +64,22 @@ export function despacharEfectos(e: Evento, hapticos: boolean, destino: DestinoD
 export function efectosDe(e: Evento): Efectos {
   switch (e.tipo) {
     case "reparto":
-      return {}; // un roce por carta: lo programa `useReparto` con el plan
+      return {}; // un «reparto» por carta: lo programa `useReparto` con el plan
     case "carta":
-      return { efecto: e.propia ? "naipe" : "naipe-bajo" };
+      return { efecto: e.propia ? { nombre: "naipe" } : { nombre: "naipe", volumen: 0.5 } };
     case "canto": {
-      const voz = { asiento: e.asiento, frase: e.texto };
-      if (esDeclaracionDeTantos(e.texto)) return { voz };
-      return e.paraMi ? { vibracion: "aviso", voz } : { voz };
+      const frase = fraseDeCanto(e.texto);
+      const voz = frase ? { voz: { asiento: e.asiento, frase } } : {};
+      // La declaración de tantos la hace el árbitro: suena, pero no pide respuesta.
+      return e.paraMi && frase?.tipo !== "tantos" ? { vibracion: "aviso", ...voz } : voz;
     }
     case "frase":
-      return e.paraMi ? { vibracion: "liviano", voz: { asiento: e.emisor, frase: e.texto } } : {};
+      return e.paraMi ? { vibracion: "liviano", voz: { asiento: e.emisor, frase: { tipo: "pie", frase: e.pie } } } : {};
     case "vuelta":
       return e.nuestra ? { vibracion: "liviano" } : {};
     case "cobro":
-      return e.nuestro ? { vibracion: "exito", efecto: "ficha" } : { efecto: "ficha" };
+      return e.nuestro ? { vibracion: "exito", efecto: { nombre: "ficha" } } : { efecto: { nombre: "ficha" } };
     case "chico":
-      return e.nuestro ? { vibracion: "exito", efecto: "festejo" } : {};
+      return e.nuestro ? { vibracion: "exito", efecto: { nombre: "festejo" } } : {};
   }
 }

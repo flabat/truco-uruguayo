@@ -4,10 +4,10 @@ import { AccessibilityInfo } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { clavePreferencias, leerPreferencias, livianoActivo, porDefecto, type Preferencias } from "./preferencias.ts";
 
-/** Sonido, hápticos y modo liviano de la mesa, recordados en el dispositivo. */
+/** Hápticos y modo liviano de la mesa, recordados en el dispositivo. */
 export function usePreferencias() {
   const [preferencias, guardar] = useState<Preferencias>(porDefecto);
-  // Hasta leer lo guardado, `preferencias` son las de fábrica: no se enciende el sonido ni los hápticos.
+  // Hasta leer lo guardado, `preferencias` son las de fábrica: no se encienden los hápticos.
   const [cargadas, marcarCargadas] = useState(false);
   const reducirMovimiento = useReducirMovimiento();
   // Si se toca un interruptor antes de que termine la lectura, gana lo que se tocó.

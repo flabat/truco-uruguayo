@@ -182,8 +182,8 @@ test("eventosEntre: una frase del pie es para su destinatario", () => {
   const frase = partidaDe(vistaDe(4, 0), {
     version: 2, indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 }],
   });
-  assert.deepEqual(eventosEntre(antes, frase, 0), [{ tipo: "frase", emisor: 2, destinatario: 0, texto: "Vení", paraMi: true }]);
-  assert.deepEqual(eventosEntre(antes, frase, 2)[0], { tipo: "frase", emisor: 2, destinatario: 0, texto: "Vení", paraMi: false });
+  assert.deepEqual(eventosEntre(antes, frase, 0), [{ tipo: "frase", emisor: 2, destinatario: 0, pie: "veni", texto: "Vení", paraMi: true }]);
+  assert.deepEqual(eventosEntre(antes, frase, 2)[0], { tipo: "frase", emisor: 2, destinatario: 0, pie: "veni", texto: "Vení", paraMi: false });
   const nombres = ["Clara", "Diego", "Ana", "Beto"];
   assert.equal((eventosEntre(antes, frase, 0, a => nombres[a])[0] as { texto: string }).texto, "Clara, vení");
 });
