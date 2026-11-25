@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { Canvas, RadialGradient, Rect } from "@shopify/react-native-skia";
 import type { Geometria } from "@eltruco/mesa-geometria";
@@ -24,12 +24,13 @@ export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) 
 
   // Las cartas que ya estaban en el paño al montar el lienzo (al reconectar o al terminar de cargar
   // CanvasKit) aparecen en su lugar; las que llegan después salen de su asiento.
-  const yaEstaban = useRef<Set<string> | null>(null);
-  yaEstaban.current ??= new Set(claves);
-  for (const clave of yaEstaban.current) if (!claves.includes(clave)) yaEstaban.current.delete(clave);
+  // Se renueva después de cada render: una carta solo es nueva en el render en que aparece.
+  const [alMontar] = useState(() => new Set(claves));
+  const yaEstaban = useRef(alMontar);
+  const clavesJuntas = claves.join(" ");
   useEffect(() => {
-    for (const clave of claves) yaEstaban.current!.add(clave);
-  });
+    yaEstaban.current = new Set(clavesJuntas ? clavesJuntas.split(" ") : []);
+  }, [clavesJuntas]);
 
   // La carta propia ya salió de la mano cuando aparece en el paño: su último lugar está en la mano anterior.
   const manoAnterior = useRef(mano);
@@ -69,7 +70,7 @@ export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) 
         const clave = a.asiento + ":" + a.jugada;
         return (
           <CartaDelPano key={clave} id={a.jugada} carta={lugar}
-            desde={yaEstaban.current!.has(clave) ? null : origenDe(a.asiento, a.jugada)}
+            desde={yaEstaban.current.has(clave) ? null : origenDe(a.asiento, a.jugada)}
             oscura={hayGanadora && !a.ganadora} duracion={liviano ? 0 : undefined} />
         );
       })}
