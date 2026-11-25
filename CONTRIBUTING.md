@@ -40,6 +40,22 @@ git diff --check
 - **Interfaz y navegación.** Probá el comportamiento modificado en el navegador en un ancho móvil y otro de escritorio. Para controles interactivos, verificá teclado, foco y estados relevantes. Si cambia la búsqueda, probá un término con tilde, uno sin tilde, un resultado vacío y el enlace al capítulo.
 - **Lógica e interacciones nuevas.** Agregá pruebas de regresión para el comportamiento observable, con casos normales, límites y errores aplicables. Usá pruebas unitarias para cálculos y pruebas de navegador para flujos que dependan del DOM. Incorporá su ejecución a `npm run check`.
 
+### Niveles de verificación
+
+Varias sesiones comparten la misma computadora. Elegí el nivel según el momento:
+
+| Nivel | Cuándo | Qué corre | Tiempo aproximado |
+|---|---|---|---|
+| `npm run check:rapido` | Mientras trabajás, después de cada cambio. | Las cartas, las unitarias cuyo árbol de imports toca lo que cambió respecto de `origin/main`, los tipos de la app si cambió `app/` o `paquetes/`, las pruebas de despliegue si cambió Python o `infra/`, y Playwright solo para las rutas afectadas. Sin Docker. | Menos de 2 minutos |
+| `npm run check` | Antes de un commit que vas a publicar. | Todo lo anterior completo: unitarias en paralelo, build, enlaces, cartas y las 294 pruebas de Playwright. | Unos 5 minutos |
+| `CHECK_STACK=1 npm run check` | Antes de pedir revisión y antes de integrar, sobre el último commit. | `npm run check` más la pila completa en Docker. | Unos 12 minutos, más la espera en la cola |
+
+`npm run check:rapido -- --plan` muestra qué correría y por qué, sin correr nada. Si cambia `package.json`, `package-lock.json`, `astro.config.mjs` o `playwright.config.mjs`, corre todo lo que no usa Docker. Lo que el sitio carga sin `import` (por ejemplo `public/`) hace correr todas las pruebas de navegador. Es una ayuda para iterar: no reemplaza la verificación completa del PR.
+
+`node --test` usa por defecto tantos procesos como núcleos menos uno; `TEST_CONCURRENCY=4` lo limita. Playwright usa la mitad de los núcleos (2 workers en CI); `PLAYWRIGHT_WORKERS=2` o `PLAYWRIGHT_WORKERS=25%` lo cambian si la máquina está cargada.
+
+`npm run check:stack` (y por lo tanto `CHECK_STACK=1`) entra en una cola de la máquina: `scripts/cola-pila.py` deja correr 2 pilas a la vez como máximo y atiende en orden de llegada. Mientras esperás, muestra tu posición y qué checkouts tienen los puestos. Los candados están en `~/.cache/truco/cola-pila` y se liberan solos si el proceso termina o se corta. Cada puesto usa sus propios puertos (18080/18081 el primero, 18090/18091 el segundo), salvo que fijes `TEST_WEB_PORT` y `TEST_OIDC_PORT`. `TRUCO_COLA_PILAS` cambia el máximo; no lo subas en esta Mac.
+
 ## Pull requests
 
 - Abrí un PR acotado contra `main` y enlazá el issue. Usá `Closes #42` si el cambio resuelve el issue. Usá `Refs #42` si el debate o el trabajo sigue abierto. [Enlace y cierre de issues en GitHub](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
