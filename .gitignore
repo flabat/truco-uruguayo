@@ -11,3 +11,6 @@ test-results/
 # Claude Code (configuración y worktrees locales)
 .claude/settings.local.json
 .claude/worktrees/
+
+# Caché de las voces generadas (scripts/voces/generar.ts)
+scripts/voces/.cache/
