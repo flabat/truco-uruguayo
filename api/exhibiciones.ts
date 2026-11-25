@@ -73,7 +73,8 @@ export async function avanzarExhibicion(pool: Pool, servicio: Inferencia, reloj?
         EXISTS(SELECT 1 FROM juego.turnos_bot WHERE mesa=m.id) AS pendiente
       FROM juego.mesas m WHERE cupo_exhibicion IS NOT NULL AND fin_publico IS NULL AND NOT exhibicion_retirada
         AND proximo_paso <= coalesce($1, clock_timestamp())
-        AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t JOIN juego.mesas h ON t.mesa=h.id WHERE h.origen='humana')
+        AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t JOIN juego.mesas h ON t.mesa=h.id
+          WHERE h.origen='humana' AND t.disponible_desde <= coalesce($1, statement_timestamp()))
       ORDER BY proximo_paso, cupo_exhibicion LIMIT 1 FOR UPDATE OF m SKIP LOCKED`, [reloj]);
     if (!mesa) return null;
     await db.query("SAVEPOINT paso");
