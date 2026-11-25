@@ -43,6 +43,8 @@ function regresoPermitido(valor: string | null) {
   if (valor === "/gestion/") return valor;
   // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
   if (valor === "/perfil/" || valor === "/jugar/?crear=1") return valor;
+  // La exportación web de la app, en su dirección de prueba del mismo origen.
+  if (valor === "/app/") return valor;
   if (valor && /^(?:\/volver\/\?mesa=|\/jugar\/\?mirar=)[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor)) return valor;
   if (valor && /^\/jugar\/(?:\?(?:invitacion|mesa)=[a-zA-Z0-9_-]{1,80})?$/.test(valor)) return valor;
   return "/#jugador";

@@ -7,6 +7,16 @@
 	handle @identidad {
 		reverse_proxy identidad:8080
 	}
+	# Exportación web de la app, en su dirección de prueba. Las rutas profundas vuelven a su index.html.
+	redir /app /app/ 308
+	handle /app/* {
+		root * /srv
+		header /app/_expo/static/* Cache-Control "public, max-age=31536000, immutable" {
+			match status 200 206 304
+		}
+		try_files {path} /app/index.html
+		file_server
+	}
 	handle {
 		root * /srv
 		header /_astro/* Cache-Control "public, max-age=31536000, immutable" {
