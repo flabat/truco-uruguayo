@@ -4,14 +4,17 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "paquetes/*"
+    "paquetes/*",
+    "app"
   ],
   "scripts": {
     "dev": "astro dev",
     "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
-    "test:unit": "node --test \"tests/unit/*.test.ts\"",
+    "test:unit": "node --test \"tests/unit/*.test.ts\" \"paquetes/*/test/*.test.ts\"",
+    "app:tipos": "npm --workspace app run tipos",
+    "app:exportar": "npm --workspace app run exportar",
     "check": "bash .github/scripts/check_site.sh",
     "check:production": "bash scripts/verificar-produccion.sh",
     "check:stack": "bash scripts/verificar-stack.sh",
@@ -22,6 +25,7 @@
     "auth:api": "bash scripts/cliente-api-local.sh",
     "preview": "astro preview",
     "cartas:generar": "node scripts/tatu/generar.mjs",
+    "voces:generar": "node scripts/voces/generar.ts",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
     "cartas:exportar": "node scripts/tatu/generar.mjs --exportar",
     "train": "node training/cli.ts",
