@@ -107,7 +107,7 @@ async function probarParejas() {
     if (asiento === 3) await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
   }
   await Promise.all([eva, diego].map(p => p.waitForURL(`/app/mesa?id=${id}`, espera)));
-  await Promise.all([eva, diego].map(p => expect(titulo(p, "Mesa en juego")).toBeVisible()));
+  await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible()));
 
   // clara la ve en el salón y la mira.
   const clara = await pagina();
@@ -130,12 +130,19 @@ async function probarParejas() {
   assert.equal((await clara.request.get("/api/mesas/" + id)).status(), 404, "mirar no sienta a clara");
 
   // eva vuelve al salón y retoma su mesa; las rutas profundas resisten una recarga.
-  await boton(eva, "Volver al salón").click();
+  // Con una hoja que pide respuesta (eva tiene flor o le tocaron envido), «Más» no abre: eva responde primero.
+  await expect(async () => {
+    for (const respuesta of ["Flor", "Quiero"]) {
+      if (await boton(eva, respuesta).isVisible()) await boton(eva, respuesta).click();
+    }
+    await boton(eva, "Más").click({ timeout: 2_000 });
+    await boton(eva, "Salir al salón").click({ timeout: 2_000 });
+  }).toPass(espera);
   await expect(titulo(eva, "Mesas en juego")).toBeVisible();
   await boton(eva, "Volver a mi mesa").click();
   await eva.waitForURL(`/app/mesa?id=${id}`, espera);
   await eva.reload();
-  await expect(titulo(eva, "Mesa en juego")).toBeVisible(espera);
+  await expect(eva.getByTestId("mesa")).toBeVisible(espera);
   await diego.goto(`/app/?mesa=${id}`);
   await diego.waitForURL(`/app/mesa?id=${id}`, espera);
   await diego.goto(`/app/sala/${id}`);
