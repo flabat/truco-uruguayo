@@ -34,6 +34,10 @@ export function useReparto(eventos: EventosDeMesa | undefined, geometria: Geomet
       cambiarReparto(r => (plan.vuelos.length ? { numero: (r?.numero ?? 0) + 1, plan } : null));
     });
   }, [eventos]);
+  // Si el modo liviano se activa en medio, el reparto se corta: las cartas aparecen en su lugar y la mano se habilita.
+  useEffect(() => {
+    if (liviano) cambiarReparto(null);
+  }, [liviano]);
   // Un roce de naipe por carta, a la hora en que sale del mazo.
   useEffect(() => {
     if (!reparto) return;
