@@ -17,4 +17,12 @@ export const canto = {
   mazo: "Irse al mazo",
 } satisfies Record<Exclude<TipoAccionOnline, "carta">, string>;
 
+/** En la mesa se grita el truco, se toca el envido y se canta la flor. */
+export function verboDeCanto(tipo: Exclude<TipoAccionOnline, "carta">) {
+  if (tipo === "truco" || tipo === "retruco" || tipo === "vale-cuatro") return "gritó";
+  if (tipo === "envido" || tipo === "real-envido" || tipo === "falta-envido") return "tocó";
+  if (tipo === "flor" || tipo === "con-flor-envido" || tipo === "contraflor-al-resto") return "cantó";
+  return "dijo";
+}
+
 export const respuestaConFlor = "«Flor» rechaza la apuesta por vos. «Con flor quiero» la acepta por tu equipo.";

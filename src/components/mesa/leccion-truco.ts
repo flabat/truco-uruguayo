@@ -40,8 +40,8 @@ export function montarLeccionTruco() {
     const enJuego = cursor === null && !resultado && !pendiente;
     const aviso = resultado ? "Mano cerrada" : pendiente ? "Falta responder al truco" : undefined;
     const cobrar = resultado && pareja(resultado.equipo) + (resultado.tantos === 1 ? " cobra 1 tanto" : " cobra 2 tantos");
-    const motivo = resultado?.motivo === "rechazo" ? "El no quiero cierra la mano. Cobra la pareja que cantó."
-      : resultado ? resultadoMano(mesa) + (apuesta === "querido" ? " El truco estaba querido." : " La mano se jugó sin cantar.") : "";
+    const motivo = resultado?.motivo === "rechazo" ? "El no quiero cierra la mano. Cobra la pareja que gritó."
+      : resultado ? resultadoMano(mesa) + (apuesta === "querido" ? " El truco estaba querido." : " La mano se jugó sin gritar truco.") : "";
     controles.replaceChildren();
     el("envido-cobrado").textContent = "Antes de la salida, " + pareja(envido.equipo).toLowerCase() + " cobró el envido con " + envido.total + ".";
     const lista = el("acciones-truco");
@@ -64,7 +64,7 @@ export function montarLeccionTruco() {
       pregunta.textContent = "Acción " + cursor + " de " + total;
       guia.textContent = (ultima ? relatar(ultima) : "Así empezó la mano.") + " " +
         (resultado ? cobrar + ". " + motivo : pendiente ? "La pareja rival del cantor tiene la palabra." :
-          ultima?.tipo === "quiero" ? "Se juega por 2. Conserva el turno de carta quien cantó." : "");
+          ultima?.tipo === "quiero" ? "Se juega por 2. Conserva el turno de carta quien gritó." : "");
       const anterior = boton("Anterior", () => reproducir(cursor - 1), "ap-opcion");
       anterior.disabled = cursor === 0;
       controles.append(anterior);
@@ -79,14 +79,14 @@ export function montarLeccionTruco() {
         boton("Reproducir la mano", () => reproducir(0), "ap-opcion"));
     } else if (pendiente) {
       momento.textContent = "La palabra es tuya";
-      pregunta.textContent = "Te cantaron truco. ¿Querés?";
+      pregunta.textContent = "Te gritaron truco. ¿Querés?";
       guia.textContent = "El rival de la derecha espera tu respuesta. Si querés, él sale y quien gane cobra 2. Si decís «no quiero», su pareja cobra 1 ahora.";
       controles.append(boton("Quiero", () => actuar({ tipo: "quiero", asiento: 0 })),
         boton("No quiero", () => actuar({ tipo: "no-quiero", asiento: 0 }), "ap-opcion"));
     } else {
       const querida = apuesta === "querido";
       momento.textContent = "Vuelta " + (mesa.vueltas.length + 1) + (querida ? " · 2 tantos en juego" : " · 1 tanto en juego");
-      pregunta.textContent = querida ? "¿Qué carta jugás?" : "¿Cantás truco o jugás una carta?";
+      pregunta.textContent = querida ? "¿Qué carta jugás?" : "¿Gritás truco o jugás una carta?";
       if (querida) {
         let reanudacion = "";
         if (ultima?.tipo === "quiero") reanudacion = "El rival quiso. Conservás el turno. ";
@@ -94,7 +94,7 @@ export function montarLeccionTruco() {
         guia.textContent = reanudacion + situacionDeJuego(mesa);
       } else {
         guia.textContent = "En cualquiera de tus turnos podés ofrecer jugar por 2 antes de tirar. En este ejercicio el rival va a querer tu oferta.";
-        controles.append(boton("Cantar truco", () => actuar({ tipo: "truco", asiento: 0 })));
+        controles.append(boton("Gritar truco", () => actuar({ tipo: "truco", asiento: 0 })));
       }
     }
     if (cursor === null && (resultado || acciones.length === 0 || pendiente)) {

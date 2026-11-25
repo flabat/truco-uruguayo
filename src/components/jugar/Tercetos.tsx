@@ -1,6 +1,6 @@
 import { ResumenDeTantos } from "./ResumenDeTantos";
 import { resumirTantos } from "@eltruco/motor/resumen-tantos.ts";
-import { canto, respuestaConFlor } from "../../lib/cantos";
+import { canto, respuestaConFlor, verboDeCanto } from "../../lib/cantos";
 import { ZonaJugador } from "./ZonaJugador";
 import type { LanceTercetos, ResumenLance, VistaTercetos } from "@eltruco/motor/mesa-online.ts";
 import { AvisoFlor, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
@@ -157,7 +157,7 @@ export function MesaDeTercetos({ mesa, partida: recibida, base, bloqueada: ocupa
             {opciones.includes("con-flor-quiero") && <p>{respuestaConFlor}</p>}
             {opciones.includes("paso-flor") && <p>No tenés flor en esta mano.</p>}
             {vista.pendiente && (vista.pendiente.tipo !== "flor" || vista.porDeclararFlor == null) &&
-              <p>{nombre(vista.pendiente.asiento)} cantó {canto[vista.pendiente.tipo].toLowerCase()}.</p>}
+              <p>{nombre(vista.pendiente.asiento)} {verboDeCanto(vista.pendiente.tipo)} {canto[vista.pendiente.tipo].toLowerCase()}.</p>}
             {vista.trucoPendiente && vista.pendiente && vista.pendiente.tipo !== vista.trucoPendiente.tipo &&
               <p>Queda pendiente el {canto[vista.trucoPendiente.tipo].toLowerCase()} de {mesa.asientos[vista.trucoPendiente.asiento].nombre}.</p>}
             {(opciones.includes("falta-envido") || vista.pendiente?.tipo === "falta-envido") && (

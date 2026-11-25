@@ -160,7 +160,7 @@ async function probarParejas(paginas) {
   await clara.reload();
   const mesa = await (await ana.request.get(ruta(ana))).json();
   const cantor = guardadas[0].vista.pendiente.asiento;
-  const anuncio = mesa.asientos[cantor].nombre + " cantó truco.";
+  const anuncio = mesa.asientos[cantor].nombre + " gritó truco.";
   for (const [i, p] of paginas.entries()) {
     const { vista } = guardadas[i];
     assert.deepEqual(vista.pendiente, { tipo: "truco", asiento: cantor });

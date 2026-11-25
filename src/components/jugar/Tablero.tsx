@@ -1,6 +1,6 @@
 import { ResumenDeTantos } from "./ResumenDeTantos";
 import { motivoDelCobro } from "../../lib/cobros";
-import { canto, respuestaConFlor } from "../../lib/cantos";
+import { canto, verboDeCanto, respuestaConFlor } from "../../lib/cantos";
 import type { ReactNode } from "react";
 import { ZonaJugador } from "./ZonaJugador";
 import { AvisoFlor, HistorialDeMano, nombrar, tantos } from "./HistorialDeMano";
@@ -110,7 +110,7 @@ function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline) {
   }
   if (pendiente) {
     const cantor = mesa.asientos[pendiente.asiento];
-    const indicacion = cantor.nombre + " cantó " + canto[pendiente.tipo].toLowerCase() + ".";
+    const indicacion = cantor.nombre + " " + verboDeCanto(pendiente.tipo) + " " + canto[pendiente.tipo].toLowerCase() + ".";
     return { titulo: tituloDeRespuesta(mesa, vista, mesa.asientos.map(a => a.asiento)),
       indicacion: legales.includes("flor") ? indicacion + " Cantá tu flor para responder." : indicacion };
   }

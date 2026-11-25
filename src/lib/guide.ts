@@ -43,7 +43,7 @@ export const groups = [
     title: "Los cantos",
     image: "mate",
     category: "Las apuestas",
-    description: "Aprendé cuándo cantar envido, flor o truco y cuánto vale cada respuesta.",
+    description: "Aprendé cuándo tocar envido, cantar flor o gritar truco y cuánto vale cada respuesta.",
     ids: ["envido", "flor", "truco"],
   },
 ];
