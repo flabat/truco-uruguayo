@@ -13,6 +13,7 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 
 - **iOS y Android:** abre `/api/auth/login?app=<desafío>` en el navegador del sistema, vuelve por `eltruco://ingreso?codigo=…`, canjea el código con `POST /api/auth/canje` y guarda la sesión en el almacenamiento seguro. Cada pedido lleva `Authorization: Bearer`.
 - **Web:** se sirve en `/app/` del mismo origen que la API y usa la cookie `truco_sesion`.
+- **Ingreso de prueba:** si la API anuncia `GET /api/auth/dev` (`AUTH_DEV=1`, activo en la pila local), la pantalla de ingreso muestra **Entrar como…** con los seis jugadores del realm local. En iOS y Android pide el código con el desafío y lo canjea en `/api/auth/canje`; en la web recibe la cookie. Ver [el entorno local](../docs/entorno-local.md#ingreso-de-prueba-sin-keycloak).
 
 ## Comandos (desde la raíz)
 

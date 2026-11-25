@@ -24,6 +24,8 @@ services:
     environment:
       DATABASE_URL: postgres://truco:truco-local@db:5432/truco
       LOCAL_OIDC: "1"
+      # Ingreso de prueba sin Keycloak (POST /api/auth/dev). AUTH_DEV=0 lo apaga.
+      AUTH_DEV: "${AUTH_DEV:-1}"
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_CATEGORY_ID: ${DISCORD_CATEGORY_ID:-}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}

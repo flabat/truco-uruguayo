@@ -16,10 +16,12 @@ const titulos: Record<Destino["tipo"] | "ninguno", [string, string]> = {
 
 /** Inicio: ingreso o salón. También recibe los enlaces `?invitacion=`, `?mesa=`, `?mirar=` y `?crear=1`. */
 export default function Inicio() {
-  const { estado, ingresar, reintentar } = useSesion();
+  const { estado, ingresar, jugadoresDePrueba, ingresarComo, reintentar } = useSesion();
   const parametros = useLocalSearchParams();
   const destino = destinoDeEnlace(parametros);
   const [ingresando, setIngresando] = useState(false);
+  const [eligiendo, setEligiendo] = useState(false);
+  const ocupado = (accion: Promise<void>) => { setIngresando(true); accion.finally(() => setIngresando(false)); };
   const retomado = useRef<Destino | null | undefined>(undefined);
 
   // Sin sesión, el destino se guarda: en la web el ingreso sale de la app y vuelve a /app/.
@@ -54,12 +56,23 @@ export default function Inicio() {
     <Pantalla titulo={titulo}>
       {estado.aviso ? <Aviso>{estado.aviso}</Aviso> : null}
       <Parrafo>{texto}</Parrafo>
-      <Boton
-        ocupado={ingresando}
-        onPress={() => { setIngresando(true); ingresar().finally(() => setIngresando(false)); }}
-      >
+      <Boton ocupado={ingresando} onPress={() => ocupado(ingresar())}>
         Ingresar
       </Boton>
+      {jugadoresDePrueba.length ? (
+        // Solo con AUTH_DEV en la API: entra como un jugador del realm local sin abrir el navegador.
+        <>
+          <Boton variante="secundario" ocupado={ingresando} onPress={() => setEligiendo(!eligiendo)}>
+            Entrar como…
+          </Boton>
+          {eligiendo ? jugadoresDePrueba.map(({ usuario, nombre }) => (
+            <Boton key={usuario} variante="secundario" ocupado={ingresando} etiqueta={"Entrar como " + nombre}
+              onPress={() => ocupado(ingresarComo(usuario))}>
+              {nombre}
+            </Boton>
+          )) : null}
+        </>
+      ) : null}
     </Pantalla>
   );
 }

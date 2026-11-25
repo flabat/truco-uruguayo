@@ -35,6 +35,12 @@ Abrí [Jugar al truco](http://localhost:8081/jugar/) y elegí **Ingresar al jueg
 
 Usá dispositivos o perfiles independientes del navegador para probar diferentes jugadores. Las pestañas de un mismo perfil comparten sesión. También podés crear una cuenta con correo y contraseña desde el enlace de registro de Keycloak. El entorno local nuevo permite probar este flujo sin enviar correo. Si ya existe el realm `mesa-local`, activá el registro y **Email as username** desde sus ajustes de ingreso. Después de ingresar, **Mi perfil** muestra el nombre, el ID y el historial de los chicos que empezaste. La sesión dura hasta siete días. **Cerrar sesión** la revoca en el servidor. El jugador recupera el mismo ID al volver a ingresar con su cuenta, incluso desde otro navegador.
 
+### Ingreso de prueba sin Keycloak
+
+La pila local arranca con `AUTH_DEV=1`. La API acepta `POST /api/auth/dev` con `{"usuario": "ana"}` (o cualquiera de los seis usuarios) y crea la sesión de ese jugador sin pasar por Keycloak. El jugador es el mismo que al ingresar con la contraseña: comparte emisor, sujeto, ID y nombre. En la web deja la cookie `truco_sesion` y solo acepta pedidos con el origen del juego. Con `{"usuario": "ana", "app": "<desafío S256>"}` responde un código que la app canjea en `/api/auth/canje` con su verificador, igual que al volver del navegador. `GET /api/auth/dev` anuncia los jugadores disponibles. La app muestra **Entrar como…** solo cuando la API lo anuncia.
+
+Es una herramienta de desarrollo: abre la cuenta de cualquier jugador de prueba a quien llegue a la API. Para probar el ingreso real, arrancá con `AUTH_DEV=0 docker compose up -d --build --wait`; la ruta responde 404. `compose.production.yaml` no la activa.
+
 El diseño del chat de voz opcional de la mesa se sigue en [#102](https://github.com/flabat/truco-uruguayo/issues/102).
 
 Si ya usabas el entorno anterior, ejecutá el mismo comando de arranque. Keycloak importa el nuevo realm `mesa-local` junto al realm de prueba existente y la API aplica la migración a PostgreSQL. Nginx recibe el retorno del proveedor en `/api/auth/callback` y lo pasa a la API. El código se canjea dentro de Compose. El navegador recibe una cookie de sesión HTTP-only y las credenciales de desarrollo pertenecen a Keycloak.
