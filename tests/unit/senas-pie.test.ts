@@ -4,7 +4,7 @@ import { cartaParaJugar, elegirAccionConPie, elegirIndicacionesPie } from "@eltr
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { aplicarOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento, TresCartas } from "@eltruco/motor/reparto.ts";
-import { cartasPedidas, catalogoGestosPie, crearIndicacionPie, gestosDeCartas, textoDeIndicacion, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { cartasPedidas, catalogoGestosPie, crearIndicacionPie, gestosDeCartas, significadoDeGesto, textoDeIndicacion, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 
 const manos: TresCartas[] = [
   ["copas-02", "bastos-01", "oros-04"], ["bastos-06", "copas-03", "oros-06"],
@@ -252,4 +252,13 @@ test("la computadora que recibe «Jugá» con carta tira esa carta si alcanza pa
   const sinCarta = crearIndicacionPie(e,4,0,"juga",1,[])!;
   assert.deepEqual(elegirAccionConPie(mano,pie,[conCarta]), {tipo:"carta",asiento:0,carta:"espadas-04"});
   assert.deepEqual(elegirAccionConPie(mano,pie,[sinCarta]), {tipo:"carta",asiento:0,carta:"espadas-02"});
+});
+
+test("si la muestra es una pieza, el pie nombra el 12 del palo, que es la carta que tiene el compañero", () => {
+  assert.deepEqual(gestosDeCartas(["copas-12"], "copas-10"), ["ojo-izquierdo"]);
+  assert.equal(significadoDeGesto("ojo-izquierdo", "copas-10"), "12 de copas");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-izquierdo" }, "copas-10"), "Jugá el 12 de copas");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-derecho" }, "copas-10"), "Jugá el 11 de copas");
+  assert.equal(significadoDeGesto("labio-inferior", "copas-03"), "Tres");
+  assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-izquierdo" }), "Jugá el 10 de la muestra");
 });

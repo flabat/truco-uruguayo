@@ -4,7 +4,7 @@ import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { Mesa, Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import {
-  cartasPedidas, catalogoGestosPie, textoDeIndicacion, versionSenasPie, type CartaPedida, type FrasePie, type GestoPie,
+  cartasPedidas, significadoDeGesto, textoDeIndicacion, versionSenasPie, type CartaPedida, type FrasePie, type GestoPie,
 } from "@eltruco/motor/senas-pie.ts";
 import { canSeeSignal, signals, signalVersionFor } from "../../../training/contracts/index.ts";
 import juego from "../../../src/data/juego.json" with { type: "json" };
@@ -32,9 +32,7 @@ const filas = juego.find(seccion => seccion.id === "senas")!.blocks
   .map(b => "table" in b ? b.table : undefined).find(tabla => tabla !== undefined)!.rows;
 const textoDeSena = new Map(signals.map((id, i) => [id, filas[i][1].replace(/\.$/, "")]));
 
-function significado(gesto: GestoPie, muestra: CardId) {
-  return catalogoGestosPie[gesto].significado.replace("de la muestra", "de " + muestra.split("-")[0]);
-}
+const significado = (gesto: GestoPie, muestra: CardId) => significadoDeGesto(gesto, muestra);
 
 function versionDeSenas(mesa: Mesa) {
   const legada = mesa.formato && mesa.formato !== "triples" ? signalVersionFor(mesa.formato) : null;

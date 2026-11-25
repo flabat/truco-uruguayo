@@ -41,11 +41,23 @@ export interface IndicacionPie {
   /** Cuántas acciones de juego se habían confirmado al hablar. Los empates conservan el orden de registro. */
   indiceAccion: number;
 }
+const rangoDeGestoPieza: Partial<Record<GestoPie, number>> = { cejas: 2, beso: 4, nariz: 5, "ojo-derecho": 11, "ojo-izquierdo": 10 };
+
+/**
+ * Lo que significa un gesto: «2 de la muestra», «As bravo», «Tres». Con la muestra nombra la carta del palo
+ * («2 de espadas»). Si la muestra es esa pieza, el 12 del palo toma su lugar y es la carta que se tiene.
+ */
+export function significadoDeGesto(gesto: GestoPie, muestra?: CardId): string {
+  const texto = catalogoGestosPie[gesto].significado;
+  if (!muestra || !texto.includes("de la muestra")) return texto;
+  const palo = muestra.split("-")[0];
+  return rangoDeGestoPieza[gesto] === rangoDe(muestra) ? "12 de " + palo : texto.replace("de la muestra", "de " + palo);
+}
+
 /** «2 de la muestra», «as bravo», «tres»: cómo nombra el pie una carta. Con la muestra, «2 de espadas». */
 export function nombreDeCartaPedida(carta: CartaPedida, muestra?: CardId): string {
-  const texto = catalogoGestosPie[carta].significado;
-  const nombre = texto[0].toLocaleLowerCase("es-UY") + texto.slice(1);
-  return muestra ? nombre.replace("de la muestra", "de " + muestra.split("-")[0]) : nombre;
+  const texto = significadoDeGesto(carta, muestra);
+  return texto[0].toLocaleLowerCase("es-UY") + texto.slice(1);
 }
 
 /** «Jugá», «Jugá el 2 de la muestra», «Vení». */
