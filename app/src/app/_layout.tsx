@@ -3,15 +3,21 @@ import { DMSerifText_400Regular } from "@expo-google-fonts/dm-serif-text";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { colores } from "../tema";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { Cargando } from "../componentes/ui.tsx";
+import { ProveedorDeSesion } from "../ingreso/contexto.tsx";
+import { colores } from "../tema.ts";
 
 export default function Raiz() {
   const [listas] = useFonts({ DMSerifText_400Regular, DMSans_400Regular, DMSans_600SemiBold });
-  if (!listas) return null;
   return (
-    <>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
-    </>
+    <SafeAreaProvider>
+      <StatusBar style="light" />
+      {listas ? (
+        <ProveedorDeSesion>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
+        </ProveedorDeSesion>
+      ) : <Cargando />}
+    </SafeAreaProvider>
   );
 }
