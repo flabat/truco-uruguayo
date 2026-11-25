@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { crearEventos } from "../../app/src/mesa/eventos.ts";
-import { movimiento, ordenDeReparto, planDeReparto } from "../../app/src/mesa/movimiento.ts";
+import { duracionDelReparto, movimiento, ordenDeReparto, planDeReparto } from "../../app/src/mesa/movimiento.ts";
 
 test("las duraciones normales son las de la tabla del diseño", () => {
   assert.deepEqual(movimiento(false), {
@@ -73,4 +73,17 @@ test("el plan saltea las cartas que ya no están y el espectador no da vuelta ni
   assert.ok(plan.vuelos.every(v => v.gira === null));
   assert.equal(plan.fin, 10 * 80 + 320);
   assert.deepEqual(planDeReparto(0, [0, 0], 0, tiempos), { vuelos: [], duracion: 320, fin: 0 });
+});
+
+test("la espera del reparto nunca es más corta que el reparto de ningún dador ni asiento propio", () => {
+  for (const n of [2, 4, 6]) {
+    const espera = duracionDelReparto(false, n);
+    for (let dador = 0; dador < n; dador++) {
+      for (const propio of [null, ...Array.from({ length: n }, (_, i) => i)]) {
+        const { fin } = planDeReparto(dador, Array<number>(n).fill(3), propio, tiempos);
+        assert.ok(espera >= fin, `${n} asientos, dador ${dador}, propio ${propio}: ${espera} < ${fin}`);
+      }
+    }
+  }
+  assert.equal(duracionDelReparto(true, 4), 0);
 });

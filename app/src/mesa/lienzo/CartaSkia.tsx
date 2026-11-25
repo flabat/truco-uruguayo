@@ -57,20 +57,16 @@ interface Props {
 
 /** Una carta Tatú con sombra fija y esquinas redondeadas, ubicada con valores compartidos. */
 export function CartaSkia({ id, pose, sombra, opacidad, giro, brillo, oscuridad }: Props) {
-  const imagen = useImagenDeCarta(id);
-  const dorso = useImagenDeCarta("reverso");
   const transform = useDerivedValue(() => {
     const p = pose.value;
-    const g = giro ? giro.value : 1;
-    return [
+    const base = [
       { translateX: p.x + p.ancho / 2 },
       { translateY: p.y + p.alto / 2 },
       { rotate: (p.rotacion * Math.PI) / 180 },
       { scale: p.escala },
-      { scaleX: Math.max(0.001, Math.abs(Math.cos(g * Math.PI))) },
-      { translateX: -p.ancho / 2 },
-      { translateY: -p.alto / 2 },
     ];
+    const angosta = giro ? [{ scaleX: Math.max(0.001, Math.abs(Math.cos(giro.value * Math.PI))) }] : [];
+    return [...base, ...angosta, { translateX: -p.ancho / 2 }, { translateY: -p.alto / 2 }];
   });
   const ancho = useDerivedValue(() => pose.value.ancho);
   const alto = useDerivedValue(() => pose.value.alto);
@@ -80,36 +76,60 @@ export function CartaSkia({ id, pose, sombra, opacidad, giro, brillo, oscuridad 
     const r = p.ancho * radioRelativo;
     return { rect: { x: 0, y: 0, width: p.ancho, height: p.alto }, rx: r, ry: r };
   });
-  const cara = useDerivedValue<number>(() => (!giro || giro.value >= 0.5 ? 1 : 0));
-  const deDorso = useDerivedValue(() => 1 - cara.value);
-  const conBrillo = useDerivedValue(() => brillo?.value ?? 0);
-  const sombraEncima = useDerivedValue(() => (oscuridad?.value ?? 0) * oscuridadMaxima);
-  // El halo y el borde dorado, alrededor de la carta.
-  const cajaHalo = useDerivedValue(() => marcoDe(pose.value, halo.mas));
-  const cajaBorde = useDerivedValue(() => marcoDe(pose.value, bordeDorado));
-  const desenfoque = useDerivedValue(() => pose.value.ancho * halo.blur);
   const s = sombras[sombra];
+  const medidas = { ancho, alto };
 
   return (
     <Group transform={transform} opacity={opacidad ?? 1}>
-      {brillo ? (
-        <Group opacity={conBrillo}>
-          <RoundedRect rect={cajaHalo} color={halo.color}>
-            <BlurMask blur={desenfoque} style="normal" />
-          </RoundedRect>
-          <RoundedRect rect={cajaBorde} color={dorado} />
-        </Group>
-      ) : null}
+      {brillo ? <Halo pose={pose} brillo={brillo} /> : null}
       <RoundedRect x={0} y={0} width={ancho} height={alto} r={radio} color="white">
         <Shadow dx={0} dy={s.dy} blur={s.blur} color={s.color} />
       </RoundedRect>
       <Group clip={borde}>
-        {imagen && <Image image={imagen} x={0} y={0} width={ancho} height={alto} fit="fill" opacity={cara} />}
-        {giro && dorso ? <Image image={dorso} x={0} y={0} width={ancho} height={alto} fit="fill" opacity={deDorso} /> : null}
+        {giro ? <CaraYDorso id={id} giro={giro} {...medidas} /> : <Cara id={id} {...medidas} />}
       </Group>
-      {oscuridad ? <RoundedRect x={0} y={0} width={ancho} height={alto} r={radio} color="black" opacity={sombraEncima} /> : null}
+      {oscuridad ? <Oscuridad oscuridad={oscuridad} radio={radio} {...medidas} /> : null}
     </Group>
   );
+}
+
+type Medidas = { ancho: Valor<number>; alto: Valor<number> };
+
+function Cara({ id, ancho, alto, opacidad }: Medidas & { id: CardId | "reverso"; opacidad?: Valor<number> }) {
+  const imagen = useImagenDeCarta(id);
+  return imagen ? <Image image={imagen} x={0} y={0} width={ancho} height={alto} fit="fill" opacity={opacidad ?? 1} /> : null;
+}
+
+/** Hasta la mitad del giro se ve el dorso; desde ahí, la cara. */
+function CaraYDorso({ id, giro, ancho, alto }: Medidas & { id: CardId | "reverso"; giro: Valor<number> }) {
+  const cara = useDerivedValue<number>(() => (giro.value >= 0.5 ? 1 : 0));
+  const dorso = useDerivedValue(() => 1 - cara.value);
+  return (
+    <>
+      <Cara id={id} ancho={ancho} alto={alto} opacidad={cara} />
+      <Cara id="reverso" ancho={ancho} alto={alto} opacidad={dorso} />
+    </>
+  );
+}
+
+/** El halo y el borde dorados de la carta ganadora. */
+function Halo({ pose, brillo }: { pose: Valor<Pose>; brillo: Valor<number> }) {
+  const cajaHalo = useDerivedValue(() => marcoDe(pose.value, halo.mas));
+  const cajaBorde = useDerivedValue(() => marcoDe(pose.value, bordeDorado));
+  const desenfoque = useDerivedValue(() => pose.value.ancho * halo.blur);
+  return (
+    <Group opacity={brillo}>
+      <RoundedRect rect={cajaHalo} color={halo.color}>
+        <BlurMask blur={desenfoque} style="normal" />
+      </RoundedRect>
+      <RoundedRect rect={cajaBorde} color={dorado} />
+    </Group>
+  );
+}
+
+function Oscuridad({ oscuridad, radio, ancho, alto }: Medidas & { oscuridad: Valor<number>; radio: Valor<number> }) {
+  const opacidad = useDerivedValue(() => oscuridad.value * oscuridadMaxima);
+  return <RoundedRect x={0} y={0} width={ancho} height={alto} r={radio} color="black" opacity={opacidad} />;
 }
 
 /** Una carta quieta: dorsos, el mazo y la muestra. */
@@ -157,17 +177,19 @@ export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano }: {
     if ("ancho" in desde) return { pose: desde, propia: true };
     return { pose: { ...carta, x: desde.x - carta.ancho / 2, y: desde.y - carta.alto / 2, escala: 1 }, propia: false };
   });
-  const avance = useSharedValue(origen ? 0 : 1);
+  // En liviano la carta aparece en su lugar, sin un cuadro de dorso en el asiento.
+  const vuela = origen !== null && vuelo.duracion > 0;
+  const avance = useSharedValue(vuela ? 0 : 1);
   const destino = usePose(carta);
   useEffect(() => {
-    if (!origen || vuelo.duracion <= 0) avance.value = 1;
-    else if (origen.propia && vuelo.rebote) avance.value = withSpring(1, { duration: vuelo.duracion, ...rebote });
+    if (!vuela) return;
+    if (origen.propia && vuelo.rebote) avance.value = withSpring(1, { duration: vuelo.duracion, ...rebote });
     else avance.value = withTiming(1, { duration: vuelo.duracion, easing: curvaVuelo });
   }, [avance]);
 
-  const pose = useDerivedValue<Pose>(() => (origen ? mezclar(origen.pose, destino.value, avance.value) : destino.value));
-  // La ajena empieza de dorso; la propia ya se veía de cara.
-  const giro = useDerivedValue(() => (origen && !origen.propia ? Math.min(1, avance.value) : 1));
+  const pose = useDerivedValue<Pose>(() => (vuela ? mezclar(origen.pose, destino.value, avance.value) : destino.value));
+  // La ajena vuela de dorso y se da vuelta en el aire; la propia ya se veía de cara.
+  const [gira] = useState(() => vuela && !origen.propia);
 
   const luz = useSharedValue(ganadora ? 1 : 0);
   const sombra = useSharedValue(oscura ? 1 : 0);
@@ -178,7 +200,12 @@ export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano }: {
     sombra.value = brillo.duracion > 0 ? withTiming(oscura ? 1 : 0, { duration: brillo.duracion }) : oscura ? 1 : 0;
   }, [sombra, oscura, brillo.duracion]);
 
-  return <CartaSkia id={id} pose={pose} sombra="pano" giro={giro} brillo={luz} oscuridad={sombra} />;
+  // Los efectos se montan solo en las cartas que los usan. Cuando la vuelta se limpia, las cartas se
+  // desmontan, así que no hace falta apagarlos de a poco.
+  return (
+    <CartaSkia id={id} pose={pose} sombra="pano" giro={gira ? avance : undefined}
+      brillo={ganadora ? luz : undefined} oscuridad={oscura ? sombra : undefined} />
+  );
 }
 
 /**
@@ -202,8 +229,16 @@ export function CartaRepartida({ id, desde, carta, reloj, sale, gira, duracion }
     return mezclar(inicio.value, destino.value, curvaVueloFn(t));
   });
   const opacidad = useDerivedValue<number>(() => (reloj.value >= sale ? 1 : 0));
-  const giro = useDerivedValue(() => (gira === null ? 0 : Math.min(1, Math.max(0, (reloj.value - gira) / duracion))));
-  return <CartaSkia id={id} pose={pose} sombra={gira === null ? "pano" : "mano"} opacidad={opacidad} giro={giro} />;
+  if (gira === null) return <CartaSkia id="reverso" pose={pose} sombra="pano" opacidad={opacidad} />;
+  return <CartaRepartidaPropia id={id} pose={pose} opacidad={opacidad} reloj={reloj} gira={gira} duracion={duracion} />;
+}
+
+/** Una carta propia del reparto: llega de dorso y se da vuelta en la mano. */
+function CartaRepartidaPropia({ id, pose, opacidad, reloj, gira, duracion }: {
+  id: CardId | "reverso"; pose: Valor<Pose>; opacidad: Valor<number>; reloj: SharedValue<number>; gira: number; duracion: number;
+}) {
+  const giro = useDerivedValue(() => Math.min(1, Math.max(0, (reloj.value - gira) / duracion)));
+  return <CartaSkia id={id} pose={pose} sombra="mano" opacidad={opacidad} giro={giro} />;
 }
 
 /** Dónde se ve ahora una carta de la mano propia. */

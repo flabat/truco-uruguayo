@@ -180,7 +180,7 @@ interface EnPantalla {
   voz?: Voz;
 }
 
-function esMostrada(p: unknown): p is Mostrada {
+export function esMostrada(p: unknown): p is Mostrada {
   return typeof p === "object" && p !== null && "vista" in p && p.vista != null;
 }
 
@@ -189,6 +189,15 @@ function salto(antes: Mostrada, despues: Mostrada, miAsiento: number | null) {
   if (!mismoLance(antes, despues)) return true;
   return despues.vista.acciones.slice(antes.vista.acciones.length)
     .some(a => a.tipo === "carta" || a.asiento !== miAsiento);
+}
+
+/**
+ * Lo que se anuncia la primera vez que la pantalla muestra una partida. Si la espera de la mesa
+ * se vio en la sala (`presencio`), su primera mano se reparte a la vista; si no, aparece repartida.
+ */
+export function eventosAlAbrir(partida: unknown, presencio: boolean): Evento[] {
+  if (!presencio || !esMostrada(partida) || partida.manoNumero !== 1) return [];
+  return [{ tipo: "reparto", dador: partida.vista.dador }];
 }
 
 /**

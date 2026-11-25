@@ -3,7 +3,8 @@ import type { PasosNuevos } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import type { Nombre } from "@eltruco/cliente/textos.ts";
 import type { Voz } from "@eltruco/cliente/voces.ts";
 import {
-  avanzar, colaInicial, enPantalla, esperaDelPaso, esperaDelReparto, eventosEnPantalla, recibir, type Evento, type Versionada,
+  avanzar, colaInicial, enPantalla, esperaDelPaso, esperaDelReparto, eventosAlAbrir, eventosEnPantalla, esMostrada, recibir,
+  type Evento, type Versionada,
 } from "./cola.ts";
 
 interface Opciones {
@@ -51,13 +52,22 @@ export function useColaDePresentacion<T extends Versionada>(actual: T, presencio
   });
   // Antes de pintar: el lienzo esconde las cartas del reparto y el tanteador vuelve al número
   // anterior para contarlo, sin que se vea un cuadro con el estado nuevo quieto.
+  // Si ya se mostró alguna partida: la primera no tiene con qué compararse (ver `eventosAlAbrir`).
+  const abierta = useRef(false);
   useLayoutEffect(() => {
     const previo = ultimo.current;
     ultimo.current = { partida, voz, reconexion };
-    // Al reconectar el estado aparece en su lugar, sin sonar el pasado.
-    if (previo.reconexion !== reconexion) return;
     const { alEvento, miAsiento, nombre } = opcionesVigentes.current;
-    const eventos = eventosEnPantalla(previo, { partida, voz }, porPaso, miAsiento, nombre);
+    let eventos: Evento[];
+    if (!abierta.current) {
+      if (!esMostrada(partida)) return;
+      abierta.current = true;
+      eventos = eventosAlAbrir(partida, presencio);
+    } else {
+      // Al reconectar el estado aparece en su lugar, sin sonar el pasado.
+      if (previo.reconexion !== reconexion) return;
+      eventos = eventosEnPantalla(previo, { partida, voz }, porPaso, miAsiento, nombre);
+    }
     const reparto = esperaDelReparto(eventos, partida, opcionesVigentes.current.liviano);
     if (reparto > 0) repartoHasta.current = Date.now() + reparto;
     for (const e of eventos) alEvento(e);

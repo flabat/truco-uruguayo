@@ -5,7 +5,7 @@ import { pasosDeVueltas } from "@eltruco/cliente/presentacion-vueltas.ts";
 import { entreCartas, vueltaCompleta, type Paso } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { pausaDeVoz } from "@eltruco/cliente/voces.ts";
 import {
-  avanzar, colaInicial, duracion, enPantalla, esperaDelPaso, esperaDelReparto, eventosEnPantalla, eventosEntre, recibir,
+  avanzar, colaInicial, duracion, enPantalla, esperaDelPaso, eventosAlAbrir, esperaDelReparto, eventosEnPantalla, eventosEntre, recibir,
 } from "../../app/src/mesa/cola.ts";
 import { partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
@@ -289,4 +289,13 @@ test("un paso que trae un reparto espera a que se den vuelta las cartas antes de
   assert.equal(esperaDelPaso(carta, false, 2680, 1000), entreCartas + 1680);
   assert.equal(esperaDelPaso(carta, false, 2680, 3000), entreCartas, "un reparto ya terminado no demora");
   assert.equal(esperaDelPaso(carta, true, 0, 3000), 250);
+});
+
+test("la primera mano de una mesa presenciada se reparte a la vista aunque no haya estado anterior", () => {
+  const primera = partidaDe(vistaDe(4, 0, { dador: 3, mano: 0 }), { manoNumero: 1 });
+  assert.deepEqual(eventosAlAbrir(primera, true), [{ tipo: "reparto", dador: 3 }]);
+  assert.deepEqual(eventosAlAbrir(primera, false), [], "sin presenciarla, la mesa aparece repartida");
+  const segunda = partidaDe(vistaDe(4, 0, { dador: 0, mano: 1 }), { manoNumero: 2 });
+  assert.deepEqual(eventosAlAbrir(segunda, true), [], "una mano posterior ya no es el reparto que se vio");
+  assert.deepEqual(eventosAlAbrir(undefined, true), []);
 });
