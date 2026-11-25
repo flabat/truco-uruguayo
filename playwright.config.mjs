@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Puertos de la ranura de este worktree (#378); las variables ya definidas tienen prioridad.
+try { process.loadEnvFile(new URL(".env.trabajo", import.meta.url)); } catch (error) { if (error.code !== "ENOENT") throw error; }
 const port = Number(process.env.TEST_PORT ?? 4322);
 const baseURL = `http://127.0.0.1:${port}/`;
 

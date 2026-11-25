@@ -26,6 +26,7 @@
     "auth:apple": "bash scripts/ingreso-social-local.sh apple",
     "auth:api": "bash scripts/cliente-api-local.sh",
     "preview": "astro preview",
+    "trabajo": "node scripts/trabajo.mjs",
     "cartas:generar": "node scripts/tatu/generar.mjs",
     "voces:generar": "node scripts/voces/generar.ts",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",

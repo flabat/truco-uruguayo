@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/trabajo-entorno.sh # Puertos de la ranura (#378).
 
 # Un proyecto exclusivo mantiene las pruebas y sus volúmenes fuera de la mesa local.
 project="truco-check-$(date +%s)-$$"
