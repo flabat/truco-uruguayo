@@ -8,8 +8,8 @@ import { fileURLToPath } from "node:url";
 
 export const RANURAS = 8;
 
-// Cada base deja ocho puertos seguidos, lejos de los predeterminados (8081, 8080, 4322, 18081, 18080).
-const BASES = { WEB_PORT: 8100, OIDC_PORT: 8200, METRO_PORT: 8300, TEST_PORT: 4400, TEST_WEB_PORT: 18500, TEST_OIDC_PORT: 18600 };
+// Cada base deja ocho puertos seguidos, lejos de los predeterminados (8081, 8080, 3001, 4322, 18081, 18080).
+const BASES = { WEB_PORT: 8100, OIDC_PORT: 8200, API_PORT: 3100, METRO_PORT: 8300, TEST_PORT: 4400, TEST_WEB_PORT: 18500, TEST_OIDC_PORT: 18600 };
 
 export function puertos(ranura) {
   if (!Number.isInteger(ranura) || ranura < 1 || ranura > RANURAS) throw new Error(`Ranura fuera de rango: ${ranura}`);
@@ -114,14 +114,14 @@ function principal(argv) {
   // Compose solo interpola .env: el enlace hace que docker compose use los puertos y el proyecto de la ranura.
   if (!existsSync(join(worktree, ".env"))) symlinkSync(".env.trabajo", join(worktree, ".env"));
   const p = puertos(ranura);
-  console.log(`Ranura ${ranura}: web ${p.WEB_PORT}, identidad ${p.OIDC_PORT}, Metro ${p.METRO_PORT}, Playwright ${p.TEST_PORT}, check:stack ${p.TEST_WEB_PORT} y ${p.TEST_OIDC_PORT}.`);
+  console.log(`Ranura ${ranura}: web ${p.WEB_PORT}, identidad ${p.OIDC_PORT}, API ${p.API_PORT}, Metro ${p.METRO_PORT}, Playwright ${p.TEST_PORT}, check:stack ${p.TEST_WEB_PORT} y ${p.TEST_OIDC_PORT}.`);
 
   const comentario = [
     `Reservé \`${rama}\` desde \`main\` (${base.slice(0, 7)}) con \`npm run trabajo\`.`,
     "",
     `- Sesión: \`${sesion}\``,
     `- Worktree: \`${rutaRelativa}\``,
-    `- Ranura ${ranura}: web ${p.WEB_PORT}, Playwright ${p.TEST_PORT}, \`check:stack\` ${p.TEST_WEB_PORT}/${p.TEST_OIDC_PORT}, Metro ${p.METRO_PORT}, proyecto Compose \`truco-issue-${issue}\`.`,
+    `- Ranura ${ranura}: web ${p.WEB_PORT}, identidad ${p.OIDC_PORT}, API ${p.API_PORT}, Playwright ${p.TEST_PORT}, \`check:stack\` ${p.TEST_WEB_PORT}/${p.TEST_OIDC_PORT}, Metro ${p.METRO_PORT}, proyecto Compose \`truco-issue-${issue}\`.`,
   ].join("\n");
   const aviso = spawnSync("gh", ["issue", "comment", issue, "--body", comentario], { cwd: raiz, encoding: "utf8" });
   if (aviso.status !== 0) console.warn(`No pude comentar en el issue #${issue}: ${aviso.stderr.trim()}`);
