@@ -1,0 +1,28 @@
+---
+import Apendice from "../../layouts/Apendice.astro";
+import Icon from "../../components/Icon.astro";
+import RuleTable from "../../components/RuleTable.astro";
+import SourceList from "../../components/SourceList.astro";
+import { chapterNumber, ruleUrl, variants } from "../../lib/guide";
+---
+
+<Apendice
+  id="variantes"
+  description="Compará las reglas que cambian entre mesas, plataformas y campeonatos uruguayos: la meta, la falta, el resto y los perros."
+  intro="Antes de repartir, acuerden qué modalidad van a jugar. Si no dicen nada, rige el reglamento. Estas diferencias pueden cambiar quién cobra y cuántos tantos se anota."
+>
+  {variants.map((variant) => (
+    <section class="appendix-entry" id={variant.id}>
+      <p class="eyebrow">
+        Capítulo {chapterNumber(variant.rule.id)} · {variant.rule.title}
+      </p>
+      <h2>{variant.title}</h2>
+      <p>{variant.text}</p>
+      {variant.table && <RuleTable table={variant.table} />}
+      <SourceList sources={variant.sources} />
+      <a class="text-link" href={ruleUrl(variant.rule.id)}>
+        Leer el capítulo <Icon name="arrow" size={15} />
+      </a>
+    </section>
+  ))}
+</Apendice>

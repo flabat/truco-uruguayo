@@ -1,0 +1,41 @@
+---
+import Apendice from "../../layouts/Apendice.astro";
+import { glossary, rules, ruleUrl } from "../../lib/guide";
+const titles = new Map(rules.map((rule) => [rule.id, rule.title]));
+const slug = (term: string) =>
+  term
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+const datos = {
+  "@context": "https://schema.org",
+  "@type": "DefinedTermSet",
+  name: "Glosario del truco uruguayo",
+  inLanguage: "es-UY",
+  hasDefinedTerm: glossary.map((item) => ({
+    "@type": "DefinedTerm",
+    name: item.termino,
+    description: item.definicion,
+  })),
+};
+---
+
+<Apendice
+  id="glosario"
+  description="Las palabras del truco uruguayo: espadilla, perica, collera, a punto y más, con el capítulo que explica cada una."
+  intro="Las palabras de la mesa, en orden alfabético, con el capítulo del reglamento que explica cada una."
+>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(datos)} />
+  <dl class="glossary">
+    {glossary.map((item) => (
+      <div id={slug(item.termino)}>
+        <dt>{item.termino}</dt>
+        <dd>
+          {item.definicion} <a href={ruleUrl(item.capitulo)}>{titles.get(item.capitulo)}</a>
+        </dd>
+      </div>
+    ))}
+  </dl>
+</Apendice>

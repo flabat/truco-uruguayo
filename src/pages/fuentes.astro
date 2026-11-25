@@ -2,7 +2,7 @@
 import Site from "../layouts/Site.astro";
 import SourceList from "../components/SourceList.astro";
 import Icon from "../components/Icon.astro";
-import { bibliography, variants, ruleUrl, url } from "../lib/guide";
+import { appendices, appendix, bibliography, chapterNumber, rules, ruleUrl, url } from "../lib/guide";
 function catalogTitle(target: string, fallback: string) {
   const names: [string, string][] = [
     ["canelonchiqueadas.com", "Club Canelón Chico · Reglamento de las Canelonchiqueadas 2026"],
@@ -13,16 +13,21 @@ function catalogTitle(target: string, fallback: string) {
     ["retruco.com", "ReTruco.com · Reglamento (archivo)"],
     ["ludoteka.com", "Ludoteka · Reglas del truco uruguayo"],
     ["conectagames.com", "ConectaGames · Reglas del truco uruguayo"],
+    ["en.wikipedia.org", "Wikipedia en inglés · Truco"],
     ["wikipedia.org", "Wikipedia · Truco uruguayo"],
     ["quierotruco.com", "Quiero Truco · Reglamento del proyecto"],
+    ["pagat.com/national", "Pagat · Card games in Uruguay"],
+    ["pagat.com", "Pagat · Uruguayan Truco"],
+    ["servicioti.com.uy", "ServicioTI · Truco uruguayo, reglamento (2026)"],
   ];
   return names.find(([part]) => target.includes(part))?.[1] ?? fallback;
 }
+const current = appendix("fuentes");
 ---
 
 <Site
-  title="Fuentes y variantes"
-  description="Consultá las fuentes del manual y compará las reglas que cambian entre mesas, plataformas y campeonatos uruguayos."
+  title="Fuentes y discrepancias"
+  description="Consultá las fuentes del reglamento de truco uruguayo y los puntos en que difieren, capítulo por capítulo."
   active="fuentes"
 >
   <div class="page-intro">
@@ -36,12 +41,12 @@ function catalogTitle(target: string, fallback: string) {
         <span class="mini-diamond" aria-hidden="true">
           ◆
         </span>{" "}
-        Referencias
+        Apéndice {current.letter}
       </p>
-      <h1>Fuentes y variantes</h1>
+      <h1>Fuentes y discrepancias</h1>
       <p>
-        Reglamentos de campeonatos, testimonios uruguayos y mesas en línea. Cada capítulo indica de
-        dónde sale la regla que describe.
+        Reglamentos de campeonatos, testimonios uruguayos y mesas en línea. Sirven de referencia: el
+        reglamento decide la regla y registra acá dónde difieren las fuentes.
       </p>
     </div>
   </div>
@@ -49,6 +54,14 @@ function catalogTitle(target: string, fallback: string) {
     <aside class="side-index">
       <p class="eyebrow">En esta página</p>
       <nav aria-label="Secciones de fuentes">
+        <a href="#criterio">
+          Criterio editorial
+          <Icon name="down" size={14} />
+        </a>
+        <a href="#por-capitulo">
+          Por capítulo
+          <Icon name="down" size={14} />
+        </a>
         <a href="#bibliografia">
           Fuentes consultadas
           <Icon name="down" size={14} />
@@ -57,13 +70,56 @@ function catalogTitle(target: string, fallback: string) {
           Imágenes de la baraja
           <Icon name="down" size={14} />
         </a>
-        <a href="#variantes">
-          Variantes de mesa
-          <Icon name="down" size={14} />
-        </a>
+      </nav>
+      <p class="eyebrow side-index-secondary">Apéndices</p>
+      <nav aria-label="Apéndices del reglamento">
+        {appendices.map((item) => (
+          <a href={item.href} aria-current={item.id === "fuentes" ? "page" : undefined}>
+            {item.letter}. {item.title}
+            <Icon name="arrow" size={14} />
+          </a>
+        ))}
       </nav>
     </aside>
     <div class="sources-body">
+      <section id="criterio">
+        <h2>Criterio editorial</h2>
+        <p>
+          No hay un reglamento oficial ni una federación del truco uruguayo. Cada regla del manual
+          sale de comparar reglamentos de clubes y torneos, testimonios publicados y mesas en línea.
+          Cuando coinciden, el manual enuncia la regla. Cuando difieren, elige la que siguen más
+          fuentes y el motor de las mesas en línea, la anota como regla y deja las otras como
+          variantes de mesa. Cada decisión queda en el historial de cambios.
+        </p>
+      </section>
+      <section id="variantes">
+        <h2>Variantes de mesa</h2>
+        <p>
+          Las variantes se comparan en el{" "}
+          <a href={appendix("variantes").href}>apéndice A, Variantes de mesa</a>.
+        </p>
+      </section>
+      <section id="por-capitulo">
+        <h2>Por capítulo</h2>
+        {rules.map((rule) => (
+          <article class="chapter-sources" id={"cap-" + rule.id}>
+            <h3>
+              <a href={ruleUrl(rule.id)}>
+                {chapterNumber(rule.id)}. {rule.title}
+              </a>
+            </h3>
+            <SourceList sources={rule.sources} />
+            {rule.discrepancias?.map((item) => (
+              <div class="discrepancy">
+                <p class="eyebrow">Discrepancia</p>
+                <h4>{item.tema}</h4>
+                <p>{item.texto}</p>
+                {item.sources && <SourceList sources={item.sources} />}
+              </div>
+            ))}
+          </article>
+        ))}
+      </section>
       <section id="bibliografia">
         <h2>Fuentes consultadas</h2>
         <ul class="bibliography">
@@ -90,28 +146,6 @@ function catalogTitle(target: string, fallback: string) {
           { title: "GlyphEnjoyer · Cartas Tatú 50, Wikimedia Commons", url: "https://commons.wikimedia.org/wiki/File:Cartas_Tat%C3%BA_50.png" },
           { title: "Creative Commons · CC0 1.0 Universal", url: "https://creativecommons.org/publicdomain/zero/1.0/deed.es" },
         ]} />
-      </section>
-      <section id="variantes">
-        <h2>Variantes de mesa</h2>
-        <p>
-          Antes de repartir, acuerden qué modalidad van a jugar. Estas diferencias pueden cambiar
-          quién cobra y cuántos tantos se anota.
-        </p>
-        {variants.map((variant) => (
-          <details class="variant-details">
-            <summary>
-              {variant.title}
-              <Icon name="down" size={18} />
-            </summary>
-            <div>
-              <p>{variant.text}</p>
-              <SourceList sources={variant.sources} />
-              <a class="text-link" href={ruleUrl(variant.rule.id)}>
-                Leer el capítulo <Icon name="arrow" size={15} />
-              </a>
-            </div>
-          </details>
-        ))}
       </section>
     </div>
   </div>
