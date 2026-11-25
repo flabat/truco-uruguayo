@@ -1,4 +1,4 @@
-// Copia CanvasKit (el motor de Skia en la web) a app/public para que la exportación lo sirva en /app/canvaskit.wasm.
+// Copia CanvasKit (el motor de Skia en la web) a app/public para que la exportación lo sirva en /jugar/canvaskit.wasm.
 // No se versiona: sale de node_modules al exportar.
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";

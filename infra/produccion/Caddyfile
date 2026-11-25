@@ -7,16 +7,23 @@
 	handle @identidad {
 		reverse_proxy identidad:8080
 	}
-	# Exportación web de la app, en su dirección de prueba. Las rutas profundas vuelven a su index.html.
-	redir /app /app/ 308
-	handle /app/* {
+	# /jugar/ es la exportación web de la app. Las rutas profundas vuelven a su index.html.
+	redir /jugar /jugar/{?query} 308
+	handle /jugar/* {
 		root * /srv
-		header /app/_expo/static/* Cache-Control "public, max-age=31536000, immutable" {
+		header /jugar/_expo/static/* Cache-Control "public, max-age=31536000, immutable" {
 			match status 200 206 304
 		}
-		try_files {path} /app/index.html
+		try_files {path} /jugar/index.html
 		file_server
 	}
+	# Enlaces ya compartidos: la dirección de prueba /app/… y el regreso /volver/?mesa= abren la misma pantalla.
+	redir /app /jugar/{?query} 308
+	handle_path /app/* {
+		redir * /jugar{uri} 308
+	}
+	@volver path /volver /volver/
+	redir @volver /jugar/{?query} 308
 	handle {
 		root * /srv
 		header /_astro/* Cache-Control "public, max-age=31536000, immutable" {

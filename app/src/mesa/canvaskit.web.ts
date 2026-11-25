@@ -1,5 +1,5 @@
-/** CanvasKit se sirve junto a la exportación web, en /app/canvaskit.wasm (lo copia scripts/copiar-canvaskit.mjs). */
-export const opcionesCanvasKit = { locateFile: (archivo: string) => "/app/" + archivo };
+/** CanvasKit se sirve junto a la exportación web, en /jugar/canvaskit.wasm (lo copia scripts/copiar-canvaskit.mjs). */
+export const opcionesCanvasKit = { locateFile: (archivo: string) => "/jugar/" + archivo };
 
 let carga: Promise<void> | undefined;
 

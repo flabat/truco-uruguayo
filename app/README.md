@@ -12,7 +12,7 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 ## Ingreso
 
 - **iOS y Android:** abre `/api/auth/login?app=<desafío>` en el navegador del sistema, vuelve por `eltruco://ingreso?codigo=…`, canjea el código con `POST /api/auth/canje` y guarda la sesión en el almacenamiento seguro. Cada pedido lleva `Authorization: Bearer`.
-- **Web:** se sirve en `/app/` del mismo origen que la API y usa la cookie `truco_sesion`.
+- **Web:** se sirve en `/jugar/` del mismo origen que la API y usa la cookie `truco_sesion`.
 
 ## Comandos (desde la raíz)
 
@@ -23,4 +23,4 @@ npm --workspace app run ios       # build de desarrollo en el simulador (requier
 npm --workspace app run android   # build de desarrollo en Android (requiere Android Studio)
 ```
 
-En las apps, la API es `https://eltru.co`. Para la pila local, definí `EXPO_PUBLIC_API_URL=http://localhost:8081` (en Android, `http://10.0.2.2:8081`) y usá otro puerto para Metro, que también toma el 8081: `npm --workspace app run ios -- --port 8082`. La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/app/`.
+En las apps, la API es `https://eltru.co`. Para la pila local, definí `EXPO_PUBLIC_API_URL=http://localhost:8081` (en Android, `http://10.0.2.2:8081`) y usá otro puerto para Metro, que también toma el 8081: `npm --workspace app run ios -- --port 8082`. La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/jugar/`.

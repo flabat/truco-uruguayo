@@ -33,7 +33,7 @@ const sha256 = async (texto: string) =>
 /** Abre el ingreso en el navegador del sistema y canjea el retorno. En la web, navega y la cookie hace el resto. */
 export async function abrirIngreso() {
   if (esWeb) {
-    globalThis.location.assign(cliente.url("/api/auth/login?volver=/app/"));
+    globalThis.location.assign(cliente.url("/api/auth/login?volver=/jugar/"));
     return null;
   }
   const { verificador, desafio } = await crearPar(Crypto.getRandomBytes, sha256);

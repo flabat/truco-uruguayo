@@ -1,7 +1,7 @@
-// Desde el host, contra la web del stack descartable: en la exportación web de la app (/app/), eva crea una
+// Desde el host, contra la web del stack descartable: en la exportación web de la app (/jugar/), eva crea una
 // mesa de parejas (siempre con señas automáticas al pie), diego entra por la invitación sin sesión, clara
 // la mira desde el salón y las computadoras completan la mesa. También: volver a la mesa, los enlaces
-// ?mesa= y ?mirar=, la precarga de las cartas y un duelo con computadoras en escritorio.
+// ?mesa= y ?mirar=, los viejos /app/… y /volver/?mesa=, la precarga de las cartas y un duelo con computadoras en escritorio.
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 import { mazo } from "@eltruco/motor/cartas.ts";
@@ -61,10 +61,10 @@ async function probarParejas() {
   const eva = await pagina();
   const cartas = new Map();
   eva.on("response", r => {
-    const nombre = /\/app\/assets\/_public\/img\/cartas\/tatu\/([a-z0-9-]+)\.[a-f0-9]+\.webp$/.exec(new URL(r.url()).pathname)?.[1];
+    const nombre = /\/jugar\/assets\/_public\/img\/cartas\/tatu\/([a-z0-9-]+)\.[a-f0-9]+\.webp$/.exec(new URL(r.url()).pathname)?.[1];
     if (nombre) cartas.set(nombre, r.status());
   });
-  await eva.goto("/app/");
+  await eva.goto("/jugar/");
   await ingresar(eva, "eva");
   await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
   // Las cartas se precargan en el salón, antes de la mesa.
@@ -73,9 +73,9 @@ async function probarParejas() {
   assert.ok([...cartas.values()].every(estado => estado === 200), "todas las cartas responden 200");
 
   await crearMesa(eva, { modalidad: "2 contra 2", meta: 30 });
-  await eva.waitForURL(new RegExp(`/app/sala/${uuid}\\?nueva=1$`));
+  await eva.waitForURL(new RegExp(`/jugar/sala/${uuid}\\?nueva=1$`));
   await expect(titulo(eva, "Esperando jugadores")).toBeVisible();
-  const id = idDeLaRuta(eva, "/app/sala/");
+  const id = idDeLaRuta(eva, "/jugar/sala/");
   const mesa = await api(eva, "/api/mesas/" + id);
   assert.equal(mesa.modo, "2v2");
   assert.equal(mesa.formato, "pairs-private-senas");
@@ -85,33 +85,33 @@ async function probarParejas() {
   await expect(eva.getByText("Faltan 3 jugadores para repartir.")).toBeVisible();
   await expect(eva.getByText(/^Señas automáticas al pie/)).toBeVisible();
   const enlace = await eva.getByRole("textbox", { name: "Enlace de invitación" }).inputValue();
-  assert.match(enlace, new RegExp(`^${web}/app/\\?invitacion=[A-Za-z0-9_-]+$`));
+  assert.match(enlace, new RegExp(`^${web}/jugar/\\?invitacion=[A-Za-z0-9_-]+$`));
   assert.equal(new URL(enlace).searchParams.get("invitacion"), new URL(mesa.invitacion).searchParams.get("invitacion"));
 
   // diego abre la invitación sin sesión: ingresa y vuelve a la invitación.
   const diego = await pagina();
   await diego.goto(enlace);
   await ingresar(diego, "diego", "Te invitaron a una mesa");
-  await diego.waitForURL(/\/app\/invitacion\//, espera);
+  await diego.waitForURL(/\/jugar\/invitacion\//, espera);
   await boton(diego, "Ocupar mi asiento").click();
-  await diego.waitForURL(new RegExp(`/app/sala/${id}$`));
+  await diego.waitForURL(new RegExp(`/jugar/sala/${id}$`));
   await expect(titulo(diego, "Esperando jugadores")).toBeVisible();
   await expect(eva.getByText("Faltan 2 jugadores para repartir.")).toBeVisible(espera);
   // La misma invitación, ya sentado, lleva a la sala.
   await diego.goto(enlace);
-  await diego.waitForURL(new RegExp(`/app/sala/${id}$`), espera);
+  await diego.waitForURL(new RegExp(`/jugar/sala/${id}$`), espera);
 
   // Las computadoras completan la mesa y todos pasan a la mesa en juego.
   for (const asiento of [3, 4]) {
     await boton(eva, `Agregar computadora al asiento ${asiento}`).click();
     if (asiento === 3) await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
   }
-  await Promise.all([eva, diego].map(p => p.waitForURL(`/app/mesa?id=${id}`, espera)));
+  await Promise.all([eva, diego].map(p => p.waitForURL(`/jugar/mesa?id=${id}`, espera)));
   await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible()));
 
   // clara la ve en el salón y la mira.
   const clara = await pagina();
-  await clara.goto("/app/");
+  await clara.goto("/jugar/");
   await ingresar(clara, "clara");
   await expect(titulo(clara, "Mesas en juego")).toBeVisible(espera);
   const fila = clara.getByTestId("mesa-" + id);
@@ -119,7 +119,7 @@ async function probarParejas() {
   await expect(fila).toContainText("Parejas");
   await expect(fila).toContainText("2 personas y 2 computadoras");
   await boton(fila, "Mirar").click();
-  await clara.waitForURL(`/app/mirar/${id}`);
+  await clara.waitForURL(`/jugar/mirar/${id}`);
   // La mesa nueva, sin mano ni Cantos: el tanteador nombra a cada pareja.
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
   await expect(clara.getByRole("heading", { level: 2, name: "La mano en juego" })).toBeVisible(espera);
@@ -130,8 +130,8 @@ async function probarParejas() {
   // tanteador van espacios duros (\u00a0): `\s` los acepta.
   await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador\s1\sy\sComputadora\s3\s\d+\s·\s\d+\sJugador\s2\sy\sComputadora\s4\s·\sa\s\d+$/);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
-  await clara.goto(`/app/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
-  await clara.waitForURL(`/app/mirar/${id}`, espera);
+  await clara.goto(`/jugar/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
+  await clara.waitForURL(`/jugar/mirar/${id}`, espera);
   assert.equal((await clara.request.get("/api/mesas/" + id)).status(), 404, "mirar no sienta a clara");
 
   // eva vuelve al salón y retoma su mesa; las rutas profundas resisten una recarga.
@@ -145,23 +145,37 @@ async function probarParejas() {
   }).toPass(espera);
   await expect(titulo(eva, "Mesas en juego")).toBeVisible();
   await boton(eva, "Volver a mi mesa").click();
-  await eva.waitForURL(`/app/mesa?id=${id}`, espera);
+  await eva.waitForURL(`/jugar/mesa?id=${id}`, espera);
   await eva.reload();
   await expect(eva.getByTestId("mesa")).toBeVisible(espera);
+  await diego.goto(`/jugar/?mesa=${id}`);
+  await diego.waitForURL(`/jugar/mesa?id=${id}`, espera);
+  await diego.goto(`/jugar/sala/${id}`);
+  await diego.waitForURL(`/jugar/mesa?id=${id}`, espera);
+  // Los enlaces ya compartidos llegan a la misma pantalla: la dirección de prueba /app/… y el regreso
+  // de Discord /volver/?mesa=, que sienta a quien juega y abre la mesa para mirar a quien no.
   await diego.goto(`/app/?mesa=${id}`);
-  await diego.waitForURL(`/app/mesa?id=${id}`, espera);
-  await diego.goto(`/app/sala/${id}`);
-  await diego.waitForURL(`/app/mesa?id=${id}`, espera);
-  await Promise.all([eva, diego, clara].map(p => p.context().close()));
+  await diego.waitForURL(`/jugar/mesa?id=${id}`, espera);
+  await diego.goto(`/volver/?mesa=${id}`);
+  await diego.waitForURL(`/jugar/mesa?id=${id}`, espera);
+  await clara.goto(`/app/mirar/${id}`);
+  await clara.waitForURL(`/jugar/mirar/${id}`, espera);
+  const desdeDiscord = await pagina();
+  await desdeDiscord.goto(`/volver/?mesa=${id}`);
+  assert.equal(new URL(desdeDiscord.url()).pathname, "/jugar/");
+  await ingresar(desdeDiscord, "clara", "Volvé a tu mesa");
+  await desdeDiscord.waitForURL(`/jugar/mirar/${id}`, espera);
+  await expect(desdeDiscord.getByText("👁 Mirando")).toBeVisible(espera);
+  await Promise.all([eva, diego, clara, desdeDiscord].map(p => p.context().close()));
 }
 
 async function probarDuelo() {
   const eva = await pagina({ width: 1280, height: 800 });
-  await eva.goto("/app/");
+  await eva.goto("/jugar/");
   await ingresar(eva, "eva");
   await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
   await crearMesa(eva, { modalidad: "1 contra 1", meta: 20, computadoras: true });
-  await eva.waitForURL(new RegExp(`/app/mesa\\?id=${uuid}$`), espera);
+  await eva.waitForURL(new RegExp(`/jugar/mesa\\?id=${uuid}$`), espera);
   const id = new URL(eva.url()).searchParams.get("id");
   const mesa = await api(eva, "/api/mesas/" + id);
   assert.equal(mesa.modo, "1v1");
@@ -174,7 +188,7 @@ async function probarDuelo() {
 try {
   await probarParejas();
   await probarDuelo();
-  console.log("App web verificada · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa y precarga de cartas.");
+  console.log("App web verificada en /jugar/ · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa, enlaces viejos y precarga de cartas.");
 } finally {
   await browser.close();
 }

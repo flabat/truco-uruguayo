@@ -1,4 +1,4 @@
-// Las 40 cartas Tatú y el reverso, como recursos de la app (Metro los empaqueta; en la web van bajo /app/).
+// Las 40 cartas Tatú y el reverso, como recursos de la app (Metro los empaqueta; en la web van bajo /jugar/).
 // Los require tienen que ser literales: la prueba app-salon comprueba que la lista coincide con el mazo.
 import type { CardId } from "@eltruco/motor/cartas.ts";
 

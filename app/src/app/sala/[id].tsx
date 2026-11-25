@@ -1,7 +1,7 @@
 import { mensajeDe } from "@eltruco/cliente/cliente.ts";
 import { useMesa } from "@eltruco/cliente/use-mesa.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
-import { useLocalSearchParams } from "expo-router";
+import { Redirect, useLocalSearchParams, type Href } from "expo-router";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 import type { Jugador } from "../../api/cliente.ts";
@@ -58,6 +58,8 @@ function SalaDeEspera({ id, jugador, recienCreada, avisoInicial }: {
     if (lista) entrarALaMesa(id);
   }, [lista, id]);
 
+  // Sin asiento en la mesa, el enlace `?mesa=` (y el viejo /volver/?mesa=, que llega acá) la abre para mirar.
+  if (error?.status === 404) return <Redirect href={("/mirar/" + id) as Href} />;
   if (error) {
     return (
       <Pantalla titulo="Mesa no disponible">
