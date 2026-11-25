@@ -1,5 +1,5 @@
 // Desde el host, contra la web del stack descartable: la exportación web de la app en /app/ ingresa con la
-// cookie, muestra el perfil, abre la mesa provisoria, cierra la sesión y pide (y cancela) la eliminación.
+// cookie, muestra el salón y el perfil, cierra la sesión y pide (y cancela) la eliminación.
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 import { ingresarDesdeIdentidad } from "./ingreso-local-navegador.mjs";
@@ -25,6 +25,8 @@ async function ingresar(p) {
 }
 
 async function verPerfil(p, esperado) {
+  await expect(titulo(p, "Mesas en juego")).toBeVisible(espera);
+  await p.getByRole("link", { name: "Tu perfil" }).click();
   await expect(titulo(p, "Tu perfil")).toBeVisible(espera);
   await expect(p.getByText(esperado.nombre, { exact: true })).toBeVisible();
   await expect(p.getByText(esperado.id, { exact: true })).toBeVisible();
@@ -41,13 +43,12 @@ async function recorrer(viewport, completo) {
   assert.ok(yo?.id, "el ingreso desde /app/ deja la cookie de sesión");
   await verPerfil(p, yo);
 
-  // La mesa provisoria, también al recargar su dirección.
-  await p.getByRole("link", { name: "Mesa de prueba" }).click();
-  await expect(titulo(p, "Mesa de prueba")).toBeVisible();
-  assert.equal(new URL(p.url()).pathname, "/app/mesa");
+  // El perfil, también al recargar su dirección; sin id, la mesa vuelve al salón.
+  assert.equal(new URL(p.url()).pathname, "/app/perfil");
   await p.reload();
-  await expect(titulo(p, "Mesa de prueba")).toBeVisible(espera);
-  await boton(p, "Volver").click();
+  await expect(titulo(p, "Tu perfil")).toBeVisible(espera);
+  await p.goto("/app/mesa");
+  await expect(titulo(p, "Mesas en juego")).toBeVisible(espera);
   await verPerfil(p, yo);
 
   await boton(p, "Cerrar sesión").click();
@@ -84,7 +85,7 @@ async function recorrer(viewport, completo) {
 try {
   await recorrer({ width: 375, height: 760 }, true);
   await recorrer({ width: 1280, height: 800 }, false);
-  console.log("App web verificada · ingreso con cookie, perfil, mesa provisoria, cierre y eliminación de cuenta.");
+  console.log("App web verificada · ingreso con cookie, salón, perfil, cierre y eliminación de cuenta.");
 } finally {
   await browser.close();
 }

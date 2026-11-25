@@ -1,17 +1,33 @@
-import { Link } from "expo-router";
-import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import type { Jugador } from "../api/cliente.ts";
-import { Confirmacion } from "../componentes/Confirmacion.tsx";
+import { Redirect, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 import { Aviso, Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { useSesion } from "../ingreso/contexto.tsx";
-import { colores, fuentes } from "../tema.ts";
+import { destinoDeEnlace, destinoPendiente, rutaDe, type Destino } from "../salon/enlaces.ts";
+import { guardadoDeDestino } from "../salon/plataforma.ts";
+import { Salon } from "../salon/Salon.tsx";
 
+const titulos: Record<Destino["tipo"] | "ninguno", [string, string]> = {
+  invitacion: ["Te invitaron a una mesa", "Ingresá para ocupar tu asiento con los demás jugadores."],
+  mirar: ["Ingresá para mirar la mesa", "Al volver del ingreso vas a ver las jugadas públicas."],
+  mesa: ["Volvé a tu mesa", "Ingresá para seguir jugando en tu mesa."],
+  ninguno: ["Entrá a jugar", "Ingresá con tu cuenta de El Truco para jugar en línea con personas y computadoras."],
+};
+
+/** Inicio: ingreso o salón. También recibe los enlaces `?invitacion=`, `?mesa=` y `?mirar=`. */
 export default function Inicio() {
   const { estado, ingresar, reintentar } = useSesion();
+  const parametros = useLocalSearchParams();
+  const destino = destinoDeEnlace(parametros);
   const [ingresando, setIngresando] = useState(false);
+  const retomado = useRef<Destino | null | undefined>(undefined);
+
+  // Sin sesión, el destino se guarda: en la web el ingreso sale de la app y vuelve a /app/.
+  const fuera = estado.tipo === "fuera";
+  useEffect(() => {
+    if (fuera && destino) destinoPendiente(guardadoDeDestino, destino);
+  }, [fuera, destino?.tipo, destino && (destino.tipo === "invitacion" ? destino.token : destino.id)]);
+
   if (estado.tipo === "cargando") return <Cargando />;
-  if (estado.tipo === "dentro") return <Perfil jugador={estado.jugador} aviso={estado.aviso} />;
   if (estado.tipo === "sinConexion") {
     return (
       <Pantalla titulo="Sin conexión">
@@ -20,10 +36,23 @@ export default function Inicio() {
       </Pantalla>
     );
   }
+  if (estado.tipo === "dentro") {
+    if (retomado.current === undefined) {
+      const guardado = destinoPendiente(guardadoDeDestino, null);
+      retomado.current = destino ?? guardado;
+    }
+    const ir = retomado.current;
+    if (ir) {
+      retomado.current = null;
+      return <Redirect href={rutaDe(ir) as Href} />;
+    }
+    return <Salon jugador={estado.jugador} />;
+  }
+  const [titulo, texto] = titulos[destino?.tipo ?? "ninguno"];
   return (
-    <Pantalla titulo="Entrá a jugar">
+    <Pantalla titulo={titulo}>
       {estado.aviso ? <Aviso>{estado.aviso}</Aviso> : null}
-      <Parrafo>Ingresá con tu cuenta de El Truco para jugar en línea con personas y computadoras.</Parrafo>
+      <Parrafo>{texto}</Parrafo>
       <Boton
         ocupado={ingresando}
         onPress={() => { setIngresando(true); ingresar().finally(() => setIngresando(false)); }}
@@ -33,61 +62,3 @@ export default function Inicio() {
     </Pantalla>
   );
 }
-
-const textoEliminar = "Cerramos tu sesión en todos tus dispositivos y te sacamos de tus mesas. "
-  + "Tenés 30 días para arrepentirte: si volvés a ingresar antes, cancelamos la eliminación. "
-  + "Después borramos tu cuenta y lo que te identifica; las partidas que jugaste con otras personas quedan sin tu nombre.";
-
-function Perfil({ jugador, aviso }: { jugador: Jugador; aviso?: string }) {
-  const { cerrarSesion, eliminarCuenta } = useSesion();
-  const [confirmando, setConfirmando] = useState(false);
-  const [ocupado, setOcupado] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function confirmarEliminacion() {
-    setOcupado(true);
-    setError(null);
-    try {
-      await eliminarCuenta();
-    } catch {
-      setError("No pudimos pedir la eliminación. Probá de nuevo.");
-      setConfirmando(false);
-      setOcupado(false);
-    }
-  }
-
-  return (
-    <Pantalla titulo="Tu perfil">
-      {aviso ? <Aviso>{aviso}</Aviso> : null}
-      {error ? <Aviso>{error}</Aviso> : null}
-      <View style={estilos.ficha}>
-        <Text style={estilos.etiqueta}>Nombre</Text>
-        <Text style={estilos.nombre}>{jugador.nombre}</Text>
-        <Text style={estilos.etiqueta}>ID de jugador</Text>
-        <Text selectable style={estilos.id}>{jugador.id}</Text>
-      </View>
-      <Link href="/mesa" style={estilos.enlace}>Mesa de prueba</Link>
-      <Boton variante="secundario" ocupado={ocupado} onPress={() => { setOcupado(true); cerrarSesion(); }}>
-        Cerrar sesión
-      </Boton>
-      <Boton variante="peligro" ocupado={ocupado} onPress={() => setConfirmando(true)}>Eliminar mi cuenta</Boton>
-      <Confirmacion
-        visible={confirmando}
-        titulo="¿Eliminar tu cuenta?"
-        texto={textoEliminar}
-        confirmar="Eliminar mi cuenta"
-        ocupado={ocupado}
-        alConfirmar={confirmarEliminacion}
-        alCancelar={() => setConfirmando(false)}
-      />
-    </Pantalla>
-  );
-}
-
-const estilos = StyleSheet.create({
-  ficha: { borderColor: colores.borde, borderRadius: 16, borderWidth: 1, gap: 4, padding: 16, backgroundColor: "#fffdf6" },
-  etiqueta: { color: colores.tintaSuave, fontFamily: fuentes.texto, fontSize: 13, marginTop: 8, textTransform: "uppercase", letterSpacing: 0.6 },
-  nombre: { color: colores.tinta, fontFamily: fuentes.titulo, fontSize: 24 },
-  id: { color: colores.tinta, fontFamily: fuentes.texto, fontSize: 15 },
-  enlace: { color: colores.panoClaro, fontFamily: fuentes.textoFuerte, fontSize: 16, textDecorationLine: "underline" },
-});

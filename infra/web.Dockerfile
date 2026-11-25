@@ -13,6 +13,8 @@ ENV EXPO_NO_TELEMETRY=1
 COPY paquetes/motor/src ./paquetes/motor/src
 COPY paquetes/cliente/src ./paquetes/cliente/src
 COPY app/app.json app/tsconfig.json ./app/
+# Las cartas Tatú se empaquetan como recursos de la app.
+COPY public/img/cartas/tatu ./public/img/cartas/tatu
 COPY app/src ./app/src
 RUN npm run app:exportar
 

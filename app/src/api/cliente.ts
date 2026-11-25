@@ -1,6 +1,7 @@
 // Rutas de ingreso y perfil de la app, sobre el cliente compartido (@eltruco/cliente): con sesión manda
 // `Authorization: Bearer` en HTTP y en el WebSocket; sin sesión (la web) usa la cookie del mismo origen.
 import { crearCliente, ErrorMesa, type Jugador, type OpcionesCliente } from "@eltruco/cliente/cliente.ts";
+import type { Lectura } from "../salon/consulta.ts";
 
 export type { Jugador };
 
@@ -19,16 +20,30 @@ export type ClienteApp = ReturnType<typeof crearClienteApp>;
 
 export function crearClienteApp(opciones: OpcionesCliente & { base: string }) {
   const { pedir, vivo } = crearCliente(opciones);
+  const url = (ruta: string) => opciones.base.replace(/\/+$/, "") + ruta;
   return {
     pedir,
     vivo,
-    url: (ruta: string) => opciones.base.replace(/\/+$/, "") + ruta,
+    url,
+
+    /** Lectura periódica del salón y del visor, con `If-None-Match` para no bajar lo que no cambió. */
+    async consultar<T>(ruta: string, etag: string | null, signal?: AbortSignal): Promise<Lectura<T>> {
+      const sesion = opciones.sesion?.();
+      const headers: Record<string, string> = {
+        ...(sesion && { Authorization: "Bearer " + sesion }),
+        ...(etag && { "If-None-Match": etag }),
+      };
+      const respuesta = await (opciones.fetch ?? fetch)(url(ruta), { cache: "no-store", signal, headers });
+      if (respuesta.status === 304 || respuesta.status === 401 || respuesta.status === 404) return { estado: respuesta.status };
+      if (!respuesta.ok) throw new ErrorMesa(respuesta.status, "No se pudo consultar el salón.");
+      return { estado: 200, datos: await respuesta.json() as T, etag: respuesta.headers.get("ETag") };
+    },
 
     /** El jugador de la sesión, o `null` si no hay sesión vigente. */
     async jugador(): Promise<Jugador | null> {
       try {
-        const { id, nombre } = await pedir<Jugador>("/api/jugador");
-        return { id, nombre };
+        const { id, nombre, salonHabilitado } = await pedir<Jugador>("/api/jugador");
+        return { id, nombre, ...(salonHabilitado !== undefined && { salonHabilitado }) };
       } catch (error) {
         if (error instanceof ErrorMesa && error.status === 401) return null;
         throw error;

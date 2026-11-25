@@ -38,8 +38,10 @@ export function ProveedorDeSesion({ children }: { children: ReactNode }) {
     try {
       const ingreso = await abrirIngreso();
       if (!ingreso) return;
+      // El canje no dice si el salón está habilitado: /api/jugador sí.
+      const jugador = await cliente.jugador().catch(() => null) ?? ingreso.jugador;
       setEstado({
-        tipo: "dentro", jugador: ingreso.jugador,
+        tipo: "dentro", jugador,
         aviso: ingreso.bajaCancelada ? "Cancelamos la eliminación de tu cuenta." : undefined,
       });
     } catch {

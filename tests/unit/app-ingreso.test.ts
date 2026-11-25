@@ -104,7 +104,8 @@ const encabezados = (p: Pedido) => new Headers(p.init.headers);
 test("el cliente manda la sesión guardada como Bearer", async () => {
   const { pedidos, pedir } = fetchFalso({ "GET /api/jugador": () => json(200, { ...ana, salonHabilitado: true }) });
   const cliente = crearCliente({ base: "https://eltru.co", sesion: () => "abc_-1", fetch: pedir });
-  assert.deepEqual(await cliente.jugador(), ana);
+  // El salón de la app necesita saber si el salón está habilitado.
+  assert.deepEqual(await cliente.jugador(), { ...ana, salonHabilitado: true });
   assert.equal(pedidos[0].url, "https://eltru.co/api/jugador");
   assert.equal(encabezados(pedidos[0]).get("authorization"), "Bearer abc_-1");
 });
@@ -233,4 +234,21 @@ test("cerrarSesion del cliente propaga un rechazo de la API", async () => {
   const { pedir } = fetchFalso({ "POST /api/auth/logout": () => json(403, null) });
   const cliente = crearCliente({ base: "https://eltru.co", sesion: () => "s", fetch: pedir });
   await assert.rejects(cliente.cerrarSesion(), ErrorMesa);
+});
+
+test("la consulta del salón manda la sesión y el ETag, y distingue 304, 401 y 404", async () => {
+  let estado = 200;
+  const { pedidos, pedir } = fetchFalso({
+    "GET /api/salon/mesas": () => estado === 200
+      ? new Response(JSON.stringify({ mesas: [] }), { status: 200, headers: { ETag: "\"v1\"" } })
+      : new Response(null, { status: estado }),
+  });
+  const cliente = crearCliente({ base: "https://eltru.co/", sesion: () => "abc", fetch: pedir });
+  assert.deepEqual(await cliente.consultar("/api/salon/mesas", null), { estado: 200, datos: { mesas: [] }, etag: "\"v1\"" });
+  assert.equal(encabezados(pedidos[0]).get("authorization"), "Bearer abc");
+  assert.equal(encabezados(pedidos[0]).get("if-none-match"), null);
+  for (estado of [304, 401, 404]) assert.deepEqual(await cliente.consultar("/api/salon/mesas", "\"v1\""), { estado });
+  assert.equal(encabezados(pedidos[1]).get("if-none-match"), "\"v1\"");
+  estado = 500;
+  await assert.rejects(cliente.consultar("/api/salon/mesas", null));
 });
