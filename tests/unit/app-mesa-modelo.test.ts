@@ -349,7 +349,7 @@ test("datosDeTercetos: el encabezado nombra el lance y la hoja Reparto agrupa lo
   }]);
 });
 
-test("tercetos: quien espera ve las cartas recordadas del reparto, menos las que ya jugó, y no las juega", () => {
+test("tercetos: después de jugar su duelo, quien espera ve las cartas que le sobraron y no las juega", () => {
   const duelo1 = partidaTercetosDe(vistaDe(6, 0, { turno: 0, legales: ["carta"] }), {
     manoNumero: 3, lance: { tipo: "pico-a-pico", duelo: 1, activos: [0, 3] },
   });
