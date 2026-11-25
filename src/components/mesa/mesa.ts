@@ -1,7 +1,7 @@
 import { crearMesaGuiada, type VistaGuiada } from "../../aprendizaje/mano-guiada";
 import { comparar, temas } from "../../aprendizaje/lecciones";
 import type { Respuesta } from "../../aprendizaje/tipos";
-import { canto } from "../../lib/cantos";
+import { canto } from "@eltruco/cliente/cantos.ts";
 import { createElement } from "react";
 import { CartaEnLeccion } from "./TapeteLeccion";
 import { asientos, nombre, pareja, resultadoMano, resultadoVuelta, situacionDeJuego, ultimaJugada } from "./relato";

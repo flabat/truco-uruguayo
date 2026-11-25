@@ -1,5 +1,5 @@
 import type { Partida } from "./cliente";
-import { pausaDeVoz, vocesEnAccion } from "./Voz";
+import { pausaDeVoz, vocesEnAccion } from "@eltruco/cliente/voces.ts";
 import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type Paso } from "./secuencia-de-mesa";
 
 function pasosNuevos(

@@ -100,3 +100,19 @@ test("idComando genera un UUID v4", () => {
   assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
   assert.notEqual(id, idComando());
 });
+
+test("el paquete solo importa sus archivos, el motor o React, y no toca el DOM", async () => {
+  const { readdir, readFile } = await import("node:fs/promises");
+  const carpeta = new URL("../../paquetes/cliente/src/", import.meta.url);
+  const archivos = (await readdir(carpeta)).filter(n => n.endsWith(".ts"));
+  assert.ok(archivos.length >= 10, "faltan los archivos del paquete");
+  for (const nombre of archivos) {
+    const texto = await readFile(new URL(nombre, carpeta), "utf8");
+    for (const [, ruta] of texto.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)["']([^"']+)["']/g)) {
+      assert.match(ruta, /^(?:\.\/[a-z0-9-]+\.ts|@eltruco\/motor\/[a-z0-9-]+\.ts|react)$/, `${nombre} importa ${ruta}`);
+    }
+    const sinComentarios = texto.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+    assert.doesNotMatch(sinComentarios.replace(/globalThis as \{ location\?/g, ""),
+      /\b(?:window|document|HTMLElement|HTMLImageElement)\b|(?<!\.)\blocation\b/, nombre);
+  }
+});

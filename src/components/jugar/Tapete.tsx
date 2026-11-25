@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { ResultadoVuelta, Vuelta } from "@eltruco/motor/mano.ts";
 import { useGloboDelCompanero, type PieEnTapete } from "./GloboDelCompanero";
-import { nombrar } from "./HistorialDeMano";
+import { nombrar } from "@eltruco/cliente/textos.ts";
 import "./tapete.css";
 
 interface Puesto {

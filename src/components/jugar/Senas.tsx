@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { signals, type Signal } from "../../../training/contracts/index";
-import { canto } from "../../lib/cantos";
-import { cartasPorId } from "../../lib/cartas";
+import { canto } from "@eltruco/cliente/cantos.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import juego from "../../data/juego.json";
-import type { Voz } from "./Voz";
+import type { Voz } from "@eltruco/cliente/voces.ts";
 import { EnJuego } from "./Tablero";
 import type { Eleccion, Mesa, Partida } from "./cliente";
 import "./senas.css";

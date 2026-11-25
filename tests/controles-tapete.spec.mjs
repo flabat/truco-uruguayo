@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { aplicarOnline, iniciarOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { proyectarTercetos } from "../api/partidas-tercetos.ts";
-import { canto } from "../src/lib/cantos.ts";
+import { canto } from "@eltruco/cliente/cantos.ts";
 import { comprobarMuestraDelDador } from "./helpers/muestra.mjs";
 import { teamSignalsVersion } from "../training/contracts/index.ts";
 
