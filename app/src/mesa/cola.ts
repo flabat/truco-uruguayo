@@ -4,7 +4,8 @@ import { entreCartas, vueltaCompleta, type Paso, type PasosNuevos } from "@eltru
 import { vozDeIndicacion, type Nombre } from "@eltruco/cliente/textos.ts";
 import { vocesEnAccion, type Voz } from "@eltruco/cliente/voces.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
-import { textoFrasePie } from "@eltruco/motor/senas-pie.ts";
+import { textoFrasePie, type FrasePie } from "@eltruco/motor/senas-pie.ts";
+import { duracionDelReparto } from "./movimiento.ts";
 
 export const entreCartasLiviano = 250;
 export const vueltaCompletaLiviana = 1200;
@@ -69,11 +70,22 @@ export function duracion(paso: Paso<unknown>, liviano: boolean): number {
   return paso.espera;
 }
 
+/** Lo que tarda el reparto que anuncian `eventos`, o 0 si no hay. La cola no avanza mientras tanto. */
+export function esperaDelReparto(eventos: readonly Evento[], partida: unknown, liviano: boolean): number {
+  if (!eventos.some(e => e.tipo === "reparto") || !esMostrada(partida)) return 0;
+  return duracionDelReparto(liviano, partida.vista.equipoPorAsiento.length);
+}
+
+/** Cuánto queda en pantalla `paso`: su espera más lo que falte del reparto que termina en `repartoHasta`. */
+export function esperaDelPaso(paso: Paso<unknown>, liviano: boolean, repartoHasta: number, ahora: number): number {
+  return duracion(paso, liviano) + Math.max(0, repartoHasta - ahora);
+}
+
 export type Evento =
   | { tipo: "reparto"; dador: number }
   | { tipo: "carta"; asiento: number; carta: CardId; propia: boolean }
   | { tipo: "canto"; asiento: number; texto: string; paraMi: boolean }
-  | { tipo: "frase"; emisor: number; destinatario: number; texto: string; paraMi: boolean }
+  | { tipo: "frase"; emisor: number; destinatario: number; pie: FrasePie; texto: string; paraMi: boolean }
   | { tipo: "vuelta"; ganador: number | null; nuestra: boolean }
   | { tipo: "cobro"; equipo: number; tantos: number; nuestro: boolean }
   | { tipo: "chico"; nuestro: boolean };
@@ -136,7 +148,7 @@ export function eventosEntre(antes: Mostrada | undefined, despues: Mostrada, miA
 
   const dichas = otraMano ? 0 : antes.indicaciones?.length ?? 0;
   for (const d of despues.indicaciones?.slice(dichas) ?? []) {
-    eventos.push({ tipo: "frase", emisor: d.emisor, destinatario: d.destinatario,
+    eventos.push({ tipo: "frase", emisor: d.emisor, destinatario: d.destinatario, pie: d.frase,
       texto: nombre ? vozDeIndicacion(d, nombre) : textoFrasePie[d.frase],
       paraMi: miAsiento != null && d.destinatario === miAsiento });
   }
@@ -168,7 +180,7 @@ interface EnPantalla {
   voz?: Voz;
 }
 
-function esMostrada(p: unknown): p is Mostrada {
+export function esMostrada(p: unknown): p is Mostrada {
   return typeof p === "object" && p !== null && "vista" in p && p.vista != null;
 }
 
@@ -177,6 +189,15 @@ function salto(antes: Mostrada, despues: Mostrada, miAsiento: number | null) {
   if (!mismoLance(antes, despues)) return true;
   return despues.vista.acciones.slice(antes.vista.acciones.length)
     .some(a => a.tipo === "carta" || a.asiento !== miAsiento);
+}
+
+/**
+ * Lo que se anuncia la primera vez que la pantalla muestra una partida. Si la espera de la mesa
+ * se vio en la sala (`presencio`), su primera mano se reparte a la vista; si no, aparece repartida.
+ */
+export function eventosAlAbrir(partida: unknown, presencio: boolean): Evento[] {
+  if (!presencio || !esMostrada(partida) || partida.manoNumero !== 1) return [];
+  return [{ tipo: "reparto", dador: partida.vista.dador }];
 }
 
 /**
