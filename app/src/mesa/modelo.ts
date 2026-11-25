@@ -1,7 +1,9 @@
 import { canto } from "@eltruco/cliente/cantos.ts";
 import type { Mesa, Partida, PartidaTercetos, Tipo } from "@eltruco/cliente/cliente.ts";
+import type { ResumenMesa } from "@eltruco/cliente/salon.ts";
+import { entreCartas, vueltaCompleta, type Paso, type PasosNuevos } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
-import { descripcionDeIndicacion, descripcionDeJugada, nombrar, tantos } from "@eltruco/cliente/textos.ts";
+import { descripcionDeIndicacion, descripcionDeJugada, nombrar, tantos, vozDeIndicacion } from "@eltruco/cliente/textos.ts";
 import { estadoDelTurno, palabraDeTercetos, tanteador, tituloDeRespuesta } from "@eltruco/cliente/turno.ts";
 import { vocesEnReposo, type Voz } from "@eltruco/cliente/voces.ts";
 import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
@@ -10,6 +12,7 @@ import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { AccionOnline, LanceTercetos, PruebaDeTantos, ResumenLance, VistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { resumirTantos, type ResumenTantos } from "@eltruco/motor/resumen-tantos.ts";
 import type { IndicacionPie, VistaPie } from "@eltruco/motor/senas-pie.ts";
+import type { tableroEspectador } from "../../../api/tablero-espectador.ts";
 import { avisoDeCanto, type EntradaHoja } from "./hoja-cantos.ts";
 
 export interface AsientoVisible {
@@ -496,5 +499,182 @@ export function datosDeTercetos(mesa: Mesa, partida: PartidaTercetos, visible: M
     vueltas: archivado ? [] : datos.vueltas,
     encabezado: `Reparto ${partida.manoNumero} · ${etiqueta} · Vuelta ${visible.vuelta}`,
     reparto: partida.historialLances.map(cerrado),
+  };
+}
+
+/** La respuesta de `/api/salon/mesas/<id>`: el tablero público, sin el punto de vista de ningún jugador. */
+export interface MesaObservada extends ResumenMesa {
+  asientos: { asiento: number; equipo: number; tipo: "humano" | "computadora"; nombre: string }[];
+  estado: "en-juego" | "terminada" | "interrumpida";
+  vozDisponible?: boolean;
+  versionReglas?: number;
+  politica?: string;
+  edicionModelo?: { nombre: string; publicado?: string };
+  tablero: ReturnType<typeof tableroEspectador>;
+}
+
+const tituloObservada = { "en-juego": "La mano en juego", terminada: "Partida terminada", interrumpida: "Partida interrumpida" };
+
+/** La frase del pie que sigue en el aire: la dicha antes de la próxima acción. */
+function fraseEnElAire(m: MesaObservada) {
+  const ultima = m.tablero.indicaciones?.at(-1);
+  return ultima?.indiceAccion === m.tablero.acciones.length ? ultima : undefined;
+}
+
+/** Como `resumenDeLaMano` del visor web. */
+function resumenDeLaMano(m: MesaObservada, nombre: Nombre) {
+  if (m.estado === "interrumpida") return "La exhibición terminó sin ganador.";
+  if (m.estado === "terminada") return "Ganó el equipo " + (m.puntos[0] > m.puntos[1] ? 1 : 2) + ".";
+  if (m.tablero.resultado) return "El equipo " + (m.tablero.resultado.equipo + 1) + " ganó la mano.";
+  const frase = fraseEnElAire(m);
+  if (frase) return descripcionDeIndicacion(frase, nombre);
+  const ultima = m.tablero.acciones.at(-1);
+  return ultima ? descripcionDeJugada(ultima, nombre) : "Se repartieron las cartas.";
+}
+
+/**
+ * La mesa del espectador: la de un jugador sin mano propia, vista desde el asiento 0. Los equipos
+ * se nombran por sus jugadores. La frase del pie es pública; los gestos nunca llegan al tablero.
+ */
+export function mesaDeEspectador(m: MesaObservada): MesaVisible {
+  const t = m.tablero;
+  const nombre: Nombre = a => m.asientos[a]?.nombre ?? "";
+  const { cerrada, vuelta, numeroVuelta } = vueltaEnMesa(t, m.asientos.length, nombre);
+  const ganador = cerrada?.resultado.tipo === "ganada" ? cerrada.resultado.asiento : null;
+  const jugadas = t.acciones.filter(a => a.tipo === "carta");
+  const asientos = m.asientos.map((a): AsientoVisible => {
+    const equipo = a.equipo === 1 ? 1 : 0;
+    const jugada = vuelta?.jugadas.find(j => j.asiento === a.asiento)?.carta ?? null;
+    const etiquetas: AsientoVisible["etiquetas"] = [];
+    if (a.asiento === t.mano) etiquetas.push("Mano");
+    if (a.asiento === t.dador) etiquetas.push("Dador");
+    return {
+      asiento: a.asiento,
+      nombre: a.nombre,
+      equipo,
+      inicial: inicialDe(a.nombre),
+      papel: equipo === 0 ? "Equipo 1" : "Equipo 2",
+      etiquetas,
+      enMano: Math.max(0, 3 - jugadas.filter(j => j.asiento === a.asiento).length),
+      jugada,
+      ganadora: jugada !== null && ganador === a.asiento,
+      parda: jugada !== null && cerrada?.resultado.tipo === "parda",
+      turno: t.turnoDeCartas === a.asiento,
+      estadoPico: null,
+    };
+  });
+  const pareja = (e: number) => m.asientos.filter(a => a.equipo === e).map(a => a.nombre).join(" y ");
+  const frase = fraseEnElAire(m);
+  return {
+    modalidad: m.modo,
+    propio: null,
+    vistaDesde: 0,
+    dador: t.dador,
+    mano: t.mano,
+    muestra: t.muestra,
+    asientos,
+    manoPropia: [],
+    puedeJugarCarta: false,
+    legales: [],
+    tanteador: {
+      texto: `${pareja(0)} ${m.puntos[0]} · ${m.puntos[1]} ${pareja(1)} · a ${m.meta}`,
+      nos: m.puntos[0],
+      ellos: m.puntos[1],
+      meta: m.meta,
+    },
+    estado: { titulo: tituloObservada[m.estado], indicacion: resumenDeLaMano(m, nombre) },
+    lance: null,
+    etiquetaLance: null,
+    vuelta: numeroVuelta,
+    voces: frase
+      ? [{ asiento: frase.emisor, texto: vozDeIndicacion(frase, nombre), indice: 0 }]
+      : vocesEnReposo(t as Parameters<typeof vocesEnReposo>[0]),
+    fin: null,
+  };
+}
+
+/** El tablero no trae versión: la cola compara las acciones públicas y las frases del pie. */
+export interface ObservadaVersionada {
+  version: number;
+  manoNumero: number;
+  indicaciones?: readonly unknown[];
+  mesa: MesaObservada;
+}
+
+export function versionarObservada(mesa: MesaObservada): ObservadaVersionada {
+  return { version: mesa.tablero.acciones.length, manoNumero: mesa.manoNumero, indicaciones: mesa.tablero.indicaciones, mesa };
+}
+
+type Tablero = MesaObservada["tablero"];
+
+/**
+ * Los pasos del espectador: solo las cartas nuevas de la misma mano, una por paso, como las
+ * presenta la mesa del jugador. Al cambiar de mano o al entrar, la mesa aparece al día.
+ */
+export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = (anterior, actual, _presencio, pendientes = []) => {
+  if (!actual || !anterior || anterior.manoNumero !== actual.manoNumero) return [];
+  const previo = anterior.mesa.tablero;
+  const t = actual.mesa.tablero;
+  if (t.acciones.length <= previo.acciones.length) return [];
+  const vueltas = [...t.vueltas, ...(t.vueltaActual ? [t.vueltaActual] : [])];
+  const enPaso = (tablero: Tablero): ObservadaVersionada => ({
+    ...actual,
+    indicaciones: tablero.indicaciones,
+    mesa: { ...actual.mesa, estado: "en-juego", puntos: anterior.mesa.puntos, tablero },
+  });
+  const pasos: Paso<ObservadaVersionada | undefined>[] = [...pendientes];
+  let cartas = previo.acciones.filter(a => a.tipo === "carta").length;
+  for (let i = previo.acciones.length; i < t.acciones.length; i++) {
+    if (t.acciones[i].tipo !== "carta") continue;
+    cartas++;
+    // La vuelta de esta carta y cuántas cartas de ella ya están en el paño.
+    let antes = 0;
+    let k = 0;
+    while (k < vueltas.length - 1 && antes + vueltas[k].jugadas.length < cartas) antes += vueltas[k++].jugadas.length;
+    const enLaVuelta = cartas - antes;
+    const completa = k < t.vueltas.length && enLaVuelta === t.vueltas[k].jugadas.length;
+    const acciones = t.acciones.slice(0, i + 1);
+    const parcial: Tablero = {
+      ...t,
+      ...(t.indicaciones && { indicaciones: t.indicaciones.filter(d => d.indiceAccion <= i) }),
+      acciones,
+      vueltas: t.vueltas.slice(0, completa ? k + 1 : k),
+      vueltaActual: completa
+        ? { salida: vueltas[k + 1]?.salida ?? t.vueltas[k].salida, jugadas: [] }
+        : { salida: vueltas[k].salida, jugadas: vueltas[k].jugadas.slice(0, enLaVuelta) },
+      turnoDeCartas: null,
+      valorTruco: 1 + acciones.filter(a => ["truco", "retruco", "vale-cuatro"].includes(a.tipo)).length,
+      cobros: previo.cobros,
+      comparacionFlor: previo.comparacionFlor,
+      resultado: null,
+    };
+    const ultima = i + 1 === t.acciones.length;
+    const antesDelResultado = completa ? enPaso({
+      ...parcial,
+      vueltas: t.vueltas.slice(0, k),
+      vueltaActual: { salida: t.vueltas[k].salida, jugadas: t.vueltas[k].jugadas },
+    }) : undefined;
+    pasos.push({ partida: ultima ? actual : enPaso(parcial), antesDelResultado, espera: completa ? vueltaCompleta : entreCartas });
+  }
+  return pasos;
+};
+
+/** Las hojas Mano y Tantos del espectador, con los textos del panel del visor web. */
+export function datosDelEspectador(m: MesaObservada, visible: MesaVisible): DatosDeHojas {
+  const t = m.tablero;
+  const nombre: Nombre = a => m.asientos[a]?.nombre ?? "";
+  const equipo: Equipo = e => "Equipo " + (e + 1);
+  return {
+    encabezado: "Mano " + m.manoNumero + " · Vuelta " + visible.vuelta,
+    historial: historialDeMano(t as Pick<VistaOnline, "acciones" | "cobros">, t.indicaciones, nombre),
+    vueltas: filasDeVueltas(t.vueltas, equipo, nombre),
+    cuenta: null,
+    cobrados: {
+      titulo: "Tantos cobrados",
+      filas: t.cobros.map(c => ({
+        equipo: equipo(c.equipo) + " · " + tantos(c.tantos),
+        texto: "por " + c.motivo + (c.asiento != null && c.tantoGanador != null ? ` (${nombre(c.asiento)} con ${c.tantoGanador})` : ""),
+      })),
+    },
   };
 }

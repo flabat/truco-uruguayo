@@ -21,6 +21,7 @@ import { enRect } from "./vistas/estilo.ts";
 import { Hoja } from "./vistas/Hoja.tsx";
 import { Paneles } from "./vistas/Paneles.tsx";
 import { HojaCantos } from "./vistas/HojaCantos.tsx";
+import { PieDelEspectador } from "./vistas/PieDelEspectador.tsx";
 import { franjaDeSenas, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
 import { Tira, titulosDePestana, type Pestana } from "./vistas/Tira.tsx";
 
@@ -151,6 +152,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
               jugar={acciones.jugarCarta} rechazos={rechazos} sinGesto={jugarSinGesto} />
           ) : null}
           <Senas senas={senas} geometria={geometria} />
+          {geometria.espectador ? <PieDelEspectador rect={geometria.espectador} salir={acciones.salir} /> : null}
           {mesa.fin && conFin ? (
             <FinDeMano fin={mesa.fin} rect={geometria.pano}
               alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir} />

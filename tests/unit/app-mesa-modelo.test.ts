@@ -5,8 +5,9 @@ import type { ResumenLance } from "@eltruco/motor/mesa-online.ts";
 import { hojaDeCantos } from "../../app/src/mesa/hoja-cantos.ts";
 import {
   cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador,
-  mesaDeTercetos, recordarCartas,
+  datosDelEspectador, mesaDeEspectador, mesaDeTercetos, pasosDelEspectador, recordarCartas, versionarObservada, type MesaObservada,
 } from "../../app/src/mesa/modelo.ts";
+import { entreCartas, vueltaCompleta } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 const enReposo = { presentando: false };
@@ -394,4 +395,131 @@ test("datosDeTercetos: con el lance en la mesa ya archivado, sus vueltas no se r
   assert.deepEqual(datos.vueltas, []);
   assert.equal(datos.reparto?.[0].vueltas.length, 1);
   assert.deepEqual(datos.reparto?.[0].historial, [], "su historial ya está arriba");
+});
+
+function observadaDe(tablero: Partial<MesaObservada["tablero"]> = {}, mesa: Partial<MesaObservada> = {}): MesaObservada {
+  return {
+    id: "m1", modo: "2v2", formato: "pairs", origen: "humana", humanos: 2, computadoras: 2, manoNumero: 3,
+    puntos: [12, 9], meta: 30, ultimaActividad: "2026-11-25T12:00:00.000Z", estado: "en-juego",
+    asientos: [
+      { asiento: 0, equipo: 0, tipo: "humano", nombre: "Ana" },
+      { asiento: 1, equipo: 1, tipo: "humano", nombre: "Diego" },
+      { asiento: 2, equipo: 0, tipo: "humano", nombre: "Clara" },
+      { asiento: 3, equipo: 1, tipo: "computadora", nombre: "Compu" },
+    ],
+    tablero: {
+      dador: 0, mano: 1, muestra: "oros-06", vueltas: [], vueltaActual: { salida: 1, jugadas: [] },
+      turnoDeCartas: 1, valorTruco: 1, acciones: [], cobros: [], comparacionFlor: undefined, resultado: null,
+      ...tablero,
+    },
+    ...mesa,
+  };
+}
+
+const vueltaDeDos = {
+  salida: 1,
+  jugadas: [{ asiento: 1, carta: "oros-07" }, { asiento: 2, carta: "copas-04" }],
+} satisfies MesaObservada["tablero"]["vueltaActual"];
+const accionesDeDos = vueltaDeDos.jugadas.map(j => ({ tipo: "carta" as const, ...j }));
+
+test("espectador: tanteador con los nombres de cada pareja, sin asiento propio ni mano", () => {
+  const m = mesaDeEspectador(observadaDe({ vueltaActual: vueltaDeDos, acciones: accionesDeDos, turnoDeCartas: 3 }));
+  assert.deepEqual(m.tanteador, { texto: "Ana y Clara 12 · 9 Diego y Compu · a 30", nos: 12, ellos: 9, meta: 30 });
+  assert.equal(m.propio, null);
+  assert.equal(m.vistaDesde, 0);
+  assert.deepEqual(m.manoPropia, []);
+  assert.deepEqual(m.legales, []);
+  assert.equal(m.puedeJugarCarta, false);
+  assert.equal(m.fin, null);
+  assert.deepEqual(m.asientos.map(a => a.papel), ["Equipo 1", "Equipo 2", "Equipo 1", "Equipo 2"]);
+  assert.deepEqual(m.asientos.map(a => a.enMano), [3, 2, 2, 3]);
+  assert.deepEqual(m.asientos.map(a => a.jugada), [null, "oros-07", "copas-04", null]);
+  assert.deepEqual(m.asientos[0].etiquetas, ["Dador"]);
+  assert.deepEqual(m.asientos[1].etiquetas, ["Mano"]);
+  assert.equal(m.asientos[3].turno, true);
+  assert.deepEqual(m.estado, { titulo: "La mano en juego", indicacion: "Clara jugó 4 de copas." });
+});
+
+test("espectador: la frase del pie es pública y se ve como voz del pie; nunca hay gestos", () => {
+  const m = mesaDeEspectador(observadaDe({
+    vueltaActual: vueltaDeDos, acciones: accionesDeDos,
+    indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 2 }],
+  }));
+  assert.deepEqual(m.voces, [{ asiento: 2, texto: "Ana, vení", indice: 0 }]);
+  assert.equal(m.estado.indicacion, "Clara le dijo a Ana «Vení».");
+  assert.doesNotMatch(JSON.stringify(m), /gesto/i);
+  // Con otra carta en el paño, la frase ya no está en el aire.
+  const despues = mesaDeEspectador(observadaDe({
+    vueltaActual: { ...vueltaDeDos, jugadas: [...vueltaDeDos.jugadas, { asiento: 3, carta: "espadas-01" }] },
+    acciones: [...accionesDeDos, { tipo: "carta", asiento: 3, carta: "espadas-01" }],
+    indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 2 }],
+  }));
+  assert.deepEqual(despues.voces, []);
+});
+
+test("espectador: el resumen dice quién ganó la mano o la partida", () => {
+  const ganada = observadaDe({ resultado: { equipo: 1, tantos: 2, motivo: "vueltas" }, turnoDeCartas: null });
+  assert.equal(mesaDeEspectador(ganada).estado.indicacion, "El equipo 2 ganó la mano.");
+  const terminada = observadaDe({}, { estado: "terminada", puntos: [30, 21] });
+  assert.deepEqual(mesaDeEspectador(terminada).estado, { titulo: "Partida terminada", indicacion: "Ganó el equipo 1." });
+});
+
+test("espectador: solo se presentan las cartas nuevas de la misma mano", () => {
+  const antes = versionarObservada(observadaDe({
+    vueltaActual: { salida: 1, jugadas: [vueltaDeDos.jugadas[0]] }, acciones: [accionesDeDos[0]],
+  }));
+  const ultima = { asiento: 3, carta: "espadas-01" } as const;
+  const ahora = versionarObservada(observadaDe({
+    vueltaActual: { salida: 1, jugadas: [...vueltaDeDos.jugadas, ultima] },
+    acciones: [...accionesDeDos, { tipo: "truco", asiento: 3 }, { tipo: "carta", ...ultima }],
+  }));
+  const pasos = pasosDelEspectador(antes, ahora, false);
+  assert.equal(pasos.length, 2);
+  const [primero, segundo] = pasos;
+  assert.equal(primero.espera, entreCartas);
+  assert.deepEqual(primero.partida!.mesa.tablero.vueltaActual?.jugadas, vueltaDeDos.jugadas);
+  assert.equal(primero.partida!.mesa.tablero.acciones.length, 2);
+  assert.equal(mesaDeEspectador(primero.partida!.mesa).estado.indicacion, "Clara jugó 4 de copas.");
+  assert.equal(segundo.partida, ahora);
+  assert.deepEqual(pasosDelEspectador(ahora, ahora, false), []);
+  assert.deepEqual(pasosDelEspectador(undefined, ahora, true), []);
+  const otraMano = versionarObservada(observadaDe({}, { manoNumero: 4 }));
+  assert.deepEqual(pasosDelEspectador(ahora, otraMano, false), []);
+});
+
+test("espectador: al completar una vuelta, el naipe se ve antes del veredicto", () => {
+  const antes = versionarObservada(observadaDe({
+    vueltaActual: { salida: 1, jugadas: vueltaDeDos.jugadas }, acciones: accionesDeDos,
+  }));
+  const cerrada = {
+    salida: 1, resultado: { tipo: "ganada", asiento: 3, equipo: 1 },
+    jugadas: [...vueltaDeDos.jugadas, { asiento: 3, carta: "espadas-01" }, { asiento: 0, carta: "bastos-04" }],
+  } satisfies MesaObservada["tablero"]["vueltas"][number];
+  const ahora = versionarObservada(observadaDe({
+    vueltas: [cerrada], vueltaActual: { salida: 3, jugadas: [{ asiento: 3, carta: "oros-03" }] },
+    acciones: cerrada.jugadas.concat({ asiento: 3, carta: "oros-03" }).map(j => ({ tipo: "carta" as const, ...j })),
+  }));
+  const [tercera, cuarta, quinta] = pasosDelEspectador(antes, ahora, false);
+  assert.equal(tercera.espera, entreCartas);
+  assert.equal(cuarta.espera, vueltaCompleta);
+  assert.deepEqual(cuarta.partida!.mesa.tablero.vueltas, [cerrada]);
+  assert.deepEqual(cuarta.partida!.mesa.tablero.vueltaActual, { salida: 3, jugadas: [] });
+  assert.deepEqual(cuarta.antesDelResultado!.mesa.tablero.vueltas, []);
+  assert.deepEqual(cuarta.antesDelResultado!.mesa.tablero.vueltaActual?.jugadas, cerrada.jugadas);
+  assert.equal(quinta.partida, ahora);
+});
+
+test("datosDelEspectador: el historial con la frase del pie, las vueltas y los cobros por equipo", () => {
+  const m = observadaDe({
+    vueltaActual: vueltaDeDos, acciones: accionesDeDos,
+    indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 1 }],
+    cobros: [{ equipo: 1, tantos: 2, motivo: "envido", asiento: 1, tantoGanador: 31 }],
+  });
+  const datos = datosDelEspectador(m, mesaDeEspectador(m));
+  assert.equal(datos.encabezado, "Mano 3 · Vuelta 1");
+  assert.deepEqual(datos.historial, ["Diego jugó 7 de oros.", "Clara le dijo a Ana «Vení».", "Clara jugó 4 de copas."]);
+  assert.equal(datos.cuenta, null);
+  assert.deepEqual(datos.cobrados, {
+    titulo: "Tantos cobrados", filas: [{ equipo: "Equipo 2 · 2 tantos", texto: "por envido (Diego con 31)" }],
+  });
 });
