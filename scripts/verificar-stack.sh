@@ -18,6 +18,8 @@ unset KEYCLOAK_ADMIN_TOKEN
 # Datos de cuenta inventados: la imagen genera la asociación con la app (/.well-known/).
 export APPLE_TEAM_ID=EQUIPO1234 ANDROID_CERT_SHA256=$(printf 'AB:%.0s' {1..31})CD
 export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
+# Rama, commit, fecha y cambios sin commit para GET /api/version y el pie.
+eval "$(node scripts/version.mjs --exportar)"
 
 cleanup() {
   local status=$?
@@ -49,6 +51,7 @@ bash scripts/verificar-app-web.sh "$caddy_web"
 node scripts/verificar-enlaces-app.mjs "$caddy_web"
 docker rm -f "$caddy" >/dev/null && caddy=
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
+node scripts/verificar-version.mjs "$web"
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
   if (d.issuer !== process.argv[1] || !d.authorization_endpoint || !d.token_endpoint || !d.jwks_uri) process.exit(1)

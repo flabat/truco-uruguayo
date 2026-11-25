@@ -7,7 +7,7 @@ Truco uruguayo con muestra para jugar en el navegador. La misma aplicación reú
 Para jugar una partida, levantá la aplicación completa con Docker Compose desde la raíz del repositorio.
 
 ```sh
-TRUCO_RELEASE=$(git rev-parse HEAD) docker compose up --build --wait
+eval "$(node scripts/version.mjs --exportar)" && docker compose up --build --wait
 ```
 
 Abrí [El Truco](http://localhost:8081/). Podés leer las reglas o practicar como invitado. Para crear una mesa o aceptar una invitación, ingresá con una de las cuentas de prueba de la [guía del entorno local](docs/entorno-local.md). Compose levanta la web, la API que aplica el motor de juego, PostgreSQL y el proveedor de identidad.

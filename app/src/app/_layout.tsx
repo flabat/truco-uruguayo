@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { PieVersion } from "../componentes/PieVersion.tsx";
 import { Cargando } from "../componentes/ui.tsx";
 import { ProveedorDeSesion } from "../ingreso/contexto.tsx";
 import { colores } from "../tema.ts";
@@ -25,6 +26,7 @@ export default function Raiz() {
       {listas || error ? (
         <ProveedorDeSesion>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
+          <PieVersion />
         </ProveedorDeSesion>
       ) : <Cargando />}
     </SafeAreaProvider>

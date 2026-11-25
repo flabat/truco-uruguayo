@@ -17,6 +17,10 @@ COPY training/partners/policy.ts /app/training/partners/
 # fuera de node_modules para que Node quite los tipos de los .ts de los paquetes.
 RUN mkdir -p /app/node_modules/@eltruco && ln -s ../../paquetes/motor /app/node_modules/@eltruco/motor \
   && ln -s ../../paquetes/cliente /app/node_modules/@eltruco/cliente
+# La versión que publica GET /api/version; va al final para no invalidar las capas anteriores.
+ARG TRUCO_RELEASE= TRUCO_RAMA= TRUCO_FECHA= TRUCO_SUCIO= TRUCO_ETIQUETA=
+ENV TRUCO_RELEASE=$TRUCO_RELEASE TRUCO_RAMA=$TRUCO_RAMA TRUCO_FECHA=$TRUCO_FECHA TRUCO_SUCIO=$TRUCO_SUCIO \
+  TRUCO_ETIQUETA=$TRUCO_ETIQUETA
 USER node
 EXPOSE 3001
 CMD ["node", "server.ts"]
