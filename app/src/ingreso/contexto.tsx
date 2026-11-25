@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Jugador } from "../api/cliente.ts";
-import { abrirIngreso, almacen, cliente } from "./plataforma.ts";
+import type { Jugador, JugadorDePrueba } from "../api/cliente.ts";
+import { abrirIngreso, abrirIngresoDePrueba, almacen, cliente } from "./plataforma.ts";
 import { cargarJugador, cerrarSesion as cerrar, eliminarCuenta as eliminar } from "./sesion.ts";
 
 export type Estado =
@@ -12,6 +12,9 @@ export type Estado =
 interface Sesion {
   estado: Estado;
   ingresar(): Promise<void>;
+  /** Los jugadores del ingreso de prueba; vacío salvo que la API anuncie el modo (AUTH_DEV). */
+  jugadoresDePrueba: JugadorDePrueba[];
+  ingresarComo(usuario: string): Promise<void>;
   cerrarSesion(): Promise<void>;
   eliminarCuenta(): Promise<void>;
   reintentar(): void;
@@ -24,6 +27,16 @@ const fecha = (iso: string) =>
 
 export function ProveedorDeSesion({ children }: { children: ReactNode }) {
   const [estado, setEstado] = useState<Estado>({ tipo: "cargando" });
+  const [jugadoresDePrueba, setJugadoresDePrueba] = useState<JugadorDePrueba[]>([]);
+
+  // Lo decide la API: sin AUTH_DEV responde 404 y no se muestra nada.
+  const fuera = estado.tipo === "fuera";
+  useEffect(() => {
+    if (!fuera) return;
+    let vigente = true;
+    cliente.jugadoresDePrueba().then(usuarios => { if (vigente) setJugadoresDePrueba(usuarios); });
+    return () => { vigente = false; };
+  }, [fuera]);
 
   const cargar = useCallback(() => {
     setEstado({ tipo: "cargando" });
@@ -34,9 +47,9 @@ export function ProveedorDeSesion({ children }: { children: ReactNode }) {
   }, []);
   useEffect(cargar, [cargar]);
 
-  const ingresar = useCallback(async () => {
+  const entrar = useCallback(async (abrir: () => Promise<{ jugador: Jugador; bajaCancelada: boolean } | null>) => {
     try {
-      const ingreso = await abrirIngreso();
+      const ingreso = await abrir();
       if (!ingreso) return;
       // El canje no dice si el salón está habilitado: /api/jugador sí.
       const jugador = await cliente.jugador().catch(() => null) ?? ingreso.jugador;
@@ -48,6 +61,8 @@ export function ProveedorDeSesion({ children }: { children: ReactNode }) {
       setEstado({ tipo: "fuera", aviso: "No pudimos completar el ingreso. Probá de nuevo." });
     }
   }, []);
+  const ingresar = useCallback(() => entrar(abrirIngreso), [entrar]);
+  const ingresarComo = useCallback((usuario: string) => entrar(() => abrirIngresoDePrueba(usuario)), [entrar]);
 
   const cerrarSesion = useCallback(async () => {
     await cerrar({ cliente, almacen });
@@ -63,7 +78,7 @@ export function ProveedorDeSesion({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ContextoSesion.Provider value={{ estado, ingresar, cerrarSesion, eliminarCuenta, reintentar: cargar }}>
+    <ContextoSesion.Provider value={{ estado, ingresar, jugadoresDePrueba, ingresarComo, cerrarSesion, eliminarCuenta, reintentar: cargar }}>
       {children}
     </ContextoSesion.Provider>
   );

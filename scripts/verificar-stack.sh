@@ -68,11 +68,13 @@ node scripts/verificar-app-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-app-salon.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-app-mesa.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
+node scripts/verificar-ingreso-dev.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-migracion-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-sesion-app.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-auth-dev-apagado.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
 COMPOSE_PROJECT_NAME="$project" npm run auth:api
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
