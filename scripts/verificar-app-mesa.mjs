@@ -470,7 +470,9 @@ async function probarEspectador() {
   // El tanteador nombra a cada pareja con los nombres del salón.
   const { asientos, meta } = await api(clara, "/api/salon/mesas/" + id);
   const pareja = e => asientos.filter(a => a.equipo === e).map(a => a.nombre).join(" y ");
-  await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(`^${pareja(0)} \\d+ · \\d+ ${pareja(1)} · a ${meta}$`), espera);
+  // Entre las piezas del tanteador van espacios duros (\u00a0): `\s` los acepta.
+  const tanteador = `^${pareja(0)} \\d+ · \\d+ ${pareja(1)} · a ${meta}$`.replaceAll(" ", "\\s");
+  await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(tanteador), espera);
   // Una mano entera: el espectador nunca tiene cartas propias ni Cantos, y el estado sigue la mano.
   await observar(clara, '[data-testid^="carta-"]');
   await clara.evaluate(() => {
