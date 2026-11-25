@@ -360,40 +360,45 @@ async function observar(p, selector) {
   }, selector);
 }
 
+// Los casos nuevos juegan con luis: después de esta prueba, eva pide la baja (verificar-baja-ingreso.mjs) y sus
+// mesas empezadas pasan a jugarlas las computadoras. Un chico de tercetos a 100 entre computadoras ocuparía el
+// trabajador con turnos de mesas humanas y frenaría las exhibiciones de las pruebas siguientes.
 async function probarTercetos() {
-  const eva = await entrar("eva");
-  const { modos } = await api(eva, "/api/modalidades");
+  const luis = await entrar("luis");
+  const { modos } = await api(luis, "/api/modalidades");
   assert.ok(modos.includes("3v3"),
-    "La pila no ofrece 3 contra 3 a eva: Tercetos tiene que estar habilitado para todos (lo hace verificar-gestion.mjs). Modalidades: " + modos.join(", "));
+    "La pila no ofrece 3 contra 3 a luis: Tercetos tiene que estar habilitado para todos (lo hace verificar-gestion.mjs). Modalidades: " + modos.join(", "));
   // A 100 tantos, el segundo reparto es pico a pico salvo que alguien llegue a 50 en la primera redondilla.
-  await crearMesa(eva, "3 contra 3", true, 100);
-  const id = await enLaMesa(eva);
-  let m = await partida(eva, id);
+  await crearMesa(luis, "3 contra 3", true, 100);
+  const id = await enLaMesa(luis);
+  let m = await partida(luis, id);
   assert.equal(m.formato, "triples");
   assert.equal(m.lance.tipo, "redondilla");
-  await expect(eva.getByTestId("etiqueta-lance")).toHaveText(/^Reparto 1 · Redondilla · Vuelta \d$/, espera);
-  await expect(cartasEnMano(eva)).toHaveCount(3, espera);
-  await capturar(eva, "tercetos-redondilla-375x760");
+  await expect(luis.getByTestId("etiqueta-lance")).toHaveText(/^Reparto 1 · Redondilla · Vuelta \d$/, espera);
+  // Un truco no querido o una flor de las computadoras puede cerrar el reparto antes de que luis juegue.
+  await expect.poll(async () => await cartasEnMano(luis).count() === 3 || await luis.getByTestId("fin-de-mano").isVisible(), espera)
+    .toBe(true);
+  await capturar(luis, "tercetos-redondilla-375x760");
   // Cuando le toca, juega sus cartas tocándolas. Un mazo o un truco no querido pueden cerrar el reparto antes.
-  const fin = await avanzar([eva], id, terminada, { pasos: 400 });
-  await expect(eva.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", espera);
+  const fin = await avanzar([luis], id, terminada, { pasos: 400 });
+  await expect(luis.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", espera);
   // Al terminar el reparto, cada lance (la redondilla o los tres duelos) ya está en el historial.
   const cartasPropias = x => x.historialLances.flatMap(l => l.acciones)
     .filter(a => a.tipo === "carta" && a.asiento === x.vista.asiento).length;
   let jugadas = cartasPropias(fin);
   assert.ok(Math.max(...fin.puntos) < 50, "nadie llegó a 50 en la redondilla: " + fin.puntos);
-  await tocar(eva, id, () => boton(eva, "Repartir otra mano"), fin.version);
-  await expect.poll(async () => (await partida(eva, id)).manoNumero, espera).toBe(2);
+  await tocar(luis, id, () => boton(luis, "Repartir otra mano"), fin.version);
+  await expect.poll(async () => (await partida(luis, id)).manoNumero, espera).toBe(2);
 
-  // Pico a pico: tres duelos; mientras espera el suyo, eva ve en qué duelo le toca y la mesa no juega.
-  m = await partida(eva, id);
+  // Pico a pico: tres duelos; mientras espera el suyo, luis ve en qué duelo le toca y la mesa no juega.
+  m = await partida(luis, id);
   assert.equal(m.lance.tipo, "pico-a-pico");
-  await expect(eva.getByTestId("etiqueta-lance")).toHaveText(/^Pico a pico · Duelo \d de 3$/, espera);
+  await expect(luis.getByTestId("etiqueta-lance")).toHaveText(/^Pico a pico · Duelo \d de 3$/, espera);
   const enviadas = [];
-  eva.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.url()); });
+  luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.url()); });
   // Mientras otros duelos se presentan, el estado narra cada jugada: el aviso del duelo propio puede durar
   // poco. Un observador lo anota aunque dure un instante.
-  await eva.evaluate(() => {
+  await luis.evaluate(() => {
     window.avisosDeDuelo = new Set();
     const revisar = () => {
       for (const aviso of document.body.innerText.match(/Te toca en el duelo \d de 3\./g) ?? []) window.avisosDeDuelo.add(aviso);
@@ -401,14 +406,14 @@ async function probarTercetos() {
     revisar();
     new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
   });
-  const avisos = () => eva.evaluate(() => [...window.avisosDeDuelo]);
+  const avisos = () => luis.evaluate(() => [...window.avisosDeDuelo]);
   let esperoSuDuelo = false;
   let jugoSuDuelo = false;
   // Los duelos salen de la mano: el 1 lo abre la mano y su frente, el 2 el siguiente, y así.
   const dueloPropio = 1 + ((m.vista.asiento - m.vista.mano + 6) % 3);
   for (let paso = 0; ; paso++) {
     assert.ok(paso < 400, "El pico a pico no avanzó");
-    m = await partida(eva, id);
+    m = await partida(luis, id);
     if (terminada(m)) {
       jugadas += cartasPropias(m);
       break;
@@ -417,32 +422,33 @@ async function probarTercetos() {
     if (!activa && m.vista.estado === "esperando" && !esperoSuDuelo) {
       if (dueloPropio > m.lance.duelo) {
         await expect.poll(avisos, espera).toContain(`Te toca en el duelo ${dueloPropio} de 3.`);
-        await capturar(eva, "tercetos-pico-375x760");
+        await capturar(luis, "tercetos-pico-375x760");
         // El servidor no manda cartas a quien espera su duelo: si la mesa muestra alguna, no se juega.
         const antes = enviadas.length;
-        for (const carta of await cartasEnMano(eva).all()) await carta.click({ timeout: 2_000 }).catch(() => {});
-        await eva.waitForTimeout(1_000);
+        for (const carta of await cartasEnMano(luis).all()) await carta.click({ timeout: 2_000 }).catch(() => {});
+        await luis.waitForTimeout(1_000);
         assert.equal(enviadas.length, antes, "la mano en espera no juega");
         esperoSuDuelo = true;
         continue;
       }
     }
     if (activa && m.vista.legales.includes("carta")) jugoSuDuelo = true;
-    if (!(await jugarTurno(eva, id, m))) await eva.waitForTimeout(300);
+    if (!(await jugarTurno(luis, id, m))) await luis.waitForTimeout(300);
   }
-  assert.ok(esperoSuDuelo || jugoSuDuelo, "eva esperó o jugó su duelo");
+  assert.ok(esperoSuDuelo || jugoSuDuelo, "luis esperó o jugó su duelo");
   // Nunca anuncia otro duelo que el propio, ni en el primero.
   assert.deepEqual(await avisos(), dueloPropio > 1 ? [`Te toca en el duelo ${dueloPropio} de 3.`] : []);
-  assert.ok(jugadas > 0, "eva jugó cartas tocándolas");
-  await expect(eva.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", espera);
-  await eva.context().close();
-  console.log(`3v3 con cinco computadoras: redondilla, pico a pico (eva en el duelo ${dueloPropio} de 3), ${jugadas} cartas tocadas y tantos del reparto.`);
+  assert.ok(jugadas > 0, "luis jugó cartas tocándolas");
+  // Si luis jugó el primer duelo, la mesa le presenta los otros dos a su ritmo: la tarjeta llega más tarde que la API.
+  await expect(luis.getByTestId("fin-de-mano")).toContainText("Tantos de este reparto", { timeout: 90_000 });
+  await luis.context().close();
+  console.log(`3v3 con cinco computadoras: redondilla, pico a pico (luis en el duelo ${dueloPropio} de 3), ${jugadas} cartas tocadas y tantos del reparto.`);
 }
 
 async function probarEspectador() {
-  const eva = await entrar("eva");
-  await crearMesa(eva, "2 contra 2", true);
-  const id = await enLaMesa(eva);
+  const luis = await entrar("luis");
+  await crearMesa(luis, "2 contra 2", true);
+  const id = await enLaMesa(luis);
   const clara = await entrar("clara");
   await clara.goto(`/app/mirar/${id}`);
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
@@ -455,59 +461,59 @@ async function probarEspectador() {
   await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(`^${pareja(0)} \\d+ · \\d+ ${pareja(1)} · a ${meta}$`), espera);
   // Una mano entera: el espectador nunca tiene cartas propias ni Cantos.
   await observar(clara, '[data-testid^="carta-"]');
-  await avanzar([eva], id, terminada);
+  await avanzar([luis], id, terminada);
   assert.deepEqual(await clara.evaluate(() => window.vistos), [], "el espectador vio cartas para tocar");
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   await capturar(clara, "espectador-375x760");
   await boton(clara, "Volver al salón").click();
   await expect(titulo(clara, "Mesas en juego")).toBeVisible(espera);
-  await Promise.all([eva, clara].map(p => p.context().close()));
+  await Promise.all([luis, clara].map(p => p.context().close()));
   console.log("Espectador con la mesa nueva: 👁 Mirando, tanteador con las parejas, sin cartas ni Cantos, y vuelta al salón.");
 }
 
 async function probarEscritorio() {
-  const eva = await entrar("eva", escritorio);
-  await crearMesa(eva, "1 contra 1", true);
-  const id = await enLaMesa(eva);
-  await expect(eva.getByTestId("panel-mano")).toBeVisible(espera);
-  await expect(eva.getByTestId("panel-tantos")).toBeVisible();
-  await expect(eva.getByRole("tab")).toHaveCount(0);
-  await expect(boton(eva, "Más")).toHaveCount(0);
+  const luis = await entrar("luis", escritorio);
+  await crearMesa(luis, "1 contra 1", true);
+  const id = await enLaMesa(luis);
+  await expect(luis.getByTestId("panel-mano")).toBeVisible(espera);
+  await expect(luis.getByTestId("panel-tantos")).toBeVisible();
+  await expect(luis.getByRole("tab")).toHaveCount(0);
+  await expect(boton(luis, "Más")).toHaveCount(0);
 
   // C abre la hoja de Cantos propia y Escape la cierra.
-  const m = await avanzar([eva], id, x => x.vista.legales.includes("carta") && !x.vista.pendiente);
-  await expect(cartasEnMano(eva)).toHaveCount(3, espera);
-  const hoja = eva.getByLabel("Cantos", { exact: true });
+  const m = await avanzar([luis], id, x => x.vista.legales.includes("carta") && !x.vista.pendiente);
+  await expect(cartasEnMano(luis)).toHaveCount(3, espera);
+  const hoja = luis.getByLabel("Cantos", { exact: true });
   // Con algún canto legal (o irse al mazo) está la hoja de Cantos.
   const abrioCantos = m.vista.legales.some(t => t !== "carta");
   if (abrioCantos) {
-    await expect(boton(eva, "Cantos")).toBeVisible(espera);
+    await expect(boton(luis, "Cantos")).toBeVisible(espera);
     await expect(async () => {
-      await eva.keyboard.press("c");
+      await luis.keyboard.press("c");
       await expect(hoja).toBeVisible({ timeout: 1_000 });
     }).toPass(espera);
-    await capturar(eva, "escritorio-cantos-1280x800");
-    await eva.keyboard.press("Escape");
+    await capturar(luis, "escritorio-cantos-1280x800");
+    await luis.keyboard.press("Escape");
     await expect(hoja).toHaveCount(0);
   }
-  await capturar(eva, "escritorio-1280x800");
+  await capturar(luis, "escritorio-1280x800");
 
   // «1» y enseguida «2»: sale una sola jugada, la de la primera carta de la izquierda.
   const enviadas = [];
-  eva.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
-  const orden = await manoEnOrden(eva);
+  luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
+  const orden = await manoEnOrden(luis);
   for (let intento = 0; enviadas.length === 0 && intento < 20; intento++) {
-    await eva.keyboard.press("1");
-    await eva.keyboard.press("2");
-    await eva.waitForTimeout(1_500);
-    if (enviadas.length === 0) assert.equal((await partida(eva, id)).version, m.version, "la mesa jugó sin enviar");
+    await luis.keyboard.press("1");
+    await luis.keyboard.press("2");
+    await luis.waitForTimeout(1_500);
+    if (enviadas.length === 0) assert.equal((await partida(luis, id)).version, m.version, "la mesa jugó sin enviar");
   }
   assert.equal(enviadas.length, 1, "1 y 2 seguidos envían una sola carta: " + JSON.stringify(enviadas));
   assert.equal("carta-" + enviadas[0].accion?.carta, orden[0], "el 1 juega la carta de la izquierda");
-  await expect(cartasEnMano(eva)).toHaveCount(2, espera);
-  await eva.waitForTimeout(1_000);
+  await expect(cartasEnMano(luis)).toHaveCount(2, espera);
+  await luis.waitForTimeout(1_000);
   assert.equal(enviadas.length, 1);
-  await eva.context().close();
+  await luis.context().close();
   console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}1 y 2 seguidos juegan una sola carta.`);
 }
 
