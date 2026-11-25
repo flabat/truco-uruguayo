@@ -234,7 +234,7 @@ Las imágenes llevan la etiqueta del commit, o `<commit>-sucio` si el árbol tie
 
 ### Preparación
 
-1. Docker en la Mac, con lugar para construir. La arquitectura del VPS se detecta con `uname -m` y se construye para ella. En una Mac con Apple Silicon y un VPS `x86_64` la construcción usa emulación y tarda más. Para forzarla, usá `TRUCO_VPS_PLATAFORMA=linux/amd64`.
+1. Docker en la Mac, con lugar para construir. La arquitectura del VPS se detecta con `uname -m` y se construye para ella. En una Mac con Apple Silicon y un VPS `x86_64` la construcción usa emulación y tarda más. Comprobá que Docker la tenga con `docker run --rm --platform linux/amd64 alpine uname -m`, que debe responder `x86_64` (en Colima, con `--vz-rosetta` o QEMU). Para forzar la plataforma, usá `TRUCO_VPS_PLATAFORMA=linux/amd64`.
 2. Acceso SSH sin contraseña a una cuenta del VPS que pueda usar Docker y escribir en `/opt/truco-oriental` y `/var/lib/truco-deploy` (por ejemplo `root`). El host no está en el repositorio. Definilo en `~/.ssh/config`:
 
    ```
