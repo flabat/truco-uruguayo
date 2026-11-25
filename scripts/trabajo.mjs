@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 export const RANURAS = 8;
 
 // Cada base deja ocho puertos seguidos, lejos de los predeterminados (8081, 8080, 3001, 4322, 18081, 18080).
-const BASES = { WEB_PORT: 8100, OIDC_PORT: 8200, API_PORT: 3100, METRO_PORT: 8300, TEST_PORT: 4400, TEST_WEB_PORT: 18500, TEST_OIDC_PORT: 18600 };
+const BASES = { WEB_PORT: 8100, OIDC_PORT: 8200, API_PORT: 3100, METRO_PORT: 8300, APP_WEB_PORT: 8400, TEST_PORT: 4400, TEST_WEB_PORT: 18500, TEST_OIDC_PORT: 18600 };
 
 export function puertos(ranura) {
   if (!Number.isInteger(ranura) || ranura < 1 || ranura > RANURAS) throw new Error(`Ranura fuera de rango: ${ranura}`);

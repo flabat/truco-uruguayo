@@ -17,6 +17,7 @@
     "app:exportar": "npm --workspace app run exportar",
     "app:iconos": "node scripts/app-iconos.mjs",
     "app:nativo": "node scripts/app-nativo.ts",
+    "app:web": "node scripts/app-web.ts",
     "check": "bash .github/scripts/check_site.sh",
     "check:rapido": "node scripts/check-rapido.mjs",
     "check:production": "bash scripts/verificar-produccion.sh",
