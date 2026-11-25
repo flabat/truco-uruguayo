@@ -124,6 +124,8 @@ class RemoteTest(unittest.TestCase):
         text = self.script(("web",))
         self.assertIn("for service in api identidad backup; do", text)
         self.assertIn("dc up -d --no-build --no-deps web\n  esperar web", text)
+        # Con las copias pausadas, Compose necesita los valores de backup antes del primer dc.
+        self.assertLess(text.index("export RESTIC_REPOSITORY=/dev/null"), text.index("dc ps -a -q"))
 
     def test_deploy_sends_images_files_and_script(self):
         plan = v.Plan(ref="rama", sha=self.sha, release=self.sha, main=self.main)

@@ -170,21 +170,22 @@ export TRUCO_RELEASE="$release"
 mkdir -p {q(r.state)}
 exec 9>{q(r.state + "/lock")}
 flock -w 900 9
+paused=
+if [ -f {q(os.path.dirname(r.config) + "/copias-pausadas")} ]; then
+  # Como desplegar.py: sin copias externas no se arranca backup. Compose interpola
+  # backup en cualquier comando, así que esto va antes del primer dc.
+  paused=1
+  export RESTIC_REPOSITORY=/dev/null RESTIC_PASSWORD=unused
+fi
 # Sólo se reemplazan los servicios pedidos: el resto conserva su imagen con la etiqueta nueva.
 for service in {keep}; do
-  container=$(dc ps -a -q "$service" 2>/dev/null || true)
+  container=$(dc ps -a -q "$service")
   if [ -n "$container" ]; then
     docker tag "$(docker inspect --format '{{{{.Config.Image}}}}' "$container")" "truco-oriental/$service:$release"
   else
     echo "Aviso: $service no tiene contenedor; un despliegue completo lo vuelve a construir." >&2
   fi
 done
-paused=
-if [ -f {q(os.path.dirname(r.config) + "/copias-pausadas")} ]; then
-  # Como desplegar.py: sin copias externas no se arranca backup.
-  paused=1
-  export RESTIC_REPOSITORY=/dev/null RESTIC_PASSWORD=unused
-fi
 # Como `up --wait`, pero tolera que un servicio lento (Keycloak en su primer arranque)
 # pase por unhealthy antes de estar sano. Falla si un contenedor termina.
 esperar() {{

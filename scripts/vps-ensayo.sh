@@ -14,6 +14,7 @@ project="$name"
 remote=(docker exec "$name")
 cleanup() {
   local status=$?
+  rm -f .vps-ensayo-sin-commit
   if ((status)); then docker compose -p "$project" logs --tail=20 >&2 || true; fi
   docker compose -p "$project" down -v --remove-orphans >/dev/null 2>&1 || true
   docker rm -f "$name" >/dev/null 2>&1 || true
@@ -84,7 +85,6 @@ web_release="$release"
 if [[ $release != *-sucio ]]; then
   # Fuerza un árbol con cambios para probar la etiqueta -sucio sin tocar archivos versionados.
   touch .vps-ensayo-sin-commit
-  trap 'rm -f .vps-ensayo-sin-commit; cleanup' EXIT
   web_release="$sha-sucio"
   echo "$web_release" >> "$tmp/etiquetas"
 fi
