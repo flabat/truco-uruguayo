@@ -25,6 +25,18 @@ export async function completarIngreso({ resultado, verificador, cliente, almace
   return { jugador, bajaCancelada };
 }
 
+/** Ingreso de prueba de la app: el mismo canje que el ingreso normal, sin abrir el navegador del sistema. */
+export async function ingresarDePrueba({ usuario, par, cliente, almacen }: Contexto & {
+  usuario: string;
+  par: { verificador: string; desafio: string };
+}): Promise<{ jugador: Jugador; bajaCancelada: boolean }> {
+  const { codigo } = await cliente.entrarDePrueba(usuario, par.desafio);
+  if (!codigo) throw new Error("La API no entregó el código del ingreso de prueba.");
+  const { sesion, jugador, bajaCancelada } = await cliente.canjear(codigo, par.verificador);
+  await almacen.guardar(sesion);
+  return { jugador, bajaCancelada };
+}
+
 /** El jugador de la sesión. Una sesión vencida o eliminada en otro dispositivo se borra; un error de red no. */
 export async function cargarJugador({ cliente, almacen }: Contexto): Promise<Jugador | null> {
   await almacen.leer();

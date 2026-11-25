@@ -177,9 +177,20 @@ async function probarEspectadores(a, b, espectador, privada) {
   const servicio = servicioComputadoras(pool);
   try {
     // El reloj adelanta los intervalos entre turnos. El motor confirma las jugadas y el cierre.
+    const turnosHumanos = `SELECT 1 FROM juego.turnos_bot t JOIN juego.mesas h ON t.mesa=h.id WHERE h.origen='humana'`;
+    const espera = Date.now() + 60_000;
     for (let n = 0; n < 120; n++) {
       const paso = await avanzarExhibicion(pool, servicio, new Date(Date.now() + n * 9_000));
-      if (paso === null) break;
+      if (paso === null) {
+        // Las exhibiciones ceden el paso mientras la API juega turnos de computadora en mesas
+        // con personas de las verificaciones anteriores: esperar a que terminen y reintentar.
+        if ((await pool.query(turnosHumanos)).rowCount && Date.now() < espera) {
+          await new Promise(listo => setTimeout(listo, 250));
+          n--;
+          continue;
+        }
+        break;
+      }
       assert.equal(paso, finalista.id);
     }
   } finally { await servicio.close(); }

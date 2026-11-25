@@ -102,8 +102,8 @@ try {
   assert.equal(await reponerExhibiciones(pool,reloj()),0);
   assert.deepEqual((await abiertas()).map(m=>m.id),iniciales.map(m=>m.id));
   ahora += 4000;
-  await pool.query("INSERT INTO juego.turnos_bot(mesa) VALUES ($1)",[humanos[0]]);
-  assert.equal(await avanzarExhibicion(pool,servicio,reloj()),null);
+  await pool.query("INSERT INTO juego.turnos_bot(mesa, disponible_desde) VALUES ($1,$2)", [humanos[0], reloj()]);
+  assert.equal(await avanzarExhibicion(pool, servicio, reloj()), null, "Un turno humano listo tiene prioridad.");
   await pool.query("DELETE FROM juego.turnos_bot WHERE mesa=$1",[humanos[0]]);
   // Cae el único trabajador tras leer las cartas de su asiento y antes de confirmar.
   assert.equal(await proceso("await avanzarExhibicion(pool,{decide:()=>process.exit(31)},reloj);"),31);
@@ -111,6 +111,11 @@ try {
   const primero = await avanzarExhibicion(pool,servicio,reloj());
   assert.equal(primero,iniciales[0].id);
   assert.equal((await pool.query("SELECT * FROM juego.inferencias")).rowCount,1);
+  await pool.query("INSERT INTO juego.turnos_bot(mesa, disponible_desde) VALUES ($1,'infinity'), ($2,$3)",
+    [humanos[0], humanos[1], new Date(ahora + 1000)]);
+  assert.equal(await avanzarExhibicion(pool, servicio, reloj()), iniciales[1].id,
+    "Los turnos humanos suspendidos o programados para más tarde no bloquean las exhibiciones.");
+  await pool.query("DELETE FROM juego.turnos_bot WHERE mesa=ANY($1::uuid[])", [humanos.slice(0, 2)]);
   // La próxima fecha se calcula desde este paso, incluso después de una pausa larga.
   ahora += 3600_000;
   for (let i=0;i<6;i++) assert.ok(await avanzarExhibicion(pool,servicio,reloj()));

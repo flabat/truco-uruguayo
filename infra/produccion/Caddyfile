@@ -17,6 +17,8 @@
 		try_files {path} /jugar/index.html
 		file_server
 	}
+	# Asociación con la app: JSON sin extensión ni redirecciones. Sin datos de la cuenta, 404.
+	header /.well-known/apple-app-site-association Content-Type application/json
 	# Enlaces ya compartidos: la dirección de prueba /app/… y el regreso /volver/?mesa= abren la misma pantalla.
 	redir /app /jugar/{?query} 308
 	handle_path /app/* {

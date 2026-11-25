@@ -7,7 +7,7 @@ import { base64url, crearPar } from "../../app/src/ingreso/pkce.ts";
 import { codigoDeRetorno, rutaDelSistema } from "../../app/src/ingreso/retorno.ts";
 import { ErrorMesa } from "@eltruco/cliente/cliente.ts";
 import { crearClienteApp as crearCliente } from "../../app/src/api/cliente.ts";
-import { cargarJugador, cerrarSesion, completarIngreso, eliminarCuenta } from "../../app/src/ingreso/sesion.ts";
+import { cargarJugador, cerrarSesion, completarIngreso, eliminarCuenta, ingresarDePrueba } from "../../app/src/ingreso/sesion.ts";
 
 const sha256 = async (texto: string) => new Uint8Array(createHash("sha256").update(texto).digest());
 // Apéndice B de RFC 7636.
@@ -76,7 +76,7 @@ test("rutaDelSistema deja pasar los demás enlaces", () => {
     "/mesa?id=1",
     "/ingresos",
     "eltruco://ingresar",
-    "https://eltru.co/app/?mesa=1",
+    "https://otro.example/jugar/?invitacion=abc",
     "/",
   ]) assert.equal(rutaDelSistema(enlace), enlace, enlace);
 });
@@ -284,4 +284,37 @@ test("la consulta del salón manda la sesión y el ETag, y distingue 304, 401 y 
   assert.equal(encabezados(pedidos[1]).get("if-none-match"), "\"v1\"");
   estado = 500;
   await assert.rejects(cliente.consultar("/api/salon/mesas", null));
+});
+
+test("jugadoresDePrueba sigue lo que anuncia la API: sin AUTH_DEV, ninguno", async () => {
+  const usuarios = [{ usuario: "ana", nombre: "Ana" }];
+  const con = fetchFalso({ "GET /api/auth/dev": () => json(200, { usuarios }) });
+  assert.deepEqual(await crearCliente({ base: "http://localhost:8081", sesion: () => null, fetch: con.pedir }).jugadoresDePrueba(), usuarios);
+  const sin = fetchFalso({ "GET /api/auth/dev": () => new Response(null, { status: 404 }) });
+  assert.deepEqual(await crearCliente({ base: "https://eltru.co", sesion: () => null, fetch: sin.pedir }).jugadoresDePrueba(), []);
+  const sinRed = fetchFalso({});
+  assert.deepEqual(await crearCliente({ base: "https://eltru.co", sesion: () => null, fetch: sinRed.pedir }).jugadoresDePrueba(), []);
+});
+
+test("ingresarDePrueba pide el código con el desafío y lo canjea con el verificador", async () => {
+  const { pedidos, pedir } = fetchFalso({
+    "POST /api/auth/dev": () => json(200, { codigo }),
+    "POST /api/auth/canje": () => json(200, { sesion: "de-prueba", jugador: ana, bajaCancelada: false }),
+  });
+  const { datos, almacen } = await sesionEnMemoria(null);
+  const cliente = crearCliente({ base: "http://localhost:8081", sesion: almacen.actual, fetch: pedir });
+  const par = { verificador: "v".repeat(43), desafio: "d".repeat(43) };
+  assert.deepEqual(await ingresarDePrueba({ usuario: "ana", par, cliente, almacen }), { jugador: ana, bajaCancelada: false });
+  assert.deepEqual(JSON.parse(String(pedidos[0].init.body)), { usuario: "ana", app: par.desafio });
+  assert.deepEqual(JSON.parse(String(pedidos[1].init.body)), { codigo, verificador: par.verificador });
+  assert.equal(datos.get("truco.sesion"), "de-prueba");
+});
+
+test("ingresarDePrueba no guarda nada si la API no tiene el modo", async () => {
+  const { pedir } = fetchFalso({ "POST /api/auth/dev": () => new Response(null, { status: 404 }) });
+  const { datos, almacen } = await sesionEnMemoria(null);
+  const cliente = crearCliente({ base: "https://eltru.co", sesion: almacen.actual, fetch: pedir });
+  await assert.rejects(ingresarDePrueba({ usuario: "ana", par: { verificador: "v", desafio: "d" }, cliente, almacen }),
+    (error: unknown) => error instanceof ErrorMesa && error.status === 404);
+  assert.equal(datos.size, 0);
 });

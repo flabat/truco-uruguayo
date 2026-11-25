@@ -12,18 +12,22 @@
     "arena": "node training/arena/cli.ts",
     "prebuild": "npm run cartas:generar",
     "build": "astro build",
-    "test:unit": "node --test \"tests/unit/*.test.ts\" \"paquetes/*/test/*.test.ts\"",
+    "test:unit": "node --test ${TEST_CONCURRENCY:+--test-concurrency=$TEST_CONCURRENCY} \"tests/unit/*.test.ts\" \"paquetes/*/test/*.test.ts\"",
     "app:tipos": "npm --workspace app run tipos",
     "app:exportar": "npm --workspace app run exportar",
+    "app:iconos": "node scripts/app-iconos.mjs",
+    "app:nativo": "node scripts/app-nativo.ts",
     "check": "bash .github/scripts/check_site.sh",
+    "check:rapido": "node scripts/check-rapido.mjs",
     "check:production": "bash scripts/verificar-produccion.sh",
-    "check:stack": "bash scripts/verificar-stack.sh",
+    "check:stack": "python3 scripts/cola-pila.py bash scripts/verificar-stack.sh",
     "auth:google": "bash scripts/ingreso-social-local.sh google",
     "auth:discord": "bash scripts/ingreso-social-local.sh discord",
     "auth:facebook": "bash scripts/ingreso-social-local.sh facebook",
     "auth:apple": "bash scripts/ingreso-social-local.sh apple",
     "auth:api": "bash scripts/cliente-api-local.sh",
     "preview": "astro preview",
+    "trabajo": "node scripts/trabajo.mjs",
     "cartas:generar": "node scripts/tatu/generar.mjs",
     "voces:generar": "node scripts/voces/generar.ts",
     "cartas:verificar": "node scripts/tatu/generar.mjs --verificar",
@@ -32,7 +36,8 @@
     "league": "python3 -B training/selfplay/local.py",
     "reel": "npm --prefix video run reel --",
     "reel:studio": "npm --prefix video run studio --",
-    "reel:instalar": "npm ci --prefix video"
+    "reel:instalar": "npm ci --prefix video",
+    "vps": "python3 -B scripts/vps.py"
   },
   "engines": {
     "node": ">=22.23.4"
@@ -47,6 +52,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@expo/fingerprint": "0.21.10",
     "@playwright/test": "1.65.1",
     "@xmldom/xmldom": "0.9.12",
     "sharp": "0.35.5"

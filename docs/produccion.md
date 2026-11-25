@@ -131,13 +131,28 @@ Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el 
 
 La imagen de identidad incluye el tema de El Truco y un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google, Facebook o Discord ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak. Para aplicar la marca a un realm existente, [actualizá el nombre y los temas de ingreso y cuenta](ingreso-social.md#activar-la-pantalla-de-el-truco).
 
+La imagen web genera `/.well-known/apple-app-site-association` y `/.well-known/assetlinks.json` con `APPLE_TEAM_ID` y `ANDROID_CERT_SHA256`, para que los enlaces de invitación abran la app. Al cargarlas o cambiarlas, reconstruí `web`. Sin ellas los enlaces abren la web y `npm run check:production` avisa. Detalles en el [README de la app](../app/README.md#enlaces-que-abren-la-app).
+
 ## Salón y exhibiciones
 
 La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)
 
 ## Publicación automática desde main
 
-El VPS consulta el repositorio privado cada tres minutos. Al subir cambios a `main`, GitHub repite el workflow **Verificar el sitio**, incluido el ensayo de restauración. El VPS espera el resultado exitoso del evento `push` para ese commit exacto y construye las imágenes con su SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents** y **Actions** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa el segundo para comprobar el resultado del workflow.
+El VPS consulta el repositorio privado cada tres minutos y publica el último commit de `main` cuando está verificado. Acepta cualquiera de estas señales para ese commit exacto:
+
+- el estado de commit `verificado-local` en `success`, que publica quien corrió `CHECK_STACK=1 npm run check`;
+- una corrida exitosa del workflow **Verificar el sitio** (`check.yml`) por el evento `push`, cuando haya runner;
+- `DESPLIEGUE_SIN_VERIFICAR=1` en `/etc/truco-oriental/production.env`, que publica `main` sin esperar. Mientras el VPS sea un entorno de desarrollo sin jugadores externos, dejala activa. Quitala o ponela en `0` cuando vuelva a haber un check obligatorio.
+
+Con un squash merge, el commit de `main` es nuevo. Para marcarlo después de verificarlo, desde un checkout de ese commit:
+
+```sh
+gh api repos/flabat/truco-uruguayo/statuses/$(git rev-parse HEAD) \
+  -f state=success -f context=verificado-local -f description="CHECK_STACK=1 npm run check"
+```
+
+El VPS construye las imágenes con el SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents**, **Actions** y **Commit statuses** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa los otros dos para comprobar la verificación. Sin **Commit statuses**, el registro muestra `HTTP 403` al leer el estado y sólo cuenta el workflow o la variable.
 
 Antes de activar el temporizador, creá el token en GitHub y guardalo desde una shell Bash de administrador en el VPS. Para rotarlo, repetí estos pasos antes del vencimiento. systemd carga el archivo en cada ejecución. La credencial se usa sólo para las solicitudes a GitHub.
 
@@ -173,7 +188,7 @@ systemctl start truco-deploy.service
 
 Antes de actualizar una base existente, la tarea guarda una copia. Comprueba otra vez el SHA de `main` antes del cambio. Compose espera la salud de los servicios y la API comprueba por HTTPS la web y el emisor de identidad. Sólo entonces se actualiza `/opt/truco-oriental/current`. `previous` conserva la versión anterior. Si falla el arranque después de una migración, el servicio reintenta el mismo commit conservando la copia previa. Durante la intervención, algunos contenedores pueden estar ya en la nueva versión. Para recuperar datos, seguí el procedimiento de restauración en volúmenes nuevos.
 
-Consultá el próximo intento con `systemctl list-timers truco-deploy.timer` y su registro con `journalctl -u truco-deploy.service -n 80`. Para mantenimiento, pará el temporizador y esperá que termine cualquier ejecución en curso antes de actualizar manualmente. Para corregir una publicación, integrá la corrección o reversión mediante PR a `main`.
+Consultá el próximo intento con `systemctl list-timers truco-deploy.timer` y su registro con `journalctl -u truco-deploy.service -n 80`. Para mantenimiento, pará el temporizador y esperá que termine cualquier ejecución en curso antes de actualizar manualmente. Para corregir una publicación, integrá la corrección o reversión mediante PR a `main`, o publicá una rama con [`npm run vps`](#publicar-una-rama-desde-la-mac).
 
 En una máquina nueva, además de Docker con Compose, se usan Git, Python 3, GNU tar, flock y systemd. Partiendo del checkout verificado, instalá el ejecutor y activá el temporizador como administrador:
 
@@ -205,3 +220,48 @@ systemctl start truco-deploy.service
 ```
 
 El siguiente despliegue guarda una copia de la base existente y arranca la programación diaria aunque el commit siga siendo el mismo.
+
+## Publicar una rama desde la Mac
+
+`npm run vps` publica en el VPS una rama sin integrar o el árbol del checkout, con los cambios sin commit. Construye las imágenes en la Mac, las envía por SSH y arranca Compose en el VPS. No hace falta Git ni un token en el servidor para esto.
+
+```sh
+npm run vps                      # el árbol actual
+npm run vps -- codex/issue-381   # una rama: origin/<rama> recién traída o, si no existe, la local
+npm run vps -- web               # sólo la imagen web del árbol actual
+npm run vps -- web codex/issue-381
+```
+
+Las imágenes llevan la etiqueta del commit, o `<commit>-sucio` si el árbol tiene cambios sin commit, y se publican con `TRUCO_RELEASE` igual a esa etiqueta. Con `web` sólo se reconstruye y reemplaza la web: la API, la identidad y las copias conservan su imagen, que recibe también la etiqueta nueva, y no se reinician. El comando usa el mismo candado que `truco-deploy.service`, así que espera a que termine una publicación automática en curso. Si `copias-pausadas` existe, arranca sin el servicio de copias, como el temporizador; si no, guarda una copia antes de reemplazar la API.
+
+### Preparación
+
+1. Docker en la Mac, con lugar para construir. La arquitectura del VPS se detecta con `uname -m` y se construye para ella. En una Mac con Apple Silicon y un VPS `x86_64` la construcción usa emulación y tarda más. Comprobá que Docker la tenga con `docker run --rm --platform linux/amd64 alpine uname -m`, que debe responder `x86_64` (en Colima, con `--vz-rosetta` o QEMU). Para forzar la plataforma, usá `TRUCO_VPS_PLATAFORMA=linux/amd64`.
+2. Acceso SSH sin contraseña a una cuenta del VPS que pueda usar Docker y escribir en `/opt/truco-oriental` y `/var/lib/truco-deploy` (por ejemplo `root`). El host no está en el repositorio. Definilo en `~/.ssh/config`:
+
+   ```
+   Host truco-vps
+     HostName <IP o nombre del VPS>
+     User root
+     IdentityFile ~/.ssh/<clave>
+   ```
+
+   o pasalo en cada ejecución con `TRUCO_VPS=root@<host>`. `TRUCO_VPS_SSH` agrega opciones de `ssh`, por ejemplo `-p 2222`.
+3. El VPS ya tiene `/etc/truco-oriental/production.env` de la [publicación automática](#publicación-automática-desde-main).
+
+### Qué queda en el VPS y cómo vuelve main
+
+Los archivos que Compose monta (`compose.production.yaml`, `infra/despliegue/imagenes.yaml` e `infra/produccion/`) quedan en `/opt/truco-oriental/manuales/<etiqueta>`. Se conservan las dos versiones manuales más recientes y sus imágenes. `/var/lib/truco-deploy/manual` guarda el commit de `main` que había al publicar y la etiqueta manual. Mientras `main` siga en ese commit, el temporizador deja la versión manual. Después del siguiente merge publica `main`, borra la marca y vuelve a la operación normal.
+
+Para volver a `main` sin esperar un merge, ejecutá `npm run vps -- main`, o en el VPS como administrador:
+
+```sh
+rm /var/lib/truco-deploy/manual
+systemctl start truco-deploy.service
+```
+
+Si `main` ya estaba publicado antes de la versión manual, `current` sigue apuntando a ese commit y el servicio no lo reconstruye: en ese caso usá `npm run vps -- main`.
+
+### Ensayo local
+
+`bash scripts/vps-ensayo.sh` prueba el comando sin el VPS. Levanta un contenedor con sshd que usa el Docker local como si fuera el del servidor, publica el árbol completo con las copias pausadas y después sólo la web. Comprueba las etiquetas de las imágenes, que la API no se reinicie al publicar la web, la marca para el temporizador y la respuesta HTTPS de Caddy. Al terminar borra el proyecto, los volúmenes y las imágenes del ensayo. Las rutas del servidor se pueden cambiar con `TRUCO_VPS_RAIZ`, `TRUCO_VPS_ESTADO`, `TRUCO_VPS_ENV` y `TRUCO_VPS_PROYECTO`; en el VPS real no hace falta.

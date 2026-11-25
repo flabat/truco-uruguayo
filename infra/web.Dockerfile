@@ -37,6 +37,11 @@ COPY arte ./arte
 COPY scripts/tatu ./scripts/tatu
 ARG TRUCO_RELEASE
 RUN npm run build
+# Asociación con la app (universal links y App Links). Sin datos, el archivo de esa plataforma no existe.
+COPY scripts/enlaces-app.mjs ./scripts/enlaces-app.mjs
+ARG APPLE_TEAM_ID
+ARG ANDROID_CERT_SHA256
+RUN node scripts/enlaces-app.mjs generar dist/.well-known
 
 FROM caddy:2-alpine AS produccion
 COPY --from=build /app/dist/ /srv/

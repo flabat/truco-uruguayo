@@ -175,3 +175,32 @@ test.describe("sin JavaScript", () => {
     await expect(page).toHaveURL("reglas/preparacion/");
   });
 });
+
+test.describe("pie con la versión del servidor", () => {
+  const commit = "0123456789abcdef0123456789abcdef01234567";
+  const servidor = page => page.getByRole("contentinfo").getByText("Servidor", { exact: true }).locator("+ dd");
+  const responder = (page, cuerpo, status = 200) =>
+    page.route("**/api/version", route => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(cuerpo) }));
+
+  test("muestra rama y commit corto, con -sucio si había cambios sin commit", async ({ page }) => {
+    await responder(page, { rama: "codex/issue-382", commit, fecha: "2026-11-25T12:00:00.000Z", sucio: true, etiqueta: null });
+    await page.goto("./");
+    await expect(servidor(page)).toBeVisible();
+    await expect(servidor(page)).toHaveText("codex/issue-382 · 01234567-sucio");
+    await expect(servidor(page)).toHaveAttribute("title", /^Construido el /);
+  });
+
+  test("se oculta en un lanzamiento etiquetado y cuando no hay API", async ({ page }) => {
+    await responder(page, { rama: "main", commit, fecha: "2026-11-25T12:00:00.000Z", sucio: false, etiqueta: "v1.0.0" });
+    const pedido = page.waitForResponse("**/api/version");
+    await page.goto("./");
+    await pedido;
+    await expect(page.getByRole("contentinfo").getByText("Servidor", { exact: true })).toBeHidden();
+    await page.unroute("**/api/version");
+    await responder(page, {}, 404);
+    const otro = page.waitForResponse("**/api/version");
+    await page.goto("aprender/mano/");
+    await otro;
+    await expect(page.getByRole("contentinfo").getByText("Servidor", { exact: true })).toBeHidden();
+  });
+});

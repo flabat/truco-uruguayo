@@ -6,6 +6,7 @@ import { Confirmacion } from "../componentes/Confirmacion.tsx";
 import { EnlaceTexto } from "../componentes/salon.tsx";
 import { Aviso, Boton, Cargando, Pantalla } from "../componentes/ui.tsx";
 import { useSesion } from "../ingreso/contexto.tsx";
+import { esWeb } from "../ingreso/plataforma.ts";
 import { colores, fuentes } from "../tema.ts";
 
 const textoEliminar = "Cerramos tu sesión en todos tus dispositivos y te sacamos de tus mesas. "
@@ -49,6 +50,10 @@ function Perfil({ jugador, aviso }: { jugador: Jugador; aviso?: string }) {
         <Text style={estilos.etiqueta}>ID de jugador</Text>
         <Text selectable style={estilos.id}>{jugador.id}</Text>
       </View>
+      {esWeb ? (
+        // «Mis partidas» sigue en el perfil del sitio, en el mismo origen y con la misma cookie.
+        <EnlaceTexto alTocar={() => globalThis.location.assign("/perfil/#mis-partidas")}>Ver mis partidas</EnlaceTexto>
+      ) : null}
       <Boton variante="secundario" ocupado={ocupado} onPress={() => {
         setOcupado(true);
         void cerrarSesion();

@@ -101,6 +101,10 @@ const pages = [
               : "Sin informar"}
           </dd>
         </div>
+        <div data-version-servidor hidden>
+          <dt>Servidor</dt>
+          <dd></dd>
+        </div>
         <div>
           <dt>Motor local</dt>
           <dd>{versionMotorPractica}</dd>
@@ -114,8 +118,25 @@ const pages = [
   </body>
 </html>
 <script>
+  import { leerVersionServidor, textoDeVersion } from "@eltruco/cliente/version.ts";
   import { contar } from "../lib/eventos";
   document.querySelector("[data-discord-comunidad]")?.addEventListener("click", () => contar("discord"));
+  // Rama y commit del servidor; sin API (sitio estático) o en un lanzamiento etiquetado, queda oculto.
+  const versionServidor = document.querySelector<HTMLElement>("[data-version-servidor]");
+  if (versionServidor) {
+    fetch("/api/version", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(datos => {
+        const version = leerVersionServidor(datos);
+        const texto = version && textoDeVersion(version);
+        if (!version || !texto) return;
+        const dd = versionServidor.querySelector("dd")!;
+        dd.textContent = texto;
+        if (version.fecha) dd.title = "Construido el " + new Date(version.fecha).toLocaleString("es-UY");
+        versionServidor.hidden = false;
+      })
+      .catch(() => {});
+  }
 </script>
 <style>
   .footer-privacidad { display: flex; flex-wrap: wrap; gap: 6px 24px; padding-bottom: 16px; color: var(--muted); font-size: 12px; }
