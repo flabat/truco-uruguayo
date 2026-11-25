@@ -9,14 +9,18 @@ export interface Opciones {
   plataforma: Plataforma;
   api: PerfilApi;
   dispositivo?: string;
+  /** iPhone físico conectado y emparejado en vez del simulador (solo iOS). */
+  fisico: boolean;
   recompilar: boolean;
 }
 
-export const USO = `Uso: npm run app:nativo -- ios|android [--api local|vps] [--dispositivo <nombre o id>] [--recompilar]
+export const USO = `Uso: npm run app:nativo -- ios|android [--api local|vps] [--dispositivo <nombre o id>] [--fisico] [--recompilar]
 
   --api local         API de la pila local (docker compose): localhost, o 10.0.2.2 en el emulador de Android
   --api vps           API de https://eltru.co (predeterminado)
   --dispositivo       simulador o emulador: nombre o UDID en iOS, nombre del AVD o serie de adb en Android
+  --fisico            iOS: un iPhone conectado y emparejado en vez del simulador. Necesita un certificado
+                      Apple Development en el llavero y que el iPhone esté en la misma red que la Mac
   --recompilar        compila aunque haya un build guardado con la misma huella`;
 
 export const METRO_PREDETERMINADO = 8082;
@@ -28,6 +32,7 @@ export function leerArgumentos(argv: string[]): Opciones {
   let api: PerfilApi = "vps";
   let dispositivo: string | undefined;
   let recompilar = false;
+  let fisico = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     const [nombre, enLinea] = arg.startsWith("--") && arg.includes("=") ? [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)] : [arg, undefined];
@@ -45,6 +50,8 @@ export function leerArgumentos(argv: string[]): Opciones {
       api = v;
     } else if (nombre === "--dispositivo") {
       dispositivo = valor();
+    } else if (nombre === "--fisico") {
+      fisico = true;
     } else if (nombre === "--recompilar") {
       recompilar = true;
     } else {
@@ -52,7 +59,8 @@ export function leerArgumentos(argv: string[]): Opciones {
     }
   }
   if (!plataforma) throw new Error("Falta la plataforma: ios o android.");
-  return { plataforma, api, dispositivo, recompilar };
+  if (fisico && plataforma !== "ios") throw new Error("--fisico es solo para iOS.");
+  return { plataforma, api, dispositivo, fisico, recompilar };
 }
 
 /** Lee un archivo `CLAVE=valor` como `.env.trabajo`; ignora comentarios, líneas vacías y comillas. */
@@ -81,14 +89,18 @@ export const puertoWeb = (env: Record<string, string>) => puerto(env.WEB_PORT, "
 
 /**
  * EXPO_PUBLIC_API_URL según el perfil. Va con localhost también para Android: así un mismo Metro sirve las dos
- * plataformas, y la app lo traduce a 10.0.2.2 en el emulador (app/src/direccion-api.ts).
+ * plataformas, y la app lo traduce a 10.0.2.2 en el emulador (app/src/direccion-api.ts). Un iPhone físico no ve el
+ * localhost de la Mac: ahí `host` es la IP de la Mac en la red local.
  */
-export const urlApi = (perfil: PerfilApi, env: Record<string, string>) =>
-  perfil === "vps" ? URL_VPS : `http://localhost:${puertoWeb(env)}`;
+export const urlApi = (perfil: PerfilApi, env: Record<string, string>, host = "localhost") =>
+  perfil === "vps" ? URL_VPS : `http://${host}:${puertoWeb(env)}`;
 
-/** `~/.cache/truco/builds/<plataforma>-<huella>`. */
-export const carpetaBuild = (cache: string, plataforma: Plataforma, huella: string) =>
-  join(cache, "builds", `${plataforma}-${huella}`);
+/**
+ * `~/.cache/truco/builds/<plataforma>-<huella>`, o `ios-fisico-<huella>` para el iPhone físico: ese build es para
+ * iphoneos y va firmado, así que no sirve en el simulador ni al revés.
+ */
+export const carpetaBuild = (cache: string, plataforma: Plataforma, huella: string, fisico = false) =>
+  join(cache, "builds", `${plataforma}${fisico ? "-fisico" : ""}-${huella}`);
 
 /** Enlace que abre el cliente de desarrollo contra un Metro dado (esquema `exp+<slug>`). */
 export const enlaceDevClient = (slug: string, metro: string) =>
@@ -108,4 +120,27 @@ export function elegirSimulador(
   if (pedido) return todos.find(d => d.udid === pedido) ?? todos.find(d => d.name === pedido);
   const iphones = todos.filter(d => d.name.startsWith("iPhone"));
   return iphones.find(d => d.state === "Booted") ?? todos.find(d => d.state === "Booted") ?? iphones[0];
+}
+
+interface DispositivoDevicectl {
+  identifier: string;
+  connectionProperties?: { pairingState?: string; tunnelState?: string };
+  deviceProperties?: { name?: string };
+  hardwareProperties?: { platform?: string; reality?: string; udid?: string };
+}
+
+/**
+ * De la salida de `xcrun devicectl list devices --json-output`, el iPhone o iPad físico pedido o el primero
+ * emparejado. Xcode 27 también lista ahí los simuladores encendidos (`reality: "simulated"`): se descartan.
+ */
+export function elegirDispositivoFisico(
+  lista: { result?: { devices?: DispositivoDevicectl[] } },
+  pedido?: string,
+): { udid: string; name: string } | undefined {
+  const fisicos = (lista.result?.devices ?? [])
+    .filter(d => d.hardwareProperties?.reality !== "simulated" && d.hardwareProperties?.platform === "iOS")
+    .filter(d => d.connectionProperties?.pairingState === "paired" && d.connectionProperties?.tunnelState !== "unavailable")
+    .map(d => ({ udid: d.hardwareProperties?.udid ?? d.identifier, name: d.deviceProperties?.name ?? d.identifier, id: d.identifier }));
+  const elegido = pedido ? fisicos.find(d => d.udid === pedido || d.id === pedido || d.name === pedido) : fisicos[0];
+  return elegido && { udid: elegido.udid, name: elegido.name };
 }
