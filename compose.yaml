@@ -1,3 +1,5 @@
+# En un worktree creado con `npm run trabajo`, .env apunta a .env.trabajo: los puertos y el nombre del proyecto
+# salen de la ranura del worktree (#378). Sin ese archivo, valen los predeterminados de abajo.
 name: truco-local
 services:
   web:

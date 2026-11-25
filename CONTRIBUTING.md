@@ -6,7 +6,17 @@
 2. Reutilizá el issue existente o abrí uno. Para errores, incluí pasos o una mano reproducible, el resultado actual y el esperado. Para funciones y decisiones de diseño, describí el problema, las opciones, los criterios y la decisión. Si hace falta acordar el diseño, registrá la decisión en el issue antes de implementarla. Para cambios de reglas, citá el artículo o sección y especificá a qué variante se aplica.
 3. Reservá una rama por issue. Usá el nombre exacto `codex/issue-<número>` y la operación de creación de la referencia, que rechaza una rama existente. Una asignación o un comentario sirve para comunicar el estado, ya que varias sesiones pueden usar la misma cuenta. La rama indica que el trabajo está reservado. Codex y Claude Code siguen el mismo protocolo y el mismo prefijo: `AGENTS.md` tiene las reglas compartidas y `CLAUDE.md` las importa.
 
-Ejemplo desde un checkout cuyo `origin` apunta al repositorio principal y con GitHub CLI autenticado. Ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
+Desde un checkout cuyo `origin` apunta al repositorio principal, con GitHub CLI autenticado, empezá el issue con un comando:
+
+```sh
+npm run trabajo -- 42
+```
+
+El comando reserva `codex/issue-42` desde `origin/main` con la operación exclusiva, crea el worktree `../truco-issue-42`, comenta en el issue la rama, la sesión, el worktree y los puertos, y corre `npm ci` con la caché de npm. Si la rama o la carpeta ya existen, falla sin tocar nada. Para nombrar la sesión en el comentario, agregá `--sesion <identificador>`; si no, usa el identificador de la sesión de Claude Code o Codex.
+
+Cada worktree recibe una de ocho ranuras de puertos, registradas en `~/.cache/truco/ranuras`, y las escribe en `.env.trabajo`: `WEB_PORT`, `OIDC_PORT`, `METRO_PORT`, `TEST_PORT`, `TEST_WEB_PORT`, `TEST_OIDC_PORT` y `COMPOSE_PROJECT_NAME=truco-issue-42`. `npm run check`, `npm run check:stack` y Playwright leen ese archivo, así que varias sesiones verifican a la vez sin chocar. Una variable definida en el entorno tiene prioridad. El worktree también recibe un `.env` que apunta a `.env.trabajo`, por lo que `docker compose up` levanta la mesa local con sus propios puertos y volúmenes. Para Metro, usá `source scripts/trabajo-entorno.sh && npm --workspace app run ios -- --port "$METRO_PORT"`. Al borrar el worktree, su ranura queda libre. Sin `.env.trabajo`, todo usa los puertos predeterminados.
+
+El comando sigue estos pasos. Para hacerlo a mano, ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
 
 ```sh
 issue=42
@@ -34,7 +44,7 @@ CHECK_STACK=1 npm run check
 git diff --check
 ```
 
-`npm run check` ejecuta las pruebas unitarias, compila la aplicación en `dist/` para la raíz del sitio y comprueba sus enlaces internos, anclas, cartas y recursos. Playwright recorre la interfaz en Chromium de escritorio y con emulación móvil. Instalá el navegador al preparar un checkout o actualizar Playwright. En Linux podés agregar `--with-deps` al comando de instalación. Si otra sesión usa el puerto 4322, elegí uno libre con `TEST_PORT=4323 npm run check`. `CHECK_STACK=1` agrega la prueba de la aplicación completa con la API, PostgreSQL y el proveedor de identidad. Si no podés usar Docker, ejecutá `npm run check` e indicá en el PR que falta la prueba de la pila completa; no integres hasta que alguien la corra.
+`npm run check` ejecuta las pruebas unitarias, compila la aplicación en `dist/` para la raíz del sitio y comprueba sus enlaces internos, anclas, cartas y recursos. Playwright recorre la interfaz en Chromium de escritorio y con emulación móvil. Instalá el navegador al preparar un checkout o actualizar Playwright. En Linux podés agregar `--with-deps` al comando de instalación. En un worktree creado con `npm run trabajo`, los puertos salen de `.env.trabajo`. En otro checkout, si otra sesión usa el puerto 4322, elegí uno libre con `TEST_PORT=4323 npm run check`. `CHECK_STACK=1` agrega la prueba de la aplicación completa con la API, PostgreSQL y el proveedor de identidad. Si no podés usar Docker, ejecutá `npm run check` e indicá en el PR que falta la prueba de la pila completa; no integres hasta que alguien la corra.
 
 - **Reglas y datos.** Revisá el texto, las tablas, los ejemplos y las fuentes de los capítulos afectados. Calculá al menos una mano concreta y comprobá los empates, los límites del tanteador o las variantes que correspondan al cambio.
 - **Interfaz y navegación.** Probá el comportamiento modificado en el navegador en un ancho móvil y otro de escritorio. Para controles interactivos, verificá teclado, foco y estados relevantes. Si cambia la búsqueda, probá un término con tilde, uno sin tilde, un resultado vacío y el enlace al capítulo.

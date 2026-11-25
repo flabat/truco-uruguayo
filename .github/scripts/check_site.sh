@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source scripts/trabajo-entorno.sh # Puertos de la ranura (#378).
 
 npm run cartas:verificar
 npm run test:unit
