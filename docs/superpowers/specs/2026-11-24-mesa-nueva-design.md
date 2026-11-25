@@ -1,6 +1,6 @@
 # Mesa nueva de El Truco: diseño visual
 
-Fecha: 2026-11-24 · Estado: en revisión del usuario · Issue #357 · Etapa 3 del [plan de la app móvil](2026-11-23-app-movil-design.md)
+Fecha: 2026-11-24 · Estado: aprobado · Issue #357 · Etapa 3 del [plan de la app móvil](2026-11-23-app-movil-design.md)
 
 ## Intención
 
