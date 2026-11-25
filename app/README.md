@@ -12,7 +12,7 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 ## Ingreso
 
 - **iOS y Android:** abre `/api/auth/login?app=<desafío>` en el navegador del sistema, vuelve por `eltruco://ingreso?codigo=…`, canjea el código con `POST /api/auth/canje` y guarda la sesión en el almacenamiento seguro. Cada pedido lleva `Authorization: Bearer`.
-- **Web:** se sirve en `/jugar/` del mismo origen que la API y usa la cookie `truco_sesion`.
+- **Web:** se sirve en `/jugar/` del mismo origen que la API y usa la cookie `truco_sesion`. Con `npm run app:web`, el proxy local hace el ingreso PKCE de la app con retorno de bucle local y guarda la sesión en la misma cookie (ver [La web con recarga en caliente](#la-web-con-recarga-en-caliente)).
 - **Ingreso de prueba:** si la API anuncia `GET /api/auth/dev` (`AUTH_DEV=1`, activo en la pila local), la pantalla de ingreso muestra **Entrar como…** con los seis jugadores del realm local. En iOS y Android pide el código con el desafío y lo canjea en `/api/auth/canje`; en la web recibe la cookie. Ver [el entorno local](../docs/entorno-local.md#ingreso-de-prueba-sin-keycloak).
 
 ## Comandos (desde la raíz)
@@ -22,6 +22,8 @@ npm run app:tipos      # TypeScript
 npm run app:exportar   # exportación web en app/dist, con base /jugar
 npm run app:nativo -- ios                  # cliente de desarrollo en el simulador de iOS, API de eltru.co
 npm run app:nativo -- android --api local  # en el emulador de Android, API de la pila local
+npm run app:web                            # web con recarga en caliente en http://localhost:8083/, API de eltru.co
+npm run app:web -- --api local             # lo mismo contra la pila local
 ```
 
 `app:nativo` calcula la huella nativa con `@expo/fingerprint` (dependencias nativas, `app.json`, plugins). Si ya hay un build con esa huella en `~/.cache/truco/builds/<plataforma>-<huella>`, lo instala en segundos; si no, compila con `expo run:<plataforma>` (requiere Xcode o Android Studio) y lo guarda. Cambios solo de JavaScript no cambian la huella. Después arranca Metro y abre la app contra él.
@@ -29,6 +31,14 @@ npm run app:nativo -- android --api local  # en el emulador de Android, API de l
 - **Dispositivo:** usa el simulador de iPhone encendido o el primero disponible, y el emulador de Android en marcha o el primer AVD. Para elegir uno, `--dispositivo "iPhone 17"` (nombre o UDID) o `--dispositivo Pixel_API_36` (AVD o serie de adb). `--recompilar` compila aunque haya un build guardado.
 - **API:** `--api vps` (predeterminado) usa `https://eltru.co`; `--api local` usa la pila de `docker compose up --build` en `http://localhost:8081` (o `WEB_PORT` de `.env.trabajo`). Llega a la app por `EXPO_PUBLIC_API_URL`, que Metro incrusta en el JavaScript: no cambia la huella. En Android la app traduce `localhost` a `10.0.2.2`, así un mismo Metro sirve las dos plataformas.
 - **Metro:** escucha en `METRO_PORT` de `.env.trabajo` o en el 8082, porque la web local ocupa el 8081. Si ya hay un Metro en ese puerto, el comando lo reusa (con la API con la que arrancó) y solo instala y abre la app. Ese mismo Metro sirve la web en `http://localhost:8082`.
+
+### La web con recarga en caliente
+
+`app:web` arranca `expo start --web` en un puerto interno y un proxy en `APP_WEB_PORT` de `.env.trabajo` o en el 8083. El proxy sirve la app y manda `/api` y el WebSocket `truco.v1` a la API elegida desde el mismo origen, así la cookie `truco_sesion` funciona como en eltru.co. Un cambio en `app/src/` se ve en el navegador en segundos, sin reconstruir nada.
+
+- **API:** `--api vps` (predeterminado) usa `https://eltru.co`; `--api local`, la pila de `docker compose up --build` en `WEB_PORT` (8081). El proxy pone en cada pedido el `Host` y el `Origin` de la API, devuelve al proxy las redirecciones de la API y saca `Secure` y `Domain` de sus cookies.
+- **Raíz:** en desarrollo Expo Router no aplica la base `/jugar`, así que la app vive en `http://localhost:8083/`. Los enlaces a `/jugar/…` (invitaciones, retorno del ingreso, CanvasKit, cartas) se redirigen a la misma ruta sin la base.
+- **Ingreso:** Keycloak solo vuelve a `/api/auth/callback` de la API, así que la cookie de eltru.co nunca llegaría a localhost. El proxy usa el flujo PKCE de la app con retorno de bucle local ([RFC 8252](https://www.rfc-editor.org/rfc/rfc8252#section-7.3)): manda el navegador a `/api/auth/login?app=<desafío>&retorno=http://localhost:8083/api/auth/retorno-local`, la API devuelve ahí el código de un solo uso, el proxy lo canjea con su verificador y guarda la sesión como cookie de localhost. La API solo acepta ese retorno con un desafío PKCE y en `localhost` o `127.0.0.1`. Con la pila local también funciona **Entrar como…**.
 
 La web exportada se prueba con la pila: `docker compose up --build` y `http://localhost:8081/jugar/`.
 

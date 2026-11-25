@@ -1,5 +1,5 @@
 import type { PoolClient } from "pg";
-import { textoFrasePie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { textoDeIndicacion, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { canto } from "@eltruco/cliente/cantos.ts";
 import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import { esCardId, type CardId } from "@eltruco/motor/cartas.ts";
@@ -55,7 +55,7 @@ function jugadasDeMano(mano: ManoReporte, indicaciones: readonly IndicacionPie[]
   const entradas: string[] = [];
   function agregarPalabras(indice: number) {
     for (const i of indicaciones.filter(i => i.indiceAccion === indice)) {
-      entradas.push(`V${i.vuelta} · A${i.emisor} le dijo a A${i.destinatario} «${textoFrasePie[i.frase]}»`);
+      entradas.push(`V${i.vuelta} · A${i.emisor} le dijo a A${i.destinatario} «${textoDeIndicacion(i)}»`);
     }
   }
   mano.acciones.forEach((accion, indice) => {

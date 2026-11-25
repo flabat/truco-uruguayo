@@ -24,7 +24,7 @@ test("cada ranura usa puertos propios, distintos de los predeterminados", () => 
 
 test(".env.trabajo trae los puertos de la ranura y el proyecto Compose del issue", () => {
   const env = contenidoEnv("42", 3);
-  for (const linea of ["WEB_PORT=8103", "OIDC_PORT=8203", "API_PORT=3103", "METRO_PORT=8303", "TEST_PORT=4403",
+  for (const linea of ["WEB_PORT=8103", "OIDC_PORT=8203", "API_PORT=3103", "METRO_PORT=8303", "APP_WEB_PORT=8403", "TEST_PORT=4403",
     "TEST_WEB_PORT=18503", "TEST_OIDC_PORT=18603", "COMPOSE_PROJECT_NAME=truco-issue-42"]) {
     assert.match(env, new RegExp(`^${linea}$`, "m"));
   }

@@ -206,6 +206,13 @@ async function verificar(cantidad) {
   await hablar(par, indicacion(1, "veni"), 409);
   await hablar(par, indicacion(0, "voy-a-vos"), 409);
   await hablar(par, indicacion(0, "libre"), 400);
+  // La carta sólo acompaña a «Jugá» y tiene que ser un gesto que el compañero le mostró al pie (#425).
+  const conCarta = (destinatario, frase, carta, version = 1) =>
+    ({ id: randomUUID(), version, indicacion: { destinatario, frase, vuelta: 1, carta } });
+  await hablar(par, conCarta(0, "veni", "cejas"), 400);
+  await hablar(par, conCarta(0, "juga", 2), 400);
+  await hablar(par, conCarta(0, "juga", "nariz"), 409);
+  await hablar(par, conCarta(0, "juga", "ojos-cerrados"), 409);
   await json(0, ruta + "/acciones", { id: randomUUID(), version: 1, accion: { tipo: "carta", carta: "oros-04", sena: "cejas" } }, 400);
 
   const orden = indicacion(0, "veni");
@@ -272,6 +279,13 @@ async function verificar(cantidad) {
     assert.deepEqual((await json(6, salon)).tablero.indicaciones, voy.indicaciones);
     assert.deepEqual(voy.indicaciones.at(-1), { emisor: par, destinatario: 0, frase: "voy-a-vos", vuelta: 2, indiceAccion: 5 });
   } else {
+    // El pie nombra la carta que le mostró Ana (el 4 de la muestra): la oye toda la mesa y la valida el replay.
+    const nombrada = await hablar(par, conCarta(2, "juga", "beso", jugadaRival.version));
+    const pedida = { emisor: par, destinatario: 2, frase: "juga", carta: "beso", vuelta: 1, indiceAccion: 2 };
+    assert.deepEqual(nombrada.indicaciones.at(-1), pedida);
+    for (const asiento of asientos) assert.deepEqual((await leer(asiento)).indicaciones.at(-1), pedida);
+    const { rows: [{ replay: conPedido }] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [id]);
+    assert.deepEqual(reproducirChico(conPedido, 2, conPedido.eventos.length).vista.indicaciones.at(-1), pedida);
     const fin = await json(2, ruta + "/acciones", { version: jugadaRival.version, id: randomUUID(), accion: { tipo: "mazo" } });
     const siguiente = await json(0, ruta + "/siguiente", { id: randomUUID(), version: fin.version });
     assert.equal(siguiente.lance.tipo, "pico-a-pico");

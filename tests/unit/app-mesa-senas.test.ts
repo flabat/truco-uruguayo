@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Mesa, Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
-import { versionSenasPie, type VistaPie } from "@eltruco/motor/senas-pie.ts";
+import { versionSenasPie, type IndicacionPie, type VistaPie } from "@eltruco/motor/senas-pie.ts";
 import { jugarEnSilencio, senasEnMesa } from "../../app/src/mesa/senas.ts";
 import { mesaDe, partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
@@ -80,8 +80,10 @@ test("el pie ve un globo por compañero con el palo de la muestra y las frases",
       { emisor: 2, nombre: "Ana", gestos: [{ gesto: "lengua", significado: "As de copa u oro" }] },
     ],
     frases: [
-      { destinatario: 0, nombre: "Clara", frases: ["juga"], esperando: true },
-      { destinatario: 2, nombre: "Ana", frases: ["voy-a-vos"], esperando: false },
+      { destinatario: 0, nombre: "Clara", frases: ["juga"], esperando: true, pedidas: [
+        { carta: "labio-inferior", texto: "Jugá el tres" }, { carta: "cejas", texto: "Jugá el 2 de bastos" },
+      ] },
+      { destinatario: 2, nombre: "Ana", frases: ["voy-a-vos"], esperando: false, pedidas: [] },
     ],
   });
 });
@@ -180,4 +182,38 @@ test("las mesas con señas de pie, sin señas o de tercetos no juegan en silenci
 test("un espectador de una mesa legada tampoco ve señas", () => {
   const mesa: Mesa = { ...mesaDe("2v2", 2), formato: "pairs-private-senas" };
   assert.deepEqual(senasEnMesa({ mesa, partida: partidaDe(vistaDe(4, 2)), espectador: true }), { tipo: "ninguna" });
+});
+
+// #425: lo que dijo el pie queda junto a la mano del destinatario hasta que tira su carta.
+const grupoPropio: VistaPie = { pie: 2, vuelta: 1, grupos: [{ emisor: 0, gestos: ["labios-derecha", "labios-izquierda"] }], opciones: [] };
+const juga: IndicacionPie = { emisor: 2, destinatario: 0, frase: "juga", carta: "labios-derecha", vuelta: 1, indiceAccion: 0 };
+
+test("el compañero ve la frase vigente del pie con la carta nombrada y sus cartas a resaltar", () => {
+  const r = senasEnMesa({ mesa: mesaPie(0), partida: partidaPie(grupoPropio, { indicaciones: [juga] }), espectador: false });
+  assert.equal(r.tipo, "companero");
+  if (r.tipo === "companero") assert.deepEqual(r.pedido, { texto: "Ana: Jugá el as bravo", cartas: ["espadas-01"] });
+  const sinCarta = { ...juga, carta: undefined };
+  const s = senasEnMesa({ mesa: mesaPie(0), partida: partidaPie(grupoPropio, { indicaciones: [sinCarta] }), espectador: false });
+  if (s.tipo === "companero") assert.deepEqual(s.pedido, { texto: "Ana: Jugá", cartas: [] });
+});
+
+test("la frase se retira al tirar o al cambiar de vuelta", () => {
+  const tiro = partidaDe(vistaDe(4, 0, { muestra: "bastos-05", vueltaActual: { salida: 0, jugadas: [{ asiento: 0, carta: "copas-04" }] } }),
+    { versionSenas: versionSenasPie, pie: grupoPropio, indicaciones: [juga] });
+  const r = senasEnMesa({ mesa: mesaPie(0), partida: tiro, espectador: false });
+  assert.equal(r.tipo === "companero" && r.pedido, undefined);
+  const otraVuelta = partidaPie({ ...grupoPropio, vuelta: 2 }, { indicaciones: [juga] });
+  const s = senasEnMesa({ mesa: mesaPie(0), partida: otraVuelta, espectador: false });
+  assert.equal(s.tipo === "companero" && s.pedido, undefined);
+});
+
+test("en tercetos, quien recibe «Vení» también sabe a qué compañero va el equipo", () => {
+  const pie: VistaPie = { pie: 4, vuelta: 1, grupos: [{ emisor: 0, gestos: ["boca"] }], opciones: [] };
+  const indicaciones: IndicacionPie[] = [
+    { emisor: 4, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 },
+    { emisor: 4, destinatario: 2, frase: "juga", carta: "cejas", vuelta: 1, indiceAccion: 0 },
+  ];
+  const r = senasEnMesa({ mesa: mesaTercetos(0), partida: { ...partidaTercetos(pie), indicaciones }, espectador: false });
+  assert.equal(r.tipo, "companero");
+  if (r.tipo === "companero") assert.deepEqual(r.pedido, { texto: "Eli: Vení · juega Ana", cartas: [] });
 });

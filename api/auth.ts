@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import * as oidc from "openid-client";
-import { cookieDe, esDesafio, hash, nombreSesion, origenValido, sesionDe, verificadorCorresponde } from "./sesion.ts";
+import { cookieDe, esDesafio, esRetornoLocal, hash, nombreSesion, origenValido, sesionDe, verificadorCorresponde } from "./sesion.ts";
 import { leerJson, responderJson } from "./http.ts";
 import { crearIngresoDePrueba, rutaIngresoDePrueba } from "./auth-dev.ts";
 import { abrirSesionWeb, diasSiete, emitirCanje, registrarJugador, secreto } from "./ingreso.ts";
@@ -97,11 +97,17 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       const regreso = regresoPermitido(url.searchParams.get("volver"));
       const desafioApp = url.searchParams.get("app");
       if (desafioApp !== null && !esDesafio(desafioApp)) { texto(res, 400, "Desafío de la app inválido."); return; }
+      // `npm run app:web` vuelve a su proxy local en lugar de eltruco://; solo junto a un desafío PKCE.
+      const retornoLocal = url.searchParams.get("retorno");
+      if (retornoLocal !== null && (desafioApp === null || !esRetornoLocal(retornoLocal))) {
+        texto(res, 400, "Retorno inválido."); return;
+      }
       // El intento y la sesión deben quedar en el dominio anunciado al navegador.
       if (req.headers.host !== web.host) {
         const login = new URL("/api/auth/login", web);
         if (desafioApp !== null) login.searchParams.set("app", desafioApp);
         else login.searchParams.set("volver", regreso);
+        if (retornoLocal !== null) login.searchParams.set("retorno", retornoLocal);
         res.writeHead(303, { Location: login.href }).end();
         return;
       }
@@ -113,7 +119,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       await pool.query("DELETE FROM juego.sesiones WHERE vence <= now()");
       await pool.query("DELETE FROM juego.canjes WHERE vence <= now()");
       await pool.query("INSERT INTO juego.ingresos (clave, estado, nonce, verificador, regreso, desafio_app) VALUES ($1,$2,$3,$4,$5,$6)",
-        [hash(handle), state, nonce, verifier, regreso, desafioApp]);
+        [hash(handle), state, nonce, verifier, retornoLocal ?? regreso, desafioApp]);
       const location = oidc.buildAuthorizationUrl(config, {
         response_type: "code", redirect_uri: callback.href, scope: "openid profile",
         state, nonce, prompt: "login", code_challenge_method: "S256",
@@ -155,7 +161,7 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       await capturarApple?.(jugador.id, acceso).catch(() => console.warn("No se pudo guardar el token de Apple del ingreso."));
       if (attempt.desafio_app) {
         const codigo = await emitirCanje(pool, jugador.id, attempt.desafio_app, cancelada);
-        const destino = new URL(retornoApp);
+        const destino = new URL(esRetornoLocal(attempt.regreso) ? attempt.regreso : retornoApp);
         destino.searchParams.set("codigo", codigo);
         res.writeHead(303, { Location: destino.href, "Set-Cookie": cookie(nombreFlujo, "", 0) }).end();
         return;

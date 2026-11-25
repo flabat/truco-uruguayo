@@ -43,7 +43,8 @@ function cruce(modelo: ModeloPie, semilla: number, pares: number, verificar = fa
                 }
               }
               for (const propuesta of elegirIndicacionesPie(vistaOnline(estado, asiento), pie)) {
-                const palabra = crearIndicacionPie(estado, asiento, propuesta.destinatario, propuesta.frase, vuelta, palabras);
+                const palabra = crearIndicacionPie(estado, asiento, propuesta.destinatario, propuesta.frase, vuelta, palabras,
+                  propuesta.carta);
                 assert.ok(palabra);
                 palabras.push(palabra);
               }

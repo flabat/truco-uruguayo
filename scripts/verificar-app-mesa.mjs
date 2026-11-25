@@ -320,6 +320,7 @@ async function probarParejasConPie() {
   await nuevaMesa();
   let globos = 0;
   let pildoras = 0;
+  let pedidos = 0;
   const mirar = async (p, m) => {
     if (!m.pie) return;
     if (m.pie.pie === yo) {
@@ -329,7 +330,11 @@ async function probarParejasConPie() {
         if (globos++ === 0) await capturar(p, "parejas-globo-375x760");
       }
     } else if (m.pie.grupos.some(g => g.emisor === yo)) {
-      await expect(p.getByTestId("pildora-senas")).toBeVisible(espera);
+      // Si el pie ya le habló en esta vuelta y no tiró, la frase reemplaza a la píldora junto a la mano (#425).
+      const pedido = (m.indicaciones ?? []).some(i => i.emisor === m.pie.pie && i.destinatario === yo && i.vuelta === m.pie.vuelta)
+        && !m.vista.vueltaActual?.jugadas.some(j => j.asiento === yo);
+      await expect(p.getByTestId(pedido ? "pedido-del-pie" : "pildora-senas")).toBeVisible(espera);
+      if (pedido && pedidos++ === 0) await capturar(p, "parejas-pedido-375x760");
       pildoras++;
     }
   };
@@ -353,7 +358,7 @@ async function probarParejasConPie() {
   }
   assert.ok(globos > 0, "luis vio el globo con las señas de su compañero");
   await luis.context().close();
-  console.log(`2v2 con tres computadoras: globo del pie (${globos}) y píldora de señas (${pildoras}).`);
+  console.log(`2v2 con tres computadoras: globo del pie (${globos}) y píldora de señas (${pildoras}), con frase del pie (${pedidos}).`);
 }
 
 /** Las cartas de la mano de izquierda a derecha, como las juegan los atajos 1, 2 y 3. */
@@ -673,7 +678,7 @@ async function probarPrivacidad() {
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
   await expect(clara.getByText("👁 Mirando", { exact: true })).toBeVisible(espera);
   // El visor nunca muestra señas: ni caras, ni globos, ni la píldora, ni las frases del pie, en toda la mano.
-  const senasDelVisor = ["cara-sena", "pildora-senas", "frases-pie"].map(t => `[data-testid="${t}"]`)
+  const senasDelVisor = ["cara-sena", "pildora-senas", "pedido-del-pie", "frases-pie"].map(t => `[data-testid="${t}"]`)
     .concat('[data-testid^="globo-senas-"]').join(", ");
   await observar(clara, senasDelVisor);
 
@@ -693,7 +698,7 @@ async function probarPrivacidad() {
     window.senasAjenas = [];
     const revisar = () => {
       if (document.querySelector(selector)) window.senasAjenas.push("globo");
-      for (const pildora of document.querySelectorAll('[data-testid="pildora-senas"]')) {
+      for (const pildora of document.querySelectorAll('[data-testid="pildora-senas"], [data-testid="pedido-del-pie"]')) {
         if (nombres.some(n => pildora.textContent.includes(n))) window.senasAjenas.push(pildora.textContent);
       }
     };
@@ -706,7 +711,9 @@ async function probarPrivacidad() {
   await eva.evaluate(() => {
     window.senasPropias = 0;
     const revisar = () => {
-      if (document.querySelector('[data-testid^="globo-senas-"], [data-testid="pildora-senas"]')) window.senasPropias++;
+      if (document.querySelector('[data-testid^="globo-senas-"], [data-testid="pildora-senas"], [data-testid="pedido-del-pie"]')) {
+        window.senasPropias++;
+      }
     };
     revisar();
     new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true });

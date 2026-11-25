@@ -45,7 +45,8 @@ function evaluar(condicion: typeof condiciones[number], semilla: number, pares: 
               if (!condicion.palabras) continue;
               const propuestas = elegirIndicacionesPie(vistaOnline(estado, asiento), pie);
               for (const propuesta of propuestas) {
-                const frase = crearIndicacionPie(estado, asiento, propuesta.destinatario, propuesta.frase, vuelta, indicaciones);
+                const frase = crearIndicacionPie(estado, asiento, propuesta.destinatario, propuesta.frase, vuelta, indicaciones,
+                  propuesta.carta);
                 assert.ok(frase);
                 indicaciones.push(frase);
                 datos.frases[frase.frase]++;

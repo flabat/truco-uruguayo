@@ -174,7 +174,8 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
           <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto}
-            juntar={chico !== null && mesa.fin !== null} />
+            juntar={chico !== null && mesa.fin !== null}
+            resaltadas={senas.tipo === "companero" ? senas.pedido?.cartas : undefined} />
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}

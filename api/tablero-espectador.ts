@@ -16,8 +16,8 @@ export function tableroEspectador(estado: EstadoOnline, indicaciones?: readonly 
   const { mano, resultado } = estado;
   // El visor oculta ciertas consultas de flor. Traducir el ancla al índice que el espectador ve.
   const esPublica = (accion: AccionOnline) => esAccionPublica(accion, mano.reparto.respondenSinFlor);
-  const palabras = indicaciones?.map(({ emisor, destinatario, frase, vuelta, indiceAccion }) => ({
-    emisor, destinatario, frase, vuelta, indiceAccion: estado.acciones.slice(0, indiceAccion).filter(esPublica).length,
+  const palabras = indicaciones?.map(({ emisor, destinatario, frase, carta, vuelta, indiceAccion }) => ({
+    emisor, destinatario, frase, ...(carta && { carta }), vuelta, indiceAccion: estado.acciones.slice(0, indiceAccion).filter(esPublica).length,
   }));
   return {
     ...(palabras && { indicaciones: palabras }),
