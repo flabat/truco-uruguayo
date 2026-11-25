@@ -20,7 +20,7 @@ function Tanteador({ texto }: { texto: string }) {
 }
 
 export function Barra({ rect, tanteador, conectada, abrirMas }: {
-  rect: Rect; tanteador: MesaVisible["tanteador"]; conectada: boolean; abrirMas: () => void;
+  rect: Rect; tanteador: MesaVisible["tanteador"]; conectada: boolean; abrirMas?: () => void;
 }) {
   return (
     <View style={[enRect(rect), estilos.barra]} pointerEvents="box-none">
@@ -34,9 +34,11 @@ export function Barra({ rect, tanteador, conectada, abrirMas }: {
           </View>
         )}
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Más" onPress={abrirMas} hitSlop={8} style={estilos.menu}>
-        <Text style={estilos.icono}>☰</Text>
-      </Pressable>
+      {abrirMas ? (
+        <Pressable accessibilityRole="button" accessibilityLabel="Más" onPress={abrirMas} hitSlop={8} style={estilos.menu}>
+          <Text style={estilos.icono}>☰</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

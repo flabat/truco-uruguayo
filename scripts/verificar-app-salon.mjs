@@ -120,10 +120,14 @@ async function probarParejas() {
   await expect(fila).toContainText("2 personas y 2 computadoras");
   await boton(fila, "Mirar").click();
   await clara.waitForURL(`/app/mirar/${id}`);
-  await expect(titulo(clara, "La mano en juego")).toBeVisible(espera);
+  // La mesa nueva, sin mano ni Cantos: el tanteador nombra a cada pareja.
+  await expect(clara.getByTestId("mesa")).toBeVisible(espera);
+  await expect(clara.getByRole("heading", { level: 2, name: "La mano en juego" })).toBeVisible(espera);
   await expect(clara.getByText("👁 Mirando")).toBeVisible();
+  await expect(boton(clara, "Volver al salón")).toBeVisible();
+  await expect(boton(clara, "Cantos")).toHaveCount(0);
   // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba.
-  await expect(clara.getByLabel("Tanteador")).toHaveText(/ \d+ · \d+ /);
+  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador 1 y Computadora 3 \d+ · \d+ Jugador 2 y Computadora 4 · a \d+$/);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
   await clara.goto(`/app/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/app/mirar/${id}`, espera);
