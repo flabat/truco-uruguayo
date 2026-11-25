@@ -12,7 +12,8 @@ export default function Raiz() {
   const [listas] = useFonts({ DMSerifText_400Regular, DMSans_400Regular, DMSans_600SemiBold });
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      {/* Iconos oscuros sobre el papel crema; la mesa los pide claros. */}
+      <StatusBar style="dark" />
       {listas ? (
         <ProveedorDeSesion>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colores.papel } }} />
