@@ -2,7 +2,7 @@
 import Site from "../layouts/Site.astro";
 import Carta from "../components/Carta.astro";
 import Icon from "../components/Icon.astro";
-import { baraja, extras } from "../lib/cartas";
+import { baraja, extras } from "@eltruco/cliente/cartas.ts";
 import { ruleUrl, url } from "../lib/guide";
 
 const grupos = [...baraja, { id: "extras", nombre: "Comodines y reverso", cartas: extras }];

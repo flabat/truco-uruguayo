@@ -3,7 +3,7 @@ import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { cartasPorId } from "../../src/lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import { loadLibrary, standalone } from "./svg.mjs";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));

@@ -1,7 +1,7 @@
 import type { ResumenTantos } from "@eltruco/motor/resumen-tantos.ts";
 import type { AccionOnline, EstadoOnline } from "@eltruco/motor/cantos-online.ts";
-import { motivoDelCobro } from "../../lib/cobros";
-import { tantos } from "./HistorialDeMano";
+import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
+import { tantos } from "@eltruco/cliente/textos.ts";
 
 export function ResumenDeTantos({ resumen, propio, equipo, acciones = [], resultado = null, titulo = "Tantos de esta mano", detalle = true, nombre }: {
   resumen: ResumenTantos; propio: number; equipo: (e: number) => string;

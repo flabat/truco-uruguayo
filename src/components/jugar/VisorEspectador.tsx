@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
-import { PalabraDelPie, useVozDelPie } from "./Voz";
+import { PalabraDelPie } from "./Voz";
+import { useVozDelPie } from "@eltruco/cliente/voces.ts";
 import { VozDiscord } from "./VozDiscord";
 import type { tableroEspectador } from "../../../api/tablero-espectador";
-import { descripcionDeIndicacion, descripcionDeJugada, HistorialDeMano, tantos } from "./HistorialDeMano";
+import { HistorialDeMano } from "./HistorialDeMano";
+import { descripcionDeIndicacion, descripcionDeJugada, tantos } from "@eltruco/cliente/textos.ts";
 import { Tanteador } from "./Tablero";
 import { Tapete } from "./Tapete";
 import type { VersionesMesa } from "./cliente";

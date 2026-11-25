@@ -1,7 +1,7 @@
 import type { ReactNode, Ref } from "react";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { VistaAsiento } from "@eltruco/motor/mano.ts";
-import { nombrar } from "../jugar/HistorialDeMano";
+import { nombrar } from "@eltruco/cliente/textos.ts";
 import { Naipe, Tapete } from "../jugar/Tapete";
 import { asientos, nombre } from "./relato";
 
