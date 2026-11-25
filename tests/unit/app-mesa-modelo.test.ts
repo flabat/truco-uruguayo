@@ -489,6 +489,8 @@ test("espectador: se presentan las jugadas nuevas de la misma mano, el truco con
   assert.deepEqual(pasosDelEspectador(undefined, ahora, true), []);
   const otraMano = versionarObservada(observadaDe({}, { manoNumero: 4 }));
   assert.deepEqual(pasosDelEspectador(ahora, otraMano, false), []);
+  // Una lectura sin acciones nuevas (otra frase del pie, otro tanteador) no tira lo que falta presentar.
+  assert.deepEqual(pasosDelEspectador(ahora, ahora, false, pasos), pasos);
 });
 
 test("espectador: al completar una vuelta, el naipe se ve antes del veredicto", () => {

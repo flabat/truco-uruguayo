@@ -617,7 +617,7 @@ export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = 
   if (!actual || !anterior || anterior.manoNumero !== actual.manoNumero) return [];
   const previo = anterior.mesa.tablero;
   const t = actual.mesa.tablero;
-  if (t.acciones.length <= previo.acciones.length) return [];
+  if (t.acciones.length <= previo.acciones.length) return pendientes;
   const vueltas = [...t.vueltas, ...(t.vueltaActual ? [t.vueltaActual] : [])];
   const enPaso = (tablero: Tablero): ObservadaVersionada => ({
     ...actual,
