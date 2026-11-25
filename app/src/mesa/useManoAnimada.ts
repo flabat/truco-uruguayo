@@ -73,9 +73,13 @@ export function volverALaMano(a: CartaAnimada): void {
 export function useManoAnimada(cartas: CardId[], destino: Carta[]): Map<CardId, CartaAnimada> {
   const guardadas = useRef(new Map<CardId, CartaAnimada>());
   const clave = cartas.join(" ");
+  // La geometría se recalcula en cada render con objetos nuevos: la clave son sus números.
+  const claveDestino = destino.map(c => `${c.x},${c.y},${c.ancho},${c.alto},${c.rotacion}`).join(";");
 
-  // Las cartas nuevas aparecen en su lugar; el reparto lo anima el lienzo.
-  // Se arma de nuevo solo cuando cambian las cartas, no con cada geometría.
+  // Las cartas nuevas aparecen en su lugar; el reparto lo anima el lienzo. `destino` queda afuera
+  // a propósito: el mapa tiene que seguir siendo el mismo objeto mientras no cambien las cartas,
+  // porque `ManoPropia` y el lienzo dependen de él. Las posiciones nuevas las lleva el efecto de
+  // abajo. Solo importa el largo de `destino`, para crear las cartas que todavía no tenían lugar.
   const mano = useMemo(() => {
     const nueva = new Map<CardId, CartaAnimada>();
     cartas.forEach((id, i) => {
@@ -101,13 +105,13 @@ export function useManoAnimada(cartas: CardId[], destino: Carta[]): Map<CardId, 
         const antes = animada.lugar.value;
         const igual = antes.x === lugar.x && antes.y === lugar.y && antes.ancho === lugar.ancho
           && antes.alto === lugar.alto && antes.rotacion === lugar.rotacion;
-        // La geometría se recalcula en cada render: sin cambios, no reinicia la animación en curso.
+        // Una carta que ya iba a ese lugar sigue con su animación en curso.
         if (igual) continue;
         animada.lugar.value = lugar;
         if (animada.fase.value === enMano) volverALaMano(animada);
       }
     });
-  }, [mano, destino]);
+  }, [mano, claveDestino]);
 
   return mano;
 }
