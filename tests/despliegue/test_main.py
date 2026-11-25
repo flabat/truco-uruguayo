@@ -94,6 +94,20 @@ class DeployTest(unittest.TestCase):
                                      "600", without_backup=False)
         self.assertFalse((d.STATE / "copias-pausadas").exists())
 
+    def test_manual_release_holds_until_main_moves(self):
+        d.point("current", d.RELEASES / self.old)
+        (d.STATE / "manual").write_text(f"{self.sha} {'c' * 40}-sucio\n")
+        with patch("builtins.print"):
+            d.deploy()
+        self.ci.assert_not_called()
+        self.compose.assert_not_called()
+        self.assertEqual(d.manual_release(self.sha), "c" * 40 + "-sucio")
+        # El siguiente merge vuelve a publicar main y retira la marca.
+        (d.STATE / "manual").write_text(f"{self.old} {'c' * 40}\n")
+        d.deploy()
+        self.assertEqual((d.ROOT / "current").resolve(), d.RELEASES / self.sha)
+        self.assertFalse((d.STATE / "manual").exists())
+
     def test_retry_after_health_failure_preserves_pre_migration_backup(self):
         d.point("current", d.RELEASES / self.old)
         self.compose.side_effect = [None, RuntimeError("TLS")]
@@ -152,10 +166,49 @@ class ChecksTest(unittest.TestCase):
                                  ({"conclusion":"failure"}, False)]:
             data = json.dumps({"workflow_runs":[dict(run, **change)]}).encode()
             with self.subTest(change=change), patch.object(d.urllib.request, "urlopen", return_value=io.BytesIO(data)) as get:
-                self.assertEqual(d.verified(sha), expected)
+                self.assertEqual(d.workflow_verified(sha), expected)
                 request = get.call_args.args[0]
                 self.assertEqual(request.get_header("Authorization"), "Bearer solo-lectura")
                 self.assertNotIn("Authorization", request.headers)  # No reenviar en redirecciones.
+
+    def statuses(self, statuses):
+        return patch.object(d.urllib.request, "urlopen", return_value=io.BytesIO(json.dumps(statuses).encode()))
+
+    def test_latest_local_status_verifies(self):
+        sha = "a" * 40
+        local = lambda state: {"context": d.LOCAL_CHECK, "state": state}
+        for statuses, expected in [([local("success")], True), ([local("failure"), local("success")], False),
+                                   ([{"context": "otro", "state": "success"}, local("success")], True),
+                                   ([{"context": "otro", "state": "success"}], False), ([], False)]:
+            with self.subTest(statuses=statuses), self.statuses(statuses) as get:
+                self.assertEqual(d.locally_verified(sha), expected)
+                self.assertIn(f"/commits/{sha}/statuses", get.call_args.args[0].full_url)
+
+    def test_status_permission_error_falls_back_to_workflow(self):
+        error = d.urllib.error.HTTPError("https://api.github.com", 403, "Forbidden", {}, io.BytesIO())
+        with patch.object(d.urllib.request, "urlopen", side_effect=error), patch("builtins.print"):
+            self.assertFalse(d.locally_verified("a" * 40))
+        with tempfile.TemporaryDirectory() as tmp, patch.object(d, "CONFIG", Path(tmp) / "production.env"), \
+                patch.object(d, "locally_verified", return_value=False), \
+                patch.object(d, "workflow_verified", return_value=True) as workflow:
+            self.assertTrue(d.verified("a" * 40))
+            workflow.assert_called_once_with("a" * 40)
+
+    def test_config_variable_skips_gate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / "production.env"
+            with patch.object(d, "CONFIG", config), patch.object(d, "github_api") as api, patch("builtins.print"):
+                for text, skipped in [("", False), ("DESPLIEGUE_SIN_VERIFICAR=0\n", False),
+                                      ("DESPLIEGUE_SIN_VERIFICAR=1\n", True), ('export DESPLIEGUE_SIN_VERIFICAR="1"\n', True),
+                                      ("# DESPLIEGUE_SIN_VERIFICAR=1\n", False), ("OTRO_DESPLIEGUE_SIN_VERIFICAR=1\n", False),
+                                      ("DESPLIEGUE_SIN_VERIFICAR=1\nDESPLIEGUE_SIN_VERIFICAR=0\n", False)]:
+                    with self.subTest(text=text):
+                        config.write_text(text)
+                        api.reset_mock()
+                        # Sin la variable se consultan el estado local y luego el workflow.
+                        api.side_effect = [[], {"workflow_runs": []}]
+                        self.assertEqual(d.verified("a" * 40), skipped)
+                        self.assertEqual(api.called, not skipped)
 
     def test_data_checks_for_new_and_existing_volumes(self):
         for volume, contents in [("", ""), ("truco-produccion_postgres", ""), ("truco-produccion_postgres", "/datos/PG_VERSION")]:
