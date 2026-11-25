@@ -229,13 +229,14 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
 }
 
 function faltaConsultarFlor(estado: EstadoOnline, asiento: Asiento): boolean {
-  const { reglaFlor, respondenSinFlor } = estado.mano.reparto;
+  const { reglaFlor, respondenSinFlor, respuestaSinFlor } = estado.mano.reparto;
   const sinJugar = !estado.acciones.some(j => j.asiento === asiento);
   if (!reglaFlor) return sinJugar;
 
   const debeContestar = !!respondenSinFlor?.includes(asiento)
     && estado.flores.some(cantor => equipoDelAsiento(cantor) !== equipoDelAsiento(asiento));
-  if (!sinJugar && !debeContestar) return false;
+  // Quien ya jugó una carta o cantó otra cosa no tiene flor: no contesta «Yo no canto».
+  if (!sinJugar && (!debeContestar || respuestaSinFlor === "antes-de-actuar")) return false;
   // La flor se declara en la primera acción. Quien ya abrió envido aún puede contestar sin flor.
   if (tantosPropios(estado, asiento).modalidad === "flor") return sinJugar;
   return debeContestar && !estado.acciones.some(j => j.asiento === asiento && j.tipo === "paso-flor");

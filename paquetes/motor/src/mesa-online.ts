@@ -36,7 +36,7 @@ export function repartirOnline(cantidad: 2 | 4 | 6, dador?: number, computadoras
     const primera = (asiento - mano + cantidad) % cantidad;
     return [mazoMezclado[primera], mazoMezclado[primera + cantidad], mazoMezclado[primera + cantidad * 2]];
   });
-  return { reglaFlor: "inmediata-v2", ...(computadoras.length && { respondenSinFlor: [...computadoras] }),
+  return { reglaFlor: "inmediata-v2", ...(computadoras.length && { respondenSinFlor: [...computadoras], respuestaSinFlor: "antes-de-actuar" as const }),
     versionReparto: cantidad === 6 ? "online-2" : "online-1", dador, mano, manos, muestra: mazoMezclado[cantidad * 3] };
 }
 

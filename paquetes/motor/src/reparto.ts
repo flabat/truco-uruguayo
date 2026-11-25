@@ -32,6 +32,8 @@ export interface RepartoOnline extends Distribucion {
   readonly reglaFlor?: "inmediata" | "inmediata-v2";
   /** Computadoras que contestan una flor rival aun cuando no tienen flor. */
   readonly respondenSinFlor?: readonly Asiento[];
+  /** Desde #431, solo contestan quienes todavía no actuaron en la mano. Sin el campo, también quienes ya actuaron. */
+  readonly respuestaSinFlor?: "antes-de-actuar";
   readonly versionReparto: "online-1" | "online-2";
 }
 
@@ -82,6 +84,7 @@ export function esRepartoOnline(valor: unknown): valor is RepartoOnline {
   return esDistribucion(valor) && (!("reglaFlor" in valor) || valor.reglaFlor === "inmediata" || valor.reglaFlor === "inmediata-v2")
     && (!("respondenSinFlor" in valor) || ("reglaFlor" in valor && valor.reglaFlor === "inmediata-v2"
       && sonAsientosDeMesa(valor.respondenSinFlor, valor.manos.length)))
+    && (!("respuestaSinFlor" in valor) || ("respondenSinFlor" in valor && valor.respuestaSinFlor === "antes-de-actuar"))
     && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
 }
 

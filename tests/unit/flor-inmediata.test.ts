@@ -117,7 +117,7 @@ test("solo las computadoras rivales activas sin flor contestan y cada una habla 
   assert.deepEqual(jugar(pico, { tipo: "paso-flor", asiento: 3 }).cobros.map(c => c.tantos), [3]);
 });
 
-test("la computadora que abrió envido contesta solo después de oír la flor", () => {
+test("en un reparto anterior a #431, la computadora que abrió envido contesta después de oír la flor", () => {
   const computadoras = [0] as const;
   const reparto = { ...repartir(2, [1]), respondenSinFlor: computadoras };
   const envite = jugar(iniciarOnline(reparto), envido);
@@ -133,12 +133,42 @@ test("la computadora que abrió envido contesta solo después de oír la flor", 
   assert.deepEqual(jugar(iniciarOnline(sinFlores), { tipo: "mazo", asiento: 0 }).cobros.map(c => c.motivo), ["truco"]);
 });
 
+test("ante una flor en medio de la vuelta, solo contestan las computadoras rivales que todavía no actuaron", () => {
+  // #431: la flor se canta en la primera acción. Quien ya jugó una carta o abrió envido no tiene flor.
+  const computadoras = [1, 2, 3, 4, 5] as const;
+  const previas: AccionOnline[] = [
+    { tipo: "carta", asiento: 0, carta: "copas-01" }, { tipo: "carta", asiento: 1, carta: "bastos-01" },
+    { tipo: "carta", asiento: 2, carta: "espadas-01" }, { tipo: "carta", asiento: 3, carta: "copas-10" },
+    { tipo: "real-envido", asiento: 4 },
+  ];
+  const canto = { tipo: "flor", asiento: 5 } as const;
+  const empezar = (reparto: RepartoOnline) => previas.reduce(jugar, iniciarOnline(reparto));
+  const reparto = { ...repartir(6, [5]), respondenSinFlor: computadoras, respuestaSinFlor: "antes-de-actuar" } as const;
+  const resuelta = jugar(empezar(reparto), canto);
+  assert.equal(resuelta.consultaFlor.length, 0);
+  for (const asiento of [0, 2, 4] as const) assert.equal(aplicarOnline(resuelta, { tipo: "paso-flor", asiento }).ok, false);
+  assert.deepEqual(resuelta.cobros.map(c => [c.equipo, c.motivo, c.tantos]), [[1, "flor", 3]]);
+  assert.deepEqual(aDecidir(resuelta), [4]);
+
+  const deSalida = jugar(iniciarOnline({ ...repartir(6, [0]), respondenSinFlor: computadoras, respuestaSinFlor: "antes-de-actuar" }), { tipo: "flor", asiento: 0 });
+  assert.deepEqual(deSalida.consultaFlor, [1, 3, 5]);
+
+  // Los repartos guardados antes del cambio conservan la respuesta de quienes ya actuaron.
+  const historica = jugar(empezar({ ...repartir(6, [5]), respondenSinFlor: computadoras }), canto);
+  assert.deepEqual(historica.consultaFlor, [2, 4]);
+});
+
 test("el reparto guarda y valida los asientos que responden sin flor", () => {
   const reparto = repartirOnline(2, 1, [1]);
   assert.deepEqual(reparto.respondenSinFlor, [1]);
   assert.ok(esRepartoOnline(JSON.parse(JSON.stringify(reparto))));
   assert.throws(() => repartirOnline(2, 1, [2]), RangeError);
   assert.equal(esRepartoOnline({ ...reparto, respondenSinFlor: [1, 1] }), false);
+  assert.equal(reparto.respuestaSinFlor, "antes-de-actuar");
+  assert.equal(esRepartoOnline({ ...reparto, respuestaSinFlor: "siempre" }), false);
+  const { respondenSinFlor: _, ...sinComputadoras } = reparto;
+  assert.equal(esRepartoOnline(sinComputadoras), false);
+  assert.equal("respuestaSinFlor" in repartirOnline(2, 1), false);
 });
 
 test("todos los repartos de flores en duelo, parejas y redondilla ante flor o cualquier envite directo", () => {
