@@ -43,7 +43,7 @@ test("el estado del turno cubre cierre, flor, canto pendiente y turnos", () => {
   assert.deepEqual(estadoDelTurno(m, partida(), vista({ porDeclararFlor: 1 })),
     { titulo: "Declara Beto", indicacion: "Esperando su declaración de flor." });
   assert.deepEqual(estadoDelTurno(m, partida(), vista({ pendiente: { tipo: "envido", asiento: 1 }, legales: ["quiero", "flor"] })),
-    { titulo: "Podés responder", indicacion: "Beto cantó envido. Cantá tu flor para responder." });
+    { titulo: "Podés responder", indicacion: "Beto tocó envido. Cantá tu flor para responder." });
   assert.deepEqual(estadoDelTurno(m, partida(), vista({ turno: 0, legales: ["carta", "truco"] })),
     { titulo: "Tu turno", indicacion: "Elegí una carta en el tapete o hacé un canto." });
   assert.deepEqual(estadoDelTurno(m, partida(), vista({ turno: 1 })),

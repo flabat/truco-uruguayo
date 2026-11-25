@@ -7,7 +7,7 @@ const titulo = (page, name) => page.getByRole("heading", { name, exact: true });
 test("el quiero del rival conserva las cartas y la reproducción explica el turno y el tanteo", async ({ page, isMobile }) => {
   if (isMobile) await page.setViewportSize({ width: 320, height: 800 });
   await page.goto("aprender/");
-  await page.getByRole("link", { name: /Cantar y responder al truco/ }).click();
+  await page.getByRole("link", { name: /Gritar y responder al truco/ }).click();
   await expect(page).toHaveURL("aprender/truco/");
   await expect(page.getByText(/Nadie tiene flor/)).toBeVisible();
   const vos = page.getByRole("region", { name: "Tapete" }).getByRole("group", { name: "Vos", exact: true });
@@ -17,7 +17,7 @@ test("el quiero del rival conserva las cartas y la reproducción explica el turn
   await capturarTapete(page, "truco");
   const posicion = await posicionEnTapete(page);
   const muestra = await page.getByRole("img", { name: /^Muestra / }).textContent();
-  await boton(page, "Cantar truco").press("Enter");
+  await boton(page, "Gritar truco").press("Enter");
   await expect(titulo(page, "¿Qué carta jugás?")).toBeFocused();
   await expect(page.locator("#guia-turno")).toContainText("El rival quiso. Conservás el turno.");
   await expect(misCartas).toHaveText(antes);
@@ -61,7 +61,7 @@ test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida r
   await page.goto("aprender/truco/");
   await boton(page, "Practicar la respuesta").click();
   await page.reload();
-  await expect(titulo(page, "Te cantaron truco. ¿Querés?")).toBeVisible();
+  await expect(titulo(page, "Te gritaron truco. ¿Querés?")).toBeVisible();
   const vos = page.getByRole("region", { name: "Tapete" }).getByRole("group", { name: "Vos", exact: true });
   const mano = vos.getByRole("group", { name: "Tus cartas" });
   const imagenes = mano.locator("img");
@@ -110,14 +110,14 @@ test("el aprendiz puede rechazar o querer el mismo truco y comprobar la salida r
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 });
 
-test("las mismas vueltas valen uno sin canto y dos si se canta antes de la segunda carta", async ({ page }) => {
+test("las mismas vueltas valen uno sin canto y dos si se grita antes de la segunda carta", async ({ page }) => {
   await page.goto("aprender/truco/");
   await boton(page, "Jugar rey de bastos").click();
   await boton(page, "Jugar 6 de espadas").click();
   await expect(titulo(page, "La pareja rival cobra 1 tanto")).toBeVisible();
   await boton(page, "Repetir el ejemplo").click();
   await boton(page, "Jugar rey de bastos").click();
-  await boton(page, "Cantar truco").click();
+  await boton(page, "Gritar truco").click();
   await expect(page.locator("#momento")).toHaveText("Vuelta 2 · 2 tantos en juego");
   await boton(page, "Jugar 6 de espadas").click();
   await expect(titulo(page, "La pareja rival cobra 2 tantos")).toBeVisible();

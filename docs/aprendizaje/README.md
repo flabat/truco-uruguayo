@@ -38,7 +38,7 @@ Al terminar, **Reproducir la mano** te deja avanzar y retroceder por las jugadas
 
 ## Practicar el primer truco
 
-Al terminar una mano guiada, elegí **Siguiente lección · Cantar y responder al truco**. También podés entrar directamente desde **Elegí qué practicar** en la ruta. La primera vez sos mano y el envido ya se cobró. Podés tirar una carta o cantar antes de jugar. Si cantás, el rival quiere y te toca tirar. Con **Practicar la respuesta**, el rival es mano y te canta a vos. Si querés, él conserva la salida y la pareja que gane cobra dos tantos. Si decís «no quiero», la pareja rival cobra uno en ese momento.
+Al terminar una mano guiada, elegí **Siguiente lección · Gritar y responder al truco**. También podés entrar directamente desde **Elegí qué practicar** en la ruta. La primera vez sos mano y el envido ya se cobró. Podés tirar una carta o gritar truco antes de jugar. Si gritás, el rival quiere y te toca tirar. Con **Practicar la respuesta**, el rival es mano y te grita a vos. Si querés, él conserva la salida y la pareja que gane cobra dos tantos. Si decís «no quiero», la pareja rival cobra uno en ese momento.
 
 Al terminar podés repetir el ejemplo, cambiar de papel o pedir otro reparto sin flor. **Reproducir la mano** te permite volver al canto, a la respuesta y a cada carta para ver cuándo cambió el turno. La pestaña recuerda en qué paso estabas. Estas decisiones de juego no llevan nota. [Ejemplo con las cartas, las vueltas y los tantos](cantos/README.md)
 
@@ -57,6 +57,6 @@ Para agregar una lección centrada en una flor aparente:
 
 ## Límites de la primera entrega
 
-Los tantos de una mano enseñan qué se puede cantar. El resultado de las vueltas identifica al equipo que gana la mano. La [lección posterior de cantos](cantos/README.md) detalla quién puede cantar truco, cómo responder y cuánto se cobra por esa mano. El [diseño de la primera lección de probabilidad](probabilidad/README.md) compara las cartas que puede jugar el aprendiz al abrir y durante una mano de parejas. Para comparar mesas de dos y cuatro jugadores habrá que definir además el modo mano a mano. La primera entrega juega cuatro asientos.
+Los tantos de una mano enseñan qué se puede tocar o cantar. El resultado de las vueltas identifica al equipo que gana la mano. La [lección posterior de cantos](cantos/README.md) detalla quién puede gritar truco, cómo responder y cuánto se cobra por esa mano. El [diseño de la primera lección de probabilidad](probabilidad/README.md) compara las cartas que puede jugar el aprendiz al abrir y durante una mano de parejas. Para comparar mesas de dos y cuatro jugadores habrá que definir además el modo mano a mano. La primera entrega juega cuatro asientos.
 
 El sitio conserva la consulta rápida de reglas. Los dos registros explican las decisiones y los costos de mantenimiento. [ADR 1 · Motor y replay](adr/0001-motor-y-replay.md) · [ADR 2 · Lecciones y progreso](adr/0002-lecciones-y-progreso.md)

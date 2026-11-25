@@ -156,9 +156,9 @@ test("si el compañero ya gana se puede jugar cualquiera de las dos cartas", asy
   await expect(titulo(page, "Tu pareja ganó la mano")).toBeVisible();
   await page.locator("#vueltas summary").last().click();
   await expect(page.locator("#vueltas ol").last()).toContainText("Vos · rey de oros");
-  await page.getByRole("link", { name: "Siguiente lección · Cantar y responder al truco" }).click();
+  await page.getByRole("link", { name: "Siguiente lección · Gritar y responder al truco" }).click();
   await expect(page).toHaveURL("aprender/truco/");
-  await expect(boton(page, "Cantar truco")).toBeEnabled();
+  await expect(boton(page, "Gritar truco")).toBeEnabled();
   await page.getByRole("link", { name: "Volver a la mano guiada" }).click();
   await expect(titulo(page, "Tu pareja ganó la mano")).toBeVisible();
 });

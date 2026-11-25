@@ -147,7 +147,7 @@ test("con resultado, el asiento que muestra su prueba de tantos no deja dorsos",
   const m = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vista), enReposo);
   assert.equal(m.asientos[1].enMano, 0);
   assert.equal(m.asientos[0].enMano, 3);
-  assert.deepEqual(m.fin?.cobros[1], { equipo: "Rival", texto: "+1 tanto · 1 tanto por truco sin cantar" });
+  assert.deepEqual(m.fin?.cobros[1], { equipo: "Rival", texto: "+1 tanto · 1 tanto por truco sin gritar" });
   const enJuego = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vistaDe(2, 0, { acciones: vista.acciones, pruebasDeTantos: vista.pruebasDeTantos })), enReposo);
   assert.equal(enJuego.asientos[1].enMano, 2, "sin resultado la prueba no oculta dorsos");
 });
@@ -345,7 +345,7 @@ test("datosDeTercetos: el encabezado nombra el lance y la hoja Reparto agrupa lo
     tantos: "Nos +1 tanto · Ellos 0 tantos",
     historial: ["Clara jugó as de espadas.", "Beto jugó rey de copas."],
     vueltas: [{ numero: "1.ª vuelta", ganador: "Nos", jugadas: "Clara · As de espadas, Beto · Rey de copas" }],
-    cobros: [{ equipo: "Nos · 1 tanto", texto: "por truco sin cantar" }],
+    cobros: [{ equipo: "Nos · 1 tanto", texto: "por truco sin gritar" }],
   }]);
 });
 

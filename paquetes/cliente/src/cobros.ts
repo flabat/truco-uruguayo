@@ -3,7 +3,7 @@ import type { AccionOnline, Cobro, EstadoOnline } from "@eltruco/motor/cantos-on
 /** La apuesta y el motivo del cierre son hechos distintos. */
 export function motivoDelCobro(cobro: Cobro, acciones: readonly AccionOnline[], resultado: EstadoOnline["resultado"]) {
   if (cobro.motivo !== "truco") return cobro.motivo;
-  const nombres = ["truco sin cantar", "truco querido", "retruco querido", "vale cuatro querido"];
+  const nombres = ["truco sin gritar", "truco querido", "retruco querido", "vale cuatro querido"];
   if (resultado?.motivo === "rechazo") {
     const oferta = acciones.findLast(a => ["truco", "retruco", "vale-cuatro"].includes(a.tipo));
     return (oferta?.tipo.replace("vale-cuatro", "vale cuatro") ?? "truco") + " no querido";

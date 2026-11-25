@@ -14,7 +14,7 @@ Un chico, dos cuentas absolutas. La mesa propone 50 para tercetos y 40 para duel
 
 | Situación | Cobro y prioridad |
 | --- | --- |
-| Truco sin cantar, querido, retruco y vale cuatro | 1, 2, 3 y 4 respectivamente. El rechazo concede el valor anterior. |
+| Truco sin gritar, querido, retruco y vale cuatro | 1, 2, 3 y 4 respectivamente. El rechazo concede el valor anterior. |
 | Envido y real envido | 2 y 3, con las subidas legales del motor. Al aceptar, comparar sólo a quienes participan del lance. Un empate favorece a quien esté antes en el orden desde el mano. |
 | Falta envido querida | Calcularla al conocer al equipo ganador. Tomar su cuenta al comienzo del lance. En malas cobra la distancia hasta la mitad. En buenas, la distancia hasta ganar. La redondilla toma la cuenta al iniciar su reparto y cada duelo la toma después del duelo precedente. Como regla de la casa, al querer una falta elevada se cobra esa distancia por todo el envite. Al rechazar se cobra lo previamente envidado, con mínimo de uno para la falta directa. |
 | Flor, con flor envido y rechazo | Reusar el cobro de flores propias y la apuesta de la cadena de cantos en juego. Aplicar la declaración sólo a los seis participantes de la redondilla o a los dos del duelo. La flor desplaza al envido y se liquida antes de un rechazo de truco reservado. |

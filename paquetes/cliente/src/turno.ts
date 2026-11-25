@@ -1,6 +1,6 @@
 import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { cuentaDelChico, mitadesDelChico } from "@eltruco/motor/chico.ts";
-import { canto, respuestaConFlor } from "./cantos.ts";
+import { canto, respuestaConFlor, verboDeCanto } from "./cantos.ts";
 import type { Mesa, Partida, PartidaTercetos } from "./cliente.ts";
 
 export function tituloDeRespuesta(mesa: Mesa, vista: Pick<VistaOnline, "pendiente" | "legales">, participantes: readonly number[]) {
@@ -46,7 +46,7 @@ export function estadoDelTurno(mesa: Mesa, partida: Partida, vista: VistaOnline)
   }
   if (pendiente) {
     const cantor = mesa.asientos[pendiente.asiento];
-    const indicacion = cantor.nombre + " cantó " + canto[pendiente.tipo].toLowerCase() + ".";
+    const indicacion = cantor.nombre + " " + verboDeCanto(pendiente.tipo) + " " + canto[pendiente.tipo].toLowerCase() + ".";
     return { titulo: tituloDeRespuesta(mesa, vista, mesa.asientos.map(a => a.asiento)),
       indicacion: legales.includes("flor") ? indicacion + " Cantá tu flor para responder." : indicacion };
   }

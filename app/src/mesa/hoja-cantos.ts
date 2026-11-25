@@ -1,27 +1,10 @@
-import { canto, respuestaConFlor } from "@eltruco/cliente/cantos.ts";
+import { canto, respuestaConFlor, verboDeCanto } from "@eltruco/cliente/cantos.ts";
+
+export { verboDeCanto };
 import type { Tipo } from "@eltruco/cliente/cliente.ts";
 import { tantos } from "@eltruco/cliente/textos.ts";
 
 export type Canto = Exclude<Tipo, "carta">;
-
-export function verboDeCanto(tipo: Canto): "gritó" | "tocó" | "cantó" | "dijo" {
-  switch (tipo) {
-    case "truco":
-    case "retruco":
-    case "vale-cuatro":
-      return "gritó";
-    case "envido":
-    case "real-envido":
-    case "falta-envido":
-      return "tocó";
-    case "flor":
-    case "con-flor-envido":
-    case "contraflor-al-resto":
-      return "cantó";
-    default:
-      return "dijo";
-  }
-}
 
 export const avisoDeCanto = (nombre: string, tipo: Canto) =>
   `${nombre} ${verboDeCanto(tipo)} ${canto[tipo].toLowerCase()}`;

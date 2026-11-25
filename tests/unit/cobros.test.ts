@@ -16,7 +16,7 @@ test("flor más retruco conserva ambos cobros públicos y suma seis", () => {
 });
 
 test("el cobro distingue apuesta aceptada, rechazo y retiro", () => {
-  for (const [tantos, texto] of [[1, "truco sin cantar"], [2, "truco querido"], [3, "retruco querido"], [4, "vale cuatro querido"]] as const) {
+  for (const [tantos, texto] of [[1, "truco sin gritar"], [2, "truco querido"], [3, "retruco querido"], [4, "vale cuatro querido"]] as const) {
     const c = { equipo: 0, tantos, motivo: "truco" } as const;
     assert.equal(motivoDelCobro(c, [], { equipo: 0, tantos, motivo: "vueltas" }), texto);
     assert.equal(motivoDelCobro(c, [], { equipo: 0, tantos, motivo: "mazo" }), texto + " · retiro al mazo");
