@@ -279,12 +279,15 @@ async function probarEnvido() {
 
 async function probarParejasConPie() {
   const eva = await entrar("eva");
-  await crearMesa(eva, "2 contra 2", true);
-  const id = await enLaMesa(eva);
-  const mesa = await api(eva, "/api/mesas/" + id);
-  const yo = mesa.miAsiento;
-  const equipo = mesa.asientos[yo].equipo;
-  const companero = mesa.asientos.find(a => a.asiento !== yo && a.equipo === equipo).asiento;
+  let id, yo, companero;
+  const nuevaMesa = async () => {
+    await crearMesa(eva, "2 contra 2", true);
+    id = await enLaMesa(eva);
+    const mesa = await api(eva, "/api/mesas/" + id);
+    yo = mesa.miAsiento;
+    companero = mesa.asientos.find(a => a.asiento !== yo && a.equipo === mesa.asientos[yo].equipo).asiento;
+  };
+  await nuevaMesa();
   let globos = 0;
   let pildoras = 0;
   const mirar = async (p, m) => {
@@ -306,6 +309,15 @@ async function probarParejasConPie() {
   for (let mano = 1; mano <= 8; mano++) {
     const fin = await avanzar([eva], id, terminada, { antes: mirar });
     if (globos > 0) break;
+    if (fin.ganadorPartida !== null) {
+      // Si el chico terminó antes, se sigue en una mesa nueva.
+      await boton(eva, "Crear otra mesa").click();
+      await expect(titulo(eva, "Crear una mesa")).toBeVisible(espera);
+      await eva.goto("/app/");
+      await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
+      await nuevaMesa();
+      continue;
+    }
     await tocar(eva, id, () => boton(eva, "Repartir otra mano"), fin.version);
     await expect.poll(async () => (await partida(eva, id)).manoNumero, espera).toBe(fin.manoNumero + 1);
   }
