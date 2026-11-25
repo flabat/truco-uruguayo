@@ -1,0 +1,67 @@
+---
+import Site from "./Site.astro";
+import Icon from "../components/Icon.astro";
+import { appendices, appendix, url } from "../lib/guide";
+interface Props {
+  id: string;
+  description: string;
+  intro: string;
+}
+const { id, description, intro } = Astro.props;
+const current = appendix(id);
+const index = appendices.indexOf(current);
+const previous = appendices[index - 1];
+const next = appendices[index + 1];
+---
+
+<Site title={current.title} description={description} active="reglas">
+  <div class="page-intro">
+    <div class="shell">
+      <p class="crumb">
+        <a href={url()}>Inicio</a>
+        <Icon name="chevron" size={12} />
+        <a href={url("reglas/")}>Reglas del Truco</a>
+        <Icon name="chevron" size={12} />
+        Apéndices
+      </p>
+      <p class="eyebrow">
+        <span class="mini-diamond" aria-hidden="true">
+          ◆
+        </span>{" "}
+        Apéndice {current.letter}
+      </p>
+      <h1>{current.title}</h1>
+      <p>{intro}</p>
+    </div>
+  </div>
+  <div class="shell index-layout">
+    <aside class="side-index">
+      <p class="eyebrow">Apéndices</p>
+      <nav aria-label="Apéndices del reglamento">
+        {appendices.map((item) => (
+          <a href={item.href} aria-current={item.id === id ? "page" : undefined}>
+            {item.letter}. {item.title}
+            <Icon name="arrow" size={14} />
+          </a>
+        ))}
+      </nav>
+    </aside>
+    <div class="sources-body appendix-body">
+      <slot />
+      <nav class="chapter-pager" aria-label="Recorrido de los apéndices">
+        {previous && (
+          <a href={previous.href}>
+            <small>← Anterior</small>
+            {previous.letter}. {previous.title}
+          </a>
+        )}
+        {next && (
+          <a href={next.href}>
+            <small>Siguiente →</small>
+            {next.letter}. {next.title}
+          </a>
+        )}
+      </nav>
+    </div>
+  </div>
+</Site>
