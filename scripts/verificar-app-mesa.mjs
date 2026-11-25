@@ -205,28 +205,35 @@ async function probarDueloConComputadora() {
   let soltar;
   const retenida = new Promise(listo => { soltar = listo; });
   await luis.route("**/acciones", async r => {
-    await Promise.race([retenida, new Promise(listo => setTimeout(listo, 4_000))]);
+    // Se suelta al comprobar la segunda carta; el plazo solo evita colgar la prueba si falla antes.
+    await Promise.race([retenida, new Promise(listo => setTimeout(listo, 60_000))]);
     await r.continue();
   });
   const lugar = async carta => {
     const caja = await carta.boundingBox();
     return caja && { x: Math.round(caja.x), y: Math.round(caja.y) };
   };
+  // Mientras la mesa presenta lo último que pasó, los toques se rechazan sin enviarse y se repiten. Con la
+  // máquina cargada, el pedido puede notarse después de la espera de un intento: cada envío se atribuye al
+  // intento en que se tocó esa carta, no al último.
+  const intentos = [];
   for (let intento = 0; enviadas.length === 0 && intento < 20; intento++) {
     const [primeraId, segundaId] = await cartasEnMano(luis).evaluateAll(cs => cs.map(c => c.dataset.testid));
     const segunda = luis.getByTestId(segundaId);
     const antes = await lugar(segunda);
     await luis.getByTestId(primeraId).click();
     await segunda.click();
-    const segundoToque = Date.now();
+    intentos.push({ primeraId, segundaId, segunda, antes, segundoToque: Date.now() });
     await luis.waitForTimeout(1_000);
-    if (enviadas.length === 0) continue;
-    assert.equal("carta-" + enviadas[0].accion?.carta, primeraId, "sale la carta del primer toque");
-    assert.ok(segundoToque < respondida, "el segundo toque terminó antes de la respuesta del primero");
-    // Con el envío retenido, la segunda carta volvió a su lugar en la mano.
-    await expect.poll(() => lugar(segunda), espera).toEqual(antes);
-    soltar();
   }
+  assert.equal(enviadas.length, 1, "un intento envió una sola carta: " + JSON.stringify(enviadas));
+  const enviada = "carta-" + enviadas[0].accion?.carta;
+  const tocado = intentos.find(t => t.primeraId === enviada);
+  assert.ok(tocado, `sale la carta del primer toque: salió ${enviada}, tocadas ${JSON.stringify(intentos.map(t => [t.primeraId, t.segundaId]))}`);
+  assert.ok(tocado.segundoToque < respondida, "el segundo toque terminó antes de la respuesta del primero");
+  // Con el envío retenido, la segunda carta volvió a su lugar en la mano.
+  await expect.poll(() => lugar(tocado.segunda), espera).toEqual(tocado.antes);
+  soltar();
   await expect.poll(() => respondida < Infinity, espera).toBe(true);
   await luis.unroute("**/acciones");
   assert.equal(enviadas.length, 1, "dos toques rápidos envían una sola carta: " + JSON.stringify(enviadas));
