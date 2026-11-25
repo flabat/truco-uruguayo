@@ -27,16 +27,22 @@ export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = n
 }) {
   const [entrada] = useState(aparicion);
   const visible = useSharedValue(entrada ? 0 : 1);
+  // Mientras aparece, el botón no responde: no se toca algo que todavía no se ve.
+  const [lista, marcarLista] = useState(entrada === null);
   useEffect(() => {
-    if (entrada) visible.value = withDelay(entrada.demora, withTiming(1, { duration: entrada.duracion, easing: Easing.out(Easing.cubic) }));
+    if (!entrada) return;
+    visible.value = withDelay(entrada.demora, withTiming(1, { duration: entrada.duracion, easing: Easing.out(Easing.cubic) }));
+    const aparecio = setTimeout(() => marcarLista(true), entrada.demora + entrada.duracion);
+    return () => clearTimeout(aparecio);
   }, [visible, entrada]);
+  const apagado = deshabilitado || !lista;
   const animado = useAnimatedStyle(() => ({
     opacity: visible.value,
     transform: [{ scale: 0.9 + 0.1 * visible.value }],
   }));
 
   return (
-    <Animated.View testID="fin-de-mano" style={[enRect(rect), estilos.capa, animado]} pointerEvents="box-none">
+    <Animated.View testID="fin-de-mano" style={[enRect(rect), estilos.capa, animado]} pointerEvents={lista ? "box-none" : "none"}>
       <View style={estilos.tarjeta}>
         <ScrollView bounces={false} contentContainerStyle={estilos.contenido}>
           <Text role="heading" aria-level={2} style={estilos.titulo}>{fin.titulo}</Text>
@@ -61,8 +67,8 @@ export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = n
         </ScrollView>
         {festejo}
       </View>
-      <Pressable accessibilityRole="button" onPress={alPresionar} disabled={deshabilitado}
-        accessibilityState={{ disabled: deshabilitado }}
+      <Pressable accessibilityRole="button" onPress={alPresionar} disabled={apagado}
+        accessibilityState={{ disabled: apagado }}
         style={({ pressed }) => [estilos.boton, (pressed || deshabilitado) && estilos.apretado]}>
         <Text style={estilos.textoBoton}>{fin.boton}</Text>
       </Pressable>
