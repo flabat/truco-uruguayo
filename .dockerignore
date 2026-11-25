@@ -18,6 +18,15 @@
 !paquetes/motor/package.json
 !paquetes/motor/src/
 !paquetes/motor/src/*.ts
+!app/
+!app/package.json
+!app/app.json
+!app/tsconfig.json
+!app/src/
+!app/src/**
+app/node_modules/
+app/dist/
+app/.expo/
 !training/
 !training/contracts/
 !training/contracts/index.ts

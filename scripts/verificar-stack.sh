@@ -17,6 +17,8 @@ export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOK
 cleanup() {
   local status=$?
   if [[ $status != 0 ]]; then "${compose[@]}" logs --tail=60 >&2; fi
+  if [[ -n ${caddy:-} ]]; then docker rm -f "$caddy" >/dev/null 2>&1 || true; fi
+  docker image rm "$project-caddy" >/dev/null 2>&1 || true
   "${compose[@]}" down --volumes --rmi local
   exit "$status"
 }
@@ -30,6 +32,14 @@ up
 web=$(url web 80)
 issuer="http://$TRUCO_HOST:$OIDC_PORT/realms/truco-local"
 curl -fsS "$web/" | grep -F '<title>El Truco</title>' >/dev/null
+bash scripts/verificar-app-web.sh "$web"
+# La misma imagen web con el Caddyfile de producción sirve la app en /app/.
+docker build -q --target produccion -f infra/web.Dockerfile -t "$project-caddy" . >/dev/null
+caddy=$(docker run -d -e SITE_HOST=:80 -v "$PWD/infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro" -p 127.0.0.1::80 "$project-caddy")
+caddy_web="http://$(docker port "$caddy" 80/tcp | head -1)"
+for _ in $(seq 40); do curl -fsS -o /dev/null "$caddy_web/" && break; sleep 0.25; done
+bash scripts/verificar-app-web.sh "$caddy_web"
+docker rm -f "$caddy" >/dev/null && caddy=
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '
   const d = JSON.parse(require("node:fs").readFileSync(0));
@@ -54,6 +64,7 @@ node scripts/verificar-ingreso-social.mjs "$web" google facebook discord apple
 node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-app-navegador.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs
