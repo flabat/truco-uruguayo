@@ -4,8 +4,8 @@ COPY package.json package-lock.json ./
 # npm ci enlaza los workspaces @eltruco/motor, @eltruco/cliente, @eltruco/mesa-geometria y @eltruco/app a partir de sus package.json.
 COPY paquetes/motor/package.json ./paquetes/motor/package.json
 COPY app/package.json ./app/package.json
-COPY paquetes/cliente/package.json ./paquetes/cliente/package.json
 COPY paquetes/mesa-geometria/package.json ./paquetes/mesa-geometria/package.json
+COPY paquetes/cliente/package.json ./paquetes/cliente/package.json
 RUN npm ci
 
 # Exportación web de la app Expo, servida en la dirección de prueba /app/.
