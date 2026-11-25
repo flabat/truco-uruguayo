@@ -20,6 +20,10 @@ test("la versión se lee de las variables grabadas en la imagen", () => {
     rama: "codex/issue-382", commit, fecha: "2026-11-25T12:00:00.000Z", sucio: true, etiqueta: null,
   });
   assert.deepEqual(versionDesdeEntorno({}), { rama: null, commit: null, fecha: null, sucio: false, etiqueta: null });
+  // La etiqueta `<commit>-sucio` de npm run vps también marca los cambios sin commit.
+  assert.deepEqual(versionDesdeEntorno({ TRUCO_RELEASE: commit + "-sucio" }),
+    { rama: null, commit, fecha: null, sucio: true, etiqueta: null });
+  assert.equal(textoDeVersion(versionDesdeEntorno({ TRUCO_RELEASE: commit + "-sucio" })), "01234567-sucio");
   // Valores que no salen de git o de la fecha del build se descartan.
   const raros = versionDesdeEntorno({ TRUCO_RELEASE: "abc", TRUCO_RAMA: "<script>", TRUCO_FECHA: "ayer", TRUCO_SUCIO: "si" });
   assert.deepEqual(raros, { rama: null, commit: null, fecha: null, sucio: false, etiqueta: null });

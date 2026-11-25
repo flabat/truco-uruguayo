@@ -20,11 +20,13 @@ const texto = (valor: string | undefined, patron: RegExp) => {
 /** Lee la versión de las variables que el Dockerfile copia de los argumentos del build. */
 export function versionDesdeEntorno(entorno: Record<string, string | undefined>): VersionServidor {
   const fecha = texto(entorno.TRUCO_FECHA, /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/);
+  // `npm run vps` etiqueta las imágenes de un árbol con cambios sin commit como `<commit>-sucio`.
+  const release = texto(entorno.TRUCO_RELEASE, /^[0-9a-f]{40}(-sucio)?$/);
   return {
     rama: texto(entorno.TRUCO_RAMA, /^[\w./-]{1,200}$/),
-    commit: texto(entorno.TRUCO_RELEASE, /^[0-9a-f]{40}$/),
+    commit: release?.slice(0, 40) ?? null,
     fecha: fecha && !Number.isNaN(Date.parse(fecha)) ? fecha : null,
-    sucio: entorno.TRUCO_SUCIO === "1",
+    sucio: entorno.TRUCO_SUCIO === "1" || !!release?.endsWith("-sucio"),
     etiqueta: texto(entorno.TRUCO_ETIQUETA, /^[\w./-]{1,200}$/),
   };
 }
