@@ -59,3 +59,23 @@ git diff --check
 ## Configuración recomendada en GitHub
 
 En un repositorio privado del plan gratuito de GitHub, los rulesets no se aplican. Si el repositorio pasa a ser público o a un plan que los admita, creá un ruleset activo para `main` que requiera PR, una rama actualizada y la resolución de conversaciones, y que bloquee el borrado y los force pushes de `main`. No requieras el job `check` del workflow **Verificar el sitio** mientras no haya créditos de GitHub Actions: sin ejecución, bloquearía todas las integraciones. Cuando haya otra persona habilitada para revisar, requerí una aprobación independiente. Si solo hay una cuenta mantenedora, puede revisar y autorizar la integración con la verificación local registrada en el PR. [Reglas disponibles en GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+
+## Etiquetas, hito y puntos de conflicto
+
+Los issues de tareas se crean con la plantilla `tarea.md` (problema, alcance, rutas que toca, `Depende de #n`, verificación y terminado). Las etiquetas y el hito dicen de qué se trata, si se puede tomar y quién espera a quién.
+
+### Etiquetas
+
+- `area:infra`, `area:app`, `area:mesa`, `area:api`, `area:motor`: la parte del producto que toca el issue (herramientas y despliegue, app Expo, mesa y juego en la app, API y autenticación, paquete del motor). Cada issue lleva una.
+- `mvp`: necesario para el MVP de iOS, Android y web. Los issues del MVP también van en el hito **MVP**.
+- `listo`: no tiene dependencias abiertas y lo puede tomar una sesión. Antes de reservar, comprobá que no exista ya la rama `codex/issue-<número>`.
+- `bloqueado`: espera otro issue o una decisión. Nadie lo toma hasta que cambie.
+
+Un issue pasa de `bloqueado` a `listo` cuando todos los `Depende de #n` están cerrados, o sea integrados en `main`, y la decisión pendiente, si la había, quedó registrada en un comentario. Quien integra el último PR del que depende hace el cambio: quita `bloqueado`, agrega `listo` y avisa en el issue. Un issue no puede tener las dos etiquetas a la vez.
+
+### Puntos de conflicto
+
+Son los archivos que muchas sesiones tocan a la vez y que git no sabe fusionar bien.
+
+- **Dependencias.** Los cambios en `package-lock.json`, `app/package.json` y `app.json` van en un PR propio y chico, que se integra antes de la funcionalidad que los necesita. El issue de la funcionalidad declara `Depende de #n` con ese PR. No mezcles una dependencia nueva con otros cambios.
+- **Migraciones de SQL.** Las de `api/migrations/` llevan un número correlativo. Si dos PR eligen el mismo número, el que se integra segundo renombra la suya al siguiente libre y actualiza lo que la referencia antes de integrar: actualizá la rama desde `main`, revisá el último número y volvé a correr las pruebas de la API. No edites una migración ya integrada: agregá una nueva.

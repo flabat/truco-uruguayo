@@ -2,6 +2,7 @@ import { StyleSheet, Switch, Text, View } from "react-native";
 import { colores, fuentes } from "../../tema.ts";
 import { baseDeLaApi } from "../../configuracion.ts";
 import { esWeb } from "../../ingreso/plataforma.ts";
+import { useSonidoActivado } from "../../sonido/index.ts";
 import type { Preferencias } from "../preferencias.ts";
 import { abrirAparte } from "../web.ts";
 import { Apartado, BotonDeHoja, estilosDeHoja, Fila } from "./PartesDeHoja.tsx";
@@ -33,10 +34,11 @@ export function HojaMas({ versionReglas, politica, nombreModelo, preferencias, c
   reducirMovimiento: boolean;
   salir: () => void;
 }) {
+  const [sonidoActivado, cambiarSonido] = useSonidoActivado();
   return (
     <View testID="hoja-mas">
       <Apartado titulo="Preferencias">
-        <Interruptor etiqueta="Sonido" valor={preferencias.sonido} cambiar={v => cambiar("sonido", v)} />
+        <Interruptor etiqueta="Sonido" valor={sonidoActivado} cambiar={cambiarSonido} />
         {esWeb ? null : <Interruptor etiqueta="Hápticos" valor={preferencias.hapticos} cambiar={v => cambiar("hapticos", v)} />}
         <Interruptor etiqueta="Modo liviano"
           detalle={reducirMovimiento ? "Lo activa la opción de reducir movimiento del sistema." : "Sin brillos ni partículas."}
