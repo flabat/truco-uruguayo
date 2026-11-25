@@ -4,6 +4,7 @@ dist/
 .DS_Store
 .env
 .env.local
+.env.trabajo
 test-results/
 
 /runs/
@@ -11,3 +12,6 @@ test-results/
 # Claude Code (configuración y worktrees locales)
 .claude/settings.local.json
 .claude/worktrees/
+
+# Caché de las voces generadas (scripts/voces/generar.ts)
+scripts/voces/.cache/

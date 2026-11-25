@@ -9,7 +9,9 @@ const browser = await chromium.launch();
 async function ingresar(page, usuario) {
   await ingresarConClaveLocal(page, usuario);
   const salon = process.env.SALON_HABILITADO === "1";
-  await expect(page.getByRole("heading", { name: salon ? "Mesas en juego" : "Crear una mesa" })).toBeVisible();
+  // El ingreso vuelve a /jugar/, el salón de la app; con el salón apagado lo avisa.
+  await expect(page.getByRole("heading", { level: 1, name: "Mesas en juego" })).toBeVisible();
+  await expect(page.getByText("El salón está cerrado.", { exact: false })).toHaveCount(salon ? 0 : 1);
   await page.goto(web);
   await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
   const me = await page.request.get(web + "/api/jugador");

@@ -1,0 +1,24 @@
+---
+import Apendice from "../../layouts/Apendice.astro";
+import { changelog } from "../../lib/guide";
+---
+
+<Apendice
+  id="historial"
+  description="Qué cambió en cada edición del reglamento de truco uruguayo de El Truco."
+  intro="Cada cambio de una regla queda registrado acá, con la fecha y la edición."
+>
+  {changelog.map((entry) => (
+    <section class="appendix-entry" id={"edicion-" + entry.fecha}>
+      <p class="eyebrow">
+        <time datetime={entry.fecha}>{entry.fecha}</time>
+      </p>
+      <h2>{entry.edicion}</h2>
+      <ul>
+        {entry.cambios.map((cambio) => (
+          <li>{cambio}</li>
+        ))}
+      </ul>
+    </section>
+  ))}
+</Apendice>

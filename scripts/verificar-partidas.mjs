@@ -109,6 +109,12 @@ async function probarReporte(mesa) {
   assert.ok(respuestas.every(r => r.status === 303));
   const ubicacion = respuestas[0].headers.get("location");
   assert.equal(respuestas[1].headers.get("location"), ubicacion);
+  // La app pide el mismo enlace en JSON, sin redirección.
+  const json = await fetch(ruta, {
+    method: "POST", headers: { cookie, origin: web.origin, accept: "application/json" }, body: new URLSearchParams(cursor), redirect: "manual",
+  });
+  assert.equal(json.status, 200);
+  assert.deepEqual(await json.json(), { enlace: ubicacion });
   const url = new URL(ubicacion);
   assert.equal(url.origin + url.pathname, "https://github.com/flabat/truco-uruguayo/issues/new");
   const body = url.searchParams.get("body");

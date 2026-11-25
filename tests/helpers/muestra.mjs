@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import { cartasPorId } from "../../src/lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 
 export async function comprobarMuestra(page, cartaEsperada) {
   const muestra = page.getByRole("img", { name: /^Muestra / });

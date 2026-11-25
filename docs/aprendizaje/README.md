@@ -16,7 +16,7 @@ El primer entregable técnico es una mano completa que se [juega y reproduce des
 | Sesión de aprendizaje | Definición de lección, situación y acciones del aprendiz. Conserva intentos, ofrece pistas y registra evidencia por habilidad. | Ruta y pausas didácticas de la mesa. |
 | Interfaz Astro | Vista pública de mesa y mano propia, o situación de ejercicio. Convierte toques y teclado en respuestas o jugadas. | Páginas estáticas con interacción en el navegador. |
 
-La galería ya contiene los nombres e imágenes Tatú. El motor modela las 40 cartas del truco con las mismas claves. El catálogo completo incluye también otros rangos, comodines y el reverso. La interfaz resuelve la imagen y el texto accesible con el catálogo y la ruta base del sitio. [Catálogo](../../src/lib/cartas.ts) · [Componente Carta](../../src/components/Carta.astro)
+La galería ya contiene los nombres e imágenes Tatú. El motor modela las 40 cartas del truco con las mismas claves. El catálogo completo incluye también otros rangos, comodines y el reverso. La interfaz resuelve la imagen y el texto accesible con el catálogo y la ruta base del sitio. [Catálogo](../../paquetes/cliente/src/cartas.ts) · [Componente Carta](../../src/components/Carta.astro)
 
 ## Dos recorridos sobre el mismo motor
 

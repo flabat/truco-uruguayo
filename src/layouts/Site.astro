@@ -17,12 +17,11 @@ import "../styles/site.css";
 interface Props {
   title: string;
   description: string;
-  active?: "inicio" | "jugar" | "aprender" | "reglas" | "fuentes";
+  active?: "inicio" | "aprender" | "reglas" | "fuentes";
 }
 const { title, description, active } = Astro.props;
 const tituloPagina = title === nombreSitio ? nombreSitio : `${title} · ${nombreSitio}`;
 const commit = import.meta.env.INTERFAZ_COMMIT;
-const enSalon = active === "jugar";
 // Las vistas previas son públicas y nunca contienen parámetros de invitación.
 const canonica = new URL(Astro.url.pathname, Astro.site || "https://eltru.co");
 const imagenSocial = new URL(url("img/mesa-social.jpg"), Astro.site || "https://eltru.co");
@@ -57,6 +56,7 @@ const pages = [
     <link rel="apple-touch-icon" href={url("apple-touch-icon.png")} />
     {Astro.site && <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />}
     <title>{tituloPagina}</title>
+    <slot name="head" />
   </head>
   <body>
     <a class="skip" href="#contenido">
@@ -65,7 +65,6 @@ const pages = [
     <header class="masthead">
       <div class="shell masthead-inner">
         <Brand />
-        {enSalon && <button class="menu-partida" type="button" aria-expanded="false" aria-controls="nav-principal open-search enlaces-juego">Menú</button>}
         <nav id="nav-principal" class="site-nav" aria-label="Navegación principal">
           {pages.map((page) => (
             <a href={url(page.path)} aria-current={active === page.key ? "page" : undefined}>
@@ -102,37 +101,46 @@ const pages = [
               : "Sin informar"}
           </dd>
         </div>
-        <div>
-          <dt>{enSalon ? "Motor de la mesa" : "Motor local"}</dt>
-          <dd id={enSalon ? "version-motor-mesa" : undefined}>{enSalon ? "Sin mesa" : versionMotorPractica}</dd>
+        <div data-version-servidor hidden>
+          <dt>Servidor</dt>
+          <dd></dd>
         </div>
         <div>
-          <dt>{enSalon ? "Modelo de la mesa" : "Modelo local"}</dt>
-          <dd>
-            {enSalon ? (
-              <>
-                <div id="version-modelo-mesa"></div>
-                <span>Sin mesa</span>
-              </>
-            ) : <FichaModelo id={versionModeloPractica} />}
-          </dd>
+          <dt>Motor local</dt>
+          <dd>{versionMotorPractica}</dd>
+        </div>
+        <div>
+          <dt>Modelo local</dt>
+          <dd><FichaModelo id={versionModeloPractica} /></dd>
         </div>
       </dl>
     </footer>
   </body>
 </html>
 <script>
+  import { leerVersionServidor, textoDeVersion } from "@eltruco/cliente/version.ts";
   import { contar } from "../lib/eventos";
   document.querySelector("[data-discord-comunidad]")?.addEventListener("click", () => contar("discord"));
-  const menuPartida = document.querySelector<HTMLButtonElement>(".menu-partida");
-  menuPartida?.addEventListener("click", () => {
-    menuPartida.setAttribute("aria-expanded", String(menuPartida.getAttribute("aria-expanded") !== "true"));
-  });
+  // Rama y commit del servidor; sin API (sitio estático) o en un lanzamiento etiquetado, queda oculto.
+  const versionServidor = document.querySelector<HTMLElement>("[data-version-servidor]");
+  if (versionServidor) {
+    fetch("/api/version", { cache: "no-store" })
+      .then(r => (r.ok ? r.json() : null))
+      .then(datos => {
+        const version = leerVersionServidor(datos);
+        const texto = version && textoDeVersion(version);
+        if (!version || !texto) return;
+        const dd = versionServidor.querySelector("dd")!;
+        dd.textContent = texto;
+        if (version.fecha) dd.title = "Construido el " + new Date(version.fecha).toLocaleString("es-UY");
+        versionServidor.hidden = false;
+      })
+      .catch(() => {});
+  }
 </script>
 <style>
   .footer-privacidad { display: flex; flex-wrap: wrap; gap: 6px 24px; padding-bottom: 16px; color: var(--muted); font-size: 12px; }
   .footer-privacidad a { text-decoration: underline; text-underline-offset: 3px; }
-  .menu-partida { display: none; }
   @media (min-width: 701px) and (max-width: 820px) {
     .masthead-inner, .masthead-inner .site-nav { gap: 12px; }
   }

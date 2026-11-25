@@ -6,6 +6,9 @@ from posixpath import normpath
 import sys
 from urllib.parse import quote, unquote, urljoin, urlsplit
 
+# Rutas que sirve la exportación web de la app (infra/web.conf y el Caddyfile), no el sitio Astro.
+APP_ROUTES = (PurePosixPath("jugar"),)
+
 
 class Page(HTMLParser):
     def __init__(self, path):
@@ -45,7 +48,12 @@ def check_site(root, site_url):
             if not pathname.is_relative_to(base):
                 yield f"{path} → {link} escapes the project path {base}"
                 continue
-            dest = root / pathname.relative_to(base)
+            relative = pathname.relative_to(base)
+            if any(relative == route or relative.is_relative_to(route) for route in APP_ROUTES):
+                if target.fragment:
+                    yield f"{path} → {link} points to an anchor inside the app"
+                continue
+            dest = root / relative
             if dest.is_dir():
                 dest = dest / "index.html"
             if not dest.is_file():

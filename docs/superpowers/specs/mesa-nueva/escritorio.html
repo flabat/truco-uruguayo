@@ -1,0 +1,113 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;background:#1e1e1e;color:#eee;padding:24px}.cards{display:flex;flex-wrap:wrap;gap:24px}.card{width:320px}.subtitle{opacity:.8}</style>
+<style>
+  .tel{width:300px;height:640px;border-radius:34px;border:8px solid #111;overflow:hidden;position:relative;
+    background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7;font:13px "DM Sans",Arial,sans-serif;margin:0 auto}
+  .tel *{box-sizing:border-box}
+  .barra{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px;font-size:12px}
+  .pill{background:rgba(0,0,0,.28);border-radius:999px;padding:4px 10px;display:inline-flex;gap:8px;align-items:center}
+  .pill b{font-size:15px}
+  .ico{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.28);display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .asiento{position:absolute;text-align:center;font-size:11px;line-height:1.2}
+  .asiento b{display:block;font-size:12px}
+  .asiento small{opacity:.7}
+  .dorsos{display:flex;justify-content:center;margin-top:3px}
+  .dorsos img{width:22px;margin-left:-12px;border-radius:2px;box-shadow:0 1px 2px #0006}
+  .dorsos img:first-child{margin-left:0}
+  .jugada{width:42px;border-radius:3px;box-shadow:0 2px 6px #0007;display:block;margin:4px auto 0}
+  .muestra{position:absolute;display:flex;align-items:center;gap:4px;font-size:10px}
+  .muestra img{width:30px;border-radius:2px}
+  .mano{position:absolute;left:0;right:0;display:flex;justify-content:center}
+  .mano img{border-radius:6px;box-shadow:0 4px 10px #0008;background:#fff}
+  .chips{position:absolute;left:8px;right:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .chip{background:#fff8e7;color:#233d31;border-radius:999px;padding:7px 12px;font-weight:700;font-size:12px}
+  .chip.sec{background:rgba(255,248,231,.15);color:#fff8e7;border:1px solid rgba(255,248,231,.4)}
+  .estado{position:absolute;left:0;right:0;text-align:center;font-size:12px}
+  .estado b{font-family:"DM Serif Text",Georgia,serif;font-size:17px;font-weight:400;display:block}
+  .tira{position:absolute;bottom:0;left:0;right:0;height:56px;background:rgba(0,0,0,.35);display:flex;justify-content:space-around;align-items:center;font-size:11px}
+  .tira span{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.85}
+  .hoja{position:absolute;left:0;right:0;bottom:0;background:#faf8f0;color:#233d31;border-radius:18px 18px 0 0;padding:10px 12px 16px;box-shadow:0 -6px 20px #0006}
+  .hoja .asa{width:36px;height:4px;border-radius:2px;background:#c9c6b6;margin:0 auto 8px}
+  .hoja h4{margin:6px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#636a5e}
+  .hoja .fila{display:flex;gap:6px;flex-wrap:wrap}
+  .hoja .b{border:1px solid #d9d8c9;border-radius:10px;padding:8px 10px;font-weight:700;font-size:12px}
+  .hoja .b.p{background:#233d31;color:#faf8f0;border-color:#233d31}
+  .fab{position:absolute;border-radius:999px;background:#a34b34;color:#fff;font-weight:700;padding:10px 16px;box-shadow:0 4px 10px #0007}
+  .sena{position:absolute;width:38px;height:38px;border-radius:50%;background:#ffcc35;color:#693c11;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 6px #0007}
+  .nota{font-size:13px;color:var(--text-secondary,#666);margin-top:8px}
+  .mz{position:absolute;width:64px;height:62px}
+  .mz .m{position:absolute;left:4px;top:0;width:34px;border-radius:3px;box-shadow:0 1px 3px #0007}
+  .mz .r{position:absolute;width:34px;border-radius:3px;box-shadow:0 1px 2px #0008;transform:rotate(90deg);left:18px;top:22px}
+  .mz .r2{left:19px;top:20px}.mz .r3{left:20px;top:18px}
+  .mz span{position:absolute;top:64px;left:-6px;width:80px;font-size:10px;line-height:1.15;text-align:center}
+
+  .hoja .b{min-width:64px;text-align:center}
+  .hoja .b.r{color:#a34b34;border-color:#e3c3b8}
+  .hoja .cab{display:flex;justify-content:space-between;align-items:baseline}
+  .hoja .cab b{font-family:"DM Serif Text",Georgia,serif;font-weight:400;font-size:17px}
+  .hoja .cab small{color:#636a5e}
+  .caras{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .caras div{border:1px solid #d9d8c9;border-radius:10px;text-align:center;padding:6px 2px;font-size:10px}
+  .caras div i{display:block;font-style:normal;font-size:22px}
+  .caras div.sel{border:2px solid #233d31;background:#efeee2}
+  .velo{position:absolute;inset:0;background:rgba(0,0,0,.25)}
+  .marca{position:absolute;bottom:-4px;right:-4px;background:#233d31;color:#fff;border-radius:999px;font-size:9px;padding:1px 5px}
+
+  .globo{position:absolute;background:#faf8f0;color:#233d31;border-radius:14px;padding:6px 8px;box-shadow:0 4px 12px #0007;font-size:10px}
+  .globo .g{display:flex;gap:6px;margin-top:3px}
+  .globo .g span{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#636a5e}
+  .globo .g i{font-style:normal;font-size:22px}
+  .globo:before{content:"";position:absolute;top:-6px;left:var(--p,50%);border:6px solid transparent;border-top:0;border-bottom-color:#faf8f0}
+  .frases{position:absolute;left:8px;right:8px;display:flex;gap:6px;justify-content:center}
+  .tusenas{position:absolute;background:rgba(0,0,0,.35);border-radius:999px;padding:4px 10px;font-size:11px}
+
+  .esc{width:1000px;height:600px;border-radius:12px;border:6px solid #222;display:grid;grid-template-columns:230px 1fr 230px;overflow:hidden;font:13px "DM Sans",Arial,sans-serif;margin:0 auto;transform-origin:top left}
+  .esc *{box-sizing:border-box}
+  .lado{background:#faf8f0;color:#233d31;padding:14px;overflow:hidden;font-size:12px}
+  .lado h5{font-family:"DM Serif Text",Georgia,serif;font-weight:400;font-size:17px;margin:0 0 8px}
+  .lado h6{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#636a5e;margin:12px 0 4px}
+  .lado li{margin:3px 0}.lado ol,.lado ul{padding-left:16px;margin:0}
+  .lado .c{display:flex;justify-content:space-between;border-bottom:1px solid #e6e4d6;padding:4px 0}
+  .lado .btn{display:inline-block;border:1px solid #d9d8c9;border-radius:8px;padding:6px 10px;font-weight:700;margin-top:6px}
+  .centro{position:relative;background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7}
+  .wrap{width:1012px;height:612px;overflow:hidden;margin:0 auto}
+</style>
+<h2>Variante ancha: la misma mesa con paneles a los costados</h2>
+<p class="subtitle">Desde unos 1024 px de ancho, la tira de abajo del teléfono (Mano, Tantos, Voz, Más) se convierte en dos paneles fijos. El centro es la mesa B tal cual, con más aire y cartas más grandes. La hoja de Cantar sube igual, pero solo dentro de la columna central.</p>
+<div class="wrap"><div class="esc">
+  <aside class="lado">
+    <h5>Mano 4 · Vuelta 2</h5>
+    <h6>Lo que pasó</h6>
+    <ol><li>Diego: envido</li><li>Ana: quiero · 33 gana</li><li>Clara: 4 de copas</li><li>Diego: 7 de oros</li><li>Compu 2: 3 de bastos</li><li>Ana: 2 de bastos</li></ol>
+    <h6>Vueltas</h6>
+    <div class="c"><span>1.ª</span><b>Nosotros</b></div>
+    <h6>Indicaciones del pie</h6>
+    <ol><li>Ana a Clara: «Vení»</li></ol>
+    <span class="btn">Reportar esta jugada</span>
+  </aside>
+  <section class="centro">
+    <div class="barra" style="padding:14px 18px"><span class="pill" style="font-size:14px">Nos <b>12</b> · <b>9</b> Ellos <small>chico a 30 · malas</small></span><span style="opacity:.8">Mesa pública · Parejas</span></div>
+    <div class="asiento" style="top:60px;left:0;right:0"><b>Clara</b><small>Tu pareja · Dador</small><img class="jugada" src="../../../../public/img/cartas/tatu/copas-04.webp" style="width:54px"></div>
+    <div class="mz" style="top:66px;left:170px;transform:scale(1.3);transform-origin:top left"><img class="m" src="../../../../public/img/cartas/tatu/oros-06.webp"><img class="r" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r2" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r3" src="../../../../public/img/cartas/tatu/reverso.webp"><span>Muestra <b>6 de oros</b></span></div>
+    <div class="asiento" style="top:190px;left:40px"><b>Diego</b><small>Rival · Mano</small><img class="jugada" src="../../../../public/img/cartas/tatu/oros-07.webp" style="width:54px"></div>
+    <div class="asiento" style="top:190px;right:40px"><b>Compu 2</b><small>Rival</small><img class="jugada" src="../../../../public/img/cartas/tatu/bastos-01.webp" style="width:54px"></div>
+    <div class="estado" style="top:300px"><b>Tu turno</b>Tocá o arrastrá una carta · teclas 1, 2, 3</div>
+    <div class="mano" style="top:390px"><img src="../../../../public/img/cartas/tatu/espadas-03.webp" style="width:116px;transform:rotate(-8deg) translate(20px,8px)"><img src="../../../../public/img/cartas/tatu/espadas-01.webp" style="width:116px;z-index:1;transform:rotate(8deg) translate(-20px,8px)"></div>
+    <div class="fab" style="bottom:20px;right:20px">Cantar ▴ <small style="opacity:.7">C</small></div>
+    <div class="asiento" style="bottom:28px;left:20px;text-align:left"><b>Ana · Vos</b><small>Pie de tu equipo</small></div>
+  </section>
+  <aside class="lado">
+    <h5>Tantos</h5>
+    <div class="c"><span>Tus tantos</span><b>33 de envido</b></div>
+    <div class="c"><span>Valor de la mano</span><b>1 tanto</b></div>
+    <h6>Cobrados</h6>
+    <div class="c"><span>Nosotros · envido</span><b>2</b></div>
+    <h6>Voz</h6>
+    <span class="btn">Abrir voz en Discord ↗</span>
+    <p style="font-size:10px;color:#636a5e;margin:6px 0 0">Acá va después el botón de voz propia (etapa 6).</p>
+    <h6>Mesa</h6>
+    <div class="c"><span>Reglas</span><b>v12</b></div>
+    <div class="c"><span>Computadoras</span><b>pie-parejas</b></div>
+    <span class="btn">Salir al salón</span>
+  </aside>
+</div></div>
+<p class="nota">Entre 600 y 1024 px (tablet) se ve la mesa del teléfono, más grande y con la tira. En escritorio se suman atajos de teclado (1 a 3 para las cartas, C para Cantar, Q para Quiero y N para No quiero) y arrastrar con el mouse.</p>

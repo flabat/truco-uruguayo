@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+source scripts/trabajo-entorno.sh # Puertos de la ranura (#378).
 
 npm run cartas:verificar
 npm run test:unit
+npm run app:tipos
 python3 -B -m unittest discover -s tests/despliegue
 
 npm run build

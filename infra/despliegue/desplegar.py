@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Publicación desde main. systemd serializa ejecuciones y conserva su registro."""
+"""Publicación desde main. systemd serializa ejecuciones y conserva su registro.
+
+`npm run vps` (scripts/vps.py) publica otras ramas y comparte el candado y el archivo STATE/manual."""
 import base64
 import json
 import os
@@ -8,6 +10,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import urllib.error
 import urllib.request
 
 REPO = "flabat/truco-uruguayo"
@@ -18,6 +21,13 @@ STATE = Path("/var/lib/truco-deploy")
 CONFIG = Path("/etc/truco-oriental/production.env")
 PROJECT = "truco-produccion"
 SHA = re.compile(r"[0-9a-f]{40}")
+# Estado de commit que publica quien verificó localmente (CHECK_STACK=1 npm run check).
+LOCAL_CHECK = "verificado-local"
+# En production.env, "1" publica main sin esperar verificación (el VPS es un entorno de desarrollo).
+SKIP_GATE = "DESPLIEGUE_SIN_VERIFICAR"
+# STATE/manual lo escribe `npm run vps`: "<main desplazado> <versión manual>". El
+# temporizador no reemplaza esa versión hasta que main avance.
+MANUAL = "manual"
 
 
 def run(*args, **kwargs):
@@ -47,18 +57,65 @@ def main_head():
     return value[0]
 
 
-def verified(sha):
-    url = (f"https://api.github.com/repos/{REPO}/actions/workflows/check.yml/runs"
-           f"?branch=main&event=push&head_sha={sha}&per_page=1")
-    req = urllib.request.Request(url, headers={"User-Agent": "truco-deploy"})
+def github_api(path):
+    req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/{path}", headers={"User-Agent": "truco-deploy"})
     req.add_unredirected_header("Authorization", f"Bearer {github_token()}")
     with urllib.request.urlopen(req, timeout=20) as response:
-        runs = json.load(response)["workflow_runs"]
+        return json.load(response)
+
+
+def config_value(name):
+    # Lectura mínima del dotenv de Compose: NOMBRE=valor, con comillas opcionales.
+    try:
+        lines = CONFIG.read_text().splitlines()
+    except FileNotFoundError:
+        return None
+    value = None
+    for line in lines:
+        match = re.fullmatch(rf"\s*(?:export\s+)?{name}\s*=\s*(.*?)\s*", line)
+        if match:
+            value = match.group(1)
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
+                value = value[1:-1]
+    return value
+
+
+def locally_verified(sha):
+    # El token necesita "Commit statuses: Read". Sin ese permiso se sigue con el workflow.
+    try:
+        statuses = github_api(f"commits/{sha}/statuses?per_page=100")
+    except urllib.error.HTTPError as error:
+        error.close()
+        print(f"No se pudo leer el estado {LOCAL_CHECK}: HTTP {error.code}", flush=True)
+        return False
+    # GitHub devuelve primero el más reciente: sólo cuenta el último de ese contexto.
+    last = next((status for status in statuses if status.get("context") == LOCAL_CHECK), None)
+    return last is not None and last.get("state") == "success"
+
+
+def workflow_verified(sha):
+    runs = github_api(f"actions/workflows/check.yml/runs?branch=main&event=push&head_sha={sha}&per_page=1")["workflow_runs"]
     if not runs:
         return False
     last = runs[0]
     return (last["head_sha"] == sha and last["event"] == "push" and last["head_branch"] == "main"
             and last["status"] == "completed" and last["conclusion"] == "success")
+
+
+def verified(sha):
+    if config_value(SKIP_GATE) == "1":
+        print(f"{SKIP_GATE}=1: publicando main {sha} sin verificación", flush=True)
+        return True
+    return locally_verified(sha) or workflow_verified(sha)
+
+
+def manual_release(sha):
+    """Versión publicada con `npm run vps` mientras main siga en el commit que desplazó."""
+    try:
+        displaced, release = (STATE / MANUAL).read_text().split()
+    except (FileNotFoundError, ValueError):
+        return None
+    return release if displaced == sha else None
 
 
 def compose(sha, *command, build_only=False, without_backup=False, **kwargs):
@@ -156,10 +213,14 @@ def deploy():
     pending = STATE / "pendiente"
     paused = CONFIG.with_name("copias-pausadas").is_file()
     applied_pause = STATE / "copias-pausadas"
+    manual = manual_release(sha)
+    if manual and not pending.exists():
+        print(f"Versión manual {manual} activa; main {sha} se publica después del próximo cambio", flush=True)
+        return
     if current == directory and not pending.exists() and paused == applied_pause.exists():
         return
     if not verified(sha):
-        print(f"Esperando CI verde de main {sha}", flush=True)
+        print(f"Esperando verificación de main {sha} ({LOCAL_CHECK} o check.yml)", flush=True)
         return
     if not stage(sha):
         return
@@ -201,6 +262,7 @@ def deploy():
     else:
         applied_pause.unlink(missing_ok=True)
     pending.unlink(missing_ok=True)
+    (STATE / MANUAL).unlink(missing_ok=True)
     cleanup()
     print(f"Publicado main {sha}", flush=True)
 

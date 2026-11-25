@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { cartasPorId } from "../src/lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { avanzarHastaAprendiz } from "@eltruco/motor/parejas.ts";
 import { iniciarMano, jugarCarta, vistaPara, type EstadoMano, type Jugada } from "@eltruco/motor/mano.ts";

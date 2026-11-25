@@ -1,0 +1,78 @@
+import { Redirect, useLocalSearchParams, type Href } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Aviso, Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
+import { useSesion } from "../ingreso/contexto.tsx";
+import { consultaDe, destinoDeEnlace, destinoPendiente, rutaDe, type Destino } from "../salon/enlaces.ts";
+import { guardadoDeDestino } from "../salon/plataforma.ts";
+import { Salon } from "../salon/Salon.tsx";
+
+const titulos: Record<Destino["tipo"] | "ninguno", [string, string]> = {
+  invitacion: ["Te invitaron a una mesa", "Ingresá para ocupar tu asiento con los demás jugadores."],
+  mirar: ["Ingresá para mirar la mesa", "Al volver del ingreso vas a ver las jugadas públicas."],
+  mesa: ["Volvé a tu mesa", "Ingresá para seguir jugando en tu mesa."],
+  crear: ["Entrá con tu jugador", "Ingresá para crear tu mesa."],
+  ninguno: ["Entrá a jugar", "Ingresá con tu cuenta de El Truco para jugar en línea con personas y computadoras."],
+};
+
+/** Inicio: ingreso o salón. También recibe los enlaces `?invitacion=`, `?mesa=`, `?mirar=` y `?crear=1`. */
+export default function Inicio() {
+  const { estado, ingresar, jugadoresDePrueba, ingresarComo, reintentar } = useSesion();
+  const parametros = useLocalSearchParams();
+  const destino = destinoDeEnlace(parametros);
+  const [ingresando, setIngresando] = useState(false);
+  const [eligiendo, setEligiendo] = useState(false);
+  const ocupado = (accion: Promise<void>) => { setIngresando(true); accion.finally(() => setIngresando(false)); };
+  const retomado = useRef<Destino | null | undefined>(undefined);
+
+  // Sin sesión, el destino se guarda: en la web el ingreso sale de la app y vuelve a /jugar/.
+  const fuera = estado.tipo === "fuera";
+  useEffect(() => {
+    if (fuera && destino) destinoPendiente(guardadoDeDestino, destino);
+  }, [fuera, destino && consultaDe(destino)]);
+
+  if (estado.tipo === "cargando") return <Cargando />;
+  if (estado.tipo === "sinConexion") {
+    return (
+      <Pantalla titulo="Sin conexión">
+        <Parrafo>No pudimos conectar con El Truco. Revisá tu conexión y probá de nuevo.</Parrafo>
+        <Boton onPress={reintentar}>Reintentar</Boton>
+      </Pantalla>
+    );
+  }
+  if (estado.tipo === "dentro") {
+    if (retomado.current === undefined) {
+      const guardado = destinoPendiente(guardadoDeDestino, null);
+      retomado.current = destino ?? guardado;
+    }
+    const ir = retomado.current;
+    if (ir) {
+      retomado.current = null;
+      return <Redirect href={rutaDe(ir) as Href} />;
+    }
+    return <Salon jugador={estado.jugador} />;
+  }
+  const [titulo, texto] = titulos[destino?.tipo ?? "ninguno"];
+  return (
+    <Pantalla titulo={titulo}>
+      {estado.aviso ? <Aviso>{estado.aviso}</Aviso> : null}
+      <Parrafo>{texto}</Parrafo>
+      <Boton ocupado={ingresando} onPress={() => ocupado(ingresar())}>
+        Ingresar
+      </Boton>
+      {jugadoresDePrueba.length ? (
+        // Solo con AUTH_DEV en la API: entra como un jugador del realm local sin abrir el navegador.
+        <>
+          <Boton variante="secundario" ocupado={ingresando} onPress={() => setEligiendo(!eligiendo)}>
+            Entrar como…
+          </Boton>
+          {eligiendo ? jugadoresDePrueba.map(({ usuario, nombre }) => (
+            <Boton key={usuario} variante="secundario" ocupado={ingresando} etiqueta={"Entrar como " + nombre}
+              onPress={() => ocupado(ingresarComo(usuario))}>
+              {nombre}
+            </Boton>
+          )) : null}
+        </>
+      ) : null}
+    </Pantalla>
+  );
+}

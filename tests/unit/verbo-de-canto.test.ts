@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { verboDeCanto } from "../../src/lib/cantos.ts";
+import { verboDeCanto } from "../../paquetes/cliente/src/cantos.ts";
 
 test("el truco se grita, el envido se toca y la flor se canta", () => {
   for (const tipo of ["truco", "retruco", "vale-cuatro"] as const) assert.equal(verboDeCanto(tipo), "gritó");

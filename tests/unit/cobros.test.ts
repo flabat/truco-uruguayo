@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { motivoDelCobro } from "../../src/lib/cobros.ts";
+import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
 import { marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
 import { manoReportada } from "../fixtures/flor-retruco.ts";
 
