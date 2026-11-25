@@ -9,11 +9,56 @@
     "backgroundColor": "#faf8f0",
     "ios": {
       "bundleIdentifier": "co.eltru.app",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": [
+        "applinks:eltru.co"
+      ]
     },
     "android": {
       "package": "co.eltru.app",
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/jugar"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/jugar/"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/volver"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/volver/"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "path": "/app"
+            },
+            {
+              "scheme": "https",
+              "host": "eltru.co",
+              "pathPrefix": "/app/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "output": "single",
