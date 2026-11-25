@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;background:#1e1e1e;color:#eee;padding:24px}.cards{display:flex;flex-wrap:wrap;gap:24px}.card{width:320px}.subtitle{opacity:.8}</style>
+<style>
+  .tel{width:300px;height:640px;border-radius:34px;border:8px solid #111;overflow:hidden;position:relative;
+    background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7;font:13px "DM Sans",Arial,sans-serif;margin:0 auto}
+  .tel *{box-sizing:border-box}
+  .barra{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px;font-size:12px}
+  .pill{background:rgba(0,0,0,.28);border-radius:999px;padding:4px 10px;display:inline-flex;gap:8px;align-items:center}
+  .pill b{font-size:15px}
+  .ico{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.28);display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .asiento{position:absolute;text-align:center;font-size:11px;line-height:1.2}
+  .asiento b{display:block;font-size:12px}
+  .asiento small{opacity:.7}
+  .dorsos{display:flex;justify-content:center;margin-top:3px}
+  .dorsos img{width:22px;margin-left:-12px;border-radius:2px;box-shadow:0 1px 2px #0006}
+  .dorsos img:first-child{margin-left:0}
+  .jugada{width:42px;border-radius:3px;box-shadow:0 2px 6px #0007;display:block;margin:4px auto 0}
+  .muestra{position:absolute;display:flex;align-items:center;gap:4px;font-size:10px}
+  .muestra img{width:30px;border-radius:2px}
+  .mano{position:absolute;left:0;right:0;display:flex;justify-content:center}
+  .mano img{border-radius:6px;box-shadow:0 4px 10px #0008;background:#fff}
+  .chips{position:absolute;left:8px;right:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .chip{background:#fff8e7;color:#233d31;border-radius:999px;padding:7px 12px;font-weight:700;font-size:12px}
+  .chip.sec{background:rgba(255,248,231,.15);color:#fff8e7;border:1px solid rgba(255,248,231,.4)}
+  .estado{position:absolute;left:0;right:0;text-align:center;font-size:12px}
+  .estado b{font-family:"DM Serif Text",Georgia,serif;font-size:17px;font-weight:400;display:block}
+  .tira{position:absolute;bottom:0;left:0;right:0;height:56px;background:rgba(0,0,0,.35);display:flex;justify-content:space-around;align-items:center;font-size:11px}
+  .tira span{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.85}
+  .hoja{position:absolute;left:0;right:0;bottom:0;background:#faf8f0;color:#233d31;border-radius:18px 18px 0 0;padding:10px 12px 16px;box-shadow:0 -6px 20px #0006}
+  .hoja .asa{width:36px;height:4px;border-radius:2px;background:#c9c6b6;margin:0 auto 8px}
+  .hoja h4{margin:6px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#636a5e}
+  .hoja .fila{display:flex;gap:6px;flex-wrap:wrap}
+  .hoja .b{border:1px solid #d9d8c9;border-radius:10px;padding:8px 10px;font-weight:700;font-size:12px}
+  .hoja .b.p{background:#233d31;color:#faf8f0;border-color:#233d31}
+  .fab{position:absolute;border-radius:999px;background:#a34b34;color:#fff;font-weight:700;padding:10px 16px;box-shadow:0 4px 10px #0007}
+  .sena{position:absolute;width:38px;height:38px;border-radius:50%;background:#ffcc35;color:#693c11;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 6px #0007}
+  .nota{font-size:13px;color:var(--text-secondary,#666);margin-top:8px}
+  .mz{position:absolute;width:64px;height:62px}
+  .mz .m{position:absolute;left:4px;top:0;width:34px;border-radius:3px;box-shadow:0 1px 3px #0007}
+  .mz .r{position:absolute;width:34px;border-radius:3px;box-shadow:0 1px 2px #0008;transform:rotate(90deg);left:18px;top:22px}
+  .mz .r2{left:19px;top:20px}.mz .r3{left:20px;top:18px}
+  .mz span{position:absolute;top:64px;left:-6px;width:80px;font-size:10px;line-height:1.15;text-align:center}
+
+  .hoja .b{min-width:64px;text-align:center}
+  .hoja .b.r{color:#a34b34;border-color:#e3c3b8}
+  .hoja .cab{display:flex;justify-content:space-between;align-items:baseline}
+  .hoja .cab b{font-family:"DM Serif Text",Georgia,serif;font-weight:400;font-size:17px}
+  .hoja .cab small{color:#636a5e}
+  .caras{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .caras div{border:1px solid #d9d8c9;border-radius:10px;text-align:center;padding:6px 2px;font-size:10px}
+  .caras div i{display:block;font-style:normal;font-size:22px}
+  .caras div.sel{border:2px solid #233d31;background:#efeee2}
+  .velo{position:absolute;inset:0;background:rgba(0,0,0,.25)}
+  .marca{position:absolute;bottom:-4px;right:-4px;background:#233d31;color:#fff;border-radius:999px;font-size:9px;padding:1px 5px}
+
+  .fila2{display:flex;justify-content:space-between;border-bottom:1px solid #e6e4d6;padding:5px 0;font-size:12px}
+  .cart{position:absolute;left:16px;right:16px;background:#faf8f0;color:#233d31;border-radius:16px;padding:12px;box-shadow:0 8px 24px #0008}
+  .cart h3{font-family:"DM Serif Text",Georgia,serif;font-weight:400;margin:0 0 6px;font-size:20px}
+</style>
+<h2>Espectador, fin de mano e historial</h2>
+<p class="subtitle">Las tres usan la misma mesa B. Nada nuevo que aprender.</p>
+<div class="cards">
+ <div class="card"><div class="card-image" style="padding:12px 0"><div class="tel"><div class="barra"><span class="pill">Ana y Clara <b>12</b> · <b>9</b> Diego y Compu</span><span class="ico">☰</span></div><div class="asiento" style="top:50px;left:0;right:0"><b>Clara</b><small>Dador</small><div class="dorsos"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div></div><div class="mz" style="top:52px;left:52px"><img class="m" src="../../../../public/img/cartas/tatu/oros-06.webp"><img class="r" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r2" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r3" src="../../../../public/img/cartas/tatu/reverso.webp"><span>Muestra <b>6 de oros</b></span></div>
+ <div class="asiento" style="top:160px;left:10px"><b>Diego</b><small>Mano</small><img class="jugada" src="../../../../public/img/cartas/tatu/oros-07.webp" style="width:40px"></div>
+ <div class="asiento" style="top:160px;right:10px"><b>Compu 2</b><div class="dorsos"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div></div>
+ <div class="estado" style="top:280px"><span style="background:#fff8e7;color:#233d31;border-radius:12px;padding:4px 10px;font-weight:700">Compu 2: “¡Truco!”</span></div>
+ <div class="asiento" style="top:330px;left:0;right:0"><b>Ana</b><div class="dorsos"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div></div>
+ <div style="position:absolute;bottom:70px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:center">
+   <span class="pill">👁 Mirando</span><span class="pill">Volver al salón</span></div>
+ <div class="tira"><span>📜<br>Mano</span><span>🔢<br>Tantos</span><span>🎙<br>Voz</span><span>⋯<br>Más</span></div></div></div>
+ <div class="card-body"><h3>Espectador</h3><p>La misma mesa sin mano propia, sin Cantar y sin señas: el espectador nunca recibe señas ni gestos de ningún equipo. Las voces de los cantos sí se oyen. Arriba del tanteador van los nombres de cada equipo.</p></div></div>
+ <div class="card"><div class="card-image" style="padding:12px 0"><div class="tel"><div class="barra"><span class="pill">Nos <b>14</b> · <b>9</b> Ellos <small>a 30</small></span><span class="ico">☰</span></div>
+ <div class="asiento" style="top:50px;left:0;right:0"><b>Clara</b><img class="jugada" src="../../../../public/img/cartas/tatu/copas-04.webp" style="width:36px"></div>
+ <div class="cart" style="top:150px"><h3>Ganaste la mano</h3>
+  <div style="font-size:11px;color:#636a5e;margin-bottom:6px">El cierre fue por las vueltas.</div>
+  <div class="fila2"><span>Envido querido · Ana con 33</span><b>+2 Nos</b></div>
+  <div class="fila2"><span>Truco · vueltas</span><b>+2 Nos</b></div>
+  <div style="font-size:11px;margin:8px 0 4px;color:#636a5e">Ana mostró sus tantos</div>
+  <div style="display:flex;gap:4px"><img src="../../../../public/img/cartas/tatu/espadas-03.webp" style="width:36px"><img src="../../../../public/img/cartas/tatu/bastos-02.webp" style="width:36px"></div>
+ </div>
+ <div style="position:absolute;bottom:80px;left:16px;right:16px;background:#a34b34;color:#fff;border-radius:999px;padding:12px;text-align:center;font-weight:700">Repartir otra mano</div>
+ <div class="tira"><span>📜<br>Mano</span><span>🔢<br>Tantos</span><span>🎙<br>Voz</span><span>⋯<br>Más</span></div></div></div>
+ <div class="card-body"><h3>Fin de mano</h3><p>Una tarjeta sobre el paño con quién ganó, por qué y cada cobro (resumen de tantos). Muestra las cartas con las que se probaron los tantos. Abajo está el botón grande para repartir otra mano, o para crear otra mesa si terminó el chico.</p></div></div>
+ <div class="card"><div class="card-image" style="padding:12px 0"><div class="tel"><div class="barra"><span class="pill">Nos <b>12</b> · <b>9</b> Ellos <small>a 30</small></span><span class="ico">☰</span></div>
+ <div class="velo"></div>
+ <div class="hoja" style="top:120px">
+  <div class="asa"></div>
+  <div class="cab"><b>Mano 4</b><small>Vuelta 2</small></div>
+  <h4>Lo que pasó</h4>
+  <div class="fila2"><span>Diego</span><span>Envido</span></div>
+  <div class="fila2"><span>Ana (vos)</span><span>Quiero · 33 gana</span></div>
+  <div class="fila2"><span>Clara</span><span>4 de copas</span></div>
+  <div class="fila2"><span>Diego</span><span>7 de oros</span></div>
+  <div class="fila2"><span>Ana a Clara</span><span>«Vení»</span></div>
+  <h4>Vueltas</h4>
+  <div class="fila2"><span>1.ª</span><b>Nosotros</b></div>
+  <div style="margin-top:12px;display:flex;gap:6px"><span class="b">Reportar esta jugada</span><span class="b">Manos anteriores</span></div>
+ </div>
+ <div class="tira" style="z-index:2"><span style="opacity:1;font-weight:700">📜<br>Mano</span><span>🔢<br>Tantos</span><span>🎙<br>Voz</span><span>⋯<br>Más</span></div></div></div>
+ <div class="card-body"><h3>Hoja "Mano"</h3><p>Al tocar Mano en la tira se abre el historial: jugadas, cantos, frases del pie, vueltas y "Reportar esta jugada". Las otras pestañas abren hojas iguales: Tantos (tus tantos, valor y cobrados), Voz (Discord) y Más (reglas, versión, salir, sonido).</p></div></div>
+</div>

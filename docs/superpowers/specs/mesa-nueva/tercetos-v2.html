@@ -1,0 +1,100 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:system-ui,sans-serif;background:#1e1e1e;color:#eee;padding:24px}.cards{display:flex;flex-wrap:wrap;gap:24px}.card{width:320px}.subtitle{opacity:.8}</style>
+<style>
+  .tel{width:300px;height:640px;border-radius:34px;border:8px solid #111;overflow:hidden;position:relative;
+    background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7;font:13px "DM Sans",Arial,sans-serif;margin:0 auto}
+  .tel *{box-sizing:border-box}
+  .barra{display:flex;justify-content:space-between;align-items:center;padding:10px 12px 6px;font-size:12px}
+  .pill{background:rgba(0,0,0,.28);border-radius:999px;padding:4px 10px;display:inline-flex;gap:8px;align-items:center}
+  .pill b{font-size:15px}
+  .ico{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.28);display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .asiento{position:absolute;text-align:center;font-size:11px;line-height:1.2}
+  .asiento b{display:block;font-size:12px}
+  .asiento small{opacity:.7}
+  .dorsos{display:flex;justify-content:center;margin-top:3px}
+  .dorsos img{width:22px;margin-left:-12px;border-radius:2px;box-shadow:0 1px 2px #0006}
+  .dorsos img:first-child{margin-left:0}
+  .jugada{width:42px;border-radius:3px;box-shadow:0 2px 6px #0007;display:block;margin:4px auto 0}
+  .muestra{position:absolute;display:flex;align-items:center;gap:4px;font-size:10px}
+  .muestra img{width:30px;border-radius:2px}
+  .mano{position:absolute;left:0;right:0;display:flex;justify-content:center}
+  .mano img{border-radius:6px;box-shadow:0 4px 10px #0008;background:#fff}
+  .chips{position:absolute;left:8px;right:8px;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .chip{background:#fff8e7;color:#233d31;border-radius:999px;padding:7px 12px;font-weight:700;font-size:12px}
+  .chip.sec{background:rgba(255,248,231,.15);color:#fff8e7;border:1px solid rgba(255,248,231,.4)}
+  .estado{position:absolute;left:0;right:0;text-align:center;font-size:12px}
+  .estado b{font-family:"DM Serif Text",Georgia,serif;font-size:17px;font-weight:400;display:block}
+  .tira{position:absolute;bottom:0;left:0;right:0;height:56px;background:rgba(0,0,0,.35);display:flex;justify-content:space-around;align-items:center;font-size:11px}
+  .tira span{display:flex;flex-direction:column;align-items:center;gap:2px;opacity:.85}
+  .hoja{position:absolute;left:0;right:0;bottom:0;background:#faf8f0;color:#233d31;border-radius:18px 18px 0 0;padding:10px 12px 16px;box-shadow:0 -6px 20px #0006}
+  .hoja .asa{width:36px;height:4px;border-radius:2px;background:#c9c6b6;margin:0 auto 8px}
+  .hoja h4{margin:6px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#636a5e}
+  .hoja .fila{display:flex;gap:6px;flex-wrap:wrap}
+  .hoja .b{border:1px solid #d9d8c9;border-radius:10px;padding:8px 10px;font-weight:700;font-size:12px}
+  .hoja .b.p{background:#233d31;color:#faf8f0;border-color:#233d31}
+  .fab{position:absolute;border-radius:999px;background:#a34b34;color:#fff;font-weight:700;padding:10px 16px;box-shadow:0 4px 10px #0007}
+  .sena{position:absolute;width:38px;height:38px;border-radius:50%;background:#ffcc35;color:#693c11;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 6px #0007}
+  .nota{font-size:13px;color:var(--text-secondary,#666);margin-top:8px}
+  .mz{position:absolute;width:64px;height:62px}
+  .mz .m{position:absolute;left:4px;top:0;width:34px;border-radius:3px;box-shadow:0 1px 3px #0007}
+  .mz .r{position:absolute;width:34px;border-radius:3px;box-shadow:0 1px 2px #0008;transform:rotate(90deg);left:18px;top:22px}
+  .mz .r2{left:19px;top:20px}.mz .r3{left:20px;top:18px}
+  .mz span{position:absolute;top:64px;left:-6px;width:80px;font-size:10px;line-height:1.15;text-align:center}
+
+  .hoja .b{min-width:64px;text-align:center}
+  .hoja .b.r{color:#a34b34;border-color:#e3c3b8}
+  .hoja .cab{display:flex;justify-content:space-between;align-items:baseline}
+  .hoja .cab b{font-family:"DM Serif Text",Georgia,serif;font-weight:400;font-size:17px}
+  .hoja .cab small{color:#636a5e}
+  .caras{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .caras div{border:1px solid #d9d8c9;border-radius:10px;text-align:center;padding:6px 2px;font-size:10px}
+  .caras div i{display:block;font-style:normal;font-size:22px}
+  .caras div.sel{border:2px solid #233d31;background:#efeee2}
+  .velo{position:absolute;inset:0;background:rgba(0,0,0,.25)}
+  .marca{position:absolute;bottom:-4px;right:-4px;background:#233d31;color:#fff;border-radius:999px;font-size:9px;padding:1px 5px}
+
+  .globo{position:absolute;background:#faf8f0;color:#233d31;border-radius:14px;padding:6px 8px;box-shadow:0 4px 12px #0007;font-size:10px}
+  .globo .g{display:flex;gap:6px;margin-top:3px}
+  .globo .g span{display:flex;flex-direction:column;align-items:center;font-size:9px;color:#636a5e}
+  .globo .g i{font-style:normal;font-size:22px}
+  .globo:before{content:"";position:absolute;top:-6px;left:var(--p,50%);border:6px solid transparent;border-top:0;border-bottom-color:#faf8f0}
+  .frases{position:absolute;left:8px;right:8px;display:flex;gap:6px;justify-content:center}
+  .tusenas{position:absolute;background:rgba(0,0,0,.35);border-radius:999px;padding:4px 10px;font-size:11px}
+
+  .esc{width:1000px;height:600px;border-radius:12px;border:6px solid #222;display:grid;grid-template-columns:230px 1fr 230px;overflow:hidden;font:13px "DM Sans",Arial,sans-serif;margin:0 auto;transform-origin:top left}
+  .esc *{box-sizing:border-box}
+  .lado{background:#faf8f0;color:#233d31;padding:14px;overflow:hidden;font-size:12px}
+  .lado h5{font-family:"DM Serif Text",Georgia,serif;font-weight:400;font-size:17px;margin:0 0 8px}
+  .lado h6{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#636a5e;margin:12px 0 4px}
+  .lado li{margin:3px 0}.lado ol,.lado ul{padding-left:16px;margin:0}
+  .lado .c{display:flex;justify-content:space-between;border-bottom:1px solid #e6e4d6;padding:4px 0}
+  .lado .btn{display:inline-block;border:1px solid #d9d8c9;border-radius:8px;padding:6px 10px;font-weight:700;margin-top:6px}
+  .centro{position:relative;background:radial-gradient(ellipse at 50% 38%,#3a614a,#244936 67%,#1c392d);color:#fff8e7}
+  .wrap{width:1012px;height:612px;overflow:hidden;margin:0 auto}
+
+  .p6{position:absolute;text-align:center;font-size:10px;line-height:1.15;width:72px}
+  .p6 b{display:block;font-size:11px}
+  .p6 .av{width:26px;height:26px;border-radius:50%;margin:0 auto 2px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#233d31}
+  .eq0 .av{background:#f2d27a;box-shadow:0 0 0 2px #fff8e7}
+  .eq1 .av{background:#c9886f;box-shadow:0 0 0 2px #fff8e7}
+  .p6 .jugada{width:30px}
+  .p6.apagado{opacity:.38}
+  .p6 .st{font-size:9px;opacity:.8}
+  .p6.turno .av{box-shadow:0 0 0 3px #fff8e7,0 0 12px 4px #ffe884}
+  .lance{position:absolute;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.35);border-radius:999px;padding:4px 12px;font-size:11px;white-space:nowrap}
+
+  .mini{position:absolute;display:flex;align-items:center;gap:4px;font-size:9px;opacity:.5}
+  .mini .av{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px;color:#233d31}
+  .mini.eq0 .av{background:#f2d27a}.mini.eq1 .av{background:#c9886f}
+</style>
+<h2>Tercetos en el teléfono (v2)</h2>
+<p class="subtitle">Los equipos se alternan alrededor del paño: a tus dos costados se sientan rivales y tus compañeros quedan lejos, en diagonal. En el pico a pico, la pantalla es la de un duelo 1 contra 1 y el resto de la mesa queda tenue en los bordes.</p>
+<div class="cards">
+ <div class="card" data-choice="redondilla" ><div class="card-image" style="padding:12px 0"><div class="tel"><div class="barra"><span class="pill">Nos <b>18</b> · <b>22</b> Ellos <small>a 40</small></span><span class="ico">☰</span></div><div class="lance" style="top:44px">Reparto 2 · Redondilla · Vuelta 1</div><div class="p6 eq1 " style="top:74px;left:16px"><div class="av">D</div><b>Diego</b><span class=st>Compañero</span><img class="jugada" src="../../../../public/img/cartas/tatu/bastos-01.webp"></div><div class="p6 eq0 " style="top:68px;left:114px"><div class="av">C</div><b>Clara</b><span class=st>Rival · Mano</span><img class="jugada" src="../../../../public/img/cartas/tatu/oros-07.webp"></div><div class="p6 eq1 " style="top:74px;right:16px"><div class="av">B</div><b>Bruno</b><span class=st>Compañero · Pie</span><img class="jugada" src="../../../../public/img/cartas/tatu/copas-04.webp"></div><div class="p6 eq0 turno" style="top:196px;left:6px"><div class="av">E</div><b>Elena</b><span class=st>Rival · Dador</span><div class="dorsos"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div></div><div class="mz" style="top:200px;left:86px;transform:scale(.8);transform-origin:top left"><img class="m" src="../../../../public/img/cartas/tatu/oros-06.webp"><img class="r" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r2" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r3" src="../../../../public/img/cartas/tatu/reverso.webp"><span>Muestra <b>6 de oros</b></span></div><div class="p6 eq0 " style="top:196px;right:6px"><div class="av">A</div><b>Ana</b><span class=st>Rival</span><div class="dorsos"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div></div><div class="estado" style="top:316px"><b>Turno de Elena</b>Después vos</div><div class="mano" style="top:400px"><img src="../../../../public/img/cartas/tatu/espadas-03.webp" style="width:92px;transform:rotate(-10deg) translate(20px,10px)"><img src="../../../../public/img/cartas/tatu/bastos-02.webp" style="width:92px;z-index:1"><img src="../../../../public/img/cartas/tatu/espadas-01.webp" style="width:92px;transform:rotate(10deg) translate(-20px,10px)"></div><div class="fab" style="bottom:70px;right:14px">Cantar ▴</div>
+        <div class="asiento" style="bottom:76px;left:14px;text-align:left"><b>Félix · Vos</b><small>Equipo 2</small></div>
+        <div class="tira"><span>📜<br>Reparto</span><span>🔢<br>Tantos</span><span>🎙<br>Voz</span><span>⋯<br>Más</span></div></div></div>
+ <div class="card-body"><h3>Redondilla: juegan los seis</h3><p>A tus costados están Elena y Ana, rivales. En las esquinas de arriba están Diego y Bruno, tus compañeros. Al frente está Clara, rival. El orden de juego va en sentido contrario a las agujas del reloj, como en la mesa real.</p></div></div>
+ <div class="card" data-choice="pico" ><div class="card-image" style="padding:12px 0"><div class="tel"><div class="barra"><span class="pill">Nos <b>18</b> · <b>22</b> Ellos <small>a 40</small></span><span class="ico">☰</span></div><div class="lance" style="top:44px">Pico a pico · Duelo 2 de 3</div><div class="mini eq1" style="top:78px;left:12px"><span class="av">D</span><span><b>Diego</b><br>Ya jugó</span></div><div class="mini eq0" style="top:78px;right:12px"><span class="av">C</span><span><b>Clara</b><br>Duelo 3</span></div><div class="mini eq1" style="top:236px;right:8px"><span class="av">B</span><span><b>Bruno</b><br>Duelo 3</span></div><div class="mini eq0" style="top:236px;left:8px"><span class="av">A</span><span><b>Ana</b><br>Ya jugó</span></div><div class="asiento" style="top:80px;left:0;right:0"><b style="font-size:14px">Elena</b><small>Tu rival en este duelo · Dador</small><div class="dorsos" style="transform:scale(1.4);margin-top:8px"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"><img src="../../../../public/img/cartas/tatu/reverso.webp"></div><img class="jugada" src="../../../../public/img/cartas/tatu/oros-07.webp" style="width:52px;margin-top:10px"></div><div class="mz" style="top:128px;left:44px;transform:scale(.8);transform-origin:top left"><img class="m" src="../../../../public/img/cartas/tatu/oros-06.webp"><img class="r" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r2" src="../../../../public/img/cartas/tatu/reverso.webp"><img class="r r3" src="../../../../public/img/cartas/tatu/reverso.webp"><span>Muestra <b>6 de oros</b></span></div><div class="estado" style="top:300px"><b>Tu turno</b>Elegí una carta o cantá</div><div class="mano" style="top:400px"><img src="../../../../public/img/cartas/tatu/espadas-03.webp" style="width:92px;transform:rotate(-10deg) translate(20px,10px)"><img src="../../../../public/img/cartas/tatu/bastos-02.webp" style="width:92px;z-index:1"><img src="../../../../public/img/cartas/tatu/espadas-01.webp" style="width:92px;transform:rotate(10deg) translate(-20px,10px)"></div><div class="fab" style="bottom:70px;right:14px">Cantar ▴</div>
+        <div class="asiento" style="bottom:76px;left:14px;text-align:left"><b>Félix · Vos</b><small>Equipo 2</small></div>
+        <div class="tira"><span>📜<br>Reparto</span><span>🔢<br>Tantos</span><span>🎙<br>Voz</span><span>⋯<br>Más</span></div></div></div>
+ <div class="card-body"><h3>Pico a pico: pantalla de duelo</h3><p>Elena ocupa el lugar del rival en el 1 contra 1, arriba y grande, con sus dorsos y su carta. Los otros cuatro quedan como puntitos tenues en sus lugares de la mesa, con su estado ("Ya jugó" o "Duelo 3"). Al cambiar de duelo, el nuevo rival se desliza al centro.</p></div></div>
+</div>
