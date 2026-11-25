@@ -45,10 +45,10 @@ export function MesaEnJuego({ id }: { id: string }) {
   const { estado: sesion, reintentar: recargarSesion } = useSesion();
   const jugadorId = sesion.tipo === "dentro" ? sesion.jugador.id : null;
   const puedeReportar = sesion.tipo === "dentro" && sesion.jugador.puedeReportar === true;
-  const { preferencias, cambiar, reducirMovimiento, liviano } = usePreferencias();
+  const { preferencias, cargadas, cambiar, reducirMovimiento, liviano } = usePreferencias();
   // La cola anuncia aquí lo que se presenta; el lienzo y el tanteador lo escuchan para animarlo.
   const [eventos] = useState(crearEventos);
-  useEfectos(eventos, preferencias);
+  useEfectos(eventos, preferencias, cargadas);
   // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
   const [presencio] = useState(() => presencioElReparto(id));
   const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
@@ -156,6 +156,6 @@ export function MesaEnJuego({ id }: { id: string }) {
 
   return (
     <MesaPantalla mesa={mesaVisible} senas={senas} hojaCantos={hojaCantos} acciones={acciones} extra={extra}
-      rechazos={rechazos} conectada={conectada} eventos={eventos} liviano={liviano} hapticos={preferencias.hapticos} />
+      rechazos={rechazos} conectada={conectada} eventos={eventos} liviano={liviano} hapticos={cargadas && preferencias.hapticos} />
   );
 }

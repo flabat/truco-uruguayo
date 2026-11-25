@@ -28,9 +28,9 @@ const acciones: AccionesMesa = {
 export function Visor({ id }: { id: string }) {
   const ruta = "/api/salon/mesas/" + encodeURIComponent(id);
   const { datos, estado, reintentar } = useConsulta<MesaObservada>(ruta, 2000);
-  const { preferencias, cambiar, reducirMovimiento, liviano } = usePreferencias();
+  const { preferencias, cargadas, cambiar, reducirMovimiento, liviano } = usePreferencias();
   const [eventos] = useState(crearEventos);
-  useEfectos(eventos, preferencias);
+  useEfectos(eventos, preferencias, cargadas);
   // La cola compara por identidad: la versión se arma una vez por lectura.
   const recibida = useMemo(() => datos ? versionarObservada(datos) : undefined, [datos]);
   const nombre = useCallback((asiento: number) => datos?.asientos[asiento]?.nombre ?? "", [datos]);
