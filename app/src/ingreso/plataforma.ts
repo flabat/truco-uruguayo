@@ -3,7 +3,7 @@ import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
-import { crearCliente } from "../api/cliente.ts";
+import { crearClienteApp } from "../api/cliente.ts";
 import { baseDeLaApi } from "../configuracion.ts";
 import { crearAlmacenSesion, type Guardado } from "./almacen.ts";
 import { crearPar } from "./pkce.ts";
@@ -25,7 +25,7 @@ const sinGuardado: Guardado = {
 };
 
 export const almacen = crearAlmacenSesion(esWeb ? sinGuardado : guardadoSeguro);
-export const cliente = crearCliente({ base: baseDeLaApi, sesion: almacen.leer });
+export const cliente = crearClienteApp({ base: baseDeLaApi, sesion: almacen.actual });
 
 const sha256 = async (texto: string) =>
   new Uint8Array(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, new TextEncoder().encode(texto)));

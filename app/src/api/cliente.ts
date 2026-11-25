@@ -1,10 +1,8 @@
-// Cliente mínimo de la API para el ingreso y el perfil. Es el único archivo de la app que conoce
-// las rutas de la API: la parte 4a (#359) lo reemplaza por el cliente compartido de paquetes/cliente.
+// Rutas de ingreso y perfil de la app, sobre el cliente compartido (@eltruco/cliente): con sesión manda
+// `Authorization: Bearer` en HTTP y en el WebSocket; sin sesión (la web) usa la cookie del mismo origen.
+import { crearCliente, ErrorMesa, type Jugador, type OpcionesCliente } from "@eltruco/cliente/cliente.ts";
 
-export interface Jugador {
-  id: string;
-  nombre: string;
-}
+export type { Jugador };
 
 export interface Canje {
   sesion: string;
@@ -12,84 +10,37 @@ export interface Canje {
   bajaCancelada: boolean;
 }
 
-export class ErrorDeApi extends Error {
-  estado: number;
-  constructor(estado: number, mensaje: string) {
-    super(mensaje);
-    this.name = "ErrorDeApi";
-    this.estado = estado;
-  }
+/** Las respuestas exitosas sin JSON (204 de la app, la página a la que redirige la web) no son un error. */
+function sinCuerpo(error: unknown) {
+  if (!(error instanceof SyntaxError)) throw error;
 }
 
-type ConstructorDeSocket = new (url: string, protocolos?: string[], opciones?: { headers: Record<string, string> }) => WebSocket;
+export type ClienteApp = ReturnType<typeof crearClienteApp>;
 
-interface Opciones {
-  /** Origen de la API: el mismo de la página en la web, eltru.co en las apps. */
-  base: string;
-  /** Sesión de la app; `null` en la web, que usa la cookie del mismo origen. */
-  sesion: () => Promise<string | null>;
-  pedir?: typeof fetch;
-  Socket?: ConstructorDeSocket;
-}
-
-export type Cliente = ReturnType<typeof crearCliente>;
-
-export function crearCliente({ base, sesion, pedir = fetch, Socket }: Opciones) {
-  const url = (ruta: string) => new URL(ruta, base).href;
-
-  async function solicitar(ruta: string, init: RequestInit = {}) {
-    const actual = await sesion();
-    const headers = new Headers(init.headers);
-    if (actual) headers.set("Authorization", "Bearer " + actual);
-    // Con la sesión en el encabezado no hace falta la cookie; sin ella, la web manda la suya.
-    return pedir(url(ruta), { ...init, headers, credentials: actual ? "omit" : "same-origin" });
-  }
-
-  async function falla(respuesta: Response): Promise<never> {
-    const cuerpo = await respuesta.json().catch(() => null) as { error?: unknown } | null;
-    const mensaje = typeof cuerpo?.error === "string" ? cuerpo.error : "No se pudo completar el pedido.";
-    throw new ErrorDeApi(respuesta.status, mensaje);
-  }
-
-  async function enviar<T>(ruta: string, cuerpo?: unknown): Promise<T> {
-    const respuesta = await solicitar(ruta, {
-      method: "POST",
-      headers: cuerpo === undefined ? {} : { "Content-Type": "application/json" },
-      body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-    });
-    if (!respuesta.ok) return falla(respuesta);
-    return respuesta.json() as Promise<T>;
-  }
-
+export function crearClienteApp(opciones: OpcionesCliente & { base: string }) {
+  const { pedir, vivo } = crearCliente(opciones);
   return {
-    url,
+    pedir,
+    vivo,
+    url: (ruta: string) => opciones.base.replace(/\/+$/, "") + ruta,
 
     /** El jugador de la sesión, o `null` si no hay sesión vigente. */
     async jugador(): Promise<Jugador | null> {
-      const respuesta = await solicitar("/api/jugador");
-      if (respuesta.status === 401) return null;
-      if (!respuesta.ok) return falla(respuesta);
-      const { id, nombre } = await respuesta.json() as Jugador;
-      return { id, nombre };
+      try {
+        const { id, nombre } = await pedir<Jugador>("/api/jugador");
+        return { id, nombre };
+      } catch (error) {
+        if (error instanceof ErrorMesa && error.status === 401) return null;
+        throw error;
+      }
     },
 
-    canjear: (codigo: string, verificador: string) => enviar<Canje>("/api/auth/canje", { codigo, verificador }),
+    canjear: (codigo: string, verificador: string) => pedir<Canje>("/api/auth/canje", { codigo, verificador }),
 
     async cerrarSesion(): Promise<void> {
-      // La web responde 303 hacia el inicio; no hace falta seguirlo.
-      await solicitar("/api/auth/logout", { method: "POST", redirect: "manual" });
+      await pedir("/api/auth/logout", {}).catch(sinCuerpo);
     },
 
-    eliminarCuenta: () => enviar<{ vence: string }>("/api/cuenta/eliminar"),
-
-    /** WebSocket con la sesión en el encabezado del upgrade (React Native); la web manda la cookie. */
-    async abrirSocket(ruta: string): Promise<WebSocket> {
-      const Constructor = Socket ?? (WebSocket as unknown as ConstructorDeSocket);
-      const direccion = url(ruta).replace(/^http/, "ws");
-      const actual = await sesion();
-      return actual
-        ? new Constructor(direccion, [], { headers: { Authorization: "Bearer " + actual } })
-        : new Constructor(direccion);
-    },
+    eliminarCuenta: () => pedir<{ vence: string }>("/api/cuenta/eliminar", {}),
   };
 }

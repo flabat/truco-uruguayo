@@ -1,9 +1,9 @@
-import type { Cliente, Jugador } from "../api/cliente.ts";
+import type { ClienteApp, Jugador } from "../api/cliente.ts";
 import type { AlmacenSesion } from "./almacen.ts";
 import { codigoDeRetorno } from "./retorno.ts";
 
 interface Contexto {
-  cliente: Cliente;
+  cliente: ClienteApp;
   almacen: AlmacenSesion;
 }
 
@@ -27,6 +27,7 @@ export async function completarIngreso({ resultado, verificador, cliente, almace
 
 /** El jugador de la sesión. Una sesión vencida o eliminada en otro dispositivo se borra; un error de red no. */
 export async function cargarJugador({ cliente, almacen }: Contexto): Promise<Jugador | null> {
+  await almacen.leer();
   const jugador = await cliente.jugador();
   if (!jugador) await almacen.borrar();
   return jugador;

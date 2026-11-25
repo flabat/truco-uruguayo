@@ -5,7 +5,7 @@ App Expo (SDK 58, Expo Router, TypeScript) para iOS, Android y web. Usa builds d
 ## Estructura
 
 - `src/app/`: rutas de Expo Router. `index.tsx` es el ingreso o el perfil; `mesa.tsx` es provisoria hasta la parte 4d.
-- `src/api/cliente.ts`: único archivo que conoce la API. Lo reemplaza `paquetes/cliente` (parte 4a).
+- `src/api/cliente.ts`: rutas de ingreso y perfil sobre el cliente compartido `@eltruco/cliente` (`paquetes/cliente`), que pone `Authorization: Bearer` en HTTP y en el WebSocket `truco.v1`. Expone `pedir` y `vivo` para el salón y la mesa.
 - `src/ingreso/`: PKCE, retorno `eltruco://ingreso`, canje y almacenamiento de la sesión. Lo puro se prueba en `tests/unit/app-ingreso.test.ts`; `plataforma.ts` lo une con `expo-crypto`, `expo-web-browser` y `expo-secure-store`.
 - `src/tema.ts`: paleta y tipografías de la mesa nueva.
 
