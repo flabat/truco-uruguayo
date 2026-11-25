@@ -142,7 +142,7 @@ test("tercetos en pico a pico no tiene señas", () => {
   assert.equal(senasEnMesa({ mesa, partida: redondilla, espectador: false }).tipo, "pie");
 });
 
-test("la mesa legada con seña elegida a mano juega en silencio y lista las señas recibidas", () => {
+test("la mesa legada con seña elegida a mano juega en silencio y lista solo las señas recibidas del compañero", () => {
   const mesa: Mesa = { ...mesaDe("2v2", 2), formato: "pairs-private-senas" };
   const vista = vistaDe(4, 2);
   const partida = partidaDe(vista, {
@@ -152,6 +152,8 @@ test("la mesa legada con seña elegida a mano juega en silencio y lista las señ
       { action: { tipo: "truco", asiento: 1 } as never, awards: [] },
       { action: { tipo: "carta", asiento: 1, carta: "oros-07" }, awards: [], signal: "cejas" as never },
       { action: { tipo: "paso-flor", asiento: 0 } as never, awards: [], signal: "ojos-cerrados" as never },
+      // La seña propia no es una seña recibida.
+      { action: { tipo: "carta", asiento: 2, carta: "copas-03" }, awards: [], signal: "beso" as never },
     ],
   });
   assert.equal(jugarEnSilencio(mesa, partida), true);

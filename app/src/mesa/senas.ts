@@ -44,7 +44,8 @@ export function senasEnMesa({ mesa, partida, espectador }: {
   if (espectador || !partida) return ninguna;
 
   if (jugarEnSilencio(mesa, partida)) {
-    const recibidas = ("turnos" in partida ? partida.turnos ?? [] : []).filter(t => t.signal && canSeeSignal("pairs-private-senas", t.action.asiento, mesa.miAsiento as Asiento)).map(({ signal, action }) => ({
+    const recibidas = ("turnos" in partida ? partida.turnos ?? [] : []).filter(t => t.signal && t.action.asiento !== mesa.miAsiento
+      && canSeeSignal("pairs-private-senas", t.action.asiento, mesa.miAsiento as Asiento)).map(({ signal, action }) => ({
       nombre: mesa.asientos[action.asiento].nombre ?? "",
       sena: textoDeSena.get(signal!)!,
       jugada: action.tipo === "carta" ? cartasPorId.get(action.carta)!.nombre
