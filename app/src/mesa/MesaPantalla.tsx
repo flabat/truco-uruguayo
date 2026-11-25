@@ -1,0 +1,156 @@
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { calcularMesa } from "@eltruco/mesa-geometria";
+import type { CardId } from "@eltruco/motor/cartas.ts";
+import { colores, fuentes } from "../tema.ts";
+import { CapaLienzo } from "./CapaLienzo";
+import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
+import { ManoPropia } from "./ManoPropia.tsx";
+import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
+import type { SenasEnMesa } from "./senas.ts";
+import { useManoAnimada } from "./useManoAnimada.ts";
+import { Asientos } from "./vistas/Asientos.tsx";
+import { Barra } from "./vistas/Barra.tsx";
+import { Estado } from "./vistas/Estado.tsx";
+import { enRect } from "./vistas/estilo.ts";
+import { Hoja } from "./vistas/Hoja.tsx";
+import { HojaCantos } from "./vistas/HojaCantos.tsx";
+import { ocupaElRotulo, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
+import { Tira, titulosDePestana, type Pestana } from "./vistas/Tira.tsx";
+
+export type { Pestana } from "./vistas/Tira.tsx";
+
+export interface AccionesMesa {
+  jugarCarta: (id: CardId) => void;
+  cantar: (tipo: Canto) => void;
+  indicar: Indicar;
+  repartir: () => void;
+  salir: () => void;
+}
+
+interface Props {
+  mesa: MesaVisible;
+  senas: SenasEnMesa;
+  /** `hojaDeCantos(...)` ya calculada; null si no hay cantos legales. */
+  hojaCantos: DatosHojaCantos | null;
+  acciones: AccionesMesa;
+  /** El contenido de las hojas de la tira y de ☰. La hoja pone el título; sin contenido queda vacía. */
+  extra?: Partial<Record<Pestana, ReactNode>>;
+  /** Jugadas rechazadas o que no se pudieron enviar: ver `ManoPropia`. */
+  rechazos: number;
+  conectada: boolean;
+}
+
+type HojaAbierta = "cantos" | Pestana | null;
+
+/**
+ * La mesa entera. Una sola geometría (`calcularMesa`) ubica el lienzo del fondo, la mano que se
+ * toca y las vistas de texto. Con una hoja abierta, la geometría recibe su alto y la mano sube.
+ */
+export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada }: Props) {
+  const ventana = useWindowDimensions();
+  const area = useSafeAreaInsets();
+  const ancho = Math.max(0, ventana.width - area.left - area.right);
+  const alto = Math.max(0, ventana.height - area.top - area.bottom);
+
+  const [elegida, elegir] = useState<HojaAbierta>(null);
+  const [altoHoja, cambiarAltoHoja] = useState(0);
+
+  // La hoja de Cantos sube sola al responder o declarar, y se cierra si el canto ya no está.
+  const anterior = useRef<DatosHojaCantos | null>(null);
+  useEffect(() => {
+    const previa = anterior.current;
+    anterior.current = hojaCantos;
+    elegir(a => {
+      const t = transicionDeHoja(previa, hojaCantos, a === "cantos");
+      return t.abierta ? "cantos" : a === "cantos" ? null : a;
+    });
+  }, [hojaCantos]);
+
+  // Hasta que corre el efecto, una hoja de Cantos que ya no existe no se muestra.
+  const abierta: HojaAbierta = elegida === "cantos" && !hojaCantos ? null : elegida;
+  const forzada = hojaCantos !== null && !hojaCantos.cerrable;
+  const cerrable = abierta !== "cantos" || !forzada;
+
+  const geometria = useMemo(
+    () => ancho > 0 && alto > 0
+      ? calcularMesa(entradaDeGeometria(mesa, { ancho, alto }, abierta ? { alto: altoHoja } : null))
+      : null,
+    [mesa, ancho, alto, abierta !== null, altoHoja],
+  );
+  const mano = useManoAnimada(mesa.manoPropia, geometria?.mano ?? []);
+
+  const cerrar = useCallback(() => elegir(a => (a === "cantos" && forzada ? a : null)), [forzada]);
+  const abrir = useCallback((hoja: Exclude<HojaAbierta, null>) => {
+    // Con un canto por responder, nada tapa la hoja de respuesta.
+    if (!forzada) elegir(hoja);
+  }, [forzada]);
+  const cantar = useCallback((tipo: Canto) => {
+    if (!forzada) elegir(null);
+    acciones.cantar(tipo);
+  }, [acciones, forzada]);
+  const medir = useCallback((h: number) => cambiarAltoHoja(a => (Math.abs(a - h) < 1 ? a : h)), []);
+
+  const tercetos = mesa.modalidad === "3v3";
+  const titulos = titulosDePestana(tercetos);
+
+  let contenido: ReactNode = null;
+  if (abierta === "cantos" && hojaCantos) contenido = <HojaCantos hoja={hojaCantos} cantar={cantar} />;
+  else if (abierta && abierta !== "cantos") {
+    contenido = (
+      <View style={estilos.pestana}>
+        <Text role="heading" aria-level={2} style={estilos.tituloPestana}>{titulos[abierta]}</Text>
+        {extra?.[abierta] ?? null}
+        {abierta === "mano" && senas.tipo === "silencio" ? <SenasRecibidas recibidas={senas.recibidas} /> : null}
+      </View>
+    );
+  }
+
+  return (
+    <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
+      {geometria ? (
+        <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
+          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={false} />
+          {abierta && cerrable ? (
+            <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
+          ) : null}
+          <Asientos mesa={mesa} geometria={geometria} sinRotuloPropio={ocupaElRotulo(senas)} />
+          <Estado rect={geometria.estado} estado={mesa.estado} />
+          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} abrirMas={() => abrir("mas")} />
+          {mesa.propio != null ? (
+            <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
+              jugar={acciones.jugarCarta} rechazos={rechazos} />
+          ) : null}
+          <Senas senas={senas} geometria={geometria} propio={mesa.propio} conCantos={hojaCantos !== null}
+            indicar={acciones.indicar} />
+          {geometria.cantos && hojaCantos ? (
+            <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}
+              style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>
+              <Text style={estilos.textoCantos}>Cantos</Text>
+            </Pressable>
+          ) : null}
+          {geometria.tira && !abierta ? <Tira rect={geometria.tira} tercetos={tercetos} abrir={abrir} /> : null}
+          <Hoja key={abierta ?? "cerrada"} abierta={abierta !== null} cerrable={cerrable} alCerrar={cerrar} alMedir={medir}
+            rect={geometria.hoja} relleno={area.bottom} etiqueta={abierta === "cantos" ? hojaCantos?.encabezado ?? "Cantos" : abierta ? titulos[abierta] : ""}>
+            {contenido}
+          </Hoja>
+        </View>
+      ) : null}
+    </GestureHandlerRootView>
+  );
+}
+
+const estilos = StyleSheet.create({
+  raiz: { backgroundColor: colores.panoOscuro, flex: 1, overflow: "hidden" },
+  area: { position: "absolute" },
+  cantos: {
+    alignItems: "center", backgroundColor: colores.acento, borderRadius: 999, boxShadow: "0 4px 10px rgba(0, 0, 0, 0.45)",
+    justifyContent: "center",
+  },
+  apretado: { opacity: 0.85 },
+  textoCantos: { color: "#ffffff", fontFamily: fuentes.textoFuerte, fontSize: 15 },
+  pestana: { gap: 8 },
+  tituloPestana: { color: colores.tinta, fontFamily: fuentes.titulo, fontSize: 20 },
+});
