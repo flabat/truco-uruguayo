@@ -42,7 +42,7 @@
 ### Task 1: Sesión por encabezado
 
 **Files:**
-- Create: `api/migrations/022-sesiones-app.sql`, `tests/unit/sesion-encabezado.test.ts`, `scripts/verificar-sesion-app.mjs`
+- Create: `api/migrations/024-sesiones-app.sql`, `tests/unit/sesion-encabezado.test.ts`, `scripts/verificar-sesion-app.mjs`
 - Modify: `api/auth.ts`, `api/vivo.ts`, `api/server.ts`, `api/mesas.ts:213`, `api/partidas.ts:326`, `api/salon.ts:104`, `api/reportes.ts:79`, `scripts/verificar-stack.sh`
 
 **Interfaces:**
@@ -75,7 +75,7 @@
 ### Task 2: Ingreso de la app con código de canje
 
 **Files:**
-- Create: `api/migrations/023-ingreso-app.sql`, `tests/unit/ingreso-app.test.ts`, `scripts/verificar-ingreso-app.mjs`
+- Create: `api/migrations/025-ingreso-app.sql`, `tests/unit/ingreso-app.test.ts`, `scripts/verificar-ingreso-app.mjs`
 - Modify: `api/auth.ts`, `scripts/verificar-stack.sh`, `docs/ingreso-social.md` (sección corta «Ingreso desde la app»)
 
 **Interfaces:**
@@ -106,7 +106,7 @@
 ### Task 3: Sacar a un jugador de sus mesas
 
 **Files:**
-- Create: `api/retiro.ts`, `api/migrations/024-retiro.sql`, `scripts/verificar-retiro.mjs`
+- Create: `api/retiro.ts`, `api/migrations/026-retiro.sql`, `scripts/verificar-retiro.mjs`
 - Modify: `api/mesas.ts` (`leerMesa`, `VistaMesa`, unirse, computadoras), `api/partidas.ts` (inicio de partida y una función exportada para reanudar computadoras), `src/components/jugar/Sala.tsx`, un spec de Playwright existente de la sala (por ejemplo `tests/jugar.spec.mjs`), `scripts/verificar-stack.sh`
 
 **Interfaces:**
@@ -137,7 +137,7 @@
 ### Task 4: Pedido de baja y arrepentimiento
 
 **Files:**
-- Create: `api/cuenta.ts`, `api/migrations/025-bajas.sql`, `scripts/verificar-bajas.mjs`, `scripts/verificar-baja-ingreso.mjs`, un spec de Playwright del perfil (por ejemplo `tests/perfil-baja.spec.mjs`)
+- Create: `api/cuenta.ts`, `api/migrations/027-bajas.sql`, `scripts/verificar-bajas.mjs`, `scripts/verificar-baja-ingreso.mjs`, un spec de Playwright del perfil (por ejemplo `tests/perfil-baja.spec.mjs`)
 - Modify: `api/server.ts` (ruta `/api/cuenta/eliminar`), `api/auth.ts` (callback), `src/components/perfil/Perfil.tsx`, `src/components/perfil/perfil.css`, `scripts/verificar-stack.sh`
 
 **Interfaces:**

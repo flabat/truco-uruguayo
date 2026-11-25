@@ -6,7 +6,8 @@ cd "$(dirname "$0")/.."
 project="truco-check-$(date +%s)-$$"
 compose=(docker compose --project-name "$project")
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-18081} API_PORT=0
-export TERCETOS_HABILITADOS=1 SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
+export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
+export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
 export KEYCLOAK_API_CLIENT_SECRET=secreto-descartable-del-cliente-de-servicio-api APPLE_TOKENS_KEY="$(openssl rand -base64 32)"
@@ -50,6 +51,7 @@ APPLE_PRIVATE_KEY=$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-2
 export APPLE_CLIENT_ID=co.eltru.prueba APPLE_TEAM_ID=EQUIPO1234 APPLE_KEY_ID=CLAVE12345 APPLE_PRIVATE_KEY
 COMPOSE_PROJECT_NAME="$project" npm run auth:apple
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord apple
+node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
 node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
@@ -90,10 +92,12 @@ jugadores=$(sql "$consulta_jugadores")
 sql "CREATE TABLE juego.prueba_persistencia (valor text); INSERT INTO juego.prueba_persistencia VALUES ('conservado')"
 migration=$(sql "SELECT applied_at FROM schema_migrations WHERE name = '001-juego.sql'")
 [[ -n "$migration" ]]
+# Cerrar las altas en la base descartable antes de comprobar la persistencia del cierre.
+sql "UPDATE juego.funciones SET audiencia='desactivado' WHERE clave='tercetos'"
 "${compose[@]}" stop db
 [[ $(curl -sS -o /dev/null -w '%{http_code}' "$(url api 3001)/health") == 503 ]]
 "${compose[@]}" down
-export TERCETOS_HABILITADOS=0 SALON_HABILITADO=0 SENAS_PIE_PAREJAS=0 SENAS_PIE_TERCETOS=0
+export SALON_HABILITADO=0 SENAS_PIE_PAREJAS=0 SENAS_PIE_TERCETOS=0
 up
 "${compose[@]}" exec -T api node --input-type=module - cerrar-altas < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module - reconectar < scripts/verificar-persistencia-tercetos.mjs

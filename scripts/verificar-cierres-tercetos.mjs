@@ -144,7 +144,7 @@ try {
   else if (modo === "cerrar-altas") {
     const p = await sesion(0);
     assert.ok(!(await peticion(p,"/api/modalidades")).modos.includes("3v3"));
-    await peticion(p,"/api/mesas",{modo:"3v3"},400);
+    await peticion(p,"/api/mesas",{modo:"3v3"},403);
   } else {
     const personas = await Promise.all(Array.from({length:6}, (_,i) => sesion(i)));
     await probarCobros(personas, 50, false);

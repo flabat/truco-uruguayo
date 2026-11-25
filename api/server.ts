@@ -4,6 +4,7 @@ import { configuracionExhibiciones, procesarExhibiciones } from "./exhibiciones.
 import { procesarEnsayos } from "./ensayos.ts";
 import { migrate } from "./migrate.ts";
 import { crearAuth, jugadorDeSesion } from "./auth.ts";
+import { crearGestion } from "./gestion.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
@@ -41,7 +42,8 @@ const server = createServer(async (request, response) => {
     try {
       const ruta = request.url.split("?")[0];
       const reporte = rutaReporte.exec(ruta);
-      if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
+      if (ruta.startsWith("/api/gestion/")) await gestion(request, response);
+      else if (reporte) await atenderReporte(pool, web, reporte[1], request, response);
       else if (esRutaPartida(ruta)) await partidas.atender(request, response);
       else if (esRutaMesas(ruta)) await mesas(request, response);
       else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);
@@ -80,13 +82,14 @@ const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), we
 const cuenta = crearCuenta(pool, web, jugador => vivo.cerrarJugador(jugador), alCambiar);
 const salon = crearSalon(pool, salonHabilitado, web, process.env.VOZ_ESPECTADORA_HABILITADA === "1" ? voz : undefined);
 const detenerLimpieza = voz?.iniciarLimpieza();
-const mesas = crearRutasMesas(pool, web, alCambiar, process.env.TERCETOS_HABILITADOS === "1", voz, salonHabilitado);
+const mesas = crearRutasMesas(pool, web, alCambiar, voz, salonHabilitado);
 const vivo = crearVivo(server, web, {
   autenticar: async req => (await jugadorDeSesion(pool, req))?.id ?? null,
   leerMesa: (mesa, jugador) => leerMesa(pool, mesa, jugador, web),
   ejecutar: partidas.ejecutar,
 });
 
+const gestion = crearGestion(pool, new URL(process.env.OIDC_ISSUER!).href, process.env.GESTION_SUJETO, vivo.jugadoresConectados, web.origin);
 const detenerExhibiciones = procesarExhibiciones(pool, configuracionExhibiciones(process.env), alCambiar);
 const detenerEnsayos = procesarEnsayos(pool, alCambiar);
 const detenerBajas = serviciosBaja ? procesarBajas(pool, serviciosBaja) : undefined;

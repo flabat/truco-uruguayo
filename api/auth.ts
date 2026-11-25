@@ -17,12 +17,12 @@ const secreto = () => randomBytes(32).toString("base64url");
 const texto = (res: ServerResponse, estado: number, mensaje: string) =>
   res.writeHead(estado, { "Content-Type": "text/plain; charset=utf-8" }).end(mensaje);
 
-export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise<{ id: string; nombre: string } | null> {
+export async function identidadDeSesion(pool: Pool, req: IncomingMessage) {
   const handle = sesionDe(req)?.handle;
   if (!handle) return null;
   const clave = hash(handle);
-  const { rows: [player] } = await pool.query(`
-    SELECT j.id, j.nombre, s.tipo = 'app' AND s.vence < now() + interval '15 days' AS renovar
+  const { rows: [player] } = await pool.query<{ id: string; nombre: string; emisor: string; sujeto: string; renovar: boolean }>(`
+    SELECT j.id, j.nombre, j.emisor, j.sujeto, s.tipo = 'app' AND s.vence < now() + interval '15 days' AS renovar
       FROM juego.sesiones s JOIN juego.jugadores j ON j.id = s.jugador
      WHERE s.clave = $1 AND s.vence > now()
   `, [clave]);
@@ -31,10 +31,16 @@ export async function jugadorDeSesion(pool: Pool, req: IncomingMessage): Promise
   if (player.renovar) {
     await pool.query("UPDATE juego.sesiones SET vence = now() + interval '30 days' WHERE clave = $1 AND tipo = 'app'", [clave]);
   }
-  return { id: player.id, nombre: player.nombre };
+  return { id: player.id, nombre: player.nombre, emisor: player.emisor, sujeto: player.sujeto };
+}
+
+export async function jugadorDeSesion(pool: Pool, req: IncomingMessage) {
+  const jugador = await identidadDeSesion(pool, req);
+  return jugador && { id: jugador.id, nombre: jugador.nombre };
 }
 
 function regresoPermitido(valor: string | null) {
+  if (valor === "/gestion/") return valor;
   // Únicamente rutas del juego, sin interpretar destinos arbitrarios enviados por el navegador.
   if (valor === "/perfil/" || valor === "/jugar/?crear=1") return valor;
   if (valor && /^(?:\/volver\/\?mesa=|\/jugar\/\?mirar=)[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor)) return valor;

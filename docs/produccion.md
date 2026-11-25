@@ -94,6 +94,16 @@ Para borrar usuarios, la API usa el cliente de servicio `truco-api`, que solo pu
 
 El comando es idempotente: volvé a ejecutarlo si cambiás el secreto. Keycloak 26.8 exige el alcance `kc-admin-api` para usar la API de administración, y el comando lo asigna. En producción `KEYCLOAK_API_CLIENT_SECRET` es obligatorio: sin esa variable, Compose no levanta la API, para que ninguna baja quede pendiente sin aviso. Si falta registrar el cliente, la API lo informa en cada pasada de la tarea. Localmente, `npm run auth:api` hace lo mismo sobre `mesa-local`.
 
+### Panel personal de gestión
+
+El panel está en `/gestion/`. Para habilitarlo, elegí una única cuenta personal del realm `mesa` con usuario y contraseña. Podés crearla con el procedimiento anterior. Antes de salir de la sesión de administración, consultá su identificador estable con `kc get users -r mesa -q username=NOMBRE -q exact=true --fields id,username`.
+
+Comprobá el nombre y copiá el valor de `id` en `GESTION_SUJETO`. En el VPS con [publicación automática](#publicación-automática-desde-main), usá `/etc/truco-oriental/production.env`. El siguiente despliegue de la API aplica el valor. Para una instalación manual, usá el archivo `.env` del checkout y ejecutá `dc up -d --wait api`. Al abrir el panel, ingresá con la contraseña de esa cuenta del juego. El panel comprueba el emisor y el identificador en cada consulta. Para retirar el acceso, vaciá la variable y recreá el servicio `api` con la configuración de su instalación.
+
+**En vivo** distingue las personas con sesión vigente de las conectadas a una mesa. Los navegadores con más de una pestaña cuentan una vez por persona. **Jugadores** incluye las cuentas que ingresaron al juego al menos una vez. **Historial** muestra cada chico desde el primer reparto, con los equipos y el último tanteador conocido. Un chico terminado suma una partida a cada participante y una victoria a cada integrante del equipo ganador. Se incluyen rivales de computadora. Los chicos sin terminar quedan en el historial con su tanteador parcial, incluso después de una desconexión. Las fechas anteriores a su registro pueden figurar como desconocidas.
+
+**Funciones** administra el acceso a Tercetos y registra cada cambio. [Operación y reversión del piloto](gestion/funciones.md).
+
 ## Copias y recuperación
 
 El servicio `backup` guarda una copia al arrancar y vuelve a hacerlo cada 24 horas. `pg_dump` obtiene una vista consistente de los dos esquemas mientras se juega. Restic cifra el archivo y publica una instantánea sólo si el volcado terminó bien. Se guardan siete copias diarias, cuatro semanales y seis mensuales. Ante un error se reintenta tras cinco minutos. Revisá `dc ps`, `dc logs --tail=40 backup` y la fecha de la última instantánea. El servicio pasa a estado no saludable después de 26 horas sin una copia exitosa. Una copia diaria permite perder hasta un día de jugadas si se pierde el disco y las copias están al día.
