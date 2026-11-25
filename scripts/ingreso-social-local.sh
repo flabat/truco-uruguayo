@@ -6,7 +6,8 @@ case "${1:-}" in
   google) credenciales=(-e GOOGLE_CLIENT_ID -e GOOGLE_CLIENT_SECRET) ;;
   facebook) credenciales=(-e FACEBOOK_APP_ID -e FACEBOOK_APP_SECRET) ;;
   discord) credenciales=(-e DISCORD_CLIENT_ID -e DISCORD_CLIENT_SECRET) ;;
-  *) echo "Elegí google, facebook o discord." >&2; exit 1 ;;
+  apple) credenciales=(-e APPLE_CLIENT_ID -e APPLE_TEAM_ID -e APPLE_KEY_ID -e APPLE_PRIVATE_KEY) ;;
+  *) echo "Elegí google, facebook, discord o apple." >&2; exit 1 ;;
 esac
 
 # La administración solo es accesible dentro de la red de Compose.

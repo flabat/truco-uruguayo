@@ -8,7 +8,7 @@ import { url } from "../lib/guide";
 
   <section class="rule-block">
     <h2>Tu cuenta</h2>
-    <p>Si entrás con Google o Discord, recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio.</p>
+    <p>Si entrás con Google, Discord o Apple, recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio. Apple puede compartir un correo de reenvío en lugar del tuyo. Si ingresás con Apple, guardamos cifrado el token que Apple entrega, solo para revocarlo cuando elimines tu cuenta. Keycloak también conserva la respuesta de Apple con ese token hasta que se borra tu cuenta de ingreso.</p>
     <p>El ingreso con Facebook está pausado. Si lo usaste, Facebook pudo compartir con El Truco tu identificador para esta aplicación, tu nombre y el correo que autorizaste.</p>
     <p>Keycloak, el sistema de cuentas de El Truco, gestiona el acceso y la vinculación con el proveedor. Si te registrás directamente con un correo y una contraseña, también gestiona su verificación y recuperación. El juego guarda tu identificador de jugador, la referencia a tu cuenta y el nombre que se muestra a los demás participantes de tu mesa.</p>
   </section>
@@ -21,7 +21,7 @@ import { url } from "../lib/guide";
 
   <section class="rule-block">
     <h2>Cookies y datos de tu navegador</h2>
-    <p>Usamos cookies para completar el ingreso y mantener tu sesión. El intento de ingreso vence a los diez minutos y la sesión del juego dura hasta siete días. Cerrar sesión en el juego termina esa sesión.</p>
+    <p>Usamos cookies para completar el ingreso y mantener tu sesión. El intento de ingreso vence a los diez minutos y la sesión del juego dura hasta siete días. En la app de El Truco, la sesión dura 30 días, se renueva mientras la usás y se guarda en el almacenamiento seguro del teléfono. Cerrar sesión en el juego termina esa sesión.</p>
     <p>El navegador recuerda el progreso de las lecciones, la última mesa que abriste y si cerraste la invitación a Discord. Podés borrar esos datos desde la configuración de almacenamiento del sitio en tu navegador.</p>
   </section>
 
@@ -35,6 +35,7 @@ import { url } from "../lib/guide";
   <section class="rule-block">
     <h2>Conservación y contacto</h2>
     <p>La cuenta y el historial permanecen disponibles entre visitas. Cerrar sesión o borrar las cookies conserva esos registros en el servidor. Las copias de seguridad que se hayan generado pueden conservar datos anteriores hasta su rotación.</p>
+    <p>Podés eliminar tu cuenta desde <a href={url("perfil/")}>Mi perfil</a> con «Eliminar mi cuenta». Tenés 30 días para arrepentirte; después borramos tu cuenta y tus datos personales, y si ingresaste con Apple revocamos el acceso de El Truco en Apple. Las partidas que compartiste con otras personas quedan en su historial con «Jugador» en lugar de tu nombre. <a href={url("eliminacion-de-datos/")}>Cómo funciona la eliminación</a>.</p>
     <p>Para consultar por tus datos en El Truco, escribinos a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>. También podés <a href={url("eliminacion-de-datos/")}>pedir la eliminación de tus datos</a>, incluso si perdiste acceso a la cuenta.</p>
   </section>
 </Privacidad>

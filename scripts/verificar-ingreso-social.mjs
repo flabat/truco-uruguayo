@@ -36,7 +36,7 @@ async function verificarOrdenYClaveLocal(viewport, locale) {
     await expect(page.locator("#kc-login")).toBeVisible();
   } else {
     await expect(introduccion).toContainText(locale === "es" ? "crear tu jugador" : "join the game");
-    for (const nombre of ["Google", "Facebook", "Discord"].filter(nombre => habilitados.includes(nombre.toLowerCase()))) {
+    for (const nombre of ["Google", "Facebook", "Discord", "Apple"].filter(nombre => habilitados.includes(nombre.toLowerCase()))) {
       const boton = page.locator("#social-" + nombre.toLowerCase());
       const etiqueta = (locale === "es" ? "Continuar con " : "Sign in with ") + nombre;
       await expect(boton).toHaveText(etiqueta);
@@ -84,6 +84,7 @@ try {
     ["google", "accounts.google.com", process.env.GOOGLE_CLIENT_ID],
     ["facebook", "graph.facebook.com", process.env.FACEBOOK_APP_ID],
     ["discord", "discord.com", process.env.DISCORD_CLIENT_ID],
+    ["apple", "appleid.apple.com", process.env.APPLE_CLIENT_ID],
   ]) {
     const boton = page.locator("#social-" + proveedor);
     if (!habilitados.includes(proveedor)) {
@@ -99,6 +100,11 @@ try {
     assert.equal(destino.origin, "https://" + dominio);
     assert.equal(destino.searchParams.get("client_id"), clientId);
     if (proveedor === "google") assert.equal(destino.searchParams.get("prompt"), "select_account");
+    if (proveedor === "apple") {
+      assert.equal(destino.searchParams.get("response_mode"), "form_post");
+      const alcances = destino.searchParams.get("scope").split(" ");
+      assert.ok(alcances.includes("name") && alcances.includes("email"), alcances.join(" "));
+    }
     if (proveedor === "discord") {
       assert.equal(destino.searchParams.get("prompt"), "consent");
       assert.equal(destino.searchParams.get("scope"), "identify email");

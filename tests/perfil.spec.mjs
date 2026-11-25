@@ -53,3 +53,44 @@ test("el jugador abre su perfil y navega el historial", async ({ page }, testInf
   await page.getByRole("link", { name: "Anterior" }).click();
   await expect(page.getByText("Página 1")).toBeVisible();
 });
+
+const confirmacion = "Vas a cerrar sesión en todos tus dispositivos. En las partidas empezadas, una computadora juega en tu lugar; las mesas que creaste y todavía esperan jugadores se cancelan. Tenés 30 días para arrepentirte: si volvés a ingresar, cancelamos la eliminación. Después borramos tu cuenta y tus datos personales.";
+
+async function perfilConCuenta(page) {
+  await page.route("**/api/perfil?*", route => route.fulfill({ json: { jugador, partidas: [], hayMas: false } }));
+  const pedidos = [];
+  await page.route("**/api/cuenta/eliminar", route => {
+    pedidos.push(route.request());
+    return route.fulfill({ json: { vence: "2026-12-24T15:00:00.000Z" } });
+  });
+  return pedidos;
+}
+
+test("eliminar la cuenta pide confirmación y volver no envía nada", async ({ page }) => {
+  const pedidos = await perfilConCuenta(page);
+  await page.goto("/perfil/");
+  await page.getByRole("button", { name: "Eliminar mi cuenta" }).click();
+  const dialogo = page.getByRole("dialog", { name: "Eliminar mi cuenta" });
+  await expect(dialogo).toBeVisible();
+  await expect(dialogo.getByText(confirmacion)).toBeVisible();
+  await dialogo.getByRole("button", { name: "Volver" }).click();
+  await expect(dialogo).toBeHidden();
+  expect(pedidos).toHaveLength(0);
+});
+
+test("confirmar la eliminación la pide y avisa la fecha", async ({ page }) => {
+  const pedidos = await perfilConCuenta(page);
+  await page.goto("/perfil/");
+  await page.getByRole("button", { name: "Eliminar mi cuenta" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Eliminar mi cuenta" }).click();
+  const fecha = new Intl.DateTimeFormat("es-UY", { dateStyle: "long" }).format(new Date("2026-12-24T15:00:00.000Z"));
+  await expect(page.getByText("Pediste eliminar tu cuenta. Se elimina el " + fecha + " si no volvés a ingresar.")).toBeVisible();
+  expect(pedidos).toHaveLength(1);
+  expect(pedidos[0].method()).toBe("POST");
+});
+
+test("al volver a ingresar se avisa que la eliminación se canceló", async ({ page }) => {
+  await perfilConCuenta(page);
+  await page.goto("/perfil/?baja=cancelada");
+  await expect(page.getByRole("status").filter({ hasText: "Cancelamos la eliminación de tu cuenta." })).toBeVisible();
+});

@@ -46,6 +46,14 @@ services:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
       SALON_HABILITADO: "${SALON_HABILITADO:-1}"
+      # Bajas vencidas: la administración de Keycloak solo es accesible dentro de la red.
+      KEYCLOAK_ADMIN_URL: http://identidad:8080
+      KEYCLOAK_API_CLIENT_SECRET: ${KEYCLOAK_API_CLIENT_SECRET:?Falta el secreto del cliente de servicio truco-api (ver docs/produccion.md)}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      APPLE_TOKENS_KEY: ${APPLE_TOKENS_KEY:-}
       VOZ_ESPECTADORA_HABILITADA: "${VOZ_ESPECTADORA_HABILITADA:-1}"
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-1}"
       EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"

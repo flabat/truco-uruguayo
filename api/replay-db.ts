@@ -9,6 +9,7 @@ import { versions, type ActionId } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import type { FormatoMesa } from "./mesas.ts";
 import { identificador, type ManoPublicable } from "./turnos.ts";
+import { cedidosDe } from "./cedidos.ts";
 
 export type DecisionReplay = Omit<Extract<EventoChicoV1, { tipo: "decision" }>, "secuencia">;
 
@@ -80,6 +81,9 @@ export async function iniciarReplayDB(db: PoolClient, mesa: string, formato: For
 /** Un lote incluye las decisiones automáticas disparadas por el comando. Un cierre pertenece a esa misma escritura. */
 export async function guardarDecisionesReplayDB(db: PoolClient, mesa: string, decisiones: readonly DecisionReplay[], meta: number) {
   if (!decisiones.length) return;
+  // Un asiento cedido sigue siendo humano en el replay: sus decisiones no llevan inferencia.
+  const cedidos = await cedidosDe(db, mesa);
+  if (cedidos.length) decisiones = decisiones.map(d => d.bot && cedidos.includes(d.accion.asiento) ? (({ bot: _bot, ...resto }) => resto)(d) : d);
   const { mano, inicio, palabras, decisiones: cantidad } = await posicionActual(db, mesa);
   const anterior = cantidad - decisiones.length;
   if (anterior < 0) throw new Error("El bloque de decisiones excede las acciones confirmadas de la mano.");

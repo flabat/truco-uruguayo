@@ -8,6 +8,7 @@ import {
 import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, guardarPalabraPie, programarBotPie, vistaPiePrivada } from "./partidas-pie.ts";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 import { formatoMesa, leerMesa, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, turnosDeEquipo,
@@ -18,6 +19,7 @@ import {
 } from "./partidas-tercetos.ts";
 import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
+import { esperanDe } from "./cedidos.ts";
 import { seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
 import { decisionReplay, guardarDecisionesReplayDB, iniciarReplayDB, type DecisionReplay } from "./replay-db.ts";
 
@@ -79,12 +81,19 @@ function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, versi
     vista: vistaOnline(mano.estado, asiento) });
 }
 
+/** Humanos para las reglas y el replay, incluidos los asientos cedidos. */
 function asientosHumanos(mesa: VistaMesa) {
+  return mesa.asientos.filter(a => a.tipo === "humano" || a.cedido).map(a => a.asiento);
+}
+
+/** Asientos que esperan a una persona: los cedidos los juega la computadora. */
+function asientosQueEsperan(mesa: VistaMesa) {
   return mesa.asientos.filter(a => a.tipo === "humano").map(a => a.asiento);
 }
 
-function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: readonly number[], decisiones: DecisionReplay[]) {
-  return jugarComputadoras(mano, formato, humanos, false, (paso, propuesta) => decisiones.push(decisionReplay(paso, propuesta)));
+function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: readonly number[], decisiones: DecisionReplay[],
+    esperan: readonly number[] = humanos) {
+  return jugarComputadoras(mano, formato, humanos, false, (paso, propuesta) => decisiones.push(decisionReplay(paso, propuesta)), esperan);
 }
 
 async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, humanos: number[], numero: number,
@@ -101,7 +110,7 @@ async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, huma
   }
   const inicial = { estado: iniciarOnline(reparto, puntos, meta), turnos: [], politicaPie };
   const decisiones: DecisionReplay[] = [];
-  const mano = (diferida || alPie) ? inicial : jugarBotsConReplay(inicial, formato, humanos, decisiones);
+  const mano = (diferida || alPie) ? inicial : jugarBotsConReplay(inicial, formato, humanos, decisiones, await esperanDe(db, mesa, humanos));
   await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [mesa, numero, version, versionReglasOnline, reparto, puntos,
     JSON.stringify(guardarAcciones(mano)), alPie ? versionSenasPie : signalVersionFor(formato)]);
@@ -178,6 +187,37 @@ export async function avanzarEnsayo(pool: Pool) {
   }
 }
 
+/**
+ * La mesa está bloqueada por el llamador. Después de ceder un asiento, juega o programa el turno
+ * si ahora corresponde a la computadora, igual que después de una jugada humana.
+ */
+export async function reanudarComputadoras(db: PoolClient, id: string) {
+  const { rows: [registro] } = await db.query<MesaComputadoras & { politica: string }>(
+    "SELECT id, modo, meta, version_senas, perfil_tercetos, politica FROM juego.mesas WHERE id=$1", [id]);
+  const fila = registro && await ultimaMano(db, id);
+  if (!fila) return;
+  verificarPerfil(registro.modo, registro.perfil_tercetos);
+  const formato = formatoMesa(registro.modo, registro.version_senas);
+  const { rows: asientos } = await db.query<{ asiento: number; computadora: boolean; cedido: boolean }>(
+    "SELECT asiento, computadora, cedido FROM juego.asientos WHERE mesa=$1", [id]);
+  const humanos = asientos.filter(a => !a.computadora).map(a => a.asiento);
+  const esperan = asientos.filter(a => !a.computadora && !a.cedido).map(a => a.asiento);
+  const mano = recuperar(fila, formato, registro.meta, humanos);
+  if (registro.version_senas === versionSenasPie) mano.politicaPie = registro.politica;
+  if (mano.estado.resultado) return;
+  if (formato === "triples") await registrarPendienteTercetos(db, id, mano.estado, humanos);
+  else if (registro.version_senas === versionSenasPie) await programarBotPie(db, id, mano, humanos);
+  else if (registro.politica !== incumbent.id) await programarTurno(db, id, mano, humanos);
+  else {
+    const decisiones: DecisionReplay[] = [];
+    const nueva = jugarBotsConReplay(mano, formato, humanos, decisiones, esperan);
+    if (!decisiones.length) return;
+    await db.query("UPDATE juego.manos SET version=version+1, acciones=$3 WHERE mesa=$1 AND numero=$2",
+      [id, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
+    await guardarDecisionesReplayDB(db, id, decisiones, registro.meta);
+  }
+}
+
 export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}) {
   async function resolver(db: PoolClient, id: string, jugador: string, op?: Operacion, datos: Record<string, unknown> = {}) {
     if (!uuid.test(id)) throw new ErrorPeticion(404, "No se encontró tu mesa.");
@@ -187,6 +227,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     if (!lock.rowCount) throw new ErrorPeticion(404, "No se encontró tu mesa.");
     const mesa = await leerMesa(db, id, jugador, web);
     if (!mesa) throw new ErrorPeticion(404, "No se encontró tu mesa.");
+    if (mesa.cancelada) throw new ErrorPeticion(409, "La mesa se canceló.");
     const asiento = mesa.miAsiento as Asiento;
     const diferida = mesa.politica !== incumbent.id;
     const alPie = mesa.versionSenas === versionSenasPie;
@@ -209,6 +250,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       }
     }
     const humanos = asientosHumanos(mesa);
+    const esperan = asientosQueEsperan(mesa);
     const fila = await ultimaMano(db, id);
     if (!fila) {
       if (comando) throw new ErrorPeticion(409, "Actualizá la mesa para recibir tu mano.");
@@ -225,7 +267,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         if (diferida) await programarTurno(db, id, mano, humanos);
         else {
           const decisiones: DecisionReplay[] = [];
-          const nueva = jugarBotsConReplay(mano, mesa.formato, humanos, decisiones);
+          const nueva = jugarBotsConReplay(mano, mesa.formato, humanos, decisiones, esperan);
           await db.query("UPDATE juego.manos SET version=version+1, acciones=$3 WHERE mesa=$1 AND numero=$2",
             [id, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
           await guardarDecisionesReplayDB(db, id, decisiones, mesa.meta);
@@ -285,7 +327,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         throw new ErrorPeticion(409, "La acción no está permitida en este turno.");
       }
       const decisiones = [decisionReplay(paso)];
-      const siguiente = diferida ? prepararTurno(paso, humanos) : jugarBotsConReplay(paso, mesa.formato, humanos, decisiones);
+      const siguiente = diferida ? prepararTurno(paso, humanos) : jugarBotsConReplay(paso, mesa.formato, humanos, decisiones, esperan);
       if (diferida) await programarTurno(db, id, siguiente, humanos);
       await db.query("UPDATE juego.manos SET version=$3, acciones=$4 WHERE mesa=$1 AND numero=$2",
         [id, fila.numero, version, JSON.stringify(guardarAcciones(siguiente))]);
@@ -326,7 +368,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         return;
       }
       if (op === "partida" || req.method !== "POST") throw new ErrorPeticion(405, "Método no permitido.");
-      if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
       responderJson(res, 200, await transaccion(id, jugador.id, op as Operacion, await leerJson(req)));
     } catch (error) {
       if (!(error instanceof ErrorPeticion)) throw error;

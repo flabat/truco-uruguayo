@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerCuerpo } from "./http.ts";
 import { prepararReporte, type CursorReporte } from "./reporte-contexto.ts";
 
@@ -76,7 +77,7 @@ export async function atenderReporte(pool: Pool, web: URL, mesa: string, req: In
       res.setHeader("Allow", "POST");
       throw new ErrorPeticion(405, "El reporte debe abrirse desde la mesa.");
     }
-    if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+    if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
     const jugador = await jugadorDeSesion(pool, req);
     if (!jugador) throw new ErrorPeticion(401, "Ingresá al juego para reportar una jugada.");
     const cursor = await leerCursor(req);

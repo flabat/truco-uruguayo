@@ -12,6 +12,7 @@ import { FalloDiscord } from "./discord.ts";
 import type { crearVoz } from "./voz-discord.ts";
 import { permiteTercetos, exigirTercetos } from "./funciones.ts";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
 
 type Modo = "1v1" | "2v2" | "3v3";
@@ -23,18 +24,22 @@ interface RegistroMesa {
   modo: Modo;
   creador: string;
   invitacion: string;
+  cancelada: Date | null;
 }
 interface AsientoVista {
   asiento: number;
   equipo: number;
   tipo: "vacio" | "humano" | "computadora";
   nombre: string | null;
+  /** Humano para las reglas, jugado por una computadora porque su jugador dejó el juego. */
+  cedido?: true;
 }
 export interface VistaMesa {
   id: string;
   modo: Modo;
   meta: number;
   publica: boolean;
+  cancelada: boolean;
   creadorId: string;
   formato: FormatoMesa;
   versionReglas: number;
@@ -59,11 +64,11 @@ export function esRutaMesas(pathname: string) {
 export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: string, web: URL): Promise<VistaMesa | null> {
   if (!esId(id)) return null;
   const { rows } = await db.query(`
-    SELECT m.id, m.modo, m.meta, m.publica, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
+    SELECT m.id, m.modo, m.meta, m.publica, m.cancelada, m.perfil_tercetos, m.creador, m.invitacion, m.version_senas, m.politica, propio.asiento AS mio,
            p.nombre AS nombre_modelo, to_char(p.publicada_el, 'YYYY-MM-DD') AS fecha_modelo,
-           a.asiento, a.computadora, j.nombre
+           a.asiento, a.computadora, a.cedido, j.nombre
       FROM juego.mesas m
-      JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2
+      JOIN juego.asientos propio ON propio.mesa = m.id AND propio.jugador = $2 AND NOT propio.cedido
       JOIN juego.asientos a ON a.mesa = m.id
       LEFT JOIN juego.jugadores j ON j.id = a.jugador
       LEFT JOIN juego.publicaciones_modelo p ON p.pin = m.politica
@@ -75,10 +80,12 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   verificarPerfil(mesa.modo, mesa.perfil_tercetos);
   const asientos: AsientoVista[] = Array.from({ length: capacidad[mesa.modo as Modo] }, (_, asiento) => {
     const ocupado = rows.find(row => row.asiento === asiento);
-    const tipo = !ocupado ? "vacio" : ocupado.computadora ? "computadora" : "humano";
+    const computadora = ocupado?.computadora || ocupado?.cedido;
+    const tipo = !ocupado ? "vacio" : computadora ? "computadora" : "humano";
     return {
       asiento, equipo: asiento % 2, tipo,
-      nombre: ocupado?.computadora ? `Computadora ${asiento + 1}` : ocupado?.nombre ?? null,
+      nombre: computadora ? `Computadora ${asiento + 1}` : ocupado?.nombre ?? null,
+      ...(ocupado?.cedido && { cedido: true as const }),
     };
   });
   const enlace = new URL("/jugar/", web);
@@ -88,7 +95,7 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
     versionReglas: mesa.modo === "3v3" ? versionReglasTercetos : versionReglasOnline, politica: mesa.politica,
     ...(mesa.version_senas && { versionSenas: mesa.version_senas }),
     edicionModelo: mesa.nombre_modelo == null ? undefined : { nombre: mesa.nombre_modelo, publicado: mesa.fecha_modelo },
-    publica: mesa.publica, creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
+    publica: mesa.publica, cancelada: mesa.cancelada !== null, creadorId: mesa.creador, miAsiento: mesa.mio, invitacion: enlace.href, lista: rows.length === asientos.length, asientos,
   };
 }
 
@@ -156,8 +163,11 @@ async function crear(db: PoolClient, jugador: string, datos: Record<string, unkn
 async function unir(db: PoolClient, jugador: string, token: string): Promise<Cambio> {
   const { rows: [mesa] } = await db.query<RegistroMesa>("SELECT * FROM juego.mesas WHERE invitacion=$1 FOR UPDATE", [token]);
   if (!mesa) throw new ErrorPeticion(404, "La invitación no es válida.");
-  const { rows } = await db.query("SELECT asiento, jugador FROM juego.asientos WHERE mesa=$1", [mesa.id]);
-  if (rows.some(a => a.jugador === jugador)) return { id: mesa.id, cambiado: false };
+  if (mesa.cancelada) throw new ErrorPeticion(409, "La mesa se canceló.");
+  const { rows } = await db.query("SELECT asiento, jugador, cedido FROM juego.asientos WHERE mesa=$1", [mesa.id]);
+  const propio = rows.find(a => a.jugador === jugador);
+  if (propio?.cedido) throw new ErrorPeticion(409, "Una computadora juega tu asiento en esta mesa.");
+  if (propio) return { id: mesa.id, cambiado: false };
   if (mesa.modo === "3v3") await exigirTercetos(db, jugador);
   const libres = Array.from({ length: capacidad[mesa.modo] }, (_, i) => i);
   const asiento = libres.find(i => !rows.some(a => a.asiento === i));
@@ -173,6 +183,7 @@ async function agregarComputadora(db: PoolClient, id: string, jugador: string, a
     AND EXISTS (SELECT 1 FROM juego.asientos a WHERE a.mesa=m.id AND a.jugador=$2) FOR UPDATE
   `, [id, jugador]);
   if (!mesa) throw new ErrorPeticion(404, "No se encontró la mesa.");
+  if (mesa.cancelada) throw new ErrorPeticion(409, "La mesa se canceló.");
   if (mesa.creador !== jugador) throw new ErrorPeticion(403, "Solo quien creó la mesa puede sumar computadoras.");
   if (typeof asiento !== "number" || !Number.isInteger(asiento) || asiento < 0 || asiento >= capacidad[mesa.modo]) {
     throw new ErrorPeticion(400, "Ese asiento no pertenece a la mesa.");
@@ -218,7 +229,7 @@ export function crearRutasMesas(pool: Pool, web: URL, alCambiar: (mesaId: string
         return;
       }
       if (req.method !== "POST" || (mesa && !mesa[2])) throw new ErrorPeticion(405, "Método no permitido.");
-      if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
       if (mesa?.[2] === "/voz") {
         const vista = await leerMesa(pool, mesa[1], jugador.id, web);
         if (!vista) throw new ErrorPeticion(404, "No se encontró tu mesa.");

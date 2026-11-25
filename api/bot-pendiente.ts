@@ -14,8 +14,9 @@ import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { confirmarComputadora, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarAutomatica, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
 import { decisionReplay, guardarDecisionesReplayDB } from "./replay-db.ts";
+import { esperanDe } from "./cedidos.ts";
 
 function actor(mano: ManoPublicable, humanos: readonly number[]) {
   const posibles = aDecidir(mano.estado);
@@ -23,11 +24,12 @@ function actor(mano: ManoPublicable, humanos: readonly number[]) {
 }
 
 export async function programarTurno(db: PoolClient, mesa: string, mano: ManoPublicable, humanos: readonly number[]) {
-  if (actor(mano, humanos) === undefined) await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
+  // Los asientos cedidos son humanos para las reglas, pero no esperan a nadie.
+  if (actor(mano, await esperanDe(db, mesa, humanos)) === undefined) await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
   else await db.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [mesa]);
 }
 
-type Snapshot = {anteriores?: PublicMove[][]; mesa: string; politica: string; meta: number; humanos: Asiento[]};
+type Snapshot = {anteriores?: PublicMove[][]; mesa: string; politica: string; meta: number; humanos: Asiento[]; esperan: Asiento[]};
 type Fila = Snapshot & ((Registro & {modo: "1v1" | "2v2"}) | (RegistroTercetos & {modo: "3v3"}));
 async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) {
   return (await db.query<Fila>(`SELECT h.*, m.politica, m.modo, m.meta,
@@ -35,7 +37,8 @@ async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) 
       WHERE a.pin=m.politica AND a.contenido->>'memory'='opponent')
     THEN ARRAY(SELECT anterior.acciones FROM juego.manos anterior
       WHERE anterior.mesa=m.id AND anterior.numero<h.numero ORDER BY anterior.numero) END AS anteriores,
-    ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos
+    ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora) AS humanos,
+    ARRAY(SELECT a.asiento FROM juego.asientos a WHERE a.mesa=m.id AND NOT a.computadora AND NOT a.cedido) AS esperan
     FROM juego.turnos_bot t JOIN juego.mesas m ON m.id=t.mesa
     JOIN LATERAL (SELECT * FROM juego.manos WHERE mesa=m.id ORDER BY numero DESC LIMIT 1) h ON true
     WHERE t.disponible_desde <= statement_timestamp() AND (m.cupo_exhibicion IS NOT NULL) = $2 AND ($1::uuid IS NULL OR t.mesa=$1) ORDER BY t.mesa LIMIT 1`, [id ?? null, exhibicion])).rows[0];
@@ -51,7 +54,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
       ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
       : restaurar(fila, "pairs-private-senas", fila.meta, fila.humanos);
     mano.politicaPie = fila.politica;
-    const asiento = actor(mano, fila.humanos);
+    const asiento = actor(mano, fila.esperan);
     if (asiento === undefined) return null;
     const inicio = performance.now();
     // Un bot activo ve sus cartas y recibe exactamente las mismas señas y palabras que ese asiento humano.
@@ -60,14 +63,14 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     if (!accion) throw new Error("La computadora al pie no encontró una acción legal.");
     const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: fila.politica, observacion: observacionPie,
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
-    return { asiento, bot, espera: (humanos: Asiento[]) => esperaDelPie(mano, humanos, accion) !== undefined,
-      actorActual: (humanos: Asiento[]) => actor(mano, humanos),
+    return { asiento, bot, espera: (esperan: Asiento[]) => esperaDelPie(mano, esperan, accion) !== undefined,
+      actorActual: (esperan: Asiento[]) => actor(mano, esperan),
       aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarJugadaPieDB(db, fila, mano, accion, humanos, bot) };
   }
   if (fila.modo === "3v3") {
     if (fila.politica !== politicaTercetos) throw new Error("Política de tercetos desconocida.");
     const estado = restaurarTercetosDB(fila);
-    const asiento = asientoBotTercetos(estado, fila.humanos);
+    const asiento = asientoBotTercetos(estado, fila.esperan);
     if (asiento === undefined) return null;
     const inicio = performance.now();
     const accion = elegirAccionTercetos(vistaTercetos(estado, asiento));
@@ -76,13 +79,13 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
       acciones: "acciones-tercetos-v1", latenciaMs: performance.now() - inicio };
     return {
       asiento, bot,
-      actorActual: (humanos: Asiento[]) => asientoBotTercetos(estado, humanos),
+      actorActual: (esperan: Asiento[]) => asientoBotTercetos(estado, esperan),
       aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarTurnoTercetosDB(db, fila, estado, accion, humanos, bot),
     };
   }
   const formato = formatoMesa(fila.modo, fila.version_senas);
   const mano = restaurar(fila, formato, fila.meta, fila.humanos);
-  const asiento = actor(mano, fila.humanos);
+  const asiento = actor(mano, fila.esperan);
   if (asiento === undefined) return null;
   const historial = formato === "pairs-senas" ? turnosDeEquipo(mano.turnos, asiento) : mano.turnos;
   const observacion = observe(mano.estado, asiento, formato, historial, vistaParaPolitica);
@@ -97,9 +100,9 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     latenciaMs: decision.latencyMs, ...(decision.fallback !== null && { fallback: decision.fallback }) };
   return {
     asiento, bot,
-    actorActual: (humanos: Asiento[]) => actor(mano, humanos),
+    actorActual: (esperan: Asiento[]) => actor(mano, esperan),
     async aplicar(db: PoolClient, humanos: Asiento[]) {
-      const nueva = prepararTurno(confirmarComputadora(mano, formato, asiento, decision.action), humanos);
+      const nueva = prepararTurno(confirmarAutomatica(mano, formato, asiento, decision.action, humanos), humanos);
       await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
         [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
       await guardarDecisionesReplayDB(db, fila.mesa, [decisionReplay(nueva, decision.action, bot)], fila.meta);
@@ -139,12 +142,12 @@ export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar:
     const actual = await snapshot(db, fila.mesa);
     if (!actual || actual.numero !== fila.numero || actual.version !== fila.version || actual.politica !== fila.politica
       || actual.indicaciones?.length !== fila.indicaciones?.length || actual.pases_pie?.length !== fila.pases_pie?.length
-      || turno.actorActual(actual.humanos) !== turno.asiento) {
+      || turno.actorActual(actual.esperan) !== turno.asiento) {
       await db.query("ROLLBACK");
       return false;
     }
     // Un trabajo creado antes de la espera explícita puede haber quedado programado con el plazo anterior.
-    if (turno.espera?.(actual.humanos)) {
+    if (turno.espera?.(actual.esperan)) {
       await db.query("UPDATE juego.turnos_bot SET disponible_desde='infinity' WHERE mesa=$1", [fila.mesa]);
     } else {
       await aplicarInferencia(db, actual, turno);

@@ -10,6 +10,7 @@ export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_P
 export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-18080}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
+export KEYCLOAK_API_CLIENT_SECRET=secreto-descartable-del-cliente-de-servicio-api APPLE_TOKENS_KEY="$(openssl rand -base64 32)"
 unset KEYCLOAK_ADMIN_TOKEN
 export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOKEN_FILE=
 
@@ -45,12 +46,23 @@ COMPOSE_PROJECT_NAME="$project" npm run auth:facebook
 node scripts/verificar-ingreso-social.mjs "$web" google facebook
 COMPOSE_PROJECT_NAME="$project" npm run auth:discord
 node scripts/verificar-ingreso-social.mjs "$web" google facebook discord
+# Clave EC P-256 descartable en el formato .p8 que entrega Apple.
+APPLE_PRIVATE_KEY=$(openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 2>/dev/null)
+export APPLE_CLIENT_ID=co.eltru.prueba APPLE_TEAM_ID=EQUIPO1234 APPLE_KEY_ID=CLAVE12345 APPLE_PRIVATE_KEY
+COMPOSE_PROJECT_NAME="$project" npm run auth:apple
+node scripts/verificar-ingreso-social.mjs "$web" google facebook discord apple
 node scripts/verificar-gestion.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-ingreso-app.mjs "http://$TRUCO_HOST:$WEB_PORT"
+node scripts/verificar-baja-ingreso.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-credenciales.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-exhibiciones.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-migracion-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-mesas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-sesion-app.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
+COMPOSE_PROJECT_NAME="$project" npm run auth:api
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
@@ -64,6 +76,7 @@ for formato in duel pairs pairs-private-senas; do
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-retiro.mjs
 for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
 "${compose[@]}" run --no-deps --rm -T api node --input-type=module < scripts/verificar-inferencia.mjs

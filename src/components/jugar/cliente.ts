@@ -37,6 +37,8 @@ export interface Mesa extends VersionesMesa {
   invitacion: string;
   vozDisponible?: boolean;
   lista: boolean;
+  /** Se canceló porque quien la creó dejó el juego. */
+  cancelada?: boolean;
   asientos: Asiento[];
 }
 export type Tipo = VistaOnline["legales"][number];

@@ -104,3 +104,31 @@ Abrí **Ingresar al juego** desde una ventana privada. Elegí el proveedor, comp
 Si el jugador entró primero con Google y después elige Facebook con el mismo correo, Keycloak puede pedirle que vuelva a ingresar con Google para verificar la cuenta existente. Al completar la vinculación, ambos botones deben llevar al mismo ID de jugador y a la misma mesa.
 
 El comando que activa un proveedor conserva su flujo de primer ingreso y sus permisos si ya existía. Revisá los permisos y quitá los adicionales si solo usás el ingreso. Comprobá que el flujo exige demostrar el control de la cuenta antes de vincularla. Conservá **Trust email** desactivado. Si el correo de confirmación resulta insuficiente, configurá la verificación con el método de ingreso original. Si Facebook omite el correo y el realm lo exige, el jugador puede completarlo al revisar su perfil. La identidad del jugador se guarda por emisor y sujeto de Keycloak. [Vinculación de identidades en Keycloak](https://www.keycloak.org/docs/latest/server_admin/#_identity_broker)
+
+## Habilitar Sign in with Apple
+
+Apple exige este ingreso en la app porque ofrece Google y Discord. Hace falta el Apple Developer Program. Keycloak lo usa con la extensión comunitaria [`apple-identity-provider-keycloak`](https://github.com/klausbetz/apple-identity-provider-keycloak) 1.17.0, que la imagen de `infra/keycloak` incluye con su suma fija.
+
+1. En [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list), creá un **App ID** con la capacidad **Sign in with Apple**.
+2. Creá un **Services ID** (por ejemplo `co.eltru.ingreso`) y activá **Sign in with Apple** en él. En **Website URLs**, el dominio es el público del juego y el **Return URL** es el de Keycloak, `https://<dominio>/realms/<realm>/broker/apple/endpoint`.
+3. En **Keys**, creá una clave con **Sign in with Apple**, asociada al App ID. Descargá el archivo `.p8` (Apple lo entrega una sola vez) y anotá el **Key ID** y el **Team ID** de tu cuenta.
+4. Configurá el proveedor:
+
+   ```sh
+   export APPLE_CLIENT_ID=co.eltru.ingreso APPLE_TEAM_ID=<Team ID> APPLE_KEY_ID=<Key ID>
+   export APPLE_PRIVATE_KEY="$(cat AuthKey_<Key ID>.p8)"
+   npm run auth:apple
+   ```
+
+La extensión firma el secreto con la clave en cada ingreso, así que no hay un secreto que venza. Keycloak guarda los tokens de Apple (`storeToken`) para que la API los revoque al eliminar una cuenta, como exige Apple. Apple entrega el nombre solo en el primer ingreso y puede ocultar el correo del jugador.
+
+## Ingreso desde la app
+
+La app usa el mismo ingreso, sin cookie:
+
+1. Genera un verificador aleatorio y abre en el navegador del sistema `/api/auth/login?app=<desafío>`, donde el desafío es el SHA-256 del verificador en base64url (S256, RFC 7636).
+2. Al terminar el ingreso, la API redirige a `eltruco://ingreso?codigo=<código>`. El código vence a los 60 segundos y sirve una sola vez.
+3. La app llama `POST /api/auth/canje` con `{"codigo", "verificador"}` y recibe `{"sesion", "jugador", "bajaCancelada"}`.
+4. En cada pedido HTTP y en el WebSocket envía `Authorization: Bearer <sesion>`. Con ese encabezado la API no exige el encabezado `Origin`. La sesión dura 30 días y se renueva con el uso.
+
+`POST /api/auth/logout` con el encabezado cierra esa sesión y sus conexiones en vivo.
