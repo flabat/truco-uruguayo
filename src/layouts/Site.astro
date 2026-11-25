@@ -57,6 +57,7 @@ const pages = [
     <link rel="apple-touch-icon" href={url("apple-touch-icon.png")} />
     {Astro.site && <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />}
     <title>{tituloPagina}</title>
+    <slot name="head" />
   </head>
   <body>
     <a class="skip" href="#contenido">
