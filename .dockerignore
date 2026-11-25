@@ -22,6 +22,10 @@
 !paquetes/cliente/package.json
 !paquetes/cliente/src/
 !paquetes/cliente/src/*.ts
+!paquetes/mesa-geometria/
+!paquetes/mesa-geometria/package.json
+!paquetes/mesa-geometria/src/
+!paquetes/mesa-geometria/src/*.ts
 !app/
 !app/package.json
 !app/app.json
