@@ -122,7 +122,8 @@ async function probarParejas() {
   await clara.waitForURL(`/app/mirar/${id}`);
   await expect(titulo(clara, "La mano en juego")).toBeVisible(espera);
   await expect(clara.getByText("👁 Mirando")).toBeVisible();
-  await expect(clara.getByLabel("Tanteador")).toContainText("0 · 0");
+  // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba.
+  await expect(clara.getByLabel("Tanteador")).toHaveText(/ \d+ · \d+ /);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
   await clara.goto(`/app/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/app/mirar/${id}`, espera);
