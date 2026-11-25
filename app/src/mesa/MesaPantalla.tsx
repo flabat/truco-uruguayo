@@ -7,7 +7,9 @@ import type { CardId } from "@eltruco/motor/cartas.ts";
 import { colores, fuentes } from "../tema.ts";
 import { CapaFestejo, CapaLienzo } from "./CapaLienzo";
 import type { Atajo } from "./atajos.ts";
-import { chicoTrasEvento, type ChicoTerminado, type EventosDeMesa } from "./eventos.ts";
+import {
+  avanceDelFestejo, chicoTrasEvento, hayParticulas, terminarFestejo, type ChicoTerminado, type EventosDeMesa,
+} from "./eventos.ts";
 import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
 import { ManoPropia, type JugarSinGesto } from "./ManoPropia.tsx";
 import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
@@ -101,7 +103,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
   const mano = useManoAnimada(mesa.manoPropia, geometria?.mano ?? []);
   const reparto = useReparto(eventos, geometria, mesa, liviano);
   // El chico ganado: cuando termina de presentarse (aparece la tarjeta) las cartas se juntan, aparece
-  // el cartel y, salvo en liviano, saltan las partículas sobre él. Se festeja una sola vez.
+  // el cartel y, salvo en liviano, saltan las partículas sobre él. Se festeja una sola vez por chico.
   const [chico, cambiarChico] = useState<ChicoTerminado | null>(null);
   useLayoutEffect(() => eventos?.escuchar(e => cambiarChico(c => chicoTrasEvento(c, e))), [eventos]);
   const { festejo } = movimiento(liviano);
@@ -135,14 +137,20 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
 
   // Con una hoja abierta la mano sube al paño: la tarjeta de fin se oculta para no taparla.
   const conFin = mesa.fin !== null && !abierta;
-  const festejando = chico !== null && !chico.festejado && mesa.fin !== null && festejo !== null;
-  const numeroDeChico = chico?.numero;
+  const conMovimiento = festejo !== null;
   useEffect(() => {
-    if (!festejando || !conFin) return;
-    const listo = setTimeout(() => cambiarChico(c => c && c.numero === numeroDeChico ? { ...c, festejado: true } : c),
+    cambiarChico(c => avanceDelFestejo(c, conFin, conMovimiento));
+  }, [conFin, conMovimiento, chico?.fase]);
+  // Hasta que corre el efecto, un chico pendiente con el cartel a la vista ya se festeja.
+  const festejando = chico !== null && conFin && festejo !== null && chico.fase !== "festejado";
+  const numeroDeChico = chico?.numero;
+  const enCurso = chico?.fase === "festejando";
+  useEffect(() => {
+    if (!enCurso || !festejo || numeroDeChico === undefined) return;
+    const listo = setTimeout(() => cambiarChico(c => terminarFestejo(c, numeroDeChico)),
       festejo.juntar + festejo.cartel + festejo.duracion);
     return () => clearTimeout(listo);
-  }, [festejando, conFin, numeroDeChico]);
+  }, [enCurso, numeroDeChico]);
   const tercetos = mesa.modalidad === "3v3";
   const titulos = titulosDePestana(tercetos);
 
@@ -183,7 +191,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
             <FinDeMano key={"fin-" + (numeroDeChico ?? 0)} fin={mesa.fin} rect={geometria.pano}
               alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir}
               aparicion={festejando ? { demora: festejo.juntar, duracion: festejo.cartel } : null}
-              festejo={festejando && chico.nuestro ? (
+              festejo={festejando && hayParticulas(chico, mesa.propio) ? (
                 <CapaFestejo cantidad={festejo.particulas} demora={festejo.juntar + festejo.cartel} duracion={festejo.duracion} />
               ) : null} />
           ) : null}

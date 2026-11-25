@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chicoTrasEvento, crearEventos } from "../../app/src/mesa/eventos.ts";
+import {
+  avanceDelFestejo, chicoTrasEvento, crearEventos, hayParticulas, terminarFestejo,
+} from "../../app/src/mesa/eventos.ts";
 import {
   alCentroDelPano, duracionDelReparto, maximoDeParticulas, movimiento, ordenDeReparto, particulasDelFestejo, planDeReparto,
   posicionDeParticula,
@@ -137,9 +139,35 @@ test("las cartas del paño se juntan en una pila al centro sin cambiar de tamañ
 
 test("el chico ganado se recuerda hasta el próximo reparto y cada chico es otro festejo", () => {
   const ganado = chicoTrasEvento(null, { tipo: "chico", nuestro: true });
-  assert.deepEqual(ganado, { numero: 1, nuestro: true, festejado: false });
+  assert.deepEqual(ganado, { numero: 1, nuestro: true, fase: "pendiente" });
   assert.equal(chicoTrasEvento(ganado, { tipo: "vuelta", ganador: 0, nuestra: true }), ganado);
   assert.equal(chicoTrasEvento(ganado, { tipo: "reparto", dador: 1 }), null);
-  assert.deepEqual(chicoTrasEvento({ ...ganado!, festejado: true }, { tipo: "chico", nuestro: false }),
-    { numero: 2, nuestro: false, festejado: false });
+  assert.deepEqual(chicoTrasEvento({ ...ganado!, fase: "festejado" }, { tipo: "chico", nuestro: false }),
+    { numero: 2, nuestro: false, fase: "pendiente" });
+});
+
+test("el festejo empieza cuando se ve el cartel y corre una sola vez por chico", () => {
+  const pendiente = chicoTrasEvento(null, { tipo: "chico", nuestro: true });
+  // Mientras no se ve el cartel (se presenta la última vuelta o hay una hoja abierta), espera.
+  assert.equal(avanceDelFestejo(pendiente, false, true), pendiente);
+  const festejando = avanceDelFestejo(pendiente, true, true);
+  assert.equal(festejando?.fase, "festejando");
+  assert.equal(avanceDelFestejo(festejando, true, true), festejando);
+  // Si una hoja tapa el cartel en medio del festejo, no vuelve a empezar al cerrarla.
+  const tapado = avanceDelFestejo(festejando, false, true);
+  assert.equal(tapado?.fase, "festejado");
+  assert.equal(avanceDelFestejo(tapado, true, true), tapado);
+  // Termina a su hora; un aviso de otro chico no toca al actual.
+  assert.equal(terminarFestejo(festejando, 1)?.fase, "festejado");
+  assert.equal(terminarFestejo(festejando, 7), festejando);
+  // En liviano no hay festejo: el chico queda festejado al verse el cartel.
+  assert.equal(avanceDelFestejo(pendiente, true, false)?.fase, "festejado");
+  assert.equal(avanceDelFestejo(null, true, true), null);
+});
+
+test("las partículas son para quien gana el chico y para el espectador, no para quien pierde", () => {
+  const chico = (nuestro: boolean) => ({ numero: 1, nuestro, fase: "festejando" as const });
+  assert.equal(hayParticulas(chico(true), 0), true);
+  assert.equal(hayParticulas(chico(false), null), true);
+  assert.equal(hayParticulas(chico(false), 1), false);
 });
