@@ -11,7 +11,7 @@ import { useSesion } from "../ingreso/contexto.tsx";
 import { cliente } from "../ingreso/plataforma.ts";
 import { avisosDeApp, memoriaDeMesa } from "../salon/plataforma.ts";
 import { signalVersionFor } from "../../../training/contracts/index.ts";
-import { hojaDeCantos, type Canto } from "./hoja-cantos.ts";
+import { hojaDeLaMesa, type Canto } from "./hoja-cantos.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
 import { datosDeHojas, mesaDeJugador } from "./modelo.ts";
 import { presencioElReparto } from "./presenciadas.ts";
@@ -108,7 +108,9 @@ export function MesaEnJuego({ id }: { id: string }) {
     estado: indicacion ? { titulo: visible.estado.titulo, indicacion } : visible.estado,
   };
   const v = partida.vista;
-  const hojaCantos = presentando || versionDesconocida || !conectada ? null : hojaDeCantos({
+  const hojaCantos = hojaDeLaMesa({
+    presentando,
+    versionDesconocida,
     legales: v.legales,
     pendiente: v.pendiente,
     trucoPendiente: v.trucoPendiente,

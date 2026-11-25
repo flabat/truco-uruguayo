@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { respuestaConFlor } from "@eltruco/cliente/cantos.ts";
-import { avisoDeCanto, hojaDeCantos, transicionDeHoja, verboDeCanto, type EntradaHoja } from "../../app/src/mesa/hoja-cantos.ts";
+import { avisoDeCanto, hojaDeCantos, hojaDeLaMesa, transicionDeHoja, verboDeCanto, type EntradaHoja } from "../../app/src/mesa/hoja-cantos.ts";
 
 const base: EntradaHoja = {
   legales: [],
@@ -159,4 +159,21 @@ test("si te gritan truco y tenés flor sin declarar, la hoja sube para cantarla"
   assert.equal(h?.cerrable, false);
   assert.deepEqual(h?.respuestas, ["flor"]);
   assert.deepEqual(h?.grupos, [{ nombre: "Flor", opciones: ["con-flor-envido", "contraflor-al-resto"] }]);
+});
+
+test("un corte de conexión no cierra ni vuelve a avisar la hoja de respuesta", () => {
+  // La conexión no entra en el cálculo: con el mismo canto pendiente, desconectada y reconectada
+  // la mesa recibe la misma hoja. El toque durante el corte lo ignora `bloqueada`.
+  const entrada = {
+    ...base, legales: ["quiero", "no-quiero"] as const, pendiente: { asiento: 1, tipo: "envido" } as const,
+    presentando: false, versionDesconocida: false,
+  };
+  const abierta = hojaDeLaMesa(entrada);
+  const cortada = hojaDeLaMesa(entrada);
+  const reconectada = hojaDeLaMesa(entrada);
+  assert.deepEqual(transicionDeHoja(null, abierta, false), { abierta: true, avisar: true });
+  assert.deepEqual(transicionDeHoja(abierta, cortada, true), { abierta: true, avisar: false });
+  assert.deepEqual(transicionDeHoja(cortada, reconectada, true), { abierta: true, avisar: false });
+  assert.equal(hojaDeLaMesa({ ...entrada, presentando: true }), null);
+  assert.equal(hojaDeLaMesa({ ...entrada, versionDesconocida: true }), null);
 });

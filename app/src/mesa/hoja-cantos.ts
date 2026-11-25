@@ -97,6 +97,18 @@ export function hojaDeCantos(e: EntradaHoja): HojaCantos | null {
   };
 }
 
+/**
+ * La hoja de Cantos de la mesa: ninguna mientras se presenta lo último o la versión de señas es
+ * desconocida. La conexión no cuenta a propósito: un corte breve no debe cerrar y reabrir la hoja
+ * forzada ni volver a avisar; mientras tanto la mesa está bloqueada y el toque se ignora.
+ */
+export function hojaDeLaMesa({ presentando, versionDesconocida, ...entrada }: EntradaHoja & {
+  presentando: boolean;
+  versionDesconocida: boolean;
+}): HojaCantos | null {
+  return presentando || versionDesconocida ? null : hojaDeCantos(entrada);
+}
+
 /** La hoja sube sola, y avisa una vez, al entrar en respuesta o flor; si desaparece se cierra. */
 export function transicionDeHoja(anterior: HojaCantos | null, actual: HojaCantos | null, abierta: boolean) {
   if (!actual) return { abierta: false, avisar: false };
