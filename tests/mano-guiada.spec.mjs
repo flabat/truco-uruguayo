@@ -201,6 +201,9 @@ async function turnoDeApertura(page) {
 }
 
 test("el análisis opcional conserva la mano y el progreso, y comparte cifras con la lección", async ({ page }) => {
+  // Dos simulaciones de 20.000 manos en el navegador: con varios workers en la misma
+  // máquina cada una puede pasar los 20 s.
+  test.slow();
   await semillaFija(page, 830838);
   const workers = [];
   page.on("worker", worker => workers.push(worker.url()));
@@ -214,7 +217,7 @@ test("el análisis opcional conserva la mano y el progreso, y comparte cifras co
   await abrir.focus();
   await abrir.press("Enter");
   const tabla = page.getByRole("table", { name: "Chances de que tu pareja gane la mano" });
-  await expect(tabla).toBeVisible({ timeout: 20000 });
+  await expect(tabla).toBeVisible({ timeout: 45000 });
   await expect(tabla.getByRole("row", { name: /3 de bastos/ })).toContainText("13.779 de 20.000");
   await expect(page.locator("#metodo-chances")).toContainText("Estimación por simulación");
   expect(workers.length).toBe(1);
@@ -236,7 +239,7 @@ test("el análisis opcional conserva la mano y el progreso, y comparte cifras co
   await expect(page).toHaveURL("aprender/probabilidad/");
   await boton(page, "Ver chances").click();
   const otra = page.getByRole("table", { name: "Victorias de tu pareja por carta jugada" });
-  await expect(otra).toBeVisible({ timeout: 20000 });
+  await expect(otra).toBeVisible({ timeout: 45000 });
   expect((await otra.locator("tbody tr").allTextContents()).toSorted()).toEqual(filas.toSorted());
 });
 

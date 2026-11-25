@@ -3,26 +3,34 @@ import Privacidad from "../layouts/Privacidad.astro";
 import { url } from "../lib/guide";
 ---
 
-<Privacidad title="Eliminación de datos" description="Cómo pedir la eliminación de tu cuenta de El Truco o de los datos recibidos al ingresar con Facebook u otro proveedor.">
-  <Fragment slot="introduccion">Para pedir la eliminación de tus datos de El Truco, escribinos a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>. Podés hacerlo aunque ya no puedas entrar al juego.</Fragment>
+<Privacidad title="Eliminación de datos" description="Cómo eliminar tu cuenta de El Truco desde Mi perfil, qué se borra y cómo pedirlo por correo si ya no podés ingresar.">
+  <Fragment slot="introduccion">Podés eliminar tu cuenta desde <a href={url("perfil/")}>Mi perfil</a> con el botón «Eliminar mi cuenta». Si ya no podés entrar al juego, escribinos a <a href="mailto:flabat@flabat.com">flabat@flabat.com</a>.</Fragment>
 
   <section class="rule-block">
-    <h2>Qué incluir en tu pedido</h2>
-    <ol>
-      <li>Usá el asunto «Eliminación de datos de El Truco».</li>
-      <li>Indicá si querés eliminar la cuenta completa o los datos recibidos de un proveedor, por ejemplo Facebook. Decinos qué proveedor usaste para ingresar.</li>
-      <li>Si lo tenés, incluí el ID de jugador que aparece en <a href={url("perfil/")}>Mi perfil</a>. También podés escribirnos desde el correo de la cuenta. Mantené en privado tus contraseñas y códigos de acceso.</li>
-    </ol>
+    <h2>Desde el juego</h2>
+    <p>En la app, el botón está en «Tu perfil», desde el salón. Al confirmar, se cierra tu sesión en todos tus dispositivos. En las partidas empezadas, una computadora juega en tu lugar y la partida sigue para los demás. Las mesas que creaste y todavía esperan jugadores se cancelan; en las mesas en espera de otras personas, tu asiento queda libre.</p>
+    <p>Tenés 30 días para arrepentirte: si volvés a ingresar, cancelamos la eliminación. Las partidas que ya juega una computadora siguen así.</p>
   </section>
 
   <section class="rule-block">
-    <h2>Cómo se tramita</h2>
-    <p>El Truco revisa los pedidos por correo. El ID de jugador nos ayuda a encontrar la cuenta. Antes de modificarla, verificamos por separado que te pertenezca. Si ya no tenés acceso al correo original, indicá esa situación en el pedido.</p>
-    <p>Te respondemos por el mismo medio para confirmar qué datos se eliminaron y aclarar si quedan registros de partidas compartidas o copias anteriores. La cuenta de ingreso y el historial de partidas se guardan por separado. Si ya quitaste El Truco de tus aplicaciones en Facebook, también podés pedirnos que eliminemos tus datos del juego.</p>
+    <h2>Qué se borra y qué queda</h2>
+    <p>A los 30 días borramos tu cuenta de ingreso, con tu correo, tu nombre, tu contraseña y los proveedores vinculados, y también tus sesiones. Si ingresaste con Apple, revocamos el acceso de El Truco en Apple.</p>
+    <p>Las partidas que jugaste con otras personas forman parte de su historial y se conservan sin datos que te identifiquen: en lugar de tu nombre aparece «Jugador». Las copias de seguridad pueden conservar datos anteriores hasta su rotación.</p>
+  </section>
+
+  <section class="rule-block">
+    <h2>Por correo</h2>
+    <p>Si perdiste el acceso a tu cuenta o querés eliminar solo los datos recibidos de un proveedor, por ejemplo Facebook, escribinos a la dirección de arriba.</p>
+    <ol>
+      <li>Usá el asunto «Eliminación de datos de El Truco».</li>
+      <li>Indicá si querés eliminar la cuenta completa o los datos recibidos de un proveedor, y qué proveedor usaste para ingresar.</li>
+      <li>Si lo tenés, incluí el ID de jugador que aparece en <a href={url("perfil/")}>Mi perfil</a>. También podés escribirnos desde el correo de la cuenta. Mantené en privado tus contraseñas y códigos de acceso.</li>
+    </ol>
+    <p>Antes de modificar una cuenta verificamos por separado que te pertenezca, y te respondemos por el mismo medio para confirmar qué datos se eliminaron. Si ya quitaste El Truco de tus aplicaciones en Facebook, también podés pedirnos que eliminemos tus datos del juego.</p>
   </section>
 
   <section class="rule-block">
     <h2>Datos guardados en este dispositivo</h2>
-    <p>Para quitar también el progreso de las lecciones y las preferencias de este navegador, borrá los datos del sitio eltru.co en su configuración. Podés consultar qué guarda el juego en la <a href={url("privacidad/")}>política de privacidad</a>.</p>
+    <p>Para quitar también el progreso de las lecciones y las preferencias de este navegador, borrá los datos del sitio eltru.co en su configuración. En la app, desinstalala para borrar la última mesa y tus preferencias del teléfono. Podés consultar qué guarda el juego en la <a href={url("privacidad/")}>política de privacidad</a>.</p>
   </section>
 </Privacidad>

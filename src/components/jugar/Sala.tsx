@@ -24,7 +24,7 @@ import { SugerenciaHorizontal } from "./SugerenciaHorizontal";
 import type { ElegirIndicacion } from "./GloboDelCompanero";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { MesaConSenas } from "./Senas";
-import { usePresentacionVueltas } from "./presentacion-vueltas";
+import { usePresentacionVueltas } from "./presentacion";
 import { esMetaDeChico, metaMaxima, metaPorModalidad, mitadesDelChico } from "@eltruco/motor/chico.ts";
 
 const modalidades = {
@@ -355,6 +355,13 @@ function MesaAbierta({
         ) : versionLegada && !esPie && !versionDesconocida ? (
           <MesaConSenas base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} />
         ) : <EnJuego base={base} mesa={mesa} partida={partida} {...estadoZona} mostrandoCartas={mostrandoCartas} voz={voz} jugar={jugada} indicar={esPie ? indicar : undefined} />
+      ) : mesa.cancelada ? (
+        <div className="j-espera">
+          <div className="j-panel">
+            <h2 ref={encabezadoEspera} tabIndex={-1}>Mesa cancelada</h2>
+            <p role="status">Se canceló la mesa: quien la creó dejó el juego.</p>
+          </div>
+        </div>
       ) : (
         <div className="j-espera">
           <div className="j-panel">

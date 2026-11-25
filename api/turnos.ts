@@ -12,6 +12,7 @@ export type Confirmada = AccionOnline & { sena?: Signal };
 export interface ManoPublicable {
   estado: EstadoOnline;
   turnos: PublicTurn[];
+  politicaPie?: string;
   indicaciones?: IndicacionPie[];
   pasesPie?: DestinoPie[];
 }
@@ -51,6 +52,11 @@ function confirmarTurno(mano: ManoPublicable, formato: Format, asiento: Asiento,
 
 export function confirmar(mano: ManoPublicable, formato: Format, accion: Confirmada): ManoPublicable {
   return confirmarTurno(mano, formato, accion.asiento, identificador(accion));
+}
+
+/** Un asiento cedido juega como la persona que lo ocupaba: no puede entregar la mano como una computadora. */
+export function confirmarAutomatica(mano: ManoPublicable, formato: Format, asiento: Asiento, decision: ActionId, humanos: readonly number[]) {
+  return humanos.includes(asiento) ? confirmarTurno(mano, formato, asiento, decision) : confirmarComputadora(mano, formato, asiento, decision);
 }
 
 export function confirmarComputadora(mano: ManoPublicable, formato: Format, asiento: Asiento, decision: ActionId) {
@@ -95,12 +101,13 @@ export function restaurar(fila: Registro, formato: Format, meta?: number, humano
   return humanos ? prepararTurno(mano, humanos) : mano;
 }
 
+/** `esperan`: los asientos humanos que juega una persona; un asiento cedido es humano para las reglas, pero lo juega la computadora. */
 export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos: readonly number[], ensayo = false,
-    alConfirmar?: (mano: ManoPublicable, propuesta: ActionId) => void) {
+    alConfirmar?: (mano: ManoPublicable, propuesta: ActionId) => void, esperan: readonly number[] = humanos) {
   while (!mano.estado.resultado) {
     mano = prepararTurno(mano, humanos);
     const posibles = aDecidir(mano.estado);
-    if (posibles.some(s => humanos.includes(s))) break;
+    if (posibles.some(s => esperan.includes(s))) break;
     const asiento = posibles[0];
     if (asiento === undefined) throw new Error("Falta un asiento habilitado.");
     const accion = elegirAccionOnline(vistaParaPolitica(mano.estado, asiento));
@@ -108,7 +115,7 @@ export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos
     // El ensayo privado comprueba la transmisión de gestos desde un actor de prueba.
     const sena = hasSignals(formato) && ensayo ? signals[mano.turnos.length % signals.length] : undefined;
     const propuesta = identificador(sena ? {...accion, sena} : accion);
-    mano = confirmarComputadora(mano, formato, asiento, propuesta);
+    mano = confirmarAutomatica(mano, formato, asiento, propuesta, humanos);
     alConfirmar?.(mano, propuesta);
   }
   return mano;

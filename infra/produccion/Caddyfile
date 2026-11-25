@@ -7,6 +7,18 @@
 	handle @identidad {
 		reverse_proxy identidad:8080
 	}
+	# Exportación web de la app, en su dirección de prueba. Las rutas profundas vuelven a su index.html.
+	redir /app /app/ 308
+	handle /app/* {
+		root * /srv
+		header /app/_expo/static/* Cache-Control "public, max-age=31536000, immutable" {
+			match status 200 206 304
+		}
+		try_files {path} /app/index.html
+		file_server
+	}
+	# Asociación con la app: JSON sin extensión ni redirecciones. Sin datos de la cuenta, 404.
+	header /.well-known/apple-app-site-association Content-Type application/json
 	handle {
 		root * /srv
 		header /_astro/* Cache-Control "public, max-age=31536000, immutable" {

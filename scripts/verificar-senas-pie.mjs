@@ -6,6 +6,7 @@ import { setTimeout as esperar } from "node:timers/promises";
 import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
+import { politicaPieParejas } from "@eltruco/motor/modelo-pie.ts";
 import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
 import { reproducirChico } from "../api/replay-chico.ts";
@@ -44,6 +45,7 @@ async function mesa(cantidad, { alternativa = false, computadoras = [] } = {}) {
   const formato = tercetos ? "triples" : "pairs-private-senas";
   const m = await json(0, "/mesas", { modo: tercetos ? "3v3" : "2v2", meta: 50, formato, versionSenas, publica: !tercetos }, 201);
   assert.equal(m.versionSenas, versionSenas);
+  assert.equal(m.politica, tercetos ? "pie-clasico-v1" : politicaPieParejas);
   const sinRepartir = await json(0, "/mesas/" + m.id + "/partida");
   assert.equal(sinRepartir.versionSenas, versionSenas);
   assert.deepEqual(sinRepartir.contexto, { versionVista: 1, fase: "sin-repartir" });

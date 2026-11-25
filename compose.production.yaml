@@ -15,6 +15,8 @@ services:
       target: produccion
       args:
         TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+        ANDROID_CERT_SHA256: ${ANDROID_CERT_SHA256:-}
     environment:
       SITE_HOST: ${SITE_HOST:?Falta el dominio público}
     ports:
@@ -30,7 +32,16 @@ services:
 
   api:
     <<: *servicio
-    build: {context: ., dockerfile: api/Dockerfile}
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      # La versión que publica GET /api/version (node scripts/version.mjs --exportar).
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        TRUCO_RAMA: ${TRUCO_RAMA:-}
+        TRUCO_FECHA: ${TRUCO_FECHA:-}
+        TRUCO_SUCIO: ${TRUCO_SUCIO:-}
+        TRUCO_ETIQUETA: ${TRUCO_ETIQUETA:-}
     environment:
       PGHOST: db
       PGDATABASE: truco
@@ -46,10 +57,19 @@ services:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
       SALON_HABILITADO: "${SALON_HABILITADO:-1}"
+      # Bajas vencidas: la administración de Keycloak solo es accesible dentro de la red.
+      KEYCLOAK_ADMIN_URL: http://identidad:8080
+      KEYCLOAK_API_CLIENT_SECRET: ${KEYCLOAK_API_CLIENT_SECRET:?Falta el secreto del cliente de servicio truco-api (ver docs/produccion.md)}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      APPLE_TOKENS_KEY: ${APPLE_TOKENS_KEY:-}
       VOZ_ESPECTADORA_HABILITADA: "${VOZ_ESPECTADORA_HABILITADA:-1}"
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-1}"
       EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"
       EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
+      MODELO_PIE_PAREJAS: "${MODELO_PIE_PAREJAS:-1}"
       SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
       SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
     depends_on:

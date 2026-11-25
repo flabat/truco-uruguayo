@@ -1,0 +1,26 @@
+---
+import Apendice from "../../layouts/Apendice.astro";
+import Icon from "../../components/Icon.astro";
+import RuleTable from "../../components/RuleTable.astro";
+import { chapterNumber, houseRules, ruleUrl } from "../../lib/guide";
+---
+
+<Apendice
+  id="en-el-truco"
+  description="Cómo aplica El Truco el reglamento en sus mesas en línea: tercetos, señas al pie y cantos con flor."
+  intro="El reglamento describe el juego de mesa. Estas son las reglas propias de las mesas en línea de El Truco, donde la interfaz o el formato exigen una decisión de la casa."
+>
+  {houseRules.map((block) => (
+    <section class="appendix-entry" id={block.id}>
+      <p class="eyebrow">
+        Capítulo {chapterNumber(block.rule.id)} · {block.rule.title}
+      </p>
+      <h2>{block.heading}</h2>
+      <p>{block.text}</p>
+      {block.table && <RuleTable table={block.table} />}
+      <a class="text-link" href={ruleUrl(block.rule.id) + "#" + block.id}>
+        Ver en el capítulo <Icon name="arrow" size={15} />
+      </a>
+    </section>
+  ))}
+</Apendice>

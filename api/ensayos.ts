@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from "pg";
 import { randomUUID } from "node:crypto";
 import { hasSignals, requireTrainingFormat, seatsFor, signalVersionFor } from "../training/contracts/index.ts";
 import { politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { politicaPieParejas } from "@eltruco/motor/modelo-pie.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { metaPorModalidad } from "@eltruco/motor/chico.ts";
 import { politicaTercetos, perfilTercetos, type FormatoMesa } from "./mesas.ts";
@@ -12,7 +13,7 @@ import { avanzarEnsayo } from "./partidas.ts";
 
 export async function insertarMesaComputadoras(db: PoolClient, formato: FormatoMesa, creador: string, pin?: string, cupo: number | null = null) {
   const tercetos = formato === "triples";
-  const alPie = pin === politicaPie;
+  const alPie = pin === politicaPie || pin === politicaPieParejas;
   if (alPie && (formato !== "pairs-private-senas" || cupo !== null)) {
     throw new RangeError("El ensayo de señas al pie requiere parejas privadas entre computadoras.");
   }

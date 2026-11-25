@@ -1,0 +1,23 @@
+---
+import Apendice from "../../layouts/Apendice.astro";
+import RuleTable from "../../components/RuleTable.astro";
+import { articleNumbers, ruleUrl, summaryTables } from "../../lib/guide";
+---
+
+<Apendice
+  id="resumen"
+  description="Todas las tablas del truco uruguayo en una página: piezas, jerarquía, pardas, envido, flor, truco y señas."
+  intro="Las tablas del reglamento en una sola página, para imprimir o tener a mano en la mesa."
+>
+  {summaryTables.map((block) => (
+    <section class="appendix-entry summary-entry" id={block.id}>
+      <h2>
+        <a class="article-number" href={ruleUrl(block.rule.id) + "#" + block.id}>
+          {articleNumbers(block.rule).get(block.id)}
+        </a>{" "}
+        {block.heading}
+      </h2>
+      <RuleTable table={block.table!} />
+    </section>
+  ))}
+</Apendice>

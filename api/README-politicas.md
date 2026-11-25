@@ -29,3 +29,14 @@ Para publicar un modelo registrado, ejecutá `policyctl.ts activate <formato> <P
 Cada mesa muestra la edición correspondiente a su PIN. Si cambiás el campeón, revertís la activación o volvés a activar uno anterior, la mesa conserva ese nombre y la fecha original. Para consultar o copiar el PIN completo, abrí el nombre en el pie.
 
 Las primeras ediciones documentadas son **Ceibo Duelo**, **Ceibo Parejas** y **Ceibo Parejas con señas**, publicadas el 20 de noviembre de 2026. Para las ediciones anteriores con fecha desconocida, el pie indica «Fecha sin registrar». Los bots integrados conservan sus fechas documentadas: Práctica v1 el 18 de noviembre de 2026, y Clásico v1 y Clásico de tercetos v1 el 19. [Activación de Ceibo](https://github.com/flabat/truco-uruguayo/issues/251#issuecomment-7043360261) · [Publicación de la práctica](https://github.com/flabat/truco-uruguayo/actions/runs/44367361710) · [Despliegue de los bots integrados](https://github.com/flabat/truco-uruguayo/issues/214#issuecomment-7027835056)
+
+## Modelo de parejas con señas automáticas al pie
+
+`pie-parejas-v2` ajusta las decisiones de envido y conserva la política de cartas e indicaciones del bot clásico. Los umbrales se eligieron con 96 repartos de entrenamiento intercambiando equipos, semilla 3512026. Se evalúan aparte, siempre entre computadoras en `pairs-private-senas` con `senas-pie-v1`.
+
+```sh
+node training/eval/entrenar-pie.ts entrenar 3512026 96 > entrenamiento.json
+node training/eval/entrenar-pie.ts evaluar 811942671 1024 entrenamiento.json
+```
+
+El modelo quedó en 1.341 victorias de 2.048 chicos a 40 en la evaluación; el límite inferior del IC pareado del 95 % fue 63,95 %. Las mesas nuevas de parejas al pie con metas de 20 a 80 usan esa edición. Para volver a asignar `pie-clasico-v1` a las próximas mesas, configurá `MODELO_PIE_PAREJAS=0` y recreá la API. La política queda fijada al crear la mesa.

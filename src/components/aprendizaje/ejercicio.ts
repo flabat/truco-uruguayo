@@ -2,7 +2,7 @@ import type { Ejemplo, Tema } from "../../aprendizaje/lecciones";
 import type { Sesion } from "../../aprendizaje/sesion";
 import type { Respuesta } from "../../aprendizaje/tipos";
 import { explicarSituacion } from "../../aprendizaje/generadores/evaluacion";
-import { canto } from "../../lib/cantos";
+import { canto } from "@eltruco/cliente/cantos.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { actualizarMuestra } from "../muestra";
 import { mostrarCarta } from "./cartas";

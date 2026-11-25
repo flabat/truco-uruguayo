@@ -1,3 +1,5 @@
+# En un worktree creado con `npm run trabajo`, .env apunta a .env.trabajo: los puertos y el nombre del proyecto
+# salen de la ranura del worktree (#378). Sin ese archivo, valen los predeterminados de abajo.
 name: truco-local
 services:
   web:
@@ -6,6 +8,8 @@ services:
       dockerfile: infra/web.Dockerfile
       args:
         TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+        ANDROID_CERT_SHA256: ${ANDROID_CERT_SHA256:-}
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${WEB_PORT:-8081}:80"
       - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:80"
@@ -19,18 +23,35 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+      # La versión que publica GET /api/version (node scripts/version.mjs --exportar).
+      args:
+        TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        TRUCO_RAMA: ${TRUCO_RAMA:-}
+        TRUCO_FECHA: ${TRUCO_FECHA:-}
+        TRUCO_SUCIO: ${TRUCO_SUCIO:-}
+        TRUCO_ETIQUETA: ${TRUCO_ETIQUETA:-}
     environment:
       DATABASE_URL: postgres://truco:truco-local@db:5432/truco
       LOCAL_OIDC: "1"
+      # Ingreso de prueba sin Keycloak (POST /api/auth/dev). AUTH_DEV=0 lo apaga.
+      AUTH_DEV: "${AUTH_DEV:-1}"
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID:-}
       DISCORD_CATEGORY_ID: ${DISCORD_CATEGORY_ID:-}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_BOT_TOKEN_FILE: ${DISCORD_BOT_TOKEN_FILE:-}
       SALON_HABILITADO: "${SALON_HABILITADO:-0}"
       VOZ_ESPECTADORA_HABILITADA: "${VOZ_ESPECTADORA_HABILITADA:-0}"
+      # Bajas vencidas: cliente de servicio de Keycloak (npm run auth:api) y Apple.
+      KEYCLOAK_API_CLIENT_SECRET: ${KEYCLOAK_API_CLIENT_SECRET:-}
+      APPLE_CLIENT_ID: ${APPLE_CLIENT_ID:-}
+      APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+      APPLE_KEY_ID: ${APPLE_KEY_ID:-}
+      APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
+      APPLE_TOKENS_KEY: ${APPLE_TOKENS_KEY:-}
       EXHIBICIONES_HABILITADAS: "${EXHIBICIONES_HABILITADAS:-0}"
       EXHIBICIONES_OBJETIVO: "${EXHIBICIONES_OBJETIVO:-6}"
       EXHIBICIONES_PAUSADAS: "${EXHIBICIONES_PAUSADAS:-0}"
+      MODELO_PIE_PAREJAS: "${MODELO_PIE_PAREJAS:-1}"
       SENAS_PIE_PAREJAS: "${SENAS_PIE_PAREJAS:-1}"
       SENAS_PIE_TERCETOS: "${SENAS_PIE_TERCETOS:-1}"
       WEB_ORIGIN: http://${TRUCO_HOST:-localhost}:${WEB_PORT:-8081}

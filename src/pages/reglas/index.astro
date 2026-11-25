@@ -1,12 +1,12 @@
 ---
 import Site from "../../layouts/Site.astro";
 import Icon from "../../components/Icon.astro";
-import { groups, rules, ruleUrl, url } from "../../lib/guide";
+import { appendices, appendix, chapterNumber, edition, parts, rules, ruleUrl, url } from "../../lib/guide";
 ---
 
 <Site
   title="Reglas del Truco"
-  description="Índice del reglamento uruguayo. Consultá el reparto, la jerarquía, las pardas, el envido, la flor y el truco."
+  description="Reglamento del truco uruguayo con muestra: el reparto, la jerarquía, las pardas, el envido, la flor, el truco y el tanteador, en artículos numerados."
   active="reglas"
 >
   <div class="page-intro">
@@ -20,7 +20,7 @@ import { groups, rules, ruleUrl, url } from "../../lib/guide";
         <span class="mini-diamond" aria-hidden="true">
           ◆
         </span>{" "}
-        El manual
+        El reglamento · {edition.edicion}
       </p>
       <h1>Reglas del Truco</h1>
       <p>
@@ -32,36 +32,69 @@ import { groups, rules, ruleUrl, url } from "../../lib/guide";
   <div class="shell index-layout">
     <aside class="side-index">
       <p class="eyebrow">En esta guía</p>
-      <nav aria-label="Grupos del índice">
-        {groups.map((group) => (
-          <a href={"#" + group.id}>
-            {group.title}
+      <nav aria-label="Partes del índice">
+        <a href="#como-usar">
+          Cómo usar este reglamento
+          <Icon name="down" size={14} />
+        </a>
+        {parts.map((part) => (
+          <a href={"#" + part.id}>
+            {part.title}
             <Icon name="down" size={14} />
           </a>
         ))}
-        <a href={url("fuentes/#variantes")}>
-          Variantes de mesa
-          <Icon name="arrow" size={14} />
+        <a href="#apendices">
+          Apéndices
+          <Icon name="down" size={14} />
         </a>
       </nav>
     </aside>
     <div>
-      {groups.map((group) => (
-        <section class="index-section" id={group.id}>
+      <section class="index-section how-to-use" id="como-usar">
+        <h2>Cómo usar este reglamento</h2>
+        <p>
+          Cada capítulo enuncia la regla de mesa del truco uruguayo. Los artículos están numerados:
+          citá «art. 12.1» y enlazá su número para señalar una regla exacta.
+        </p>
+        <ul>
+          <li>
+            <strong>Regla.</strong> Lo que rige si la mesa no acordó otra cosa.
+          </li>
+          <li>
+            <strong>Variante de mesa.</strong> Otra forma de jugar que se usa en algunas mesas o
+            torneos. Se comparan en el <a href={appendix("variantes").href}>apéndice A</a>.
+          </li>
+          <li>
+            <strong>En El Truco.</strong> Cómo se aplica la regla en las mesas en línea del sitio. Se
+            reúnen en el <a href={appendix("en-el-truco").href}>apéndice B</a>.
+          </li>
+        </ul>
+        <p>
+          Las fuentes consultadas y los puntos en que difieren están en el{" "}
+          <a href={appendix("fuentes").href}>apéndice F</a>. {edition.edicion}, revisada el{" "}
+          <time datetime={edition.fecha}>{edition.fecha}</time>.
+        </p>
+      </section>
+      {parts.map((part, i) => (
+        <section class="index-section" id={part.id}>
           <div class="index-heading">
             <div>
-              <span class="chapter-count">{group.ids.length} capítulos</span>
-              <h2>{group.title}</h2>
+              <span class="chapter-count">
+                Parte {i + 1} · {part.ids.length} {part.ids.length === 1 ? "capítulo" : "capítulos"}
+              </span>
+              <h2>{part.title}</h2>
             </div>
-            <img src={url("img/" + group.image + ".webp")} alt="" width="92" height="92" />
+            {part.image && <img src={url("img/" + part.image + ".webp")} alt="" width="92" height="92" />}
           </div>
           <div class="chapter-list">
-            {group.ids.map((id) => {
+            {part.ids.map((id) => {
               const rule = rules.find((rule) => rule.id === id)!;
               return (
                 <a href={ruleUrl(id)}>
                   <div>
-                    <h3>{rule.title}</h3>
+                    <h3>
+                      {rule.title} <span class="chapter-number">Capítulo {chapterNumber(id)}</span>
+                    </h3>
                     <p>{rule.intro}</p>
                   </div>
                   <Icon name="arrow" size={20} />
@@ -71,6 +104,26 @@ import { groups, rules, ruleUrl, url } from "../../lib/guide";
           </div>
         </section>
       ))}
+      <section class="index-section" id="apendices">
+        <div class="index-heading">
+          <div>
+            <span class="chapter-count">{appendices.length} apéndices</span>
+            <h2>Apéndices</h2>
+          </div>
+        </div>
+        <div class="chapter-list">
+          {appendices.map((item) => (
+            <a href={item.href}>
+              <div>
+                <h3>
+                  {item.title} <span class="chapter-number">Apéndice {item.letter}</span>
+                </h3>
+              </div>
+              <Icon name="arrow" size={20} />
+            </a>
+          ))}
+        </div>
+      </section>
     </div>
   </div>
 </Site>

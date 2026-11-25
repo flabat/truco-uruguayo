@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Avisa (sin fallar) si .env o el entorno no tienen los datos de las cuentas para abrir la app.
+node scripts/enlaces-app.mjs verificar .env
 tmp=$(mktemp -d)
 project="truco-dr-$(date +%s)-$$"
 network="$project-copias"
@@ -9,8 +11,8 @@ export SITE_HOST=mesa.internal HTTP_BIND=127.0.0.1: HTTPS_BIND=127.0.0.1:
 unset SALON_HABILITADO VOZ_ESPECTADORA_HABILITADA EXHIBICIONES_HABILITADAS EXHIBICIONES_OBJETIVO EXHIBICIONES_PAUSADAS
 unset DISCORD_GUILD_ID DISCORD_CATEGORY_ID DISCORD_BOT_TOKEN DISCORD_BOT_TOKEN_FILE
 export RESTIC_REPOSITORY=rest:http://almacen:8000/mesa
-export POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD
-for variable in POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD; do
+export POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD KEYCLOAK_API_CLIENT_SECRET
+for variable in POSTGRES_PASSWORD GAME_DB_PASSWORD ID_DB_PASSWORD KC_ADMIN_PASSWORD RESTIC_PASSWORD TEST_PLAYER_PASSWORD KEYCLOAK_API_CLIENT_SECRET; do
   printf -v "$variable" '%s' "$(openssl rand -hex 24)"
 done
 # El almacén simula un segundo servidor y sobrevive a la pérdida de todo el proyecto.

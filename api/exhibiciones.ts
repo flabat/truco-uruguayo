@@ -69,7 +69,7 @@ export async function reponerExhibiciones(pool: Pool, reloj?: Date, objetivo = o
 export async function avanzarExhibicion(pool: Pool, servicio: Inferencia, reloj?: Date) {
   return conTurnoDeSalon(pool, async db => {
     const { rows: [mesa] } = await db.query<MesaComputadoras & { pendiente: boolean; cupo_exhibicion: number; fallos_exhibicion: number }>(`
-      SELECT id, modo, meta, version_senas, perfil_tercetos, cupo_exhibicion, fallos_exhibicion,
+      SELECT id, modo, meta, politica, version_senas, perfil_tercetos, cupo_exhibicion, fallos_exhibicion,
         EXISTS(SELECT 1 FROM juego.turnos_bot WHERE mesa=m.id) AS pendiente
       FROM juego.mesas m WHERE cupo_exhibicion IS NOT NULL AND fin_publico IS NULL AND NOT exhibicion_retirada
         AND proximo_paso <= coalesce($1, clock_timestamp())

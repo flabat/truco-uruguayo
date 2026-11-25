@@ -1,5 +1,5 @@
 // Lo que cada plantilla le da a `reel.ts`: guion, props, composición, momentos de prueba y borrador de publicación.
-import { cartasPorId } from "../../src/lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { resolverManos, resolverVueltas, type Episodio, type EpisodioComparar, type EpisodioTantos } from "../src/lib/episodio.ts";
 import type { Linea, LineaGuion } from "../src/lib/linea.ts";

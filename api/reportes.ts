@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
 import { jugadorDeSesion } from "./auth.ts";
+import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerCuerpo } from "./http.ts";
 import { prepararReporte, type CursorReporte } from "./reporte-contexto.ts";
 
@@ -14,6 +15,9 @@ function numero(texto: string | null, minimo: number, maximo: number) {
   }
   return Number(texto);
 }
+
+const pideJson = (req: IncomingMessage) =>
+  req.headers.accept?.split(",").some(tipo => tipo.split(";")[0].trim().toLowerCase() === "application/json") === true;
 
 async function leerCursor(req: IncomingMessage): Promise<CursorReporte> {
   if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/x-www-form-urlencoded") {
@@ -76,7 +80,7 @@ export async function atenderReporte(pool: Pool, web: URL, mesa: string, req: In
       res.setHeader("Allow", "POST");
       throw new ErrorPeticion(405, "El reporte debe abrirse desde la mesa.");
     }
-    if (req.headers.origin !== web.origin) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+    if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
     const jugador = await jugadorDeSesion(pool, req);
     if (!jugador) throw new ErrorPeticion(401, "Ingresá al juego para reportar una jugada.");
     const cursor = await leerCursor(req);
@@ -85,7 +89,9 @@ export async function atenderReporte(pool: Pool, web: URL, mesa: string, req: In
       await db.query("BEGIN");
       const url = await guardar(db, web, jugador.id, mesa, cursor);
       await db.query("COMMIT");
-      res.writeHead(303, { Location: url }).end();
+      // La app pide el enlace en JSON: así nunca sigue una redirección a GitHub con su sesión.
+      if (pideJson(req)) res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" }).end(JSON.stringify({ enlace: url }));
+      else res.writeHead(303, { Location: url }).end();
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;

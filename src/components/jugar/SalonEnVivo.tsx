@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { participantesMesa, type ResumenMesa } from "./resumen-salon";
+import { participantesMesa, type ResumenMesa } from "@eltruco/cliente/salon.ts";
 import { useConsultaSalon } from "./useConsultaSalon";
 import "./salon.css";
 

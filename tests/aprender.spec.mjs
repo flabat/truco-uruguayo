@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { temas } from "../src/aprendizaje/lecciones/index.ts";
 import { claveSituacion } from "../src/aprendizaje/generadores/index.ts";
-import { cartasPorId } from "../src/lib/cartas.ts";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import { explicarSituacion } from "../src/aprendizaje/generadores/evaluacion.ts";
 import { paloDe } from "@eltruco/motor/cartas.ts";
 

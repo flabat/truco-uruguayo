@@ -13,6 +13,8 @@ test("la voz de la exhibición se abre a pedido y la partida avanza durante un f
   const inesperadas = [];
   await page.route("**/api/**", async route => {
     const req = route.request(), path = new URL(req.url()).pathname;
+    // El pie pide la versión del servidor; sin ella queda oculto, como en el sitio estático.
+    if (path === "/api/version") return route.fulfill({ status: 404 });
     if (path === "/api/jugador") return route.fulfill({ json: { id: "invitada", nombre: "Eva", salonHabilitado: true } });
     if (path === ruta + "/voz" && req.method() === "POST") {
       expect(req.postDataJSON()).toEqual({});

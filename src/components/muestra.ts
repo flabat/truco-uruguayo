@@ -1,4 +1,4 @@
-import { cartasPorId } from "../lib/cartas";
+import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 
 export function actualizarMuestra(elemento: HTMLElement, base: string, carta: CardId) {

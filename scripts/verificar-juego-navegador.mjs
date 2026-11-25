@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { canto } from "../src/lib/cantos.ts";
+import { canto } from "@eltruco/cliente/cantos.ts";
 import { probarTercetos } from "./verificar-tercetos-navegador.mjs";
 import { ingresarConClaveLocal as ingresar, ingresarDesdeIdentidad } from "./ingreso-local-navegador.mjs";
 import { chromium, expect } from "@playwright/test";

@@ -72,3 +72,41 @@
 @media (max-width: 600px) {
   .perfil-partidas li { grid-template-columns: minmax(0, 1fr); }
 }
+.perfil-aviso {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.perfil-baja {
+  margin-top: 44px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.perfil-baja h2 { font-size: 1.12rem; }
+.perfil-eliminar {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.perfil-dialogo {
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper, #fff);
+  color: var(--ink);
+}
+.perfil-dialogo::backdrop { background: rgb(0 0 0 / 45%); }
+.perfil-dialogo h2 { margin-top: 0; }
+.perfil-dialogo-botones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 18px;
+}

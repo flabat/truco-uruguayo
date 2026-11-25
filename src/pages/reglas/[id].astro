@@ -3,41 +3,74 @@ import Site from "../../layouts/Site.astro";
 import EjemploDelRey from "../../components/EjemploDelRey.astro";
 import MetaDeSeis from "../../components/MetaDeSeis.astro";
 import Icon from "../../components/Icon.astro";
-import SourceList from "../../components/SourceList.astro";
-import { groups, rules, ruleUrl, url } from "../../lib/guide";
+import RuleTable from "../../components/RuleTable.astro";
+import { discordComunidad } from "../../lib/comunidad";
+import {
+  appendices,
+  appendix,
+  articleNumbers,
+  chapterNumber,
+  edition,
+  partOf,
+  parts,
+  rules,
+  ruleUrl,
+  url,
+} from "../../lib/guide";
 export function getStaticPaths() {
   return rules.map((rule, index) => ({ params: { id: rule.id }, props: { rule, index } }));
 }
 const { rule, index } = Astro.props;
-const group = groups.find((group) => group.ids.includes(rule.id))!;
+const part = partOf(rule.id);
 const previous = rules[index - 1];
 const next = rules[index + 1];
+const numbers = articleNumbers(rule);
+const chapter = chapterNumber(rule.id);
+const firstAppendix = appendices[0];
+const datos = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: rule.title,
+  description: rule.intro,
+  inLanguage: "es-UY",
+  dateModified: edition.fecha,
+  isPartOf: { "@type": "CreativeWork", name: "Reglas del Truco · " + edition.edicion },
+};
 ---
 
 <Site title={rule.title} description={rule.intro} active="reglas">
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(datos)} />
   <div class="shell reading-breadcrumb">
     <p class="crumb">
       <a href={url()}>Inicio</a>
       <Icon name="chevron" size={12} />
       <a href={url("reglas/")}>Reglas del Truco</a>
       <Icon name="chevron" size={12} />
-      {group.title}
+      {part.title}
     </p>
   </div>
   <div class="shell reading-layout">
     <aside class="side-index article-nav">
       <p class="eyebrow">Reglas del Truco</p>
       <nav aria-label="Capítulos del manual">
-        {groups.map((group) => (
+        {parts.map((group) => (
           <div class="nav-cluster">
             <h2>{group.title}</h2>
             {group.ids.map((id) => (
               <a href={ruleUrl(id)} aria-current={id === rule.id ? "page" : undefined}>
-                {rules.find((rule) => rule.id === id)!.title}
+                {chapterNumber(id)}. {rules.find((rule) => rule.id === id)!.title}
               </a>
             ))}
           </div>
         ))}
+        <div class="nav-cluster">
+          <h2>Apéndices</h2>
+          {appendices.map((item) => (
+            <a href={item.href}>
+              {item.letter}. {item.title}
+            </a>
+          ))}
+        </div>
       </nav>
     </aside>
     <article class="article">
@@ -46,60 +79,78 @@ const next = rules[index + 1];
           <span class="mini-diamond" aria-hidden="true">
             ◆
           </span>{" "}
-          {group.category}
+          Capítulo {chapter} · {part.category}
         </p>
         <h1>{rule.title}</h1>
         <p class="standfirst">{rule.intro}</p>
       </header>
       {rule.id === "seis-jugadores" && <MetaDeSeis />}
-      {rule.blocks.map((block) => (
-        <section class="rule-block" id={block.id}>
-          <h2>{block.heading}</h2>
-          <p>{block.text}</p>
-          {block.id === "rey-pieza" && <EjemploDelRey />}
-          {block.items && (
-            <ul>
-              {block.items.map((item) => (
-                <li>{item}</li>
-              ))}
-            </ul>
-          )}
-          {block.table && (
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    {block.table.headers.map((header) => (
-                      <th scope="col">{header}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {block.table.rows.map((row) => (
-                    <tr>
-                      {row.map((value, i) =>
-                        i === 0 ? <th scope="row">{value}</th> : <td>{value}</td>,
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      ))}
+      {rule.blocks.map((block) => {
+        const number = numbers.get(block.id);
+        const body = (
+          <>
+            <p>{block.text}</p>
+            {block.id === "rey-pieza" && <EjemploDelRey />}
+            {block.items && (
+              <ul>
+                {block.items.map((item) => (
+                  <li>{item}</li>
+                ))}
+              </ul>
+            )}
+            {block.table && <RuleTable table={block.table} />}
+          </>
+        );
+        if (block.kind === "casa")
+          return (
+            <aside class="house-rule" id={block.id}>
+              <p class="eyebrow">En El Truco</p>
+              <h2>{block.heading}</h2>
+              {body}
+              <a class="text-link" href={appendix("en-el-truco").href}>
+                Todas las reglas de la mesa en línea <Icon name="arrow" size={15} />
+              </a>
+            </aside>
+          );
+        if (block.kind === "ejemplo")
+          return (
+            <section class="rule-block worked-example" id={block.id}>
+              <p class="eyebrow">Ejemplo</p>
+              <h2>{block.heading}</h2>
+              {body}
+            </section>
+          );
+        return (
+          <section class="rule-block" id={block.id}>
+            <h2>
+              <a class="article-number" href={"#" + block.id} aria-label={"Artículo " + number}>
+                {number}
+              </a>{" "}
+              {block.heading}
+            </h2>
+            {body}
+          </section>
+        );
+      })}
       {rule.variants?.map((variant) => (
         <aside class="variant">
           <p class="eyebrow">Variante de mesa</p>
           <h2>{variant.title}</h2>
           <p>{variant.text}</p>
-          <SourceList sources={variant.sources} />
+          <a class="text-link" href={appendix("variantes").href + "#" + variant.id}>
+            Comparar en las variantes <Icon name="arrow" size={15} />
+          </a>
         </aside>
       ))}
-      <section class="citations">
-        <h2>Fuentes del capítulo</h2>
-        <SourceList sources={rule.sources} />
-      </section>
+      <footer class="chapter-footer">
+        <a class="text-link" href={url("fuentes/#cap-" + rule.id)}>
+          Fuentes y discrepancias de este capítulo <Icon name="arrow" size={15} />
+        </a>
+        <p>
+          {edition.edicion} · revisada el <time datetime={edition.fecha}>{edition.fecha}</time> ·{" "}
+          <a href={discordComunidad}>Reportar un error</a>
+        </p>
+      </footer>
       <nav class="chapter-pager" aria-label="Recorrido del manual">
         {previous && (
           <a href={ruleUrl(previous.id)}>
@@ -107,9 +158,9 @@ const next = rules[index + 1];
             {previous.title}
           </a>
         )}
-        <a href={next ? ruleUrl(next.id) : url("fuentes/")}>
+        <a href={next ? ruleUrl(next.id) : firstAppendix.href}>
           <small>Siguiente →</small>
-          {next ? next.title : "Fuentes y variantes"}
+          {next ? next.title : "Apéndice " + firstAppendix.letter + " · " + firstAppendix.title}
         </a>
       </nav>
     </article>
