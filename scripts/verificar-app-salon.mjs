@@ -1,7 +1,9 @@
 // Desde el host, contra la web del stack descartable: en la exportación web de la app (/app/), eva crea una
 // mesa de parejas (siempre con señas automáticas al pie), diego entra por la invitación sin sesión, clara
 // la mira desde el salón y las computadoras completan la mesa. También: volver a la mesa, los enlaces
-// ?mesa= y ?mirar=, la precarga de las cartas y un duelo con computadoras en escritorio.
+// ?mesa= y ?mirar=, la precarga de las cartas y un duelo con computadoras en escritorio. Además, lo que la
+// app suma para no perder nada de /jugar/ (#403): ?crear=1, los conteos de /eventos/, el aviso de la
+// comunidad, el enlace a «Mis partidas» y el aviso sin red.
 import assert from "node:assert/strict";
 import { chromium, expect } from "@playwright/test";
 import { mazo } from "@eltruco/motor/cartas.ts";
@@ -107,7 +109,8 @@ async function probarParejas() {
     if (asiento === 3) await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
   }
   await Promise.all([eva, diego].map(p => p.waitForURL(`/app/mesa?id=${id}`, espera)));
-  await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible()));
+  // La mesa carga CanvasKit: con la máquina cargada tarda más que el plazo por defecto.
+  await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible(espera)));
 
   // clara la ve en el salón y la mira.
   const clara = await pagina();
@@ -126,8 +129,9 @@ async function probarParejas() {
   await expect(clara.getByText("👁 Mirando")).toBeVisible();
   await expect(boton(clara, "Volver al salón")).toBeVisible();
   await expect(boton(clara, "Cantos")).toHaveCount(0);
-  // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba.
-  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador 1 y Computadora 3 \d+ · \d+ Jugador 2 y Computadora 4 · a \d+$/);
+  // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba. Entre las piezas del
+  // tanteador van espacios duros (\u00a0): `\s` los acepta.
+  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador\s1\sy\sComputadora\s3\s\d+\s·\s\d+\sJugador\s2\sy\sComputadora\s4\s·\sa\s\d+$/);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
   await clara.goto(`/app/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/app/mirar/${id}`, espera);
@@ -170,10 +174,54 @@ async function probarDuelo() {
   await eva.context().close();
 }
 
+async function probarParidadConJugar() {
+  const eva = await pagina();
+  const eventos = [];
+  eva.on("request", r => {
+    const evento = /^\/eventos\/([a-z-]+)\.txt$/.exec(new URL(r.url()).pathname)?.[1];
+    if (evento) eventos.push(evento);
+  });
+  // /jugar/?crear=1 es un retorno permitido del ingreso: lleva a crear la mesa después de ingresar.
+  await eva.goto("/app/?crear=1");
+  await ingresar(eva, "eva", "Entrá con tu jugador");
+  await expect(titulo(eva, "Crear una mesa")).toBeVisible(espera);
+  await eva.goto("/app/");
+  await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
+  // El aviso de la comunidad, como en /jugar/: «Ahora no» lo oculta para este jugador.
+  const comunidad = eva.getByRole("region", { name: "Comunidad de Discord" });
+  await expect(comunidad).toBeVisible();
+  await expect(boton(eva, "Unirme al Discord ↗")).toBeVisible();
+  await comunidad.getByText("Ahora no", { exact: true }).click();
+  await expect(comunidad).toHaveCount(0);
+  await eva.reload();
+  await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
+  await expect(comunidad).toHaveCount(0);
+  // «Mis partidas» sigue en el perfil del sitio.
+  await eva.getByText("Tu perfil", { exact: true }).click();
+  await expect(titulo(eva, "Tu perfil")).toBeVisible(espera);
+  await eva.getByText("Ver mis partidas", { exact: true }).click();
+  await eva.waitForURL(/\/perfil\/#mis-partidas$/, espera);
+  await expect(eva.getByRole("heading", { name: "Mis partidas" })).toBeVisible(espera);
+  await eva.goto("/app/");
+  await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
+  await crearMesa(eva, { modalidad: "1 contra 1", meta: 20 });
+  await eva.waitForURL(new RegExp(`/app/sala/${uuid}\\?nueva=1$`), espera);
+  await expect(titulo(eva, "Esperando jugadores")).toBeVisible(espera);
+  await boton(eva, "Compartir invitación").click();
+  await expect.poll(() => eventos).toContain("compartir-mesa");
+  // Sin red, la sala lo dice enseguida y vuelve a leer la mesa cuando vuelve la red.
+  await eva.context().setOffline(true);
+  await expect(eva.getByText("Reconectando con tu mesa…")).toBeVisible();
+  await eva.context().setOffline(false);
+  await expect(eva.getByText("Reconectando con tu mesa…")).toHaveCount(0, espera);
+  await eva.context().close();
+}
+
 try {
   await probarParejas();
   await probarDuelo();
-  console.log("App web verificada · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa y precarga de cartas.");
+  await probarParidadConJugar();
+  console.log("App web verificada · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa, precarga de cartas, ?crear=1, conteos, comunidad y aviso sin red.");
 } finally {
   await browser.close();
 }

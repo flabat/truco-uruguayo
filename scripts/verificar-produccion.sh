@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Avisa (sin fallar) si .env o el entorno no tienen los datos de las cuentas para abrir la app.
+node scripts/enlaces-app.mjs verificar .env
 tmp=$(mktemp -d)
 project="truco-dr-$(date +%s)-$$"
 network="$project-copias"

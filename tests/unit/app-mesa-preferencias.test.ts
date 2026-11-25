@@ -4,18 +4,20 @@ import { leerPreferencias, livianoActivo, porDefecto } from "../../app/src/mesa/
 
 test("sin nada guardado rigen las preferencias por defecto", () => {
   assert.deepEqual(leerPreferencias(null), porDefecto);
-  assert.deepEqual(porDefecto, { sonido: true, hapticos: true, liviano: false });
+  assert.deepEqual(porDefecto, { hapticos: true, liviano: false });
 });
 
 test("un campo guardado cambia solo ese interruptor", () => {
-  assert.deepEqual(leerPreferencias('{"sonido":false}'), { sonido: false, hapticos: true, liviano: false });
+  assert.deepEqual(leerPreferencias('{"hapticos":false}'), { hapticos: false, liviano: false });
+  // Lo que guardaba la versión anterior con el sonido se ignora: el sonido lo guarda la 4e.
+  assert.deepEqual(leerPreferencias('{"sonido":false,"liviano":true}'), { hapticos: true, liviano: true });
 });
 
 test("un texto roto o con valores que no son booleanos vuelve a lo de siempre", () => {
   assert.deepEqual(leerPreferencias("{sonido:"), porDefecto);
   assert.deepEqual(leerPreferencias("null"), porDefecto);
   assert.deepEqual(leerPreferencias("[false]"), porDefecto);
-  assert.deepEqual(leerPreferencias('{"hapticos":"no","liviano":true}'), { sonido: true, hapticos: true, liviano: true });
+  assert.deepEqual(leerPreferencias('{"hapticos":"no","liviano":true}'), { hapticos: true, liviano: true });
 });
 
 test("reducir movimiento del sistema activa el modo liviano aunque el interruptor esté apagado", () => {
