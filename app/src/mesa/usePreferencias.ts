@@ -1,12 +1,13 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AccessibilityInfo } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
 import { clavePreferencias, leerPreferencias, livianoActivo, porDefecto, type Preferencias } from "./preferencias.ts";
 
 /** Sonido, hápticos y modo liviano de la mesa, recordados en el dispositivo. */
 export function usePreferencias() {
   const [preferencias, guardar] = useState<Preferencias>(porDefecto);
-  const reducirMovimiento = useReducedMotion();
+  const reducirMovimiento = useReducirMovimiento();
   // Si se toca un interruptor antes de que termine la lectura, gana lo que se tocó.
   const tocadas = useRef(false);
 
@@ -29,4 +30,22 @@ export function usePreferencias() {
   }, []);
 
   return { preferencias, cambiar, reducirMovimiento, liviano: livianoActivo(preferencias, reducirMovimiento) };
+}
+
+/**
+ * «Reducir movimiento» del sistema, en vivo. `useReducedMotion` de Reanimated se lee una sola vez al
+ * cargar: sirve de valor inicial. En la web, react-native-web responde con `prefers-reduced-motion`.
+ */
+function useReducirMovimiento() {
+  const [reducir, cambiarReducir] = useState(useReducedMotion());
+  useEffect(() => {
+    let vigente = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(v => { if (vigente) cambiarReducir(v); }, () => {});
+    const suscripcion = AccessibilityInfo.addEventListener("reduceMotionChanged", v => cambiarReducir(v));
+    return () => {
+      vigente = false;
+      suscripcion?.remove();
+    };
+  }, []);
+  return reducir;
 }
