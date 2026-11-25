@@ -1,5 +1,6 @@
 import type { PoolClient } from "pg";
-import { elegirAccionConPie, elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
+import { elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
+import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
 import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { DecisionBotV1 } from "./replay-chico.ts";
@@ -30,7 +31,7 @@ export function esperaDelPie(mano: ManoPublicable, humanos: readonly number[], a
   if (!companero || companero.pie === asiento || !humanos.includes(companero.pie)) return;
   const pie = vistaDelPie(estado, companero.pie, destinosAtendidos(mano));
   if (!pie?.opciones.some(o => o.destinatario === asiento)) return;
-  const jugada = accion ?? elegirAccionConPie(vistaOnline(estado, asiento), companero, indicaciones);
+  const jugada = accion ?? elegirAccionPoliticaPie(mano.politicaPie, vistaOnline(estado, asiento), companero, indicaciones);
   return jugada?.tipo === "carta" ? asiento : undefined;
 }
 
@@ -104,5 +105,6 @@ export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTe
   if (escrita.rowCount !== 1) throw new ErrorPeticion(409, "La mesa cambió. Actualizá la partida.");
   await guardarDecisionesReplayDB(db, fila.mesa, [decision], mano.estado.meta);
   nueva.pasesPie = mano.pasesPie;
+  nueva.politicaPie = mano.politicaPie;
   return continuarAlPie(db, fila.mesa, fila.numero, nueva, humanos, mano.indicaciones ?? [], mano.estado);
 }

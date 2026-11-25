@@ -4,6 +4,8 @@ import { randomUUID } from "node:crypto";
 import { setTimeout as esperar } from "node:timers/promises";
 import pg from "pg";
 import { crearEnsayo } from "./ensayos.ts";
+import { politicaPieParejas } from "@eltruco/motor/modelo-pie.ts";
+import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { restaurar } from "./turnos.ts";
 import { restaurarTercetosDB } from "./partidas-tercetos.ts";
 import { marcadorOnline } from "@eltruco/motor/mesa-online.ts";
@@ -15,10 +17,12 @@ const {rows: [creador]} = await pool.query(`INSERT INTO juego.jugadores (emisor,
   VALUES ('ensayo-local',$1,'Operador de prueba') RETURNING id`, [randomUUID()]);
 const mesas = [];
 const recuperado=process.argv[2]==="recuperado", aprendidos=process.argv[2]==="aprendidos";
+const alPie = process.argv[2] === "al-pie";
+const formatos = alPie ? ["pairs-private-senas"] : recuperado ? ["duel"] : aprendidos ? activeFormats : [...activeFormats, "triples"];
 try {
-  for (const formato of (recuperado ? ["duel"] : aprendidos ? activeFormats : [...activeFormats, "triples"])) {
+  for (const formato of formatos) {
     const previa = recuperado && (await pool.query("SELECT * FROM juego.prueba_reinicio_actor")).rows[0];
-    const id = previa ? previa.mesa : await crearEnsayo(pool, formato, creador.id);
+    const id = previa ? previa.mesa : await crearEnsayo(pool, formato, creador.id, alPie ? politicaPieParejas : undefined);
     mesas.push(id);
     const limite = Date.now() + 90_000;
     while (!(await pool.query("SELECT ensayo_terminado FROM juego.mesas WHERE id=$1", [id])).rows[0].ensayo_terminado) {
@@ -32,6 +36,11 @@ try {
     const filas = await pool.query("SELECT * FROM juego.manos WHERE mesa=$1 ORDER BY numero", [id]);
     const inferencias=(await pool.query("SELECT * FROM juego.inferencias WHERE mesa=$1 ORDER BY mano, version_anterior",[id])).rows;
     assert.equal(inferencias.length,filas.rows.reduce((n,h)=>n+h.acciones.length,0));
+    if (alPie) {
+      assert.ok(inferencias.length > 0);
+      assert.ok(inferencias.every(i => i.solicitada === politicaPieParejas && i.aplicada === politicaPieParejas && i.fallback === null));
+      assert.ok(filas.rows.every(fila => fila.version_senas === versionSenasPie));
+    }
     if (aprendidos) {
       const {politica}=(await pool.query("SELECT politica FROM juego.mesas WHERE id=$1",[id])).rows[0];
       assert.match(politica, /^[0-9a-f]{64}$/);
@@ -57,7 +66,7 @@ try {
       const mano = restaurar(fila, formato);
       assert.ok(mano.estado.resultado);
       assert.ok(mano.turnos.length);
-      if (!aprendidos) assert.ok(mano.turnos.every(t => Boolean(t.signal) === hasSignals(formato)));
+      if (!aprendidos && !alPie) assert.ok(mano.turnos.every(t => Boolean(t.signal) === hasSignals(formato)));
       for (const a of mano.estado.cobros) puntos[a.equipo] = Math.min(40, puntos[a.equipo] + a.tantos);
     }
     assert.equal(Math.max(...puntos), formato === "triples" ? 50 : 40);

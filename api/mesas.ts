@@ -5,6 +5,7 @@ import type { EdicionModelo } from "../src/lib/modelos.ts";
 import { signalVersionFor, teamSignalsVersion, versions, type Format } from "../training/contracts/index.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { politicaPieParejas } from "@eltruco/motor/modelo-pie.ts";
 import { esMetaDeChico, metaPorModalidad } from "@eltruco/motor/chico.ts";
 import { versionReglasOnline, versionReglasTercetos } from "@eltruco/motor/mesa-online.ts";
 import { FalloDiscord } from "./discord.ts";
@@ -140,7 +141,9 @@ async function crear(db: PoolClient, jugador: string, datos: Record<string, unkn
   }
   if (alPie && !altasPie(true).includes(modo)) throw new ErrorPeticion(409, "Las señas al pie están deshabilitadas en esta modalidad.");
   const versionSenas = alPie ? versionSenasPie : nueva === "triples" ? null : signalVersionFor(nueva);
-  const politica = alPie ? politicaPie : modo === "3v3" ? politicaTercetos : null;
+  const mejorada = modo === "2v2" && meta >= 20 && meta <= 80 && process.env.MODELO_PIE_PAREJAS !== "0";
+  const politicaAlPie = mejorada ? politicaPieParejas : politicaPie;
+  const politica = alPie ? politicaAlPie : modo === "3v3" ? politicaTercetos : null;
   const token = randomBytes(24).toString("base64url");
   const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos, publica) VALUES ($1,$2,$3,$4,$5,
     COALESCE($7, (SELECT pin FROM juego.activaciones WHERE formato=$6), 'incumbent-online-v1'), $8, $9) RETURNING id`,

@@ -6,7 +6,8 @@ import type { DecisionBotV1 } from "./replay-chico.ts";
 import { hasSignals, versions, type Move, type SeatObservation } from "../training/contracts/index.ts";
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
-import { accionesPie, elegirAccionConPie, observacionPie, politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { accionesPie, observacionPie, politicaPie } from "@eltruco/motor/bot-pie.ts";
+import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
 import { versionSenasPie, vistaDelPie } from "@eltruco/motor/senas-pie.ts";
 import { confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
 import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
@@ -44,19 +45,20 @@ export interface Inferencia { decide(pin: string, obs: SeatObservation): Promise
 
 async function decidirTurno(fila: Fila, servicio: Inferencia) {
   if (fila.version_senas === versionSenasPie) {
-    if (fila.politica !== politicaPie) throw new Error("La política no admite el contrato de señas al pie.");
+    if (fila.modo !== "2v2" && fila.politica !== politicaPie) throw new Error("La mesa requiere la política clásica al pie.");
     const indicaciones = fila.indicaciones ?? [];
     const mano: ManoPublicable = fila.modo === "3v3"
       ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
       : restaurar(fila, "pairs-private-senas", fila.meta, fila.humanos);
+    mano.politicaPie = fila.politica;
     const asiento = actor(mano, fila.humanos);
     if (asiento === undefined) return null;
     const inicio = performance.now();
     // Un bot activo ve sus cartas y recibe exactamente las mismas señas y palabras que ese asiento humano.
     const vista = vistaOnline(mano.estado, asiento);
-    const accion = elegirAccionConPie(vista, vistaDelPie(mano.estado, asiento, indicaciones), indicaciones);
+    const accion = elegirAccionPoliticaPie(fila.politica, vista, vistaDelPie(mano.estado, asiento, indicaciones), indicaciones);
     if (!accion) throw new Error("La computadora al pie no encontró una acción legal.");
-    const bot: DecisionBotV1 = { solicitada: politicaPie, aplicada: politicaPie, observacion: observacionPie,
+    const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: fila.politica, observacion: observacionPie,
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
     return { asiento, bot, espera: (humanos: Asiento[]) => esperaDelPie(mano, humanos, accion) !== undefined,
       actorActual: (humanos: Asiento[]) => actor(mano, humanos),
