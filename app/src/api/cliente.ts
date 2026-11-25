@@ -42,8 +42,12 @@ export function crearClienteApp(opciones: OpcionesCliente & { base: string }) {
     /** El jugador de la sesión, o `null` si no hay sesión vigente. */
     async jugador(): Promise<Jugador | null> {
       try {
-        const { id, nombre, salonHabilitado } = await pedir<Jugador>("/api/jugador");
-        return { id, nombre, ...(salonHabilitado !== undefined && { salonHabilitado }) };
+        const { id, nombre, salonHabilitado, puedeReportar } = await pedir<Jugador>("/api/jugador");
+        return {
+          id, nombre,
+          ...(salonHabilitado !== undefined && { salonHabilitado }),
+          ...(puedeReportar !== undefined && { puedeReportar }),
+        };
       } catch (error) {
         if (error instanceof ErrorMesa && error.status === 401) return null;
         throw error;

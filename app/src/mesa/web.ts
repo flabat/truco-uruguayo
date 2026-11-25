@@ -8,3 +8,9 @@ export function abrirEnLaWeb(ruta: string) {
   if (esWeb) globalThis.location.assign(url);
   else void Linking.openURL(url);
 }
+
+/** Abre un enlace sin dejar la mesa: en la web en otra pestaña, en las apps en el navegador. */
+export function abrirAparte(url: string) {
+  if (esWeb) globalThis.open(url, "_blank", "noopener,noreferrer");
+  else void Linking.openURL(url);
+}

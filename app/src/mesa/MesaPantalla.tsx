@@ -14,6 +14,7 @@ import { useManoAnimada } from "./useManoAnimada.ts";
 import { Asientos } from "./vistas/Asientos.tsx";
 import { Barra } from "./vistas/Barra.tsx";
 import { Estado } from "./vistas/Estado.tsx";
+import { FinDeMano } from "./vistas/FinDeMano.tsx";
 import { enRect } from "./vistas/estilo.ts";
 import { Hoja } from "./vistas/Hoja.tsx";
 import { HojaCantos } from "./vistas/HojaCantos.tsx";
@@ -27,6 +28,8 @@ export interface AccionesMesa {
   cantar: (tipo: Canto) => void;
   indicar: Indicar;
   repartir: () => void;
+  /** «Crear otra mesa» al terminar el chico. */
+  crearMesa: () => void;
   salir: () => void;
 }
 
@@ -97,6 +100,8 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     m.hoja === abierta && Math.abs(m.alto - h) < 1 ? m : { hoja: abierta, alto: h }
   )), [abierta]);
 
+  // Con una hoja abierta la mano sube al paño: la tarjeta de fin se oculta para no taparla.
+  const conFin = mesa.fin !== null && !abierta;
   const tercetos = mesa.modalidad === "3v3";
   const titulos = titulosDePestana(tercetos);
 
@@ -121,13 +126,18 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
           <Asientos mesa={mesa} geometria={geometria} />
-          <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />
+          {/* La tarjeta de fin de mano ya dice quién ganó y por qué. */}
+          {conFin ? null : <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />}
           <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} abrirMas={() => abrir("mas")} />
           {mesa.propio != null ? (
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
               jugar={acciones.jugarCarta} rechazos={rechazos} />
           ) : null}
           <Senas senas={senas} geometria={geometria} />
+          {mesa.fin && conFin ? (
+            <FinDeMano fin={mesa.fin} rect={geometria.pano}
+              alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir} />
+          ) : null}
           {geometria.cantos && hojaCantos ? (
             <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}
               style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>

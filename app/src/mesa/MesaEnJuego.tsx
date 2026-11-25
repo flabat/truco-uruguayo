@@ -13,21 +13,31 @@ import { avisosDeApp, memoriaDeMesa } from "../salon/plataforma.ts";
 import { signalVersionFor } from "../../../training/contracts/index.ts";
 import { hojaDeCantos, type Canto } from "./hoja-cantos.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
-import { mesaDeJugador } from "./modelo.ts";
+import { datosDeHojas, mesaDeJugador } from "./modelo.ts";
 import { presencioElReparto } from "./presenciadas.ts";
+import { reportarJugada } from "./reporte.ts";
+import { camposDelReporte } from "./reporte-campos.ts";
 import { senasEnMesa } from "./senas.ts";
 import { useColaDePresentacion } from "./useCola.ts";
 import { useJugadas } from "./useJugadas.ts";
+import { usePreferencias } from "./usePreferencias.ts";
+import { HojaMano } from "./vistas/HojaMano.tsx";
+import { HojaMas } from "./vistas/HojaMas.tsx";
+import { HojaTantos } from "./vistas/HojaTantos.tsx";
+import { HojaVoz } from "./vistas/HojaVoz.tsx";
 import { abrirEnLaWeb } from "./web.ts";
 
 // No se importa de entrada.tsx: esa entrada importa este archivo.
 const salirAlSalon = () => router.replace("/");
+const crearMesa = () => router.replace("/crear");
 const sinEventos = () => {};
 
 /** La mesa en juego, conectada a la mesa en vivo. */
 export function MesaEnJuego({ id }: { id: string }) {
   const { estado: sesion, reintentar: recargarSesion } = useSesion();
   const jugadorId = sesion.tipo === "dentro" ? sesion.jugador.id : null;
+  const puedeReportar = sesion.tipo === "dentro" && sesion.jugador.puedeReportar === true;
+  const { preferencias, cambiar, reducirMovimiento } = usePreferencias();
   // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
   const [presencio] = useState(() => presencioElReparto(id));
   const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
@@ -124,11 +134,26 @@ export function MesaEnJuego({ id }: { id: string }) {
     repartir: () => {
       if (!bloqueada) void jugar();
     },
+    crearMesa,
     salir: salirAlSalon,
   };
 
+  const datos = datosDeHojas(mesa, partida, visible, { voz, presentando });
+  const reportar = puedeReportar
+    ? () => reportarJugada(mesa.id, camposDelReporte(partida, visible.vuelta, presentando, voz?.indice))
+    : undefined;
+  const extra = {
+    mano: <HojaMano datos={datos} reportar={reportar} />,
+    tantos: <HojaTantos datos={datos} />,
+    voz: <HojaVoz ruta={ruta} disponible={mesa.vozDisponible === true} />,
+    mas: (
+      <HojaMas versionReglas={mesa.versionReglas} politica={mesa.politica} nombreModelo={mesa.edicionModelo?.nombre}
+        preferencias={preferencias} cambiar={cambiar} reducirMovimiento={reducirMovimiento} salir={salirAlSalon} />
+    ),
+  };
+
   return (
-    <MesaPantalla mesa={mesaVisible} senas={senas} hojaCantos={hojaCantos} acciones={acciones} extra={{}}
+    <MesaPantalla mesa={mesaVisible} senas={senas} hojaCantos={hojaCantos} acciones={acciones} extra={extra}
       rechazos={rechazos} conectada={conectada} />
   );
 }

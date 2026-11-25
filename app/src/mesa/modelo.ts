@@ -1,7 +1,7 @@
 import { canto } from "@eltruco/cliente/cantos.ts";
 import type { Mesa, Partida, Tipo } from "@eltruco/cliente/cliente.ts";
 import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
-import { tantos } from "@eltruco/cliente/textos.ts";
+import { descripcionDeIndicacion, descripcionDeJugada, nombrar, tantos } from "@eltruco/cliente/textos.ts";
 import { estadoDelTurno, tanteador, tituloDeRespuesta } from "@eltruco/cliente/turno.ts";
 import { vocesEnReposo, type Voz } from "@eltruco/cliente/voces.ts";
 import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
@@ -9,7 +9,7 @@ import type { EntradaMesa } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { PruebaDeTantos, VistaOnline } from "@eltruco/motor/mesa-online.ts";
 import type { ResumenTantos } from "@eltruco/motor/resumen-tantos.ts";
-import type { VistaPie } from "@eltruco/motor/senas-pie.ts";
+import type { IndicacionPie, VistaPie } from "@eltruco/motor/senas-pie.ts";
 import { avisoDeCanto } from "./hoja-cantos.ts";
 
 export interface AsientoVisible {
@@ -65,6 +65,32 @@ export interface MesaVisible {
 type Nombre = (asiento: number) => string;
 
 const inicialDe = (nombre: string) => nombre.charAt(0).toLocaleUpperCase("es-UY") || "?";
+
+// Como `Intl.ListFormat("es-UY")`, que Hermes no trae en todas las plataformas.
+const enLista = (partes: string[]) =>
+  partes.length < 2 ? partes.join("") : partes.slice(0, -1).join(", ") + " y " + partes.at(-1);
+
+/** Lo que pasó en la mano, con el orden y los textos de `HistorialDeMano` de la mesa web. */
+export function historialDeMano(
+  vista: Pick<VistaOnline, "acciones" | "cobros">, indicaciones: readonly IndicacionPie[] | undefined, nombre: Nombre,
+): string[] {
+  const entradas: string[] = [];
+  const pendientes = indicaciones ?? [];
+  const flor = vista.cobros.find(c => c.comparacionFlor);
+  let cursor = 0;
+  for (let i = 0; i <= vista.acciones.length; i++) {
+    while (cursor < pendientes.length && pendientes[cursor].indiceAccion === i) {
+      entradas.push(descripcionDeIndicacion(pendientes[cursor++], nombre));
+    }
+    if (i === vista.acciones.length) break;
+    entradas.push(descripcionDeJugada(vista.acciones[i], nombre));
+    if (flor?.comparacionFlor?.indiceAccion !== i) continue;
+    const cantadas = enLista(flor.comparacionFlor.participantes.map(p => nombre(p.asiento) + " cantó " + p.total));
+    entradas.push(`Flor querida. ${cantadas}. Ganó ${nombre(flor.asiento!)} con ${flor.tantoGanador} de flor. `
+      + `El equipo ${flor.equipo + 1} sumó ${tantos(flor.tantos)} al tanteador.`);
+  }
+  return entradas;
+}
 
 /** La misma lógica que `esperaDelCompanero` de la mesa web, sin JSX. */
 export function esperaDelCompanero(pie: VistaPie | undefined, nombre: Nombre) {
@@ -233,5 +259,45 @@ export function entradaDeGeometria(m: MesaVisible, pantalla: { ancho: number; al
     mano: m.mano,
     cartas,
     hoja,
+  };
+}
+
+export interface DatosDeHojas {
+  /** «Mano 4 · Vuelta 2». */
+  encabezado: string;
+  historial: string[];
+  vueltas: { numero: string; ganador: string; jugadas: string }[];
+  /** Null cuando ya terminó la mano o se presenta una voz, como el panel de la mesa web. */
+  cuenta: { tusTantos: string; valor: string } | null;
+  cobrados: { titulo: string; filas: { equipo: string; texto: string }[] };
+}
+
+/** El contenido de las hojas Mano y Tantos, con los textos del panel de `Tablero` de la mesa web. */
+export function datosDeHojas(mesa: Mesa, partida: Partida, visible: MesaVisible, p: { voz?: Voz; presentando: boolean }): DatosDeHojas {
+  const v = partida.vista;
+  const nombre: Nombre = a => mesa.asientos[a]?.nombre ?? "";
+  const propio = mesa.asientos[mesa.miAsiento].equipo;
+  const equipo = (e: number) => mesa.modo === "1v1" ? (e === propio ? "Vos" : "Rival") : e === propio ? "Nos" : "Ellos";
+  const resultado = v.resultado;
+  const cobrados = (v.resumenTantos?.cobros ?? v.cobros).map(c => ({
+    equipo: equipo(c.equipo) + " · " + tantos(c.tantos),
+    texto: "por " + motivoDelCobro(c, v.acciones, resultado)
+      + (c.tantoGanador != null ? " (" + (c.asiento != null ? nombre(c.asiento) + " con " : "") + c.tantoGanador + ")" : ""),
+  }));
+  return {
+    encabezado: "Mano " + partida.manoNumero + " · Vuelta " + visible.vuelta,
+    historial: historialDeMano(v, partida.indicaciones, nombre),
+    vueltas: v.vueltas.map((vuelta, i) => ({
+      numero: i + 1 + ".ª vuelta",
+      ganador: vuelta.resultado.tipo === "parda" ? "Parda" : equipo(vuelta.resultado.equipo),
+      jugadas: vuelta.jugadas.map(j => nombre(j.asiento) + " · " + nombrar(j.carta)).join(", "),
+    })),
+    cuenta: resultado || (p.presentando && p.voz) ? null : {
+      tusTantos: v.tantosPropios.total + " de " + v.tantosPropios.modalidad,
+      valor: tantos(v.valorTruco),
+    },
+    cobrados: resultado && visible.fin
+      ? { titulo: visible.fin.tituloCobros, filas: visible.fin.cobros }
+      : { titulo: "Tantos cobrados", filas: cobrados },
   };
 }

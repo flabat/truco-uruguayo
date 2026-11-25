@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { cajaDeCarta, calcularMesa } from "@eltruco/mesa-geometria";
-import { entradaDeGeometria, mesaDeJugador } from "../../app/src/mesa/modelo.ts";
+import { datosDeHojas, entradaDeGeometria, historialDeMano, mesaDeJugador } from "../../app/src/mesa/modelo.ts";
 import { mesaDe, partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 const enReposo = { presentando: false };
@@ -168,4 +168,69 @@ test("a 360 × 640 con la hoja más alta, la mano queda por encima de la hoja", 
     const caja = cajaDeCarta(carta);
     assert.ok(caja.y + caja.alto <= hoja.y + 0.5, `la carta termina en ${caja.y + caja.alto}, la hoja empieza en ${hoja.y}`);
   }
+});
+
+const nombreParejas = (a: number) => ["Clara", "Diego", "Ana", "Beto"][a];
+
+test("historialDeMano: jugadas y frases del pie en orden, con las frases antes de la jugada que siguen", () => {
+  const vista = vistaDe(4, 2, {
+    acciones: [
+      { tipo: "envido", asiento: 0 },
+      { tipo: "quiero", asiento: 1 },
+      { tipo: "carta", asiento: 0, carta: "copas-04" },
+      { tipo: "mazo", asiento: 1 },
+    ],
+  });
+  const indicaciones = [
+    { emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 2 },
+    { emisor: 2, destinatario: 0, frase: "juga", vuelta: 1, indiceAccion: 4 },
+  ] as const;
+  assert.deepEqual(historialDeMano(vista, indicaciones, nombreParejas), [
+    "Clara dijo «Envido».",
+    "Diego dijo «Quiero».",
+    "Ana le dijo a Clara «Vení».",
+    "Clara jugó 4 de copas.",
+    "Diego se fue al mazo.",
+    "Ana le dijo a Clara «Jugá».",
+  ]);
+  assert.deepEqual(historialDeMano(vistaDe(4, 2), undefined, nombreParejas), []);
+});
+
+test("historialDeMano: la flor querida va después de la acción que la resolvió", () => {
+  const vista = vistaDe(4, 2, {
+    acciones: [
+      { tipo: "flor", asiento: 0 },
+      { tipo: "flor", asiento: 1 },
+      { tipo: "carta", asiento: 0, carta: "copas-04" },
+    ],
+    cobros: [{
+      equipo: 0, tantos: 6, motivo: "flor", asiento: 0, tantoGanador: 33,
+      comparacionFlor: { indiceAccion: 1, participantes: [{ asiento: 0, total: 33 }, { asiento: 1, total: 30 }, { asiento: 2, total: 25 }] },
+    }],
+  });
+  assert.deepEqual(historialDeMano(vista, [], nombreParejas), [
+    "Clara dijo «Flor».",
+    "Diego dijo «Flor».",
+    "Flor querida. Clara cantó 33, Diego cantó 30 y Ana cantó 25. Ganó Clara con 33 de flor. El equipo 1 sumó 6 tantos al tanteador.",
+    "Clara jugó 4 de copas.",
+  ]);
+});
+
+test("datosDeHojas: vueltas terminadas, la cuenta de la mano y los tantos cobrados como el panel web", () => {
+  const vista = vistaDe(2, 0, {
+    turno: 0,
+    valorTruco: 2,
+    vueltaActual: { salida: 0, jugadas: [{ asiento: 0, carta: "oros-07" }] },
+    vueltas: [{ salida: 0, jugadas: [{ asiento: 0, carta: "espadas-01" }, { asiento: 1, carta: "copas-12" }], resultado: { tipo: "ganada", asiento: 0, equipo: 0 } }],
+    cobros: [{ equipo: 1, tantos: 2, motivo: "envido", asiento: 1, tantoGanador: 31 }],
+  });
+  const mesa = mesaDe("1v1", 0);
+  const partida = partidaDe(vista, { manoNumero: 4 });
+  const datos = datosDeHojas(mesa, partida, mesaDeJugador(mesa, partida, enReposo), enReposo);
+  assert.equal(datos.encabezado, "Mano 4 · Vuelta 2");
+  assert.deepEqual(datos.vueltas, [{ numero: "1.ª vuelta", ganador: "Vos", jugadas: "Ana · As de espadas, Diego · Rey de copas" }]);
+  assert.deepEqual(datos.cuenta, { tusTantos: "27 de envido", valor: "2 tantos" });
+  assert.equal(datos.cobrados.titulo, "Tantos cobrados");
+  assert.equal(datos.cobrados.filas[0].equipo, "Rival · 2 tantos");
+  assert.match(datos.cobrados.filas[0].texto, /^por .+ \(Diego con 31\)$/);
 });
