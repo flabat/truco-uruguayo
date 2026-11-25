@@ -97,17 +97,18 @@ function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: read
 }
 
 async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, humanos: number[], numero: number,
-    version: number, puntos: Tanteador, meta: number, dador?: number, diferida = false, alPie = false) {
+    version: number, puntos: Tanteador, meta: number, dador?: number, diferida = false, politicaPie?: string) {
+  const alPie = politicaPie !== undefined;
   const cantidad = formato === "triples" ? 6 : seatsFor(formato);
   const computadoras = Array.from({ length: cantidad }, (_, i) => i as Asiento).filter(i => !humanos.includes(i));
   const reparto = repartirOnline(cantidad, dador, computadoras);
   if (formato === "triples") {
     const estado = await repartirTercetosDB(db, mesa, numero, version, puntos, meta, humanos, reparto, alPie);
     await iniciarReplayDB(db, mesa, formato, humanos, estado, numero);
-    const mano = {estado, turnos: []};
+    const mano = { estado, turnos: [], politicaPie };
     return alPie ? continuarAlPie(db, mesa, numero, mano, humanos, []) : mano;
   }
-  const inicial = {estado: iniciarOnline(reparto, puntos, meta), turnos: []};
+  const inicial = { estado: iniciarOnline(reparto, puntos, meta), turnos: [], politicaPie };
   const decisiones: DecisionReplay[] = [];
   const mano = (diferida || alPie) ? inicial : jugarBotsConReplay(inicial, formato, humanos, decisiones, await esperanDe(db, mesa, humanos));
   await db.query(`INSERT INTO juego.manos (mesa, numero, version, version_reglas, reparto, puntos_inicio, acciones, version_senas)
@@ -134,7 +135,7 @@ function recuperar(fila: RegistroTercetos, formato: FormatoMesa, meta: number, h
   return restaurar(fila, formato, meta, humanos);
 }
 
-export type MesaComputadoras = Pick<VistaMesa, "id" | "modo" | "meta"> & {
+export type MesaComputadoras = Pick<VistaMesa, "id" | "modo" | "meta" | "politica"> & {
   version_senas: string | null; perfil_tercetos: string | null;
 };
 
@@ -159,7 +160,7 @@ export async function avanzarManoComputadoras(db: PoolClient, mesa: MesaComputad
   if (!final) {
     const dador = fila ? (fila.reparto.dador + 1) % capacidad : undefined;
     const mano = await repartir(db, mesa.id, formato, [], (fila?.numero ?? 0) + 1,
-      (fila?.version ?? 0) + 1, puntos, mesa.meta, dador, true, mesa.version_senas === versionSenasPie);
+      (fila?.version ?? 0) + 1, puntos, mesa.meta, dador, true, mesa.version_senas === versionSenasPie ? mesa.politica : undefined);
     final = ganador(marcadorOnline(mano.estado), mesa.meta) !== null;
   }
   return final;
@@ -170,7 +171,7 @@ export async function avanzarEnsayo(pool: Pool) {
   const db = await pool.connect();
   try {
     await db.query("BEGIN");
-    const {rows: [mesa]} = await db.query<MesaComputadoras>(`SELECT id, modo, meta, version_senas, perfil_tercetos FROM juego.mesas
+    const {rows: [mesa]} = await db.query<MesaComputadoras>(`SELECT id, modo, meta, politica, version_senas, perfil_tercetos FROM juego.mesas
       WHERE solo_computadoras AND cupo_exhibicion IS NULL AND NOT ensayo_terminado
       AND NOT EXISTS (SELECT 1 FROM juego.turnos_bot t WHERE t.mesa=juego.mesas.id) ORDER BY id FOR UPDATE SKIP LOCKED LIMIT 1`);
     if (mesa) {
@@ -202,6 +203,7 @@ export async function reanudarComputadoras(db: PoolClient, id: string) {
   const humanos = asientos.filter(a => !a.computadora).map(a => a.asiento);
   const esperan = asientos.filter(a => !a.computadora && !a.cedido).map(a => a.asiento);
   const mano = recuperar(fila, formato, registro.meta, humanos);
+  if (registro.version_senas === versionSenasPie) mano.politicaPie = registro.politica;
   if (mano.estado.resultado) return;
   if (formato === "triples") await registrarPendienteTercetos(db, id, mano.estado, humanos);
   else if (registro.version_senas === versionSenasPie) await programarBotPie(db, id, mano, humanos);
@@ -229,6 +231,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const asiento = mesa.miAsiento as Asiento;
     const diferida = mesa.politica !== incumbent.id;
     const alPie = mesa.versionSenas === versionSenasPie;
+    const politicaPie = alPie ? mesa.politica : undefined;
     const comando = op && validar(op, datos, asiento, mesa.formato, alPie);
     if (!mesa.lista) {
       if (comando) throw new ErrorPeticion(409, "La mesa todavía tiene asientos libres.");
@@ -251,11 +254,12 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const fila = await ultimaMano(db, id);
     if (!fila) {
       if (comando) throw new ErrorPeticion(409, "Actualizá la mesa para recibir tu mano.");
-      const mano = await repartir(db, id, mesa.formato, humanos, 1, 1, [0, 0], mesa.meta, undefined, diferida, alPie);
+      const mano = await repartir(db, id, mesa.formato, humanos, 1, 1, [0, 0], mesa.meta, undefined, diferida, politicaPie);
       return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento, humanos) };
     }
     if ((fila.version_senas ?? undefined) !== mesa.versionSenas) throw new ErrorPeticion(503, "La mano y la mesa tienen versiones de señas diferentes.");
     const mano = recuperar(fila, mesa.formato, mesa.meta, humanos);
+    mano.politicaPie = politicaPie;
     const estado = mano.estado;
     if (!comando) {
       // Una mano guardada antes de esta regla puede estar esperando la salida humana.
@@ -306,7 +310,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       const puntos = marcadorOnline(estado);
       if (!estado.resultado || ganador(puntos, mesa.meta) !== null) throw new ErrorPeticion(409, "No corresponde repartir otra mano.");
       const dador = (fila.reparto.dador + 1) % mesa.asientos.length;
-      const nueva = await repartir(db, id, mesa.formato, humanos, fila.numero + 1, version, puntos, mesa.meta, dador, diferida, alPie);
+      const nueva = await repartir(db, id, mesa.formato, humanos, fila.numero + 1, version, puntos, mesa.meta, dador, diferida, politicaPie);
       partida = vista(nueva, mesa.formato, fila.numero + 1, version, asiento, humanos);
     } else if (alPie) {
       const nueva = await confirmarJugadaPieDB(db, fila, mano, comando.accion!, humanos);

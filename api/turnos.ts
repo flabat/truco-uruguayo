@@ -12,6 +12,7 @@ export type Confirmada = AccionOnline & { sena?: Signal };
 export interface ManoPublicable {
   estado: EstadoOnline;
   turnos: PublicTurn[];
+  politicaPie?: string;
   indicaciones?: IndicacionPie[];
   pasesPie?: DestinoPie[];
 }
