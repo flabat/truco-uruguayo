@@ -46,7 +46,27 @@
 
 No quedan huecos sin decidir: todo es igual, se arregla en este PR, difiere por una decisión anotada o tiene issue propio (#409, #410).
 
+## Pruebas que retira #412
+
+#412 retira las pruebas de la pantalla Astro (`verificar-juego-navegador.mjs`, `verificar-tercetos-navegador.mjs` y las specs de Playwright con la API simulada). Para cada comportamiento que la app debe conservar:
+
+| Comportamiento | Cobertura en la app |
+| --- | --- |
+| Reconexión tras parar la API y la base: cada mesa dice «Reconectando…» y vuelve a la misma partida | **Nueva en #403:** `scripts/verificar-app-reconexion.mjs`, en `verificar-stack.sh` donde corría el script retirado. Cuatro personas en parejas; `docker compose stop api db` y `up`; compara `/partida` antes y después. Sin red del lado del navegador: `verificar-app-salon.mjs` (`setOffline`). La cola tras una reconexión: `app-mesa-cola.test.ts` («una reconexión vacía la cola…»). |
+| Dos «Quiero» simultáneos: uno solo prospera | **Nueva en #403:** el mismo script toca «Quiero» en la hoja de respuesta de los dos rivales con una barrera que suelta los dos POST juntos: 200 y 409, una sola versión más y truco querido una vez. El 409 no es un error en la app (`crearEnvio`, `app-mesa-jugadas.test.ts`). Las carreras del servidor siguen en `verificar-mesas.mjs`. |
+| Privacidad de las cartas en el DOM | **Nueva en #403:** en las cuatro páginas, solo tres `carta-<id>`, que son las propias; ni el texto ni los atributos (fuera de `src`, `href` y `style`) nombran una carta ajena; `/partida` tampoco la trae. La mesa dibuja en un lienzo y no publica dorsos con nombre. Las señas: `verificar-app-mesa.mjs` (`probarPrivacidad`). |
+| Comunidad y eventos del salón | **#403:** el aviso se descarta y sigue oculto al recargar (`verificar-app-salon.mjs`); la invitación no lo muestra y cuenta `ingreso-mesa` sin consulta ni token (`verificar-app-reconexion.mjs`); `compartir-mesa` al compartir (`verificar-app-salon.mjs`); unitarias en `app-paridad.test.ts`. |
+| Pie con motor y modelo | **Nueva en #403:** la hoja «Más» muestra «Versión de reglas» y el modelo que trae `/api/mesas/<id>` (`verificar-app-reconexion.mjs`). Difiere a propósito: la app muestra el nombre del modelo o, sin nombre, su identificador, sin la ficha con fecha y huella de `FichaModelo`. «Quitarlos al volver al salón» no aplica: la hoja vive dentro de la mesa. |
+| Sugerencia horizontal | **Difiere a propósito** (app en vertical, plan de la 4c). No necesita prueba. |
+| Reporte de flor desde el historial | La flor querida aparece en «Lo que pasó» después de la acción que la resolvió (`app-mesa-modelo.test.ts`, «historialDeMano: la flor querida…»). **Nueva en #403:** «Reportar esta jugada» aparece solo con permiso (bruno con `juego.reporteros`, clara sin él) y envía `mano` y `posicion` a `/api/mesas/<id>/reportes` (`verificar-app-reconexion.mjs`). Los campos: `app-mesa-reporte.test.ts`. |
+| Duelo y computadoras, envido, tercetos completos, espectador, escritorio y teclado | `verificar-app-mesa.mjs` (`probarDueloConComputadora`, `probarEnvido`, `probarTercetos`, `probarEspectador`, `probarEscritorio`). |
+| Orden de voces, pardas, vuelta a la vista, tantos de la mano y del reparto, tercetos (duelos, pico a pico, redondilla) | La presentación es la misma de `paquetes/cliente` (`secuencia-de-mesa.test.ts`, `presentacion-mesa.test.ts`) más `app-mesa-cola.test.ts` y `app-mesa-modelo.test.ts` (fin de mano, «Tantos de este reparto», pruebas de tantos, lances de tercetos). |
+| Regreso desde `/volver/`, enlaces viejos y salón apagado | #412 en `verificar-app-salon.mjs` y `verificar-jugadores.mjs`; `?mirar=` con invitación y salón cerrado en `verificar-app-salon.mjs`. |
+| Menú de la partida del sitio, `Site.astro` y búsqueda con foco en la mano | **Difiere a propósito:** la app no tiene el encabezado del sitio. La salida está en «Más» y «Volver al salón». |
+
 ## Para #407 (mover la exportación a `/jugar/`)
+
+#412 ya hace lo que sigue, salvo conservar `volver.astro`, que reemplaza por una redirección. Al rebasar sobre #403, `verificar-app-reconexion.mjs` también tiene que pasar de `/app/` a `/jugar/`.
 
 - `app/src/salon/enlaces.ts`: `enlaceParaCompartir` arma `/app/?invitacion=`. Tiene que pasar a `/jugar/?invitacion=`.
 - `app/src/ingreso/plataforma.ts`: `abrirIngreso` en la web pide `volver=/app/`. Tiene que pedir `volver=/jugar/`, que `regresoPermitido` de `api/auth.ts` ya acepta.
