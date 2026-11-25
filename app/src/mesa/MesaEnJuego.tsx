@@ -14,9 +14,11 @@ import { signalVersionFor } from "../../../training/contracts/index.ts";
 import { hojaDeCantos, type Canto } from "./hoja-cantos.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
 import { mesaDeJugador } from "./modelo.ts";
+import { presencioElReparto } from "./presenciadas.ts";
 import { senasEnMesa } from "./senas.ts";
 import { useColaDePresentacion } from "./useCola.ts";
 import { useJugadas } from "./useJugadas.ts";
+import { abrirEnLaWeb } from "./web.ts";
 
 // No se importa de entrada.tsx: esa entrada importa este archivo.
 const salirAlSalon = () => router.replace("/");
@@ -26,13 +28,14 @@ const sinEventos = () => {};
 export function MesaEnJuego({ id }: { id: string }) {
   const { estado: sesion, reintentar: recargarSesion } = useSesion();
   const jugadorId = sesion.tipo === "dentro" ? sesion.jugador.id : null;
-  // La sala no avisa si se acaba de crear la mesa: el primer reparto aparece sin animarse.
-  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, false, avisosDeApp);
+  // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
+  const [presencio] = useState(() => presencioElReparto(id));
+  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
   const recibida = lectura?.vista ? lectura : undefined;
   const simple: Partida | undefined = recibida && recibida.formato !== "triples" ? recibida as Partida : undefined;
 
   const nombre = useCallback((asiento: number) => mesa?.asientos[asiento]?.nombre ?? "", [mesa]);
-  const { partida, presentando, voz } = useColaDePresentacion(simple, false, reconexion, pasosDeVueltas, {
+  const { partida, presentando, voz } = useColaDePresentacion(simple, presencio, reconexion, pasosDeVueltas, {
     liviano: false, alEvento: sinEventos, miAsiento: mesa?.miAsiento ?? null, nombre,
   });
   const { enviando, aviso, jugar, indicar } = useJugadas(cliente, ruta, refrescar, partida?.version);
@@ -73,7 +76,8 @@ export function MesaEnJuego({ id }: { id: string }) {
     // Provisorio hasta la tarea 12, que lleva los tercetos a la mesa nueva.
     return (
       <Pantalla titulo="Tercetos">
-        <Parrafo>Los tercetos todavía no se juegan en la mesa nueva de la app.</Parrafo>
+        <Parrafo>Los tercetos todavía no se juegan en la mesa nueva de la app. Mientras tanto, seguí la partida en la web.</Parrafo>
+        <Boton onPress={() => abrirEnLaWeb("/jugar/?mesa=" + encodeURIComponent(id))}>Jugar en la web</Boton>
         <Boton variante="secundario" onPress={salirAlSalon}>Volver al salón</Boton>
       </Pantalla>
     );
@@ -94,7 +98,7 @@ export function MesaEnJuego({ id }: { id: string }) {
     estado: indicacion ? { titulo: visible.estado.titulo, indicacion } : visible.estado,
   };
   const v = partida.vista;
-  const hojaCantos = presentando || versionDesconocida ? null : hojaDeCantos({
+  const hojaCantos = presentando || versionDesconocida || !conectada ? null : hojaDeCantos({
     legales: v.legales,
     pendiente: v.pendiente,
     trucoPendiente: v.trucoPendiente,

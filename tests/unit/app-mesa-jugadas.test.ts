@@ -25,19 +25,19 @@ test("dos envíos seguidos hacen un solo pedido", async () => {
   const enviar = crearEnvio(pedir, ruta);
   const primero = enviar("/acciones", jugada);
   const segundo = await enviar("/acciones", { ...jugada, id: "c-2" });
-  assert.equal(segundo, null);
+  assert.deepEqual(segundo, { tipo: "ocupado" });
   responder();
-  assert.equal(await primero, null);
+  assert.deepEqual(await primero, { tipo: "aceptado" });
   assert.deepEqual(pedidos, [{ ruta: ruta + "/acciones", datos: jugada }]);
   // Terminado el primero, se puede enviar otra jugada.
-  await enviar("/siguiente", { id: "c-3", version: 8 });
+  assert.deepEqual(await enviar("/siguiente", { id: "c-3", version: 8 }), { tipo: "aceptado" });
   assert.equal(pedidos.length, 2);
 });
 
 test("ante un error de red reintenta una vez con la misma clave", async () => {
   const { pedir, pedidos } = pedirFalso([() => Promise.reject(new TypeError("Network request failed"))]);
   const resultado = await crearEnvio(pedir, ruta)("/acciones", jugada);
-  assert.equal(resultado, null);
+  assert.deepEqual(resultado, { tipo: "aceptado" });
   assert.equal(pedidos.length, 2);
   assert.deepEqual(pedidos[1], pedidos[0]);
 });
@@ -46,22 +46,20 @@ test("si el reintento también falla, avisa que no hay conexión", async () => {
   const red = () => Promise.reject(new TypeError("Network request failed"));
   const { pedir, pedidos } = pedirFalso([red, red]);
   const resultado = await crearEnvio(pedir, ruta)("/indicaciones", { id: "i-1", version: 3, indicacion: {} });
-  assert.equal(resultado, "No se pudo contactar con el servidor. Revisá tu conexión.");
+  assert.deepEqual(resultado, { tipo: "error", mensaje: "No se pudo contactar con el servidor. Revisá tu conexión." });
   assert.equal(pedidos.length, 2);
 });
 
 test("un rechazo del servidor devuelve su mensaje sin reintentar", async () => {
   const { pedir, pedidos } = pedirFalso([() => Promise.reject(new ErrorMesa(400, "No es tu turno."))]);
   const resultado = await crearEnvio(pedir, ruta)("/acciones", jugada);
-  assert.equal(resultado, "No es tu turno.");
+  assert.deepEqual(resultado, { tipo: "error", mensaje: "No es tu turno." });
   assert.equal(pedidos.length, 1);
 });
 
-test("una versión vieja (409) no se muestra y avisa para devolver la carta", async () => {
+test("una versión vieja (409) no es un error para mostrar ni se reintenta", async () => {
   const { pedir, pedidos } = pedirFalso([() => Promise.reject(new ErrorMesa(409, "La mesa cambió."))]);
-  let viejas = 0;
-  const resultado = await crearEnvio(pedir, ruta, () => viejas++)("/acciones", jugada);
-  assert.equal(resultado, null);
-  assert.equal(viejas, 1);
+  const resultado = await crearEnvio(pedir, ruta)("/acciones", jugada);
+  assert.deepEqual(resultado, { tipo: "vieja" });
   assert.equal(pedidos.length, 1);
 });

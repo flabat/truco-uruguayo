@@ -2,22 +2,23 @@
 // `mirarMesa`, `MesaEnJuego` y `VisorDeEspectador`.
 import { participantesMesa, type ResumenMesa } from "@eltruco/cliente/salon.ts";
 import { router, type Href } from "expo-router";
-import { Linking, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 import { Hoja, Pano, Pildora } from "../componentes/salon.tsx";
 import { Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
-import { baseDeLaApi } from "../configuracion.ts";
-import { esWeb } from "../ingreso/plataforma.ts";
 import { registrarPrecargaWeb } from "../precarga/usePrecargaDeMesa.ts";
 import { useConsulta } from "../salon/useConsulta.ts";
 import { colores, fuentes } from "../tema.ts";
 import { cargarCanvasKit } from "./canvaskit.ts";
+import { anotarPresenciada } from "./presenciadas.ts";
+import { abrirEnLaWeb } from "./web.ts";
 
 export { MesaEnJuego } from "./MesaEnJuego.tsx";
 
 registrarPrecargaWeb(cargarCanvasKit);
 
-/** Cuando la mesa empieza, la sala de espera deja su lugar a la mesa. */
+/** Cuando la mesa empieza, la sala de espera deja su lugar a la mesa, que anima el primer reparto. */
 export function entrarALaMesa(id: string) {
+  anotarPresenciada(id);
   router.replace(`/mesa?id=${encodeURIComponent(id)}` as Href);
 }
 
@@ -26,12 +27,6 @@ export function mirarMesa(id: string) {
 }
 
 export const volverAlSalon = () => router.replace("/");
-
-function abrirEnLaWeb(ruta: string) {
-  const url = baseDeLaApi.replace(/\/+$/, "") + ruta;
-  if (esWeb) globalThis.location.assign(url);
-  else void Linking.openURL(url);
-}
 
 interface MesaObservada extends ResumenMesa {
   asientos: { asiento: number; equipo: number; tipo: "humano" | "computadora"; nombre: string }[];
