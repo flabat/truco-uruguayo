@@ -1,9 +1,10 @@
-import { randomBytes } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool } from "pg";
 import * as oidc from "openid-client";
 import { cookieDe, esDesafio, hash, nombreSesion, origenValido, sesionDe, verificadorCorresponde } from "./sesion.ts";
 import { leerJson, responderJson } from "./http.ts";
+import { crearIngresoDePrueba, rutaIngresoDePrueba } from "./auth-dev.ts";
+import { abrirSesionWeb, diasSiete, emitirCanje, registrarJugador, secreto } from "./ingreso.ts";
 
 export { origenValido, sesionDe };
 
@@ -11,9 +12,7 @@ const clientId = "truco-web";
 const flujo = "truco_ingreso";
 const sesion = nombreSesion;
 const minutosDiez = 600;
-const diasSiete = 604800;
 const retornoApp = "eltruco://ingreso";
-const secreto = () => randomBytes(32).toString("base64url");
 const texto = (res: ServerResponse, estado: number, mensaje: string) =>
   res.writeHead(estado, { "Content-Type": "text/plain; charset=utf-8" }).end(mensaje);
 
@@ -60,9 +59,11 @@ interface OpcionesOIDC {
   cerrarConexiones?: (jugador: string) => void;
   /** Guarda el token de Apple del jugador, si ingresó con Apple, para poder revocarlo en una baja. */
   capturarApple?: ((jugador: string, acceso: string) => Promise<void>) | null;
+  /** AUTH_DEV=1: habilita el ingreso de prueba en /api/auth/dev. Nunca en un entorno con jugadores reales. */
+  ingresoDePrueba?: boolean;
 }
 
-export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false, cerrarConexiones = () => {}, capturarApple }: OpcionesOIDC) {
+export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, salonHabilitado = false, cerrarConexiones = () => {}, capturarApple, ingresoDePrueba = false }: OpcionesOIDC) {
   const protocol = "/protocol/openid-connect";
   const config = new oidc.Configuration({
     issuer: issuer.href,
@@ -80,6 +81,10 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
     return name + "=" + value + "; Path=/api/; HttpOnly; SameSite=Lax; Max-Age=" + age
       + (web.protocol === "https:" ? "; Secure" : "");
   }
+  // El emisor de la configuración es el mismo `iss` que firma el proveedor: el jugador de prueba es el de Keycloak.
+  const dev = ingresoDePrueba
+    ? crearIngresoDePrueba(pool, { emisor: config.serverMetadata().issuer, web, cookie: handle => cookie(sesion, handle, diasSiete) })
+    : null;
 
   return async function auth(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url!, callback);
@@ -142,39 +147,28 @@ export function crearAuth(pool: Pool, { web, callback, issuer, backend, local, s
       // Algunos proveedores usan el correo como nombre de usuario. El nombre se muestra a toda la mesa.
       const name = [claims.given_name, claims.preferred_username]
         .find(value => typeof value === "string" && value.trim() && !value.includes("@")) || "Jugador";
-      const { rows: [jugador] } = await pool.query(`
-        INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ($1,$2,$3)
-        ON CONFLICT (emisor, sujeto) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id
-      `, [claims.iss, claims.sub, name]);
       // Volver a ingresar dentro de los 30 días cancela la baja. Vencida, la cuenta ya se está borrando.
-      const { rows: [baja] } = await pool.query("SELECT vence > now() AS vigente FROM juego.bajas WHERE jugador = $1", [jugador.id]);
-      const cancelada = Boolean(baja) && (await pool.query(
-        "DELETE FROM juego.bajas WHERE jugador = $1 AND vence > now()", [jugador.id])).rowCount === 1;
-      if (baja && !cancelada) { texto(res, 403, "Tu cuenta se está eliminando."); return; }
+      const jugador = await registrarJugador(pool, claims.iss, claims.sub, name);
+      if (!jugador) { texto(res, 403, "Tu cuenta se está eliminando."); return; }
+      const cancelada = jugador.cancelada;
       // Un fallo al guardar el token de Apple no impide ingresar.
       await capturarApple?.(jugador.id, acceso).catch(() => console.warn("No se pudo guardar el token de Apple del ingreso."));
       if (attempt.desafio_app) {
-        // La app recibe un código de un solo uso, inútil sin el verificador que nunca salió del teléfono.
-        const codigo = secreto();
-        await pool.query("INSERT INTO juego.canjes (clave, jugador, desafio, baja_cancelada) VALUES ($1,$2,$3,$4)",
-          [hash(codigo), jugador.id, attempt.desafio_app, cancelada]);
+        const codigo = await emitirCanje(pool, jugador.id, attempt.desafio_app, cancelada);
         const destino = new URL(retornoApp);
         destino.searchParams.set("codigo", codigo);
         res.writeHead(303, { Location: destino.href, "Set-Cookie": cookie(nombreFlujo, "", 0) }).end();
         return;
       }
-      const handle = secreto();
-      // La sesión anterior de este navegador se reemplaza en el mismo commit que crea la nueva.
-      await pool.query(`
-        WITH anterior AS (DELETE FROM juego.sesiones WHERE clave = $1)
-        INSERT INTO juego.sesiones (clave, jugador) VALUES ($2, $3)
-      `, [sessionKey, hash(handle), jugador.id]);
+      const handle = await abrirSesionWeb(pool, sessionKey, jugador.id);
       const destino = cancelada ? "/perfil/?baja=cancelada" : regresoPermitido(attempt.regreso);
       res.writeHead(303, { Location: new URL(destino, web).href, "Set-Cookie": [
         cookie(nombreFlujo, "", 0), cookie(sesion, handle, diasSiete),
       ] }).end();
       return;
     }
+
+    if (dev && url.pathname === rutaIngresoDePrueba) return dev(req, res, sessionKey);
 
     if (req.method === "POST" && url.pathname === "/api/auth/canje") {
       const vencido = () => responderJson(res, 401, { error: "El ingreso venció. Volvé a ingresar." });

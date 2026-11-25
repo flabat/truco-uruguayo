@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { StatusBar } from "expo-status-bar";
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -168,6 +169,8 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
 
   return (
     <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
+      {/* El paño es oscuro: iconos claros solo mientras la mesa está montada. */}
+      <StatusBar style="light" />
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
           <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} reparto={reparto}

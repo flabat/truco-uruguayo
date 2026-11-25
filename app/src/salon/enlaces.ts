@@ -1,11 +1,12 @@
-// Enlaces de la app: `?invitacion=`, `?mesa=` y `?mirar=`, iguales a los de /jugar/.
+// Enlaces de la app: `?invitacion=`, `?mesa=`, `?mirar=` y `?crear=1`, iguales a los de /jugar/.
 const esId = (valor: string) => /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(valor);
 const esToken = (valor: string) => /^[A-Za-z0-9_-]{1,80}$/.test(valor);
 
 export type Destino =
   | { tipo: "mirar"; id: string }
   | { tipo: "invitacion"; token: string }
-  | { tipo: "mesa"; id: string };
+  | { tipo: "mesa"; id: string }
+  | { tipo: "crear" };
 
 type Parametros = Record<string, string | string[] | undefined>;
 const primero = (valor: string | string[] | undefined) => (Array.isArray(valor) ? valor[0] : valor);
@@ -18,13 +19,23 @@ export function destinoDeEnlace(parametros: Parametros): Destino | null {
   if (token !== undefined) return esToken(token) ? { tipo: "invitacion", token } : null;
   const mesa = primero(parametros.mesa);
   if (mesa !== undefined && esId(mesa)) return { tipo: "mesa", id: mesa };
+  // El ingreso del servidor acepta volver a `/jugar/?crear=1` (api/auth.ts).
+  if (primero(parametros.crear) === "1") return { tipo: "crear" };
   return null;
 }
 
 export function rutaDe(destino: Destino): string {
   if (destino.tipo === "mirar") return "/mirar/" + destino.id;
   if (destino.tipo === "invitacion") return "/invitacion/" + destino.token;
+  if (destino.tipo === "crear") return "/crear";
   return "/sala/" + destino.id;
+}
+
+/** La consulta de `/` que retoma el destino tras ingresar. */
+export function consultaDe(destino: Destino): string {
+  if (destino.tipo === "invitacion") return "?invitacion=" + destino.token;
+  if (destino.tipo === "crear") return "?crear=1";
+  return `?${destino.tipo}=${destino.id}`;
 }
 
 export function tokenDeInvitacion(enlace: string): string | null {
@@ -63,7 +74,8 @@ export function destinoPendiente(
   guardado.guardar(null);
   try {
     const valor = JSON.parse(texto) as Destino;
-    const parametros = valor.tipo === "invitacion" ? { invitacion: valor.token } : { [valor.tipo]: valor.id };
+    const parametros = valor.tipo === "invitacion" ? { invitacion: valor.token }
+      : valor.tipo === "crear" ? { crear: "1" } : { [valor.tipo]: valor.id };
     return destinoDeEnlace(parametros);
   } catch {
     return null;

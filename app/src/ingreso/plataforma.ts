@@ -8,7 +8,7 @@ import { baseDeLaApi } from "../configuracion.ts";
 import { crearAlmacenSesion, type Guardado } from "./almacen.ts";
 import { crearPar } from "./pkce.ts";
 import { retornoApp } from "./retorno.ts";
-import { completarIngreso } from "./sesion.ts";
+import { completarIngreso, ingresarDePrueba } from "./sesion.ts";
 
 export const esWeb = Platform.OS === "web";
 
@@ -39,4 +39,15 @@ export async function abrirIngreso() {
   const { verificador, desafio } = await crearPar(Crypto.getRandomBytes, sha256);
   const resultado = await WebBrowser.openAuthSessionAsync(cliente.url("/api/auth/login?app=" + desafio), retornoApp);
   return completarIngreso({ resultado, verificador, cliente, almacen });
+}
+
+/** Ingreso de prueba (AUTH_DEV): la web recibe la cookie; la app, el canje con su propio par PKCE. */
+export async function abrirIngresoDePrueba(usuario: string) {
+  if (esWeb) {
+    const { jugador, bajaCancelada = false } = await cliente.entrarDePrueba(usuario);
+    if (!jugador) throw new Error("La API no entregó el jugador del ingreso de prueba.");
+    return { jugador, bajaCancelada };
+  }
+  const par = await crearPar(Crypto.getRandomBytes, sha256);
+  return ingresarDePrueba({ usuario, par, cliente, almacen });
 }

@@ -4,6 +4,8 @@ import type { AvisosDeRed } from "@eltruco/cliente/use-mesa.ts";
 import { AppState, Share } from "react-native";
 import type { Guardado } from "../ingreso/almacen.ts";
 import { esWeb, guardadoSeguro } from "../ingreso/plataforma.ts";
+import { crearAvisosDeRed } from "./avisos-red.ts";
+import { crearContador } from "./eventos.ts";
 import { crearMemoriaDeMesa } from "./memoria.ts";
 
 const almacenamiento = (cual: "localStorage" | "sessionStorage"): Storage | null => {
@@ -21,15 +23,18 @@ const guardadoLocal: Guardado = {
   borrar: async clave => almacenamiento("localStorage")?.removeItem(clave),
 };
 
-export const memoriaDeMesa = crearMemoriaDeMesa(esWeb ? guardadoLocal : guardadoSeguro);
+/** Lo que se guarda en el dispositivo y no es secreto: la última mesa y el aviso de la comunidad. */
+export const guardadoDelDispositivo: Guardado = esWeb ? guardadoLocal : guardadoSeguro;
+export const memoriaDeMesa = crearMemoriaDeMesa(guardadoDelDispositivo);
 
-/** Vuelve a leer la mesa cuando la app vuelve a primer plano. Estable, como pide useMesa. */
-export const avisosDeApp: AvisosDeRed = ({ leer }) => {
-  const suscripcion = AppState.addEventListener("change", estado => {
-    if (estado === "active") leer();
-  });
-  return () => suscripcion.remove();
-};
+/** Vuelve a leer la mesa al volver la app a primer plano o, en la web, la red. Estable, como pide useMesa. */
+export const avisosDeApp: AvisosDeRed = crearAvisosDeRed({
+  app: AppState,
+  ventana: esWeb && typeof window !== "undefined" ? window : null,
+});
+
+/** Los conteos anónimos de `/eventos/`, como en /jugar/. Solo en la web. */
+export const contar = crearContador({ web: esWeb, pedir: typeof fetch === "function" ? (ruta, opciones) => fetch(ruta, opciones) : undefined });
 
 let destinoEnMemoria: string | null = null;
 const claveDestino = "truco.app.destino";

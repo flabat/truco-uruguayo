@@ -131,6 +131,8 @@ Antes de actualizar, ejecutá `dc run --rm --no-deps backup guardar`, anotá el 
 
 La imagen de identidad incluye el tema de El Truco y un proveedor de Keycloak que omite la confirmación de correo durante el ingreso con un Google, Facebook o Discord ya vinculado, sin modificar el estado del correo. Las pruebas del stack comprueban ese ingreso, el primer acceso social, la vinculación, el registro por correo y la recuperación. Ejecutalas al actualizar la versión de Keycloak. Para aplicar la marca a un realm existente, [actualizá el nombre y los temas de ingreso y cuenta](ingreso-social.md#activar-la-pantalla-de-el-truco).
 
+La imagen web genera `/.well-known/apple-app-site-association` y `/.well-known/assetlinks.json` con `APPLE_TEAM_ID` y `ANDROID_CERT_SHA256`, para que los enlaces de invitación abran la app. Al cargarlas o cambiarlas, reconstruí `web`. Sin ellas los enlaces abren la web y `npm run check:production` avisa. Detalles en el [README de la app](../app/README.md#enlaces-que-abren-la-app).
+
 ## Salón y exhibiciones
 
 La publicación de producción abre el salón a todas las cuentas autenticadas y busca seis mesas públicas entre humanas y exhibiciones. El visor ofrece la voz cuando Discord está configurado. En instalaciones existentes, los valores explícitos del archivo protegido siguen vigentes. Antes de publicar, revisá esos valores y prepará la verificación de la revisión y del conteo real de partidas. [Procedimiento de lanzamiento, capacidad, pausa y recuperación](multijugador/salon-en-vivo/operacion.md)

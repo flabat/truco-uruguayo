@@ -6,7 +6,17 @@
 2. Reutilizá el issue existente o abrí uno. Para errores, incluí pasos o una mano reproducible, el resultado actual y el esperado. Para funciones y decisiones de diseño, describí el problema, las opciones, los criterios y la decisión. Si hace falta acordar el diseño, registrá la decisión en el issue antes de implementarla. Para cambios de reglas, citá el artículo o sección y especificá a qué variante se aplica.
 3. Reservá una rama por issue. Usá el nombre exacto `codex/issue-<número>` y la operación de creación de la referencia, que rechaza una rama existente. Una asignación o un comentario sirve para comunicar el estado, ya que varias sesiones pueden usar la misma cuenta. La rama indica que el trabajo está reservado. Codex y Claude Code siguen el mismo protocolo y el mismo prefijo: `AGENTS.md` tiene las reglas compartidas y `CLAUDE.md` las importa.
 
-Ejemplo desde un checkout cuyo `origin` apunta al repositorio principal y con GitHub CLI autenticado. Ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
+Desde un checkout cuyo `origin` apunta al repositorio principal, con GitHub CLI autenticado, empezá el issue con un comando:
+
+```sh
+npm run trabajo -- 42
+```
+
+El comando reserva `codex/issue-42` desde `origin/main` con la operación exclusiva, crea el worktree `../truco-issue-42`, comenta en el issue la rama, la sesión, el worktree y los puertos, y corre `npm ci` con la caché de npm. Si la rama o la carpeta ya existen, falla sin tocar nada. Para nombrar la sesión en el comentario, agregá `--sesion <identificador>`; si no, usa el identificador de la sesión de Claude Code o Codex.
+
+Cada worktree recibe una de ocho ranuras de puertos, registradas en `~/.cache/truco/ranuras`, y las escribe en `.env.trabajo`: `WEB_PORT`, `OIDC_PORT`, `API_PORT`, `METRO_PORT`, `TEST_PORT`, `TEST_WEB_PORT`, `TEST_OIDC_PORT` y `COMPOSE_PROJECT_NAME=truco-issue-42`. `npm run check`, `npm run check:stack` y Playwright leen ese archivo, así que varias sesiones verifican a la vez sin chocar. Una variable definida en el entorno tiene prioridad. El worktree también recibe un `.env` que apunta a `.env.trabajo`, por lo que `docker compose up` levanta la mesa local con sus propios puertos y volúmenes. Para Metro, usá `source scripts/trabajo-entorno.sh && npm --workspace app run ios -- --port "$METRO_PORT"`. Al borrar el worktree, su ranura queda libre. Sin `.env.trabajo`, todo usa los puertos predeterminados.
+
+El comando sigue estos pasos. Para hacerlo a mano, ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
 
 ```sh
 issue=42
@@ -34,7 +44,7 @@ CHECK_STACK=1 npm run check
 git diff --check
 ```
 
-`npm run check` ejecuta las pruebas unitarias, compila la aplicación en `dist/` para la raíz del sitio y comprueba sus enlaces internos, anclas, cartas y recursos. Playwright recorre la interfaz en Chromium de escritorio y con emulación móvil. Instalá el navegador al preparar un checkout o actualizar Playwright. En Linux podés agregar `--with-deps` al comando de instalación. Si otra sesión usa el puerto 4322, elegí uno libre con `TEST_PORT=4323 npm run check`. `CHECK_STACK=1` agrega la prueba de la aplicación completa con la API, PostgreSQL y el proveedor de identidad. Si no podés usar Docker, ejecutá `npm run check` e indicá en el PR que falta la prueba de la pila completa; no integres hasta que alguien la corra.
+`npm run check` ejecuta las pruebas unitarias, compila la aplicación en `dist/` para la raíz del sitio y comprueba sus enlaces internos, anclas, cartas y recursos. Playwright recorre la interfaz en Chromium de escritorio y con emulación móvil. Instalá el navegador al preparar un checkout o actualizar Playwright. En Linux podés agregar `--with-deps` al comando de instalación. En un worktree creado con `npm run trabajo`, los puertos salen de `.env.trabajo`. En otro checkout, si otra sesión usa el puerto 4322, elegí uno libre con `TEST_PORT=4323 npm run check`. `CHECK_STACK=1` agrega la prueba de la aplicación completa con la API, PostgreSQL y el proveedor de identidad. Si no podés usar Docker, ejecutá `npm run check` e indicá en el PR que falta la prueba de la pila completa; no integres hasta que alguien la corra.
 
 - **Reglas y datos.** Revisá el texto, las tablas, los ejemplos y las fuentes de los capítulos afectados. Calculá al menos una mano concreta y comprobá los empates, los límites del tanteador o las variantes que correspondan al cambio.
 - **Interfaz y navegación.** Probá el comportamiento modificado en el navegador en un ancho móvil y otro de escritorio. Para controles interactivos, verificá teclado, foco y estados relevantes. Si cambia la búsqueda, probá un término con tilde, uno sin tilde, un resultado vacío y el enlace al capítulo.
@@ -65,3 +75,23 @@ Varias sesiones comparten la misma computadora. Elegí el nivel según el moment
 ## Configuración recomendada en GitHub
 
 En un repositorio privado del plan gratuito de GitHub, los rulesets no se aplican. Si el repositorio pasa a ser público o a un plan que los admita, creá un ruleset activo para `main` que requiera PR, una rama actualizada y la resolución de conversaciones, y que bloquee el borrado y los force pushes de `main`. No requieras el job `check` del workflow **Verificar el sitio** mientras no haya créditos de GitHub Actions: sin ejecución, bloquearía todas las integraciones. Cuando haya otra persona habilitada para revisar, requerí una aprobación independiente. Si solo hay una cuenta mantenedora, puede revisar y autorizar la integración con la verificación local registrada en el PR. [Reglas disponibles en GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+
+## Etiquetas, hito y puntos de conflicto
+
+Los issues de tareas se crean con la plantilla `tarea.md` (problema, alcance, rutas que toca, `Depende de #n`, verificación y terminado). Las etiquetas y el hito dicen de qué se trata, si se puede tomar y quién espera a quién.
+
+### Etiquetas
+
+- `area:infra`, `area:app`, `area:mesa`, `area:api`, `area:motor`: la parte del producto que toca el issue (herramientas y despliegue, app Expo, mesa y juego en la app, API y autenticación, paquete del motor). Cada issue lleva una.
+- `mvp`: necesario para el MVP de iOS, Android y web. Los issues del MVP también van en el hito **MVP**.
+- `listo`: no tiene dependencias abiertas y lo puede tomar una sesión. Antes de reservar, comprobá que no exista ya la rama `codex/issue-<número>`.
+- `bloqueado`: espera otro issue o una decisión. Nadie lo toma hasta que cambie.
+
+Un issue pasa de `bloqueado` a `listo` cuando todos los `Depende de #n` están cerrados, o sea integrados en `main`, y la decisión pendiente, si la había, quedó registrada en un comentario. Quien integra el último PR del que depende hace el cambio: quita `bloqueado`, agrega `listo` y avisa en el issue. Un issue no puede tener las dos etiquetas a la vez.
+
+### Puntos de conflicto
+
+Son los archivos que muchas sesiones tocan a la vez y que git no sabe fusionar bien.
+
+- **Dependencias.** Los cambios en `package-lock.json`, `app/package.json` y `app.json` van en un PR propio y chico, que se integra antes de la funcionalidad que los necesita. El issue de la funcionalidad declara `Depende de #n` con ese PR. No mezcles una dependencia nueva con otros cambios.
+- **Migraciones de SQL.** Las de `api/migrations/` llevan un número correlativo. Si dos PR eligen el mismo número, el que se integra segundo renombra la suya al siguiente libre y actualiza lo que la referencia antes de integrar: actualizá la rama desde `main`, revisá el último número y volvé a correr las pruebas de la API. No edites una migración ya integrada: agregá una nueva.
