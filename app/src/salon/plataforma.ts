@@ -69,7 +69,8 @@ const navegador = (globalThis as { navigator?: Navegador }).navigator;
 /** La hoja de compartir del sistema. En la web, solo si el navegador la ofrece. */
 export const compartirConElSistema: ((enlace: string) => Promise<"compartida" | "cancelada">) | undefined = !esWeb
   ? async enlace => {
-    const { action } = await Share.share({ title: "El Truco", message: `${textoInvitacion} ${enlace}`, url: enlace });
+    // Solo el mensaje: con `url` además, iOS compartiría el enlace dos veces.
+    const { action } = await Share.share({ title: "El Truco", message: `${textoInvitacion} ${enlace}` });
     return action === Share.dismissedAction ? "cancelada" : "compartida";
   }
   : navegador?.share
