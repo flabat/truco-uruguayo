@@ -66,7 +66,7 @@ test("un error HTTP conserva el estado y el mensaje del servidor", async () => {
   assert.equal(error.status, 404);
   assert.equal(mensajeDe(error), "La mesa no existe.");
   const sinMensaje = crearCliente({ fetch: fetchFalso({ status: 500, cuerpo: {} }).fetch });
-  assert.equal((await sinMensaje.pedir("/api/mesas/x").catch(e => e)).message, "No se pudo abrir la mesa.");
+  assert.equal((await sinMensaje.pedir("/api/mesas/x").catch((e: Error) => e) as Error).message, "No se pudo abrir la mesa.");
   assert.equal(mensajeDe(new TypeError("red")), "No se pudo contactar con el servidor. Revisá tu conexión.");
 });
 

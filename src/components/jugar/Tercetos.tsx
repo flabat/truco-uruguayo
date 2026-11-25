@@ -14,7 +14,7 @@ import type { Eleccion, Mesa, PartidaTercetos } from "./cliente";
 import { GloboDeVoz, PalabraDelPie } from "./Voz";
 import { useVozDelPie, vocesEnReposo } from "@eltruco/cliente/voces.ts";
 import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
-import { usePresentacionTercetos } from "./presentacion-cantos-tercetos";
+import { usePresentacionTercetos } from "./presentacion";
 import "./tercetos.css";
 
 type Props = {

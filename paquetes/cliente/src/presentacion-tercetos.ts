@@ -1,9 +1,8 @@
 import type { LanceTercetos, VistaTercetos } from "@eltruco/motor/mesa-online.ts";
 import { faltaDelGanador } from "@eltruco/motor/reglas-tercetos.ts";
-import type { PartidaTercetos } from "./cliente";
-import { pausaDeVoz, vocesEnAccion } from "@eltruco/cliente/voces.ts";
-
-import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type Paso } from "./secuencia-de-mesa";
+import type { PartidaTercetos } from "./cliente.ts";
+import { pausaDeVoz, vocesEnAccion } from "./voces.ts";
+import { entreCartas, vueltaCompleta, useSecuenciaDeMesa, type EsperaDeNaipes, type Paso } from "./secuencia-de-mesa.ts";
 
 type Registro = Pick<VistaTercetos, "acciones" | "vueltas" | "cobros" | "indiceCobroLateral">;
 
@@ -52,7 +51,7 @@ function hastaLaAccion(actual: PartidaTercetos, lance: LanceTercetos, registro: 
   };
 }
 
-function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercetos,
+export function pasosDeTercetos(anterior: PartidaTercetos | undefined, actual: PartidaTercetos,
     presencioReparto: boolean, pendientes: Paso<PartidaTercetos>[] = []): Paso<PartidaTercetos>[] {
   const misma = anterior?.manoNumero === actual.manoNumero ? anterior : undefined;
   const desdeElReparto = (!anterior && presencioReparto && actual.manoNumero === 1)
@@ -100,6 +99,7 @@ function siguientes(anterior: PartidaTercetos | undefined, actual: PartidaTercet
   return pasos;
 }
 
-export function usePresentacionTercetos(actual: PartidaTercetos, presencioReparto: boolean, reconexion: number) {
-  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, siguientes);
+export function usePresentacionTercetos(actual: PartidaTercetos, presencioReparto: boolean, reconexion: number,
+    esperar?: EsperaDeNaipes) {
+  return useSecuenciaDeMesa(actual, presencioReparto, reconexion, pasosDeTercetos, esperar);
 }
