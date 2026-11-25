@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PasosNuevos } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import type { Nombre } from "@eltruco/cliente/textos.ts";
 import type { Voz } from "@eltruco/cliente/voces.ts";
@@ -42,10 +42,12 @@ export function useColaDePresentacion<T extends Versionada>(actual: T, presencio
   const porPaso = paso !== undefined;
   const ultimo = useRef({ partida, voz, reconexion });
   const opcionesVigentes = useRef(opciones);
-  useEffect(() => {
+  useLayoutEffect(() => {
     opcionesVigentes.current = opciones;
   });
-  useEffect(() => {
+  // Antes de pintar: el lienzo esconde las cartas del reparto y el tanteador vuelve al número
+  // anterior para contarlo, sin que se vea un cuadro con el estado nuevo quieto.
+  useLayoutEffect(() => {
     const previo = ultimo.current;
     ultimo.current = { partida, voz, reconexion };
     // Al reconectar el estado aparece en su lugar, sin sonar el pasado.

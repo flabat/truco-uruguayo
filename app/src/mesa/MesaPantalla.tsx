@@ -7,6 +7,7 @@ import type { CardId } from "@eltruco/motor/cartas.ts";
 import { colores, fuentes } from "../tema.ts";
 import { CapaLienzo } from "./CapaLienzo";
 import type { Atajo } from "./atajos.ts";
+import type { EventosDeMesa } from "./eventos.ts";
 import { transicionDeHoja, type Canto, type HojaCantos as DatosHojaCantos } from "./hoja-cantos.ts";
 import { ManoPropia, type JugarSinGesto } from "./ManoPropia.tsx";
 import { entradaDeGeometria, type MesaVisible } from "./modelo.ts";
@@ -48,6 +49,10 @@ interface Props {
   /** Jugadas rechazadas o que no se pudieron enviar: ver `ManoPropia`. */
   rechazos: number;
   conectada: boolean;
+  /** Lo que anuncia la cola de presentación: el reparto y los cobros se animan al oírlo. */
+  eventos?: EventosDeMesa;
+  /** Modo liviano: `livianoActivo(preferencias, reducirMovimiento)`. */
+  liviano?: boolean;
 }
 
 type HojaAbierta = "cantos" | Pestana | null;
@@ -56,7 +61,7 @@ type HojaAbierta = "cantos" | Pestana | null;
  * La mesa entera. Una sola geometría (`calcularMesa`) ubica el lienzo del fondo, la mano que se
  * toca y las vistas de texto. Con una hoja abierta, la geometría recibe su alto y la mano sube.
  */
-export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada }: Props) {
+export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false }: Props) {
   const ventana = useWindowDimensions();
   const area = useSafeAreaInsets();
   const ancho = Math.max(0, ventana.width - area.left - area.right);
@@ -137,7 +142,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     <GestureHandlerRootView testID="mesa" style={estilos.raiz}>
       {geometria ? (
         <View style={[estilos.area, { left: area.left, top: area.top, width: ancho, height: alto }]}>
-          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={false} />
+          <CapaLienzo geometria={geometria} mesa={mesa} mano={mano} liviano={liviano} eventos={eventos} />
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
@@ -145,7 +150,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
           {/* La tarjeta de fin de mano ya dice quién ganó y por qué. */}
           {conFin ? null : <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />}
           {/* En el escritorio, lo de Más está siempre a la vista en el panel derecho: no hay ☰. */}
-          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada}
+          <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} eventos={eventos} liviano={liviano}
             abrirMas={geometria.paneles ? undefined : () => abrir("mas")} />
           {mesa.propio != null ? (
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}

@@ -1,8 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import type { Geometria, GeometriaAsiento, Rect } from "@eltruco/mesa-geometria";
+import { curvaDeGlobo, movimiento } from "../movimiento.ts";
 import { mesaColores } from "./estilo.ts";
+
+const { duracion } = movimiento(false).globo;
+const curva = Easing.bezier(...curvaDeGlobo);
 
 const separacion = 6;
 const punta = 7;
@@ -87,10 +91,11 @@ export function Globo({ asiento, posicion, limites, testID, etiqueta, children }
 }) {
   const [tamano, cambiarTamano] = useState<{ ancho: number; alto: number } | null>(null);
   const escala = useSharedValue(0);
+  // Se mide antes de saltar: hasta saber su tamaño no sabe de qué lado está el asiento.
   useEffect(() => {
-    if (tamano) escala.value = withTiming(1, { duration: 220 });
+    if (tamano) escala.value = withTiming(1, { duration: duracion, easing: curva });
   }, [escala, tamano !== null]);
-  const animado = useAnimatedStyle(() => ({ opacity: escala.value, transform: [{ scale: 0.6 + 0.4 * escala.value }] }));
+  const animado = useAnimatedStyle(() => ({ transform: [{ scale: escala.value }] }));
 
   const medir = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -106,10 +111,17 @@ export function Globo({ asiento, posicion, limites, testID, etiqueta, children }
     izquierda: { left: -punta, top: lugar.puntaEn - punta / 2, ...triangulo("izquierda") },
     derecha: { right: -punta, top: lugar.puntaEn - punta / 2, ...triangulo("derecha") },
   }[lugar.punta];
+  // Salta desde la punta, que señala al asiento.
+  const origen = lugar && tamano && {
+    arriba: `${lugar.puntaEn}px 0px`,
+    abajo: `${lugar.puntaEn}px ${tamano.alto}px`,
+    izquierda: `0px ${lugar.puntaEn}px`,
+    derecha: `${tamano.ancho}px ${lugar.puntaEn}px`,
+  }[lugar.punta];
 
   return (
     <Animated.View testID={testID} accessibilityLabel={etiqueta} onLayout={medir} pointerEvents="none"
-      style={[estilos.globo, { maxWidth: maxAncho }, lugar ? { left: lugar.left, top: lugar.top } : estilos.oculto, animado]}>
+      style={[estilos.globo, { maxWidth: maxAncho }, lugar ? { left: lugar.left, top: lugar.top, transformOrigin: origen ?? "center" } : estilos.oculto, animado]}>
       {children}
       {estiloPunta ? <View style={[estilos.punta, estiloPunta]} /> : null}
     </Animated.View>

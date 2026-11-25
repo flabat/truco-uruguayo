@@ -19,6 +19,7 @@ import {
   cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeHoja, mesaDeJugador, mesaDeTercetos, recordarCartas,
   type CartasRecordadas,
 } from "./modelo.ts";
+import { crearEventos } from "./eventos.ts";
 import { presencioElReparto } from "./presenciadas.ts";
 import { reportarJugada } from "./reporte.ts";
 import { camposDelReporte } from "./reporte-campos.ts";
@@ -34,7 +35,6 @@ import { HojaVoz } from "./vistas/HojaVoz.tsx";
 // No se importa de entrada.tsx: esa entrada importa este archivo.
 const salirAlSalon = () => router.replace("/");
 const crearMesa = () => router.replace("/crear");
-const sinEventos = () => {};
 // La cola de tercetos queda vacía mientras la mesa no es de tercetos.
 const pasosDeLosTercetos: PasosNuevos<PartidaTercetos | undefined> = (anterior, actual, presencio, pendientes) =>
   actual ? pasosDeTercetos(anterior, actual, presencio, pendientes as Paso<PartidaTercetos>[] | undefined) : [];
@@ -44,7 +44,9 @@ export function MesaEnJuego({ id }: { id: string }) {
   const { estado: sesion, reintentar: recargarSesion } = useSesion();
   const jugadorId = sesion.tipo === "dentro" ? sesion.jugador.id : null;
   const puedeReportar = sesion.tipo === "dentro" && sesion.jugador.puedeReportar === true;
-  const { preferencias, cambiar, reducirMovimiento } = usePreferencias();
+  const { preferencias, cambiar, reducirMovimiento, liviano } = usePreferencias();
+  // La cola anuncia aquí lo que se presenta; el lienzo y el tanteador lo escuchan para animarlo.
+  const [eventos] = useState(crearEventos);
   // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
   const [presencio] = useState(() => presencioElReparto(id));
   const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
@@ -53,7 +55,7 @@ export function MesaEnJuego({ id }: { id: string }) {
   const tercetos: PartidaTercetos | undefined = recibida?.formato === "triples" ? recibida as PartidaTercetos : undefined;
 
   const nombre = useCallback((asiento: number) => mesa?.asientos[asiento]?.nombre ?? "", [mesa]);
-  const opcionesDeCola = { liviano: false, alEvento: sinEventos, miAsiento: mesa?.miAsiento ?? null, nombre };
+  const opcionesDeCola = { liviano, alEvento: eventos.emitir, miAsiento: mesa?.miAsiento ?? null, nombre };
   const colaSimple = useColaDePresentacion(simple, presencio, reconexion, pasosDeVueltas, opcionesDeCola);
   const colaTercetos = useColaDePresentacion(tercetos, presencio, reconexion, pasosDeLosTercetos, opcionesDeCola);
   const { partida, presentando, voz } = tercetos ? colaTercetos : colaSimple;
@@ -152,6 +154,6 @@ export function MesaEnJuego({ id }: { id: string }) {
 
   return (
     <MesaPantalla mesa={mesaVisible} senas={senas} hojaCantos={hojaCantos} acciones={acciones} extra={extra}
-      rechazos={rechazos} conectada={conectada} />
+      rechazos={rechazos} conectada={conectada} eventos={eventos} liviano={liviano} />
   );
 }

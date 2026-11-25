@@ -1,24 +1,29 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { Canvas, RadialGradient, Rect } from "@shopify/react-native-skia";
+import { Easing, useSharedValue, withTiming } from "react-native-reanimated";
 import type { Geometria } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
+import type { EventosDeMesa } from "../eventos.ts";
 import type { MesaVisible } from "../modelo.ts";
+import { movimiento, planDeReparto, type PlanDeReparto } from "../movimiento.ts";
 import type { CartaAnimada } from "../useManoAnimada.ts";
-import { CartaDeMano, CartaDelPano, CartaFija, poseDeMano, type Pose } from "./CartaSkia.tsx";
+import { CartaDeMano, CartaDelPano, CartaFija, CartaRepartida, poseDeMano, type Pose } from "./CartaSkia.tsx";
 
 export interface PropsLienzo {
   geometria: Geometria;
   mesa: MesaVisible;
   mano: Map<CardId, CartaAnimada>;
   liviano: boolean;
+  /** Con el evento `reparto`, las cartas salen del mazo de a una. */
+  eventos?: EventosDeMesa;
 }
 
 const colores = ["#3a614a", "#244936", "#1c392d"];
 const posiciones = [0, 0.67, 1];
 
 /** El paño, el mazo y todas las cartas, dibujados con Skia al fondo de la mesa. Nada de texto. */
-export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) {
+export default function Lienzo({ geometria, mesa, mano, liviano, eventos }: PropsLienzo) {
   const { ancho, alto } = geometria.pantalla;
   const claves = mesa.asientos.flatMap(a => (a.jugada ? [a.asiento + ":" + a.jugada] : []));
 
@@ -37,6 +42,31 @@ export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) 
   useEffect(() => {
     manoAnterior.current = mano;
   }, [mano]);
+
+  // El reparto se planea al oírlo, con las cartas que hay en ese momento. Llega antes de pintar
+  // la mano nueva (ver `useColaDePresentacion`), así nunca se ven las cartas quietas antes de volar.
+  const [reparto, cambiarReparto] = useState<{ numero: number; plan: PlanDeReparto } | null>(null);
+  const vigentes = useRef({ geometria, mesa, liviano });
+  useLayoutEffect(() => {
+    vigentes.current = { geometria, mesa, liviano };
+  });
+  useLayoutEffect(() => {
+    if (!eventos) return;
+    return eventos.escuchar(e => {
+      if (e.tipo !== "reparto") return;
+      const { geometria: g, mesa: m, liviano: l } = vigentes.current;
+      const { reparto: tiempos, vuelo } = movimiento(l);
+      if (!tiempos) return;
+      const cartas = g.asientos.map((a, i) => (i === m.propio ? m.manoPropia.length : a.dorsos.length));
+      const plan = planDeReparto(e.dador, cartas, m.propio, { entreCartas: tiempos.entreCartas, vuelo: vuelo.duracion });
+      cambiarReparto(r => (plan.vuelos.length ? { numero: (r?.numero ?? 0) + 1, plan } : null));
+    });
+  }, [eventos]);
+  useEffect(() => {
+    if (!reparto) return;
+    const listo = setTimeout(() => cambiarReparto(r => (r === reparto ? null : r)), reparto.plan.fin);
+    return () => clearTimeout(listo);
+  }, [reparto]);
 
   const hayGanadora = mesa.asientos.some(a => a.ganadora);
 
@@ -61,7 +91,7 @@ export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) 
       </Rect>
       <CartaFija id={mesa.muestra} carta={geometria.mazo.muestra} sombra="pano" />
       <CartaFija id="reverso" carta={geometria.mazo.mazo} sombra="pano" />
-      {geometria.asientos.flatMap(g => g.dorsos.map((dorso, i) => (
+      {reparto ? null : geometria.asientos.flatMap(g => g.dorsos.map((dorso, i) => (
         <CartaFija key={"dorso-" + g.asiento + "-" + i} id="reverso" carta={dorso} sombra="pano" />
       )))}
       {mesa.asientos.map(a => {
@@ -71,11 +101,39 @@ export default function Lienzo({ geometria, mesa, mano, liviano }: PropsLienzo) 
         return (
           <CartaDelPano key={clave} id={a.jugada} carta={lugar}
             desde={yaEstaban.current.has(clave) ? null : origenDe(a.asiento, a.jugada)}
-            oscura={hayGanadora && !a.ganadora} duracion={liviano ? 0 : undefined} />
+            ganadora={a.ganadora} oscura={hayGanadora && !a.ganadora} liviano={liviano} />
         );
       })}
-      {[...mano].map(([id, carta]) => <CartaDeMano key={"mano-" + id} id={id} carta={carta} encima={false} />)}
-      {[...mano].map(([id, carta]) => <CartaDeMano key={"encima-" + id} id={id} carta={carta} encima />)}
+      {reparto ? (
+        <Reparto key={reparto.numero} plan={reparto.plan} geometria={geometria} mesa={mesa} />
+      ) : (
+        <>
+          {[...mano].map(([id, carta]) => <CartaDeMano key={"mano-" + id} id={id} carta={carta} encima={false} />)}
+          {[...mano].map(([id, carta]) => <CartaDeMano key={"encima-" + id} id={id} carta={carta} encima />)}
+        </>
+      )}
     </Canvas>
   );
+}
+
+/**
+ * Las cartas del reparto, de dorso desde el mazo hasta los dorsos de cada asiento y la mano propia.
+ * Mientras dura, reemplazan a los dorsos quietos y a la mano. Cada destino se lee de la geometría
+ * vigente: si se abre una hoja en medio, las cartas van al lugar nuevo.
+ */
+function Reparto({ plan, geometria, mesa }: { plan: PlanDeReparto; geometria: Geometria; mesa: MesaVisible }) {
+  const reloj = useSharedValue(0);
+  useEffect(() => {
+    reloj.value = withTiming(plan.fin, { duration: plan.fin, easing: Easing.linear });
+  }, [reloj, plan.fin]);
+  return plan.vuelos.map(({ asiento, ronda, sale, gira }) => {
+    const propia = asiento === mesa.propio;
+    const id = propia ? mesa.manoPropia[ronda] : "reverso";
+    const destino = propia ? geometria.mano[ronda] : geometria.asientos[asiento]?.dorsos[ronda];
+    if (!id || !destino) return null;
+    return (
+      <CartaRepartida key={asiento + ":" + ronda} id={id} desde={geometria.mazo.mazo} carta={destino} reloj={reloj}
+        sale={sale} gira={gira} duracion={plan.duracion} />
+    );
+  });
 }

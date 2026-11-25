@@ -7,6 +7,7 @@ import {
   datosDelEspectador, mesaDeEspectador, pasosDelEspectador, seguimientoInicial, seguirConsulta, versionarObservada,
   type MesaObservada,
 } from "./modelo.ts";
+import { crearEventos } from "./eventos.ts";
 import { volverAlSalon } from "./salir.ts";
 import { useColaDePresentacion } from "./useCola.ts";
 import { usePreferencias } from "./usePreferencias.ts";
@@ -26,7 +27,8 @@ const acciones: AccionesMesa = {
 export function Visor({ id }: { id: string }) {
   const ruta = "/api/salon/mesas/" + encodeURIComponent(id);
   const { datos, estado, reintentar } = useConsulta<MesaObservada>(ruta, 2000);
-  const { preferencias, cambiar, reducirMovimiento } = usePreferencias();
+  const { preferencias, cambiar, reducirMovimiento, liviano } = usePreferencias();
+  const [eventos] = useState(crearEventos);
   // La cola compara por identidad: la versión se arma una vez por lectura.
   const recibida = useMemo(() => datos ? versionarObservada(datos) : undefined, [datos]);
   const nombre = useCallback((asiento: number) => datos?.asientos[asiento]?.nombre ?? "", [datos]);
@@ -35,7 +37,7 @@ export function Visor({ id }: { id: string }) {
   const seguimiento = seguirConsulta(guardado, estado, datos?.manoNumero);
   if (seguimiento !== guardado) guardar(seguimiento);
   const { partida, voz } = useColaDePresentacion(recibida, false, seguimiento.reconexion, pasosDelEspectador,
-    { liviano: false, alEvento: nada, miAsiento: null, nombre });
+    { liviano, alEvento: eventos.emitir, miAsiento: null, nombre });
 
   if (estado === "cargando" && !datos) return <Cargando />;
   if (estado === "no-disponible" || estado === "sin-sesion" || !datos || !partida) {
@@ -62,6 +64,6 @@ export function Visor({ id }: { id: string }) {
   };
   return (
     <MesaPantalla mesa={visible} senas={sinSenas} hojaCantos={null} acciones={acciones} extra={extra}
-      rechazos={0} conectada={estado !== "error"} />
+      rechazos={0} conectada={estado !== "error"} eventos={eventos} liviano={liviano} />
   );
 }
