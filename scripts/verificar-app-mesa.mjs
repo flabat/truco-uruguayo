@@ -300,8 +300,10 @@ async function probarParejasConPie() {
       pildoras++;
     }
   };
-  // Una mano entera; si eva nunca fue el pie, se reparte otra hasta ver el globo (hasta 4 manos).
-  for (let mano = 1; mano <= 4; mano++) {
+  // Una mano entera; si eva no fue el pie o su compañero no le hizo señas, se reparte otra hasta ver el
+  // globo. El pie del equipo cambia con el dador (eva lo es en dos de cada cuatro manos) y una mano corta
+  // puede terminar sin señas: hasta 8 manos.
+  for (let mano = 1; mano <= 8; mano++) {
     const fin = await avanzar([eva], id, terminada, { antes: mirar });
     if (globos > 0) break;
     await tocar(eva, id, () => boton(eva, "Repartir otra mano"), fin.version);
