@@ -41,6 +41,8 @@ async function servicio(page) {
   await page.route("**/api/**", async route => {
     const req = route.request();
     const ruta = new URL(req.url()).pathname;
+    // El pie pide la versión del servidor; sin ella queda oculto, como en el sitio estático.
+    if (ruta === "/api/version") return route.fulfill({ status: 404 });
     if (ruta === "/api/jugador") return route.fulfill({ status: estado.sesion ? 200 : 401, json: { id: "ana", nombre: "Ana", salonHabilitado: true } });
     if (req.method() !== "GET" || ![directorio, directorio + "/" + id].includes(ruta)) {
       privadas.push(req.method() + " " + ruta);
@@ -201,6 +203,8 @@ test("con el salón apagado se crea en privado y el enlace de espectador no abre
   await page.route("**/api/**", route => {
     const req = route.request();
     const ruta = new URL(req.url()).pathname;
+    // El pie pide la versión del servidor; sin ella queda oculto, como en el sitio estático.
+    if (ruta === "/api/version") return route.fulfill({ status: 404 });
     solicitudes.push([req.method(), ruta]);
     if (ruta === "/api/jugador") return route.fulfill({ json: jugador });
     if (ruta === "/api/modalidades") return route.fulfill({ json: { modos: ["1v1", "2v2"] } });

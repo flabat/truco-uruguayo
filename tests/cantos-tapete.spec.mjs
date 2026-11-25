@@ -38,6 +38,8 @@ async function abrirMesa(page, reparto, acciones) {
   await page.routeWebSocket("**/vivo", canal => { socket = canal; });
   await page.route("**/api/**", async route => {
     const ruta = new URL(route.request().url()).pathname;
+    // El pie pide la versión del servidor; sin ella queda oculto, como en el sitio estático.
+    if (ruta === "/api/version") return route.fulfill({ status: 404 });
     if (ruta === "/api/jugador") return route.fulfill({ json: { id: "ana", nombre: "Ana", puedeReportar: true } });
     if (ruta.endsWith(id)) return route.fulfill({ json: {
       id, lista: true, modo: asientos.length === 4 ? "2v2" : "1v1", miAsiento: 0, asientos,

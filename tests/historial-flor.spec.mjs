@@ -13,6 +13,8 @@ test("la comparación de flor queda entre su Quiero y el del truco, también al 
   await page.routeWebSocket("**/vivo", () => {});
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
+    // El pie pide la versión del servidor; sin ella queda oculto, como en el sitio estático.
+    if (path === "/api/version") return route.fulfill({ status: 404 });
     if (path === "/api/jugador") {
       return route.fulfill({ json: { id: String(miAsiento), nombre: asientos[miAsiento].nombre } });
     }
