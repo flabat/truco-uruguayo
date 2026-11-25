@@ -19,7 +19,7 @@ const modalidades: Record<Modo, [string, string]> = {
 };
 
 export default function PantallaCrear() {
-  return <RequiereJugador destino={null}>{jugador => <CrearMesa jugador={jugador} />}</RequiereJugador>;
+  return <RequiereJugador destino={{ tipo: "crear" }}>{jugador => <CrearMesa jugador={jugador} />}</RequiereJugador>;
 }
 
 function CrearMesa({ jugador }: { jugador: Jugador }) {
