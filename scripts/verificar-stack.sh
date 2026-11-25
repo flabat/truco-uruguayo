@@ -56,6 +56,7 @@ node scripts/verificar-jugadores.mjs "http://$TRUCO_HOST:$WEB_PORT"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-senas-pie.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-ensayos.mjs
+"${compose[@]}" exec -T api node --input-type=module - al-pie < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-cierres-tercetos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-persistencia-tercetos.mjs
 for formato in duel pairs pairs-private-senas; do

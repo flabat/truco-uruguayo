@@ -8,6 +8,7 @@ const ediciones = new Map<string, EdicionModelo>([
   ["6167e85c55fad708de425839d3ff51ca05eb7af5c5f9ae94252bb5513071d2e2", { nombre: "Ceibo Parejas", publicado: "2026-11-20" }],
   ["d2b2293d4d8c9ee4f067ee74c1d6d5983eb5c8ad3a4ebce57bbdb561f946b78b", { nombre: "Ceibo Parejas con señas", publicado: "2026-11-20" }],
   ["incumbent-online-v1", { nombre: "Clásico v1", publicado: "2026-11-19" }],
+  ["pie-parejas-v2", { nombre: "Parejas con señas al pie 2", publicado: null }],
   ["pie-clasico-v1", { nombre: "Clásico con señas al pie", publicado: null }],
   ["tercetos-basica-v1", { nombre: "Clásico de tercetos v1", publicado: "2026-11-19" }],
   ["bot-v1", { nombre: "Práctica v1", publicado: "2026-11-18" }],
