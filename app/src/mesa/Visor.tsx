@@ -1,10 +1,13 @@
 import "./polyfill.ts";
 import { router } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { useConsulta } from "../salon/useConsulta.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
-import { datosDelEspectador, mesaDeEspectador, pasosDelEspectador, versionarObservada, type MesaObservada } from "./modelo.ts";
+import {
+  datosDelEspectador, mesaDeEspectador, pasosDelEspectador, seguimientoInicial, seguirConsulta, versionarObservada,
+  type MesaObservada,
+} from "./modelo.ts";
 import { useColaDePresentacion } from "./useCola.ts";
 import { usePreferencias } from "./usePreferencias.ts";
 import { HojaMano } from "./vistas/HojaMano.tsx";
@@ -29,7 +32,11 @@ export function Visor({ id }: { id: string }) {
   // La cola compara por identidad: la versión se arma una vez por lectura.
   const recibida = useMemo(() => datos ? versionarObservada(datos) : undefined, [datos]);
   const nombre = useCallback((asiento: number) => datos?.asientos[asiento]?.nombre ?? "", [datos]);
-  const { partida } = useColaDePresentacion(recibida, false, 0, pasosDelEspectador,
+  // Tras un corte, lo que llegó junto aparece al día.
+  const [guardado, guardar] = useState(seguimientoInicial);
+  const seguimiento = seguirConsulta(guardado, estado, datos?.manoNumero);
+  if (seguimiento !== guardado) guardar(seguimiento);
+  const { partida } = useColaDePresentacion(recibida, false, seguimiento.reconexion, pasosDelEspectador,
     { liviano: false, alEvento: nada, miAsiento: null, nombre });
 
   if (estado === "cargando" && !datos) return <Cargando />;

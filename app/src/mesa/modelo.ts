@@ -5,7 +5,7 @@ import { entreCartas, vueltaCompleta, type Paso, type PasosNuevos } from "@eltru
 import { motivoDelCobro } from "@eltruco/cliente/cobros.ts";
 import { descripcionDeIndicacion, descripcionDeJugada, nombrar, tantos, vozDeIndicacion } from "@eltruco/cliente/textos.ts";
 import { estadoDelTurno, palabraDeTercetos, tanteador, tituloDeRespuesta } from "@eltruco/cliente/turno.ts";
-import { vocesEnReposo, type Voz } from "@eltruco/cliente/voces.ts";
+import { pausaDeVoz, vocesEnAccion, vocesEnReposo, type Voz } from "@eltruco/cliente/voces.ts";
 import { vueltaEnMesa } from "@eltruco/cliente/vuelta-en-mesa.ts";
 import type { EntradaMesa } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
@@ -608,8 +608,9 @@ export function versionarObservada(mesa: MesaObservada): ObservadaVersionada {
 type Tablero = MesaObservada["tablero"];
 
 /**
- * Los pasos del espectador: solo las cartas nuevas de la misma mano, una por paso, como las
- * presenta la mesa del jugador. Al cambiar de mano o al entrar, la mesa aparece al día.
+ * Los pasos del espectador: las cartas nuevas de la misma mano, una por paso, y la voz de cada
+ * canto nuevo, como las presenta la mesa del jugador. Al cambiar de mano o al entrar, la mesa
+ * aparece al día.
  */
 export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = (anterior, actual, _presencio, pendientes = []) => {
   if (!actual || !anterior || anterior.manoNumero !== actual.manoNumero) return [];
@@ -625,9 +626,9 @@ export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = 
   const pasos: Paso<ObservadaVersionada | undefined>[] = [...pendientes];
   let cartas = previo.acciones.filter(a => a.tipo === "carta").length;
   for (let i = previo.acciones.length; i < t.acciones.length; i++) {
-    if (t.acciones[i].tipo !== "carta") continue;
-    cartas++;
-    // La vuelta de esta carta y cuántas cartas de ella ya están en el paño.
+    const esCarta = t.acciones[i].tipo === "carta";
+    if (esCarta) cartas++;
+    // La vuelta de la última carta en el paño y cuántas cartas de ella ya están.
     let antes = 0;
     let k = 0;
     while (k < vueltas.length - 1 && antes + vueltas[k].jugadas.length < cartas) antes += vueltas[k++].jugadas.length;
@@ -649,6 +650,13 @@ export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = 
       resultado: null,
     };
     const ultima = i + 1 === t.acciones.length;
+    if (!esCarta) {
+      // El espectador no canta: suenan todas las voces.
+      const voces = vocesEnAccion(t as Parameters<typeof vocesEnAccion>[0], i);
+      const alDia = ultima && !t.resultado && voces.length === 1;
+      for (const voz of voces) pasos.push({ partida: alDia ? actual : enPaso(parcial), voz, espera: pausaDeVoz });
+      continue;
+    }
     const antesDelResultado = completa ? enPaso({
       ...parcial,
       vueltas: t.vueltas.slice(0, k),
@@ -658,6 +666,27 @@ export const pasosDelEspectador: PasosNuevos<ObservadaVersionada | undefined> = 
   }
   return pasos;
 };
+
+/** Lo que el visor recuerda de sus lecturas para saber si hubo un corte. */
+export interface SeguimientoDelVisor {
+  reconexion: number;
+  enError: boolean;
+  manoNumero: number | null;
+}
+
+export const seguimientoInicial: SeguimientoDelVisor = { reconexion: 0, enError: false, manoNumero: null };
+
+/**
+ * Sube `reconexion` cuando vuelven los datos tras un error o cuando se salteó una mano entera:
+ * lo que llegó junto durante el corte aparece al día, sin presentarse. Sin cambios, devuelve el mismo.
+ */
+export function seguirConsulta(s: SeguimientoDelVisor, estado: string, manoNumero: number | undefined): SeguimientoDelVisor {
+  if (estado === "error") return s.enError ? s : { ...s, enError: true };
+  if (manoNumero === undefined || estado !== "listo") return s;
+  const corte = s.enError || (s.manoNumero !== null && manoNumero > s.manoNumero + 1);
+  if (!corte && s.manoNumero === manoNumero) return s;
+  return { reconexion: s.reconexion + (corte ? 1 : 0), enError: false, manoNumero };
+}
 
 /** Las hojas Mano y Tantos del espectador, con los textos del panel del visor web. */
 export function datosDelEspectador(m: MesaObservada, visible: MesaVisible): DatosDeHojas {

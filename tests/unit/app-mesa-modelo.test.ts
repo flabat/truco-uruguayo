@@ -5,9 +5,11 @@ import type { ResumenLance } from "@eltruco/motor/mesa-online.ts";
 import { hojaDeCantos } from "../../app/src/mesa/hoja-cantos.ts";
 import {
   cartasDeLaEspera, datosDeHojas, datosDeTercetos, entradaDeGeometria, entradaDeHoja, historialDeMano, mesaDeJugador,
-  datosDelEspectador, mesaDeEspectador, mesaDeTercetos, pasosDelEspectador, recordarCartas, versionarObservada, type MesaObservada,
+  datosDelEspectador, mesaDeEspectador, mesaDeTercetos, pasosDelEspectador, recordarCartas, seguimientoInicial, seguirConsulta,
+  versionarObservada, type MesaObservada,
 } from "../../app/src/mesa/modelo.ts";
 import { entreCartas, vueltaCompleta } from "@eltruco/cliente/secuencia-de-mesa.ts";
+import { pausaDeVoz } from "@eltruco/cliente/voces.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 const enReposo = { presentando: false };
@@ -464,7 +466,7 @@ test("espectador: el resumen dice quién ganó la mano o la partida", () => {
   assert.deepEqual(mesaDeEspectador(terminada).estado, { titulo: "Partida terminada", indicacion: "Ganó el equipo 1." });
 });
 
-test("espectador: solo se presentan las cartas nuevas de la misma mano", () => {
+test("espectador: se presentan las jugadas nuevas de la misma mano, el truco con su voz", () => {
   const antes = versionarObservada(observadaDe({
     vueltaActual: { salida: 1, jugadas: [vueltaDeDos.jugadas[0]] }, acciones: [accionesDeDos[0]],
   }));
@@ -474,8 +476,10 @@ test("espectador: solo se presentan las cartas nuevas de la misma mano", () => {
     acciones: [...accionesDeDos, { tipo: "truco", asiento: 3 }, { tipo: "carta", ...ultima }],
   }));
   const pasos = pasosDelEspectador(antes, ahora, false);
-  assert.equal(pasos.length, 2);
-  const [primero, segundo] = pasos;
+  assert.equal(pasos.length, 3);
+  const [primero, truco, segundo] = pasos;
+  assert.deepEqual(truco.voz, { asiento: 3, texto: "Truco", indice: 0 });
+  assert.equal(truco.partida!.mesa.tablero.valorTruco, 2);
   assert.equal(primero.espera, entreCartas);
   assert.deepEqual(primero.partida!.mesa.tablero.vueltaActual?.jugadas, vueltaDeDos.jugadas);
   assert.equal(primero.partida!.mesa.tablero.acciones.length, 2);
@@ -522,4 +526,37 @@ test("datosDelEspectador: el historial con la frase del pie, las vueltas y los c
   assert.deepEqual(datos.cobrados, {
     titulo: "Tantos cobrados", filas: [{ equipo: "Equipo 2 · 2 tantos", texto: "por envido (Diego con 31)" }],
   });
+});
+
+test("espectador: una carta y un envido que llegan juntos dan dos pasos, el segundo con la voz del canto", () => {
+  const antes = versionarObservada(observadaDe({
+    vueltaActual: { salida: 1, jugadas: [vueltaDeDos.jugadas[0]] }, acciones: [accionesDeDos[0]],
+  }));
+  const ahora = versionarObservada(observadaDe({
+    vueltaActual: vueltaDeDos, acciones: [...accionesDeDos, { tipo: "envido", asiento: 3 }],
+  }));
+  const [carta, canto, ...resto] = pasosDelEspectador(antes, ahora, false);
+  assert.equal(resto.length, 0);
+  assert.equal(carta.espera, entreCartas);
+  assert.equal(carta.voz, undefined);
+  assert.equal(carta.partida!.mesa.tablero.acciones.length, 2);
+  assert.equal(canto.espera, pausaDeVoz);
+  assert.deepEqual(canto.voz, { asiento: 3, texto: "Envido", indice: 0 });
+  assert.equal(canto.partida, ahora);
+});
+
+test("seguirConsulta: tras un corte o una mano salteada, la reconexión sube y la mesa aparece al día", () => {
+  let s = seguimientoInicial;
+  s = seguirConsulta(s, "listo", 3);
+  assert.equal(s.reconexion, 0);
+  assert.equal(seguirConsulta(s, "listo", 3), s);
+  assert.equal(seguirConsulta(s, "listo", 4).reconexion, 0);
+  const cortada = seguirConsulta(s, "error", 3);
+  assert.equal(cortada.reconexion, 0);
+  assert.equal(seguirConsulta(cortada, "error", 3), cortada);
+  const vuelta = seguirConsulta(cortada, "listo", 3);
+  assert.equal(vuelta.reconexion, 1);
+  assert.equal(seguirConsulta(vuelta, "listo", 3), vuelta);
+  assert.equal(seguirConsulta(vuelta, "listo", 5).reconexion, 2);
+  assert.equal(seguirConsulta(seguimientoInicial, "cargando", undefined), seguimientoInicial);
 });
