@@ -16,6 +16,9 @@ function numero(texto: string | null, minimo: number, maximo: number) {
   return Number(texto);
 }
 
+const pideJson = (req: IncomingMessage) =>
+  req.headers.accept?.split(",").some(tipo => tipo.split(";")[0].trim().toLowerCase() === "application/json") === true;
+
 async function leerCursor(req: IncomingMessage): Promise<CursorReporte> {
   if (req.headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/x-www-form-urlencoded") {
     throw new ErrorPeticion(415, "Se esperaba el formulario de la mesa.");
@@ -86,7 +89,9 @@ export async function atenderReporte(pool: Pool, web: URL, mesa: string, req: In
       await db.query("BEGIN");
       const url = await guardar(db, web, jugador.id, mesa, cursor);
       await db.query("COMMIT");
-      res.writeHead(303, { Location: url }).end();
+      // La app pide el enlace en JSON: así nunca sigue una redirección a GitHub con su sesión.
+      if (pideJson(req)) res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" }).end(JSON.stringify({ enlace: url }));
+      else res.writeHead(303, { Location: url }).end();
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;

@@ -41,3 +41,6 @@ example
 # generated native folders
 /ios
 /android
+
+# CanvasKit, copiado de node_modules al exportar
+/public/canvaskit.wasm

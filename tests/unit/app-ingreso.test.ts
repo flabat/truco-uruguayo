@@ -133,10 +133,12 @@ const ana = { id: "11111111-2222-3333-4444-555555555555", nombre: "Ana" };
 const encabezados = (p: Pedido) => new Headers(p.init.headers);
 
 test("el cliente manda la sesión guardada como Bearer", async () => {
-  const { pedidos, pedir } = fetchFalso({ "GET /api/jugador": () => json(200, { ...ana, salonHabilitado: true }) });
+  const { pedidos, pedir } = fetchFalso({
+    "GET /api/jugador": () => json(200, { ...ana, salonHabilitado: true, puedeReportar: true, otro: 1 }),
+  });
   const cliente = crearCliente({ base: "https://eltru.co", sesion: () => "abc_-1", fetch: pedir });
-  // El salón de la app necesita saber si el salón está habilitado.
-  assert.deepEqual(await cliente.jugador(), { ...ana, salonHabilitado: true });
+  // El salón de la app necesita saber si el salón está habilitado, y la hoja Mano si puede reportar.
+  assert.deepEqual(await cliente.jugador(), { ...ana, salonHabilitado: true, puedeReportar: true });
   assert.equal(pedidos[0].url, "https://eltru.co/api/jugador");
   assert.equal(encabezados(pedidos[0]).get("authorization"), "Bearer abc_-1");
 });
