@@ -121,7 +121,7 @@ test("una posición inexistente no genera un enlace ni consulta otro reparto", a
 test("dos indicaciones antes de la misma carta conservan el orden y la secuencia que vio el reportero", async () => {
   const fila = { ...mano, modo: "3v3", acciones: [], indicaciones: [
     { emisor: 4, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 },
-    { emisor: 4, destinatario: 2, frase: "juga", vuelta: 1, indiceAccion: 0 },
+    { emisor: 4, destinatario: 2, frase: "juga", carta: "beso", vuelta: 1, indiceAccion: 0 },
   ] };
   async function pantalla(cantidad: number) {
     return prepararReporte(lectura(fila).db, mesa, 1, { ...cursor, posicion: 0, indicaciones: cantidad }, web, reporte);
@@ -131,7 +131,7 @@ test("dos indicaciones antes de la misma carta conservan el orden y la secuencia
     assert.equal(borrador?.secuencia, 8 + cantidad);
     const texto = new URL(borrador!.url).searchParams.get("body")!;
     assert.equal(texto.includes("A4 le dijo a A0 «Vení»"), cantidad >= 1);
-    assert.equal(texto.includes("A4 le dijo a A2 «Jugá»"), cantidad === 2);
+    assert.equal(texto.includes("A4 le dijo a A2 «Jugá el 4 de la muestra»"), cantidad === 2);
   }
   assert.equal(await pantalla(3), null);
 });

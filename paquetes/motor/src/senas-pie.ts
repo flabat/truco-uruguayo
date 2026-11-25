@@ -28,15 +28,41 @@ const gestoPieza: Record<RangoPieza, GestoPie> = {
 
 export const textoFrasePie = { veni: "Vení", juga: "Jugá", "voy-a-vos": "Voy a vos" } as const;
 export type FrasePie = keyof typeof textoFrasePie;
+/** Los gestos que nombran una carta: todos menos «Solo bajas». */
+export type CartaPedida = Exclude<GestoPie, "ojos-cerrados">;
 export interface IndicacionPie {
   emisor: Asiento;
   destinatario: Asiento;
   frase: FrasePie;
+  /** Sólo con «Jugá»: la carta que el pie conoce por las señas del destinatario. */
+  carta?: CartaPedida;
   /** Vuelta de la mano, empezando en 1. */
   vuelta: number;
   /** Cuántas acciones de juego se habían confirmado al hablar. Los empates conservan el orden de registro. */
   indiceAccion: number;
 }
+/** «2 de la muestra», «as bravo», «tres»: cómo nombra el pie una carta. Con la muestra, «2 de espadas». */
+export function nombreDeCartaPedida(carta: CartaPedida, muestra?: CardId): string {
+  const texto = catalogoGestosPie[carta].significado;
+  const nombre = texto[0].toLocaleLowerCase("es-UY") + texto.slice(1);
+  return muestra ? nombre.replace("de la muestra", "de " + muestra.split("-")[0]) : nombre;
+}
+
+/** «Jugá», «Jugá el 2 de la muestra», «Vení». */
+export function textoDeIndicacion(i: Pick<IndicacionPie, "frase" | "carta">, muestra?: CardId): string {
+  const frase = textoFrasePie[i.frase];
+  return i.carta ? frase + " el " + nombreDeCartaPedida(i.carta, muestra) : frase;
+}
+
+/** Las cartas de una mano que corresponden a la carta pedida. */
+export function cartasPedidas(cartas: readonly CardId[], carta: CartaPedida, muestra: CardId): CardId[] {
+  return cartas.filter(c => gestoDeCarta(c, muestra) === carta);
+}
+
+function esCartaPedida(valor: unknown): valor is CartaPedida {
+  return typeof valor === "string" && valor !== "ojos-cerrados" && Object.hasOwn(catalogoGestosPie, valor);
+}
+
 export type DestinoPie = Pick<IndicacionPie, "destinatario" | "vuelta">;
 export interface VistaPie {
   pie: Asiento;
@@ -48,7 +74,8 @@ export interface VistaPie {
   opciones: { destinatario: Asiento; frases: FrasePie[] }[];
 }
 
-function gestoDeCarta(carta: CardId, muestra: CardId): GestoPie | undefined {
+/** El gesto que corresponde a una carta, o undefined si es baja. */
+export function gestoDeCarta(carta: CardId, muestra: CardId): GestoPie | undefined {
   const efectiva = pieza(carta, muestra);
   if (efectiva !== null) return gestoPieza[efectiva];
   if (carta === "espadas-01" || carta === "bastos-01") return "labios-derecha";
@@ -97,12 +124,18 @@ export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, atendidos: r
   return { pie, vuelta, grupos, opciones };
 }
 
-/** El árbitro fija emisor e índice. La API proporciona estado e indicaciones de la misma mano bajo el bloqueo de mesa. */
+/**
+ * El árbitro fija emisor e índice. La API proporciona estado e indicaciones de la misma mano bajo el bloqueo de mesa.
+ * `carta` sólo acompaña a «Jugá» y tiene que ser un gesto que el destinatario le mostró al pie en esta vuelta.
+ */
 export function crearIndicacionPie(estado: EstadoOnline, asiento: Asiento, destinatario: unknown, frase: unknown,
-  vuelta: unknown, atendidos: readonly DestinoPie[]): IndicacionPie | undefined {
+  vuelta: unknown, atendidos: readonly DestinoPie[], carta?: unknown): IndicacionPie | undefined {
   if (!esAsientoOnline(destinatario) || typeof frase !== "string" || !Object.hasOwn(textoFrasePie, frase)) return undefined;
   const vista = vistaDelPie(estado, asiento, atendidos);
   const valida = frase as FrasePie;
   if (!vista || vista.vuelta !== vuelta || !vista.opciones.some(o => o.destinatario === destinatario && o.frases.includes(valida))) return undefined;
-  return { emisor: asiento, destinatario, frase: valida, vuelta: vista.vuelta, indiceAccion: estado.acciones.length };
+  if (carta !== undefined && (valida !== "juga" || !esCartaPedida(carta)
+    || !vista.grupos.some(g => g.emisor === destinatario && g.gestos.includes(carta)))) return undefined;
+  return { emisor: asiento, destinatario, frase: valida, ...(carta !== undefined && { carta: carta as CartaPedida }),
+    vuelta: vista.vuelta, indiceAccion: estado.acciones.length };
 }

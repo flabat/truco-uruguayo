@@ -19,13 +19,15 @@ export interface PropsLienzo {
   reparto: RepartoEnCurso | null;
   /** Terminó el chico: las cartas del paño se juntan al centro (en liviano quedan en su lugar). */
   juntar?: boolean;
+  /** Las cartas de la mano que nombró el pie: llevan el halo dorado hasta que se tira una. */
+  resaltadas?: readonly CardId[];
 }
 
 const colores = ["#3a614a", "#244936", "#1c392d"];
 const posiciones = [0, 0.67, 1];
 
 /** El paño, el mazo y todas las cartas, dibujados con Skia al fondo de la mesa. Nada de texto. */
-export default function Lienzo({ geometria, mesa, mano, liviano, reparto, juntar = false }: PropsLienzo) {
+export default function Lienzo({ geometria, mesa, mano, liviano, reparto, juntar = false, resaltadas = [] }: PropsLienzo) {
   const { ancho, alto } = geometria.pantalla;
   const claves = mesa.asientos.flatMap(a => (a.jugada ? [a.asiento + ":" + a.jugada] : []));
 
@@ -86,7 +88,9 @@ export default function Lienzo({ geometria, mesa, mano, liviano, reparto, juntar
         <Reparto key={reparto.numero} plan={reparto.plan} geometria={geometria} mesa={mesa} />
       ) : (
         <>
-          {[...mano].map(([id, carta]) => <CartaDeMano key={"mano-" + id} id={id} carta={carta} encima={false} />)}
+          {[...mano].map(([id, carta]) => (
+            <CartaDeMano key={"mano-" + id} id={id} carta={carta} encima={false} resaltada={resaltadas.includes(id)} />
+          ))}
           {[...mano].map(([id, carta]) => <CartaDeMano key={"encima-" + id} id={id} carta={carta} encima />)}
         </>
       )}

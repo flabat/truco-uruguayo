@@ -1,6 +1,6 @@
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import type { VistaOnline } from "@eltruco/motor/mesa-online.ts";
-import { textoFrasePie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { textoDeIndicacion, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { canto } from "./cantos.ts";
 import { cartasPorId } from "./cartas.ts";
 
@@ -17,9 +17,10 @@ export function descripcionDeJugada(accion: VistaOnline["acciones"][number], nom
 }
 
 export function vozDeIndicacion(i: IndicacionPie, nombre: Nombre) {
-  return nombre(i.destinatario) + ", " + textoFrasePie[i.frase].toLocaleLowerCase("es-UY");
+  const texto = textoDeIndicacion(i);
+  return nombre(i.destinatario) + ", " + texto[0].toLocaleLowerCase("es-UY") + texto.slice(1);
 }
 
 export function descripcionDeIndicacion(i: IndicacionPie, nombre: Nombre) {
-  return nombre(i.emisor) + " le dijo a " + nombre(i.destinatario) + " «" + textoFrasePie[i.frase] + "».";
+  return nombre(i.emisor) + " le dijo a " + nombre(i.destinatario) + " «" + textoDeIndicacion(i) + "».";
 }

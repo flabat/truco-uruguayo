@@ -34,7 +34,7 @@ interface Comando {
   version: number;
   operacion: Operacion;
   accion?: Confirmada;
-  indicacion?: { destinatario: number; frase: string; vuelta: number };
+  indicacion?: { destinatario: number; frase: string; vuelta: number; carta?: string };
 }
 
 function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: Asiento, formato: FormatoMesa, alPie: boolean): Comando {
@@ -46,13 +46,15 @@ function validar(operacion: Operacion, datos: Record<string, unknown>, asiento: 
   if (operacion === "indicaciones") {
     const dato = datos.indicacion;
     if (!alPie || Object.keys(datos).length !== 3 || !dato || typeof dato !== "object" || Array.isArray(dato)
-      || Object.keys(dato).length !== 3
+      || Object.keys(dato).length !== ("carta" in dato ? 4 : 3)
+      || ("carta" in dato && (typeof dato.carta !== "string" || dato.frase !== "juga"))
       || !("destinatario" in dato) || typeof dato.destinatario !== "number" || !Number.isInteger(dato.destinatario)
       || !("vuelta" in dato) || typeof dato.vuelta !== "number" || !Number.isInteger(dato.vuelta)
       || !("frase" in dato) || typeof dato.frase !== "string" || (dato.frase !== "sin-indicacion" && !Object.hasOwn(textoFrasePie, dato.frase))) {
       throw new ErrorPeticion(400, "Se esperaba una indicación del pie para un compañero de esta vuelta.");
     }
-    comando.indicacion = { destinatario: dato.destinatario, frase: dato.frase, vuelta: dato.vuelta };
+    comando.indicacion = { destinatario: dato.destinatario, frase: dato.frase, vuelta: dato.vuelta,
+      ...("carta" in dato && typeof dato.carta === "string" && { carta: dato.carta }) };
     return comando;
   }
   if (operacion === "siguiente") {
@@ -284,7 +286,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const version = fila.version + 1;
     let partida;
     if (comando.operacion === "indicaciones") {
-      const { destinatario, frase, vuelta } = comando.indicacion!;
+      const { destinatario, frase, vuelta, carta } = comando.indicacion!;
       if (pase) {
         const pie = vistaPiePrivada(mano, asiento, humanos);
         if (pie?.esperando === undefined || pie.esperando !== destinatario || pie.vuelta !== vuelta) {
@@ -295,7 +297,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
           [id, fila.numero, JSON.stringify([permiso])]);
         mano.pasesPie = [...(mano.pasesPie ?? []), permiso];
       } else {
-        const palabra = crearIndicacionPie(estado, asiento, destinatario, frase, vuelta, destinosAtendidos(mano));
+        const palabra = crearIndicacionPie(estado, asiento, destinatario, frase, vuelta, destinosAtendidos(mano), carta);
         if (!palabra) {
           const enVuelta = estado.mano.vueltas[vuelta - 1] ?? (vuelta === estado.mano.vueltas.length + 1 ? estado.mano.vueltaActual : null);
           if (enVuelta?.jugadas.some(j => j.asiento === destinatario)) throw new ErrorPeticion(409, "El compañero ya jugó su carta.");

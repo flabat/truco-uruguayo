@@ -71,7 +71,8 @@ export async function continuarAlPie(db: PoolClient, mesa: string, numero: numbe
       const pie = vistaDelPie(estado, emisor, indicaciones);
       if (pie?.pie !== emisor) continue;
       for (const propuesta of elegirIndicacionesPie(vistaOnline(estado, emisor), pie)) {
-        const palabra = crearIndicacionPie(estado, emisor, propuesta.destinatario, propuesta.frase, pie.vuelta, indicaciones);
+        const palabra = crearIndicacionPie(estado, emisor, propuesta.destinatario, propuesta.frase, pie.vuelta, indicaciones,
+          propuesta.carta);
         if (!palabra) throw new Error("La computadora propuso una indicación fuera de su oportunidad.");
         await guardarPalabraPie(db, mesa, numero, palabra);
         indicaciones.push(palabra);

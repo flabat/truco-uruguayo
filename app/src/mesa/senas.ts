@@ -3,7 +3,9 @@ import { canto } from "@eltruco/cliente/cantos.ts";
 import { cartasPorId } from "@eltruco/cliente/cartas.ts";
 import type { Mesa, Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import type { CardId } from "@eltruco/motor/cartas.ts";
-import { catalogoGestosPie, versionSenasPie, type FrasePie, type GestoPie } from "@eltruco/motor/senas-pie.ts";
+import {
+  cartasPedidas, catalogoGestosPie, textoDeIndicacion, versionSenasPie, type CartaPedida, type FrasePie, type GestoPie,
+} from "@eltruco/motor/senas-pie.ts";
 import { canSeeSignal, signals, signalVersionFor } from "../../../training/contracts/index.ts";
 import juego from "../../../src/data/juego.json" with { type: "json" };
 
@@ -12,9 +14,17 @@ export type SenasEnMesa =
   | {
       tipo: "pie"; vuelta: number;
       globos: { emisor: number; nombre: string; gestos: { gesto: GestoPie; significado: string }[] }[];
-      frases: { destinatario: number; nombre: string; frases: FrasePie[]; esperando: boolean }[];
+      frases: {
+        destinatario: number; nombre: string; frases: FrasePie[]; esperando: boolean;
+        /** «Jugá» con cada carta que el compañero le mostró al pie. */
+        pedidas: { carta: CartaPedida; texto: string }[];
+      }[];
     }
-  | { tipo: "companero"; pie: number; texto: string; gestos: GestoPie[] }
+  | {
+      tipo: "companero"; pie: number; texto: string; gestos: GestoPie[];
+      /** Lo que el pie le pidió en esta vuelta, mientras no tiró: el texto y las cartas propias que nombró. */
+      pedido?: { texto: string; cartas: CardId[] };
+    }
   | { tipo: "silencio"; recibidas: { nombre: string; sena: string; jugada: string }[] };
 
 // Los textos del menú son las filas de la tabla publicada, en el orden de `signals`.
@@ -73,15 +83,38 @@ export function senasEnMesa({ mesa, partida, espectador }: {
       })),
       frases: pie.opciones.filter(o => delEquipo(o.destinatario)).map(({ destinatario, frases }) => ({
         destinatario, nombre: nombre(destinatario), frases, esperando: pie.esperando === destinatario,
+        pedidas: !frases.includes("juga") ? [] : (pie.grupos.find(g => g.emisor === destinatario)?.gestos ?? [])
+          .filter((g): g is CartaPedida => g !== "ojos-cerrados")
+          .map(carta => ({ carta, texto: textoDeIndicacion({ frase: "juga", carta }, muestra) })),
       })),
     };
   }
   const grupo = pie.grupos.find(g => g.emisor === mesa.miAsiento);
   if (!grupo) return ninguna;
+  const pedido = pedidoDelPie(partida, pie.pie, pie.vuelta, mesa.miAsiento, nombre);
   return {
     tipo: "companero",
     pie: pie.pie,
     texto: `Le mostraste a ${nombre(pie.pie)}: ${grupo.gestos.map(g => significado(g, muestra)).join(" · ")}`,
     gestos: grupo.gestos,
+    ...(pedido && { pedido }),
   };
+}
+
+/**
+ * La frase del pie para este asiento en la vuelta en curso, hasta que tire su carta. Si le pidió «Vení»
+ * y otro compañero recibió la carta fuerte, también dice quién juega: el plan del equipo entero.
+ */
+function pedidoDelPie(partida: Partida | PartidaTercetos, pie: number, vuelta: number, propio: number,
+    nombre: (asiento: number) => string): { texto: string; cartas: CardId[] } | undefined {
+  const { vista } = partida;
+  if (vista.vueltaActual?.jugadas.some(j => j.asiento === propio)) return undefined;
+  const dichas = (partida.indicaciones ?? []).filter(i => i.emisor === pie && i.vuelta === vuelta);
+  const propia = dichas.find(i => i.destinatario === propio);
+  if (!propia) return undefined;
+  const juega = propia.frase === "veni" ? dichas.find(i => i.frase !== "veni" && i.destinatario !== propio) : undefined;
+  const texto = nombre(pie) + ": " + textoDeIndicacion(propia, vista.muestra)
+    + (juega ? " · juega " + nombre(juega.destinatario) : "");
+  const cartas = propia.carta && "cartas" in vista ? cartasPedidas(vista.cartas, propia.carta, vista.muestra) : [];
+  return { texto, cartas };
 }
