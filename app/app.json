@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "El Truco",
+    "slug": "el-truco",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "eltruco",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#faf8f0",
+    "ios": {
+      "bundleIdentifier": "co.eltru.app",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "co.eltru.app",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "name": "El Truco",
+      "lang": "es-UY",
+      "backgroundColor": "#faf8f0",
+      "themeColor": "#233d31"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#faf8f0"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "baseUrl": "/app"
+    }
+  }
+}

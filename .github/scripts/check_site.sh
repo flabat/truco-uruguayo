@@ -3,6 +3,7 @@ set -euo pipefail
 
 npm run cartas:verificar
 npm run test:unit
+npm run app:tipos
 python3 -B -m unittest discover -s tests/despliegue
 
 npm run build
