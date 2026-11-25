@@ -35,3 +35,24 @@ test("de la respuesta guardada por Keycloak se toma el refresh token de Apple", 
   assert.equal(refreshDeRespuesta(JSON.stringify({ access_token: "a" })), null);
   assert.equal(refreshDeRespuesta("no es un token"), null);
 });
+
+test("si Keycloak no responde, guardar el token de Apple no demora el ingreso más del plazo", async () => {
+  const { createServer } = await import("node:http");
+  const { crearCapturaApple } = await import("../../api/bajas.ts");
+  const colgado = createServer(() => {}).listen(0, "127.0.0.1");
+  await new Promise(r => colgado.once("listening", r));
+  const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const env = { APPLE_TOKENS_KEY: clave.toString("base64"), APPLE_CLIENT_ID: "c", APPLE_TEAM_ID: "t", APPLE_KEY_ID: "k",
+    APPLE_PRIVATE_KEY: privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
+    OIDC_BACKEND: `http://127.0.0.1:${(colgado.address() as { port: number }).port}/realms/mesa` };
+  const capturar = crearCapturaApple(env, {} as never, 200)!;
+  const inicio = Date.now();
+  const resultado = await Promise.race([
+    capturar("jugador", "acceso").then(() => "terminó", () => "falló"),
+    new Promise(r => setTimeout(() => r("colgado"), 2000)),
+  ]);
+  colgado.closeAllConnections();
+  colgado.close();
+  assert.notEqual(resultado, "colgado");
+  assert.ok(Date.now() - inicio < 1500);
+});

@@ -209,6 +209,27 @@ try {
     { method: "POST", headers: { cookie: c.cookie, origin: web.origin } });
   assert.equal(entra.status, 200);
 
+  // El retiro lee el estado de la mesa después de esperar el bloqueo: si mientras espera la mesa cambió, decide con lo nuevo.
+  {
+    const f = await jugador("f"), g = await jugador("g");
+    const carrera = await mesa("1v1", f, [f, g]);
+    const otro = await pool.connect();
+    try {
+      await otro.query("BEGIN");
+      await otro.query("SELECT id FROM juego.mesas WHERE id=$1 FOR UPDATE", [carrera.id]);
+      const retiro = retirar(f);
+      await new Promise(r => setTimeout(r, 300));
+      await otro.query(`INSERT INTO juego.eventos_chico (mesa,mano,posicion,secuencia,build,evento)
+        VALUES ($1,1,1,1,'prueba','{"tipo":"cierre"}')`, [carrera.id]);
+      await otro.query("COMMIT");
+      assert.deepEqual(await retiro, [], "una mesa que se cerró durante la espera no se toca");
+    } finally { otro.release(); }
+    const { rows: [estado] } = await pool.query(`SELECT m.cancelada, (SELECT count(*) FROM juego.asientos a WHERE a.mesa=m.id AND a.jugador=$2) AS asiento
+      FROM juego.mesas m WHERE m.id=$1`, [carrera.id, f.id]);
+    assert.equal(estado.cancelada, null);
+    assert.equal(Number(estado.asiento), 1);
+  }
+
   // Una mesa terminada no cambia.
   const d = await jugador("d"), e = await jugador("e");
   const terminada = await mesa("1v1", d, [d, null]);

@@ -92,7 +92,7 @@ Para borrar usuarios, la API usa el cliente de servicio `truco-api`, que solo pu
    unset KC_BOOTSTRAP_ADMIN_PASSWORD
    ```
 
-El comando es idempotente: volvé a ejecutarlo si cambiás el secreto. Keycloak 26.8 exige el alcance `kc-admin-api` para usar la API de administración, y el comando lo asigna. Sin `KEYCLOAK_API_CLIENT_SECRET`, la API registra una advertencia al arrancar y las bajas vencidas quedan pendientes hasta configurarlo. Localmente, `npm run auth:api` hace lo mismo sobre `mesa-local`.
+El comando es idempotente: volvé a ejecutarlo si cambiás el secreto. Keycloak 26.8 exige el alcance `kc-admin-api` para usar la API de administración, y el comando lo asigna. En producción `KEYCLOAK_API_CLIENT_SECRET` es obligatorio: sin esa variable, Compose no levanta la API, para que ninguna baja quede pendiente sin aviso. Si falta registrar el cliente, la API lo informa en cada pasada de la tarea. Localmente, `npm run auth:api` hace lo mismo sobre `mesa-local`.
 
 ## Copias y recuperación
 

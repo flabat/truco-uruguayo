@@ -8,7 +8,7 @@ import { url } from "../lib/guide";
 
   <section class="rule-block">
     <h2>Tu cuenta</h2>
-    <p>Si entrás con Google, Discord o Apple, recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio. Apple puede compartir un correo de reenvío en lugar del tuyo. Si ingresás con Apple, guardamos cifrado el token que Apple entrega, solo para revocarlo cuando elimines tu cuenta.</p>
+    <p>Si entrás con Google, Discord o Apple, recibimos los datos de identidad que ese servicio comparte para iniciar sesión. Ingresás la contraseña de tu proveedor en ese servicio. Apple puede compartir un correo de reenvío en lugar del tuyo. Si ingresás con Apple, guardamos cifrado el token que Apple entrega, solo para revocarlo cuando elimines tu cuenta. Keycloak también conserva la respuesta de Apple con ese token hasta que se borra tu cuenta de ingreso.</p>
     <p>El ingreso con Facebook está pausado. Si lo usaste, Facebook pudo compartir con El Truco tu identificador para esta aplicación, tu nombre y el correo que autorizaste.</p>
     <p>Keycloak, el sistema de cuentas de El Truco, gestiona el acceso y la vinculación con el proveedor. Si te registrás directamente con un correo y una contraseña, también gestiona su verificación y recuperación. El juego guarda tu identificador de jugador, la referencia a tu cuenta y el nombre que se muestra a los demás participantes de tu mesa.</p>
   </section>

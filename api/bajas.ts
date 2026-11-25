@@ -170,12 +170,13 @@ export function crearServiciosBaja(env: NodeJS.ProcessEnv, pool: Pool): Servicio
  * Al ingresar con Apple, guarda cifrado el refresh token que Keycloak recibió de Apple, para poder revocarlo
  * si el jugador elimina su cuenta. Keycloak solo lo entrega al propio usuario, con su token de acceso.
  */
-export function crearCapturaApple(env: NodeJS.ProcessEnv, pool: Pool): ((jugador: string, acceso: string) => Promise<void>) | null {
+export function crearCapturaApple(env: NodeJS.ProcessEnv, pool: Pool, esperaMs = 3000): ((jugador: string, acceso: string) => Promise<void>) | null {
   const clave = claveTokens(env);
   if (!clave || !configApple(env) || !env.OIDC_BACKEND) return null;
   const url = env.OIDC_BACKEND.replace(/\/$/, "") + "/broker/apple/token";
   return async (jugador, acceso) => {
-    const respuesta = await fetch(url, { headers: { authorization: "Bearer " + acceso } });
+    // Corre en cada ingreso: un Keycloak lento no puede demorar el ingreso más de este plazo.
+    const respuesta = await fetch(url, { headers: { authorization: "Bearer " + acceso }, signal: AbortSignal.timeout(esperaMs) });
     if (!respuesta.ok) return;
     const token = refreshDeRespuesta(await respuesta.text());
     if (!token) return;

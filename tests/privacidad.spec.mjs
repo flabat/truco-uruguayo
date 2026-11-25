@@ -16,6 +16,7 @@ test("la política de privacidad incluye Apple, la eliminación desde el juego y
   const contenido = page.locator("main");
   await expect(contenido).toContainText("Apple");
   await expect(contenido).toContainText("revocamos");
+  await expect(contenido).toContainText("Keycloak también conserva");
   await expect(contenido).toContainText("Eliminar mi cuenta");
   await expect(contenido).toContainText("la app");
   await expect(contenido).toContainText("30 días");
