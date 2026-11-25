@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, View, type LayoutChangeEvent } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import type { GeometriaAsiento, Rect } from "@eltruco/mesa-geometria";
+import type { Geometria, GeometriaAsiento, Rect } from "@eltruco/mesa-geometria";
 import { mesaColores } from "./estilo.ts";
 
 const separacion = 6;
@@ -23,16 +23,38 @@ function cajaDe(a: GeometriaAsiento): Rect {
 
 const limitar = (v: number, min: number, max: number) => Math.max(min, Math.min(v, max));
 
+/** La caja que se ve del mazo cruzado y la muestra (el mazo está girado 90°). */
+export function cajasDelMazo({ mazo }: Geometria): Rect[] {
+  const m = mazo.mazo;
+  const girado = Math.abs(m.rotacion % 180) === 90;
+  const cx = m.x + m.ancho / 2;
+  const cy = m.y + m.alto / 2;
+  const [ancho, alto] = girado ? [m.alto, m.ancho] : [m.ancho, m.alto];
+  return [mazo.muestra, { x: cx - ancho / 2, y: cy - alto / 2, ancho, alto }, mazo.rotulo];
+}
+
+export interface Limites {
+  columna: Rect;
+  arriba: number;
+  estado: Rect;
+  /** Lo que el globo no debería tapar si tiene otro lugar: el mazo y la muestra. */
+  evitar?: readonly Rect[];
+}
+
+type Lugar = { left: number; top: number; punta: Punta; puntaEn: number };
+
+const seCortan = (a: Rect, b: Rect) =>
+  a.x < b.x + b.ancho && b.x < a.x + a.ancho && a.y < b.y + b.alto && b.y < a.y + a.alto;
+
 /**
- * Dónde va un globo de `ancho` × `alto` para el asiento `a`. «costado» (cantos y frases) se abre
- * hacia el centro del paño; «debajo» (señas del pie) cuelga del asiento. El de abajo, el propio,
- * siempre va encima del estado.
+ * Dónde va un globo de `ancho` × `alto` para el asiento `a`. «costado» (cantos) se abre hacia el
+ * centro del paño; «debajo» (señas del pie) cuelga del asiento. Si el preferido tapa el mazo, prueba
+ * los otros. El de abajo, el propio, siempre va encima del estado.
  */
 export function lugarDelGlobo(
-  a: GeometriaAsiento, posicion: "costado" | "debajo", tamano: { ancho: number; alto: number },
-  limites: { columna: Rect; arriba: number; estado: Rect },
-): { left: number; top: number; punta: Punta; puntaEn: number } {
-  const { columna, arriba, estado } = limites;
+  a: GeometriaAsiento, posicion: "costado" | "debajo", tamano: { ancho: number; alto: number }, limites: Limites,
+): Lugar {
+  const { columna, arriba, estado, evitar = [] } = limites;
   const caja = cajaDe(a);
   const minX = columna.x + 4;
   const maxX = columna.x + columna.ancho - tamano.ancho - 4;
@@ -41,25 +63,24 @@ export function lugarDelGlobo(
     const left = centrado(a.ancla.x);
     return { left, top: estado.y - tamano.alto - separacion, punta: "abajo", puntaEn: a.ancla.x - left };
   }
-  if (posicion === "debajo") {
-    const left = centrado(a.ancla.x);
-    return { left, top: caja.y + caja.alto + separacion, punta: "arriba", puntaEn: a.ancla.x - left };
-  }
+  const leftDebajo = centrado(a.ancla.x);
+  const debajo: Lugar = { left: leftDebajo, top: caja.y + caja.alto + separacion, punta: "arriba", puntaEn: a.ancla.x - leftDebajo };
   const top = limitar(caja.y + (a.rotulo?.alto ?? 0) / 2 - punta - 6, arriba, estado.y - tamano.alto);
-  const aLaDerecha = caja.x + caja.ancho + separacion;
-  const aLaIzquierda = caja.x - separacion - tamano.ancho;
-  const haciaLaDerecha = a.lugar.includes("izquierda") || (!a.lugar.includes("derecha") && aLaDerecha <= maxX);
-  if (haciaLaDerecha && aLaDerecha <= maxX + 4) return { left: aLaDerecha, top, punta: "izquierda", puntaEn: 14 };
-  if (aLaIzquierda >= minX - 4) return { left: aLaIzquierda, top, punta: "derecha", puntaEn: 14 };
-  const left = centrado(a.ancla.x);
-  return { left, top: caja.y + caja.alto + separacion, punta: "arriba", puntaEn: a.ancla.x - left };
+  const derecha: Lugar = { left: caja.x + caja.ancho + separacion, top, punta: "izquierda", puntaEn: 14 };
+  const izquierda: Lugar = { left: caja.x - separacion - tamano.ancho, top, punta: "derecha", puntaEn: 14 };
+  const haciaLaDerecha = a.lugar.includes("izquierda") || (!a.lugar.includes("derecha") && derecha.left <= maxX);
+  const costados = haciaLaDerecha ? [derecha, izquierda] : [izquierda, derecha];
+  const candidatos = posicion === "debajo" ? [debajo, ...costados] : [...costados, debajo];
+  const entra = (l: Lugar) => l.left >= minX - 4 && l.left <= maxX + 4;
+  const libre = (l: Lugar) => !evitar.some(r => seCortan(r, { x: l.left, y: l.top, ...tamano }));
+  return candidatos.find(l => entra(l) && libre(l)) ?? candidatos.find(entra) ?? debajo;
 }
 
 /** Un globo de papel que salta desde su asiento. */
 export function Globo({ asiento, posicion, limites, testID, etiqueta, children }: {
   asiento: GeometriaAsiento;
   posicion: "costado" | "debajo";
-  limites: { columna: Rect; arriba: number; estado: Rect };
+  limites: Limites;
   testID?: string;
   etiqueta?: string;
   children: ReactNode;

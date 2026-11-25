@@ -17,7 +17,7 @@ import { Estado } from "./vistas/Estado.tsx";
 import { enRect } from "./vistas/estilo.ts";
 import { Hoja } from "./vistas/Hoja.tsx";
 import { HojaCantos } from "./vistas/HojaCantos.tsx";
-import { ocupaElRotulo, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
+import { franjaDeSenas, Senas, SenasRecibidas, type Indicar } from "./vistas/Senas.tsx";
 import { Tira, titulosDePestana, type Pestana } from "./vistas/Tira.tsx";
 
 export type { Pestana } from "./vistas/Tira.tsx";
@@ -56,7 +56,8 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
   const alto = Math.max(0, ventana.height - area.top - area.bottom);
 
   const [elegida, elegir] = useState<HojaAbierta>(null);
-  const [altoHoja, cambiarAltoHoja] = useState(0);
+  // El alto medido es de la hoja que lo midió: al cambiar de hoja vuelve a 0 hasta medirse.
+  const [medida, cambiarMedida] = useState<{ hoja: HojaAbierta; alto: number }>({ hoja: null, alto: 0 });
 
   // La hoja de Cantos sube sola al responder o declarar, y se cierra si el canto ya no está.
   const anterior = useRef<DatosHojaCantos | null>(null);
@@ -71,6 +72,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
 
   // Hasta que corre el efecto, una hoja de Cantos que ya no existe no se muestra.
   const abierta: HojaAbierta = elegida === "cantos" && !hojaCantos ? null : elegida;
+  const altoHoja = medida.hoja === abierta ? medida.alto : 0;
   const forzada = hojaCantos !== null && !hojaCantos.cerrable;
   const cerrable = abierta !== "cantos" || !forzada;
 
@@ -91,7 +93,9 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
     if (!forzada) elegir(null);
     acciones.cantar(tipo);
   }, [acciones, forzada]);
-  const medir = useCallback((h: number) => cambiarAltoHoja(a => (Math.abs(a - h) < 1 ? a : h)), []);
+  const medir = useCallback((h: number) => cambiarMedida(m => (
+    m.hoja === abierta && Math.abs(m.alto - h) < 1 ? m : { hoja: abierta, alto: h }
+  )), [abierta]);
 
   const tercetos = mesa.modalidad === "3v3";
   const titulos = titulosDePestana(tercetos);
@@ -116,22 +120,21 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
           {abierta && cerrable ? (
             <Pressable accessibilityLabel="Cerrar la hoja" onPress={cerrar} style={enRect(geometria.pano)} />
           ) : null}
-          <Asientos mesa={mesa} geometria={geometria} sinRotuloPropio={ocupaElRotulo(senas)} />
-          <Estado rect={geometria.estado} estado={mesa.estado} />
+          <Asientos mesa={mesa} geometria={geometria} />
+          <Estado rect={geometria.estado} estado={mesa.estado} fila={franjaDeSenas(senas, acciones.indicar)} />
           <Barra rect={geometria.barra} tanteador={mesa.tanteador} conectada={conectada} abrirMas={() => abrir("mas")} />
           {mesa.propio != null ? (
             <ManoPropia mano={mano} pano={geometria.pano} habilitada={mesa.puedeJugarCarta}
               jugar={acciones.jugarCarta} rechazos={rechazos} />
           ) : null}
-          <Senas senas={senas} geometria={geometria} propio={mesa.propio} conCantos={hojaCantos !== null}
-            indicar={acciones.indicar} />
+          <Senas senas={senas} geometria={geometria} />
           {geometria.cantos && hojaCantos ? (
             <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}
               style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>
               <Text style={estilos.textoCantos}>Cantos</Text>
             </Pressable>
           ) : null}
-          {geometria.tira && !abierta ? <Tira rect={geometria.tira} tercetos={tercetos} abrir={abrir} /> : null}
+          {geometria.tira && !abierta ? <Tira rect={geometria.tira} tercetos={tercetos} abierta={abierta} abrir={abrir} /> : null}
           <Hoja key={abierta ?? "cerrada"} abierta={abierta !== null} cerrable={cerrable} alCerrar={cerrar} alMedir={medir}
             rect={geometria.hoja} relleno={area.bottom} etiqueta={abierta === "cantos" ? hojaCantos?.encabezado ?? "Cantos" : abierta ? titulos[abierta] : ""}>
             {contenido}

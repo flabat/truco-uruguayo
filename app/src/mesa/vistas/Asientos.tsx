@@ -4,7 +4,7 @@ import { nombrar } from "@eltruco/cliente/textos.ts";
 import { fuentes } from "../../tema.ts";
 import type { AsientoVisible, MesaVisible } from "../modelo.ts";
 import { enRect, mesaColores } from "./estilo.ts";
-import { Globo } from "./Globo.tsx";
+import { cajasDelMazo, Globo } from "./Globo.tsx";
 
 const colorDeEquipo = ["#d8a24a", "#7fb4d8"] as const;
 
@@ -55,15 +55,16 @@ function rotuloDeMuestra({ mazo, columna }: Geometria) {
  * Nombre y papel de cada asiento, los globos de canto que saltan desde su ancla y el rótulo de la
  * muestra. Las cartas las dibuja el lienzo.
  */
-export function Asientos({ mesa, geometria, sinRotuloPropio = false }: {
-  mesa: MesaVisible; geometria: Geometria; sinRotuloPropio?: boolean;
-}) {
-  const limites = { columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado };
+export function Asientos({ mesa, geometria }: { mesa: MesaVisible; geometria: Geometria }) {
+  const limites = {
+    columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado,
+    evitar: cajasDelMazo(geometria),
+  };
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {mesa.asientos.map(a => {
         const geo = geometria.asientos[a.asiento];
-        if (!geo?.rotulo || (sinRotuloPropio && a.asiento === mesa.propio)) return null;
+        if (!geo?.rotulo) return null;
         return <Rotulo key={a.asiento} asiento={a} geo={geo} propio={a.asiento === mesa.propio} />;
       })}
       <View style={[enRect(rotuloDeMuestra(geometria)), estilos.centro]}>

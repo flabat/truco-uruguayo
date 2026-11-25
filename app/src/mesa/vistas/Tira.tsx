@@ -15,12 +15,14 @@ export const titulosDePestana = (tercetos: boolean): Record<Pestana, string> => 
 const iconos: Record<Pestana, string> = { mano: "📜", tantos: "🔢", voz: "🎙", mas: "⋯" };
 
 /** Las pestañas de abajo en el teléfono. Cada una abre su hoja. */
-export function Tira({ rect, tercetos, abrir }: { rect: Rect; tercetos: boolean; abrir: (p: Pestana) => void }) {
+export function Tira({ rect, tercetos, abierta, abrir }: {
+  rect: Rect; tercetos: boolean; abierta: string | null; abrir: (p: Pestana) => void;
+}) {
   const titulos = titulosDePestana(tercetos);
   return (
     <View style={[enRect(rect), estilos.tira]} accessibilityRole="tablist">
       {(Object.keys(titulos) as Pestana[]).map(p => (
-        <Pressable key={p} accessibilityRole="tab" accessibilityLabel={titulos[p]} onPress={() => abrir(p)}
+        <Pressable key={p} accessibilityRole="tab" accessibilityLabel={titulos[p]} accessibilityState={{ selected: abierta === p }} onPress={() => abrir(p)}
           style={({ pressed }) => [estilos.pestana, pressed && estilos.apretada]}>
           <Text style={estilos.icono} aria-hidden>{iconos[p]}</Text>
           <Text style={estilos.texto}>{titulos[p]}</Text>

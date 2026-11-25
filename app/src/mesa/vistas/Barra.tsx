@@ -9,10 +9,10 @@ const forma = /^(.+) (\d+) · (\d+) (.+) · a (\d+)$/;
 /** «Nos 12 · 9 Ellos · a 30» con los números destacados, como en la maqueta. */
 function Tanteador({ texto }: { texto: string }) {
   const partes = forma.exec(texto);
-  if (!partes) return <Text style={estilos.tanteador}>{texto}</Text>;
+  if (!partes) return <Text style={estilos.tanteador} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{texto}</Text>;
   const [, nos, puntosNos, puntosEllos, ellos, meta] = partes;
   return (
-    <Text style={estilos.tanteador} numberOfLines={1}>
+    <Text style={estilos.tanteador} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
       {nos} <Text style={estilos.puntos}>{puntosNos}</Text> · <Text style={estilos.puntos}>{puntosEllos}</Text> {ellos}
       <Text style={estilos.meta}> · a {meta}</Text>
     </Text>
