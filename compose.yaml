@@ -6,6 +6,8 @@ services:
       dockerfile: infra/web.Dockerfile
       args:
         TRUCO_RELEASE: ${TRUCO_RELEASE:-}
+        APPLE_TEAM_ID: ${APPLE_TEAM_ID:-}
+        ANDROID_CERT_SHA256: ${ANDROID_CERT_SHA256:-}
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${WEB_PORT:-8081}:80"
       - "${TRUCO_BIND:-127.0.0.1}:${OIDC_PORT:-8080}:80"

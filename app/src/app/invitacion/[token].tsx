@@ -9,6 +9,7 @@ import { volverAlSalon } from "../../mesa/entrada.tsx";
 import { usePrecargaDeMesa } from "../../precarga/usePrecargaDeMesa.ts";
 import { destinoDeEnlace, rutaDe } from "../../salon/enlaces.ts";
 import { textoVisibilidad } from "../../salon/mesa-nueva.ts";
+import { contar } from "../../salon/plataforma.ts";
 import { RequiereJugador } from "../../salon/RequiereJugador.tsx";
 
 export default function PantallaInvitacion() {
@@ -55,6 +56,7 @@ function Invitacion({ token }: { token: string }) {
     setOcupado(true);
     try {
       const mesa = await cliente.pedir<Mesa>(ruta + "/unirse", {});
+      contar("ingreso-mesa");
       irALaSala(mesa.id);
     } catch (e) {
       fallar(e);

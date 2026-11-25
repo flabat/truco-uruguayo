@@ -4,7 +4,9 @@ import type { Partida, PartidaTercetos } from "@eltruco/cliente/cliente.ts";
 import { pasosDeVueltas } from "@eltruco/cliente/presentacion-vueltas.ts";
 import { entreCartas, vueltaCompleta, type Paso } from "@eltruco/cliente/secuencia-de-mesa.ts";
 import { pausaDeVoz } from "@eltruco/cliente/voces.ts";
-import { avanzar, colaInicial, duracion, enPantalla, eventosEnPantalla, eventosEntre, recibir } from "../../app/src/mesa/cola.ts";
+import {
+  avanzar, colaInicial, duracion, enPantalla, esperaDelPaso, eventosAlAbrir, esperaDelReparto, eventosEnPantalla, eventosEntre, recibir,
+} from "../../app/src/mesa/cola.ts";
 import { partidaDe, vistaDe } from "./fixtures/app-mesa.ts";
 
 type Recibida = Partida | undefined;
@@ -180,8 +182,8 @@ test("eventosEntre: una frase del pie es para su destinatario", () => {
   const frase = partidaDe(vistaDe(4, 0), {
     version: 2, indicaciones: [{ emisor: 2, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 }],
   });
-  assert.deepEqual(eventosEntre(antes, frase, 0), [{ tipo: "frase", emisor: 2, destinatario: 0, texto: "Vení", paraMi: true }]);
-  assert.deepEqual(eventosEntre(antes, frase, 2)[0], { tipo: "frase", emisor: 2, destinatario: 0, texto: "Vení", paraMi: false });
+  assert.deepEqual(eventosEntre(antes, frase, 0), [{ tipo: "frase", emisor: 2, destinatario: 0, pie: "veni", texto: "Vení", paraMi: true }]);
+  assert.deepEqual(eventosEntre(antes, frase, 2)[0], { tipo: "frase", emisor: 2, destinatario: 0, pie: "veni", texto: "Vení", paraMi: false });
   const nombres = ["Clara", "Diego", "Ana", "Beto"];
   assert.equal((eventosEntre(antes, frase, 0, a => nombres[a])[0] as { texto: string }).texto, "Clara, vení");
 });
@@ -271,4 +273,29 @@ test("eventosEntre en tercetos: un duelo nuevo trae sus propias cartas y archiva
   assert.deepEqual(eventosEntre(duelo1, archivado, 0), []);
   const duelo2 = tercetos(2, 1, [{ tipo: "carta", asiento: 1, carta: "oros-03" }], 3);
   assert.deepEqual(eventosEntre(archivado, duelo2, 0), [{ tipo: "carta", asiento: 1, carta: "oros-03", propia: false }]);
+});
+
+test("un paso que trae un reparto espera a que se den vuelta las cartas antes de avanzar", () => {
+  const siguiente = partidaDe(vistaDe(4, 0, { dador: 0, mano: 1 }), { manoNumero: 2, version: 3 });
+  const reparto = [{ tipo: "reparto", dador: 0 } as const];
+  // 12 cartas cada 80 ms, 320 ms la última y las tres propias se dan vuelta de a una.
+  assert.equal(esperaDelReparto(reparto, siguiente, false), 11 * 80 + 320 + 2 * 80 + 320);
+  assert.equal(esperaDelReparto(reparto, partidaDe(vistaDe(2, 0)), false), 5 * 80 + 320 + 2 * 80 + 320);
+  assert.equal(esperaDelReparto(reparto, siguiente, true), 0, "en liviano no hay reparto animado");
+  assert.equal(esperaDelReparto([{ tipo: "chico", nuestro: true }], siguiente, false), 0);
+
+  const carta: Paso<unknown> = { partida: null, espera: entreCartas };
+  // El reparto terminó de anunciarse en t = 1000 y dura hasta t = 2680: el paso espera lo que falta.
+  assert.equal(esperaDelPaso(carta, false, 2680, 1000), entreCartas + 1680);
+  assert.equal(esperaDelPaso(carta, false, 2680, 3000), entreCartas, "un reparto ya terminado no demora");
+  assert.equal(esperaDelPaso(carta, true, 0, 3000), 250);
+});
+
+test("la primera mano de una mesa presenciada se reparte a la vista aunque no haya estado anterior", () => {
+  const primera = partidaDe(vistaDe(4, 0, { dador: 3, mano: 0 }), { manoNumero: 1 });
+  assert.deepEqual(eventosAlAbrir(primera, true), [{ tipo: "reparto", dador: 3 }]);
+  assert.deepEqual(eventosAlAbrir(primera, false), [], "sin presenciarla, la mesa aparece repartida");
+  const segunda = partidaDe(vistaDe(4, 0, { dador: 0, mano: 1 }), { manoNumero: 2 });
+  assert.deepEqual(eventosAlAbrir(segunda, true), [], "una mano posterior ya no es el reparto que se vio");
+  assert.deepEqual(eventosAlAbrir(undefined, true), []);
 });

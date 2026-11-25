@@ -21,6 +21,8 @@ COPY app/app.json app/tsconfig.json ./app/
 # Las cartas Tatú se empaquetan como recursos de la app.
 COPY public/img/cartas/tatu ./public/img/cartas/tatu
 COPY app/src ./app/src
+# Las voces y los efectos de la 4e, que la mesa importa.
+COPY app/assets/sonido ./app/assets/sonido
 COPY scripts/copiar-canvaskit.mjs ./scripts/copiar-canvaskit.mjs
 RUN npm run app:exportar
 
@@ -35,6 +37,11 @@ COPY arte ./arte
 COPY scripts/tatu ./scripts/tatu
 ARG TRUCO_RELEASE
 RUN npm run build
+# Asociación con la app (universal links y App Links). Sin datos, el archivo de esa plataforma no existe.
+COPY scripts/enlaces-app.mjs ./scripts/enlaces-app.mjs
+ARG APPLE_TEAM_ID
+ARG ANDROID_CERT_SHA256
+RUN node scripts/enlaces-app.mjs generar dist/.well-known
 
 FROM caddy:2-alpine AS produccion
 COPY --from=build /app/dist/ /srv/
