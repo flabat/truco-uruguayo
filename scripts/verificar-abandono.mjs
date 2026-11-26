@@ -29,6 +29,11 @@ async function jugador(nombre) {
   await pool.query("INSERT INTO juego.sesiones (clave,jugador) VALUES ($1,$2)", [createHash("sha256").update(sesion).digest("hex"), j.id]);
   return { id: j.id, nombre: sujeto, cookie: "truco_sesion=" + sesion };
 }
+async function resultadoEnPerfil(persona, id) {
+  const res = await fetch(base + "/api/perfil", { headers: { cookie: persona.cookie } });
+  assert.equal(res.status, 200);
+  return (await res.json()).partidas.find(p => p.id === id)?.resultado;
+}
 async function mesa(modo, creador, asientos, { meta = 4, politica = "incumbent-online-v1" } = {}) {
   const { rows: [m] } = await pool.query(`INSERT INTO juego.mesas (modo, creador, invitacion, meta, politica)
     VALUES ($1,$2,$3,$4,$5) RETURNING id, invitacion`, [modo, creador.id, randomUUID(), meta, politica]);
@@ -198,6 +203,7 @@ async function probarReemplazoParejas() {
   assert.deepEqual(deB.esperas, [], "la computadora ya juega el asiento de A");
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
   assert.deepEqual(asiento, { cedido: true, salida: "desconectada" });
+  assert.equal(await resultadoEnPerfil(a, m.id), "desconectada");
   assert.equal(await salidas(m.id), 1);
   await assert.rejects(servicio.leer(m.id, a.id), { status: 409, message: "Una computadora te reemplazó porque te desconectaste." });
   await rechazo(await reemplazar(a, m.id, 1), 409, "Solo quien sigue en la mesa puede reemplazar a otro jugador.");
@@ -372,6 +378,7 @@ async function probarDueloComputadora(pin) {
   const replay = await replayDe(m.id);
   assert.ok(replay, "el replay sigue completo");
   assert.equal(reproducirChico(replay, 1).ganador, 1);
+  assert.equal(await resultadoEnPerfil(a, m.id), "abandonada");
   assert.deepEqual(replay.eventos.slice(-2).map(e => [e.tipo, e.estado ?? e.motivo]), [["salida", "abandonada"], ["cierre", "abandonado"]]);
   assert.equal(Number((await pool.query("SELECT count(*) FROM juego.turnos_bot WHERE mesa=$1", [m.id])).rows[0].count), 0);
   await new Promise(r => setTimeout(r, 1000));
@@ -415,6 +422,8 @@ async function probarDueloHumano() {
   await rechazo(await abandonar(b, m.id), 409, terminada);
   assert.equal(await salidas(m.id), 1);
   for (const asiento of [0, 1]) assert.equal(reproducirChico(await replayDe(m.id), asiento).ganador, 1);
+  assert.equal(await resultadoEnPerfil(a, m.id), "abandonada");
+  assert.equal(await resultadoEnPerfil(b, m.id), "ganada");
 }
 
 /** Parejas: A (0) y B (2) compañeros contra dos computadoras. La computadora juega el asiento de A y B termina el chico. */
@@ -453,6 +462,7 @@ async function probarParejas() {
   const replay = await replayDe(m.id);
   assert.ok(replay, "el replay sigue completo después de la salida");
   assert.equal(replay.eventos.at(-1).estado, "terminado");
+  assert.equal(await resultadoEnPerfil(a, m.id), "abandonada", "A figura abandonada aunque su equipo gane");
   for (const s of [0, 1, 2, 3]) reproducirChico(replay, s);
   // Si hubo repartos después de la salida, la secuencia de la mano siguiente contó el evento.
   return replay.eventos.findIndex(e => e.tipo === "salida") < replay.eventos.findLastIndex(e => e.tipo === "reparto");

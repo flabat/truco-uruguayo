@@ -18,6 +18,9 @@ interface FilaPartida {
   fecha: string | null;
   puntos: [number, number] | null;
   registro: RegistroTercetos | null;
+  salida: "abandonada" | "desconectada" | null;
+  cierre_abandonado: boolean;
+  cierre_ganador: number | null;
 }
 
 function resumen(fila: FilaPartida): ResumenPartida {
@@ -34,7 +37,10 @@ function resumen(fila: FilaPartida): ResumenPartida {
     }
   }
   const ganador = puntos?.findIndex(tantos => tantos >= fila.meta);
-  const resultado = ganador === undefined ? "desconocido" : ganador === -1 ? "sin-terminar"
+  // La salida del asiento gana sobre todo; un cierre por abandono decide por su ganador, no por el tanteo.
+  const resultado: ResumenPartida["resultado"] = fila.salida ? fila.salida
+    : fila.cierre_abandonado && fila.cierre_ganador !== null ? (fila.cierre_ganador === fila.equipo ? "ganada" : "perdida")
+    : ganador === undefined ? "desconocido" : ganador === -1 ? "sin-terminar"
     : ganador === fila.equipo ? "ganada" : "perdida";
   return {
     id: fila.id, modo: fila.modo, fecha: fila.fecha, resultado, meta: fila.meta, mano: fila.mano,
@@ -67,7 +73,9 @@ export async function atenderPerfil(pool: Pool, req: IncomingMessage, res: Serve
   const { rows } = await pool.query<FilaPartida>(`
     WITH pagina AS (
       SELECT m.id, m.modo, m.meta, m.version_senas, a.asiento % 2 AS equipo,
-             h.numero AS mano, h.puntos_inicio, h.cantidad,
+             h.numero AS mano, h.puntos_inicio, h.cantidad, a.salida,
+             c.evento->>'estado'='abandonado' AS cierre_abandonado,
+             (c.evento->>'ganador')::integer AS cierre_ganador,
              coalesce(c.evento->>'fecha', r.cabecera->>'inicio') AS fecha
         FROM juego.asientos a JOIN juego.mesas m ON m.id=a.mesa
         JOIN LATERAL (
@@ -80,7 +88,8 @@ export async function atenderPerfil(pool: Pool, req: IncomingMessage, res: Serve
        ORDER BY fecha DESC NULLS LAST, m.id
        LIMIT $2 OFFSET $3
     )
-    SELECT p.id, p.modo, p.meta, p.version_senas, p.equipo, p.mano, p.fecha,
+    SELECT p.id, p.modo, p.meta, p.version_senas, p.equipo, p.mano, p.fecha, p.salida,
+           coalesce(p.cierre_abandonado, false) AS cierre_abandonado, p.cierre_ganador,
            CASE WHEN p.cantidad=0 THEN p.puntos_inicio
                 WHEN d.evento->>'tipo'='decision'
                 THEN ARRAY[(d.evento->'puntos'->>0)::integer, (d.evento->'puntos'->>1)::integer] END AS puntos,
