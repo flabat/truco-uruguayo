@@ -94,6 +94,8 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
     ws.on("close", () => {
       grupo.delete(c);
       if (!grupo.size) mesas.delete(mesa);
+      // Sin otra conexión del jugador, la mesa puede quedar esperándolo: el resto relee su vista.
+      if (![...grupo].some(otra => otra.jugador === jugador)) alCambiar(mesa);
     });
     let enCurso = false;
     ws.on("message", (buffer, binario) => {
@@ -105,8 +107,9 @@ export function crearVivo(server: Server, web: URL, servicios: ServiciosVivo) {
       enCurso = true;
       void comando(c, datos).finally(() => { enCurso = false; });
     });
-    // La vista inicial se recupera también si hubo un cambio durante el upgrade.
-    enviar(ws, { tipo: "actualizar" });
+    // La vista inicial se recupera también si hubo un cambio durante el upgrade. El resto de la mesa
+    // relee porque el jugador conectado ya no la traba.
+    alCambiar(mesa);
   }
 
   function upgrade(req: IncomingMessage, socket: Duplex, head: Buffer) {

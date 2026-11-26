@@ -7,6 +7,7 @@ import { crearAuth, jugadorDeSesion } from "./auth.ts";
 import { ingresoDePruebaHabilitado } from "./auth-dev.ts";
 import { crearGestion } from "./gestion.ts";
 import { crearPartidas, esRutaPartida } from "./partidas.ts";
+import { crearEsperas } from "./esperas.ts";
 import { crearRutasMesas, esRutaMesas, leerMesa } from "./mesas.ts";
 import { crearVivo } from "./vivo.ts";
 import { crearSalon } from "./salon.ts";
@@ -82,7 +83,8 @@ const server = createServer(async (request, response) => {
 });
 
 const alCambiar = (mesa: string) => vivo.alCambiar(mesa);
-const partidas = crearPartidas(pool, web, alCambiar);
+const partidas = crearPartidas(pool, web, alCambiar,
+  mesa => vivo.jugadoresConectados().get(mesa.toLowerCase()) ?? new Set(), crearEsperas());
 const configVoz = configDiscord();
 const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3,
   connectionTimeoutMillis: 5000, statement_timeout: 15000 });

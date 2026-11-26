@@ -10,6 +10,7 @@ compose=(docker compose --project-name "$project")
 desplazamiento=$((10 * ${TRUCO_COLA_PUESTO:-0}))
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-$((18081 + desplazamiento))} API_PORT=0
 export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
+export PLAZO_ESPERA_MS=1500 # El reemplazo por desconexión se prueba sin esperar un minuto.
 export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-$((18080 + desplazamiento))}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable

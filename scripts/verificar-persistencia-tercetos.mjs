@@ -11,6 +11,8 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
 const origin = new URL(process.env.WEB_ORIGIN).origin;
 const hash = valor => createHash("sha256").update(valor).digest("hex");
+/** La huella de una vista: las esperas cuentan por asiento, porque su hora empieza de nuevo al reiniciar la API. */
+const huella = p => hash(JSON.stringify({ ...p, esperas: p.esperas?.map(e => e.asiento) }));
 const comando = (version, tipo) => ({ id: randomUUID(), version, ...(tipo && {accion: {tipo}}) });
 const sinFlor = {
   versionReparto: "online-2", dador: 5, mano: 0, muestra: "copas-06",
@@ -101,7 +103,7 @@ async function comprobarPrivacidad(mesa) {
 async function guardar(mesa, asiento, orden, respuesta) {
   const proyecciones = await comprobarPrivacidad(mesa);
   await pool.query("INSERT INTO juego.prueba_reingreso_tercetos VALUES ($1,$2,$3,$4,$5,$6)",
-    [mesa.id, mesa.personas.map(p => p.indice), asiento, orden, respuesta, proyecciones.map(p => hash(JSON.stringify(p)))]);
+    [mesa.id, mesa.personas.map(p => p.indice), asiento, orden, respuesta, proyecciones.map(huella)]);
 }
 
 async function hastaCerrar(mesa) {
@@ -211,7 +213,7 @@ async function reconectar(personas) {
   for (const previa of rows) {
     const mesa = {id: previa.mesa, personas: previa.personas.map(i => personas[i])};
     const actuales = await comprobarPrivacidad(mesa);
-    assert.deepEqual(actuales.map(p => hash(JSON.stringify(p))), previa.huellas);
+    assert.deepEqual(actuales.map(huella), previa.huellas);
     await confirmarPorSocket(mesa, previa.asiento, previa.orden, previa.respuesta);
     // Conservar el mismo recibo de PostgreSQL tal como lo escribía la versión anterior.
     const { contexto, ...historica } = previa.respuesta;
