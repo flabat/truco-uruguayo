@@ -48,7 +48,9 @@ async function posicionActual(db: PoolClient, mesa: string) {
     SELECT h.numero AS mano, jsonb_array_length(h.acciones) AS decisiones,
       (SELECT count(*)::integer FROM juego.eventos_chico i WHERE i.mesa=h.mesa AND i.mano=h.numero AND i.posicion IS NULL) AS palabras,
       COALESCE(e.secuencia, (SELECT 1 + COALESCE(sum(1 + jsonb_array_length(p.acciones) + jsonb_array_length(p.indicaciones)), 0)
-        FROM juego.manos p WHERE p.mesa=h.mesa AND p.numero<h.numero)) AS inicio
+        FROM juego.manos p WHERE p.mesa=h.mesa AND p.numero<h.numero)
+        -- Una salida ocupa una secuencia sin figurar en juego.manos.
+        + (SELECT count(*) FROM juego.eventos_chico s WHERE s.mesa=h.mesa AND s.mano<h.numero AND s.evento->>'tipo'='salida')) AS inicio
     FROM juego.manos h
     LEFT JOIN juego.eventos_chico e ON e.mesa=h.mesa AND e.mano=h.numero AND e.posicion=0
     WHERE h.mesa=$1 ORDER BY h.numero DESC LIMIT 1`, [mesa]);
@@ -120,5 +122,5 @@ export async function guardarSalidaReplayDB(db: PoolClient, mesa: string, asient
   if (!cierre) return;
   await db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
     VALUES ($1,$2,$3,$4,$5::jsonb || jsonb_build_object('fecha', ${fecha}),$6)`,
-    [mesa, mano, decisiones, secuencia + 1, { tipo: "cierre", estado: "abandonado", ganador: cierre.ganador, puntos: cierre.puntos }, build]);
+    [mesa, mano, decisiones + 1, secuencia + 1, { tipo: "cierre", estado: "abandonado", ganador: cierre.ganador, puntos: cierre.puntos }, build]);
 }

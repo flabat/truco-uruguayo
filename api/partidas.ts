@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Pool, PoolClient } from "pg";
-import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
+import { normalizarPartida, type PartidaJugador } from "@eltruco/motor/partida-jugador.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import {
   iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
@@ -10,7 +10,7 @@ import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, guardarPalabra
 import { jugadorDeSesion } from "./auth.ts";
 import { origenValido } from "./sesion.ts";
 import { ErrorPeticion, leerJson, responderJson } from "./http.ts";
-import { formatoMesa, leerMesa, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
+import { exigirSinSalida, formatoMesa, leerMesa, textoDeSalida, verificarPerfil, type FormatoMesa, type VistaMesa } from "./mesas.ts";
 import { confirmar, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, turnosDeEquipo,
   type Confirmada, type ManoPublicable } from "./turnos.ts";
 import {
@@ -21,10 +21,13 @@ import { incumbent } from "../training/seat/index.ts";
 import { programarTurno } from "./bot-pendiente.ts";
 import { esperanDe } from "./cedidos.ts";
 import { seatsFor, signalVersionFor, type Format } from "../training/contracts/index.ts";
-import { decisionReplay, guardarDecisionesReplayDB, iniciarReplayDB, type DecisionReplay } from "./replay-db.ts";
+import { decisionReplay, guardarDecisionesReplayDB, guardarSalidaReplayDB, iniciarReplayDB, type DecisionReplay } from "./replay-db.ts";
+import type { Motivo } from "./replay-chico.ts";
+import { efectoDeSalida, type Efecto } from "./abandono.ts";
+import { retirarSinReparto } from "./retiro.ts";
 
 const uuid = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
-const rutaPartida = /^\/api\/mesas\/([^/]+)\/(partida|acciones|siguiente|indicaciones)$/;
+const rutaPartida = /^\/api\/mesas\/([^/]+)\/(partida|acciones|siguiente|indicaciones|abandonar)$/;
 export const esRutaPartida = (path: string) => rutaPartida.test(path);
 type Operacion = "acciones" | "siguiente" | "indicaciones";
 type Tanteador = [number, number];
@@ -86,6 +89,28 @@ function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, versi
   return normalizarPartida({ version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
     ...pie, ...(!pie && versionSenas && {versionSenas, turnos: turnosDeEquipo(mano.turnos, asiento)}),
     vista: callar(vistaOnline(mano.estado, asiento)) });
+}
+
+type CierreAbandono = NonNullable<PartidaJugador["cierreAbandono"]>;
+
+/** El cierre por abandono del chico, con quien salió; `undefined` si la partida no se cerró así. */
+async function leerCierreAbandono(db: PoolClient, mesa: string): Promise<CierreAbandono | undefined> {
+  const { rows: [cierre] } = await db.query<CierreAbandono>(`
+    SELECT (s.evento->>'asiento')::integer AS asiento, COALESCE(j.nombre, 'Jugador ' || (a.asiento + 1)) AS nombre,
+           s.evento->>'motivo' AS motivo, (c.evento->>'ganador')::integer AS ganador
+      FROM juego.eventos_chico c
+      JOIN juego.eventos_chico s ON s.mesa = c.mesa AND s.secuencia = c.secuencia - 1
+      JOIN juego.asientos a ON a.mesa = c.mesa AND a.asiento = (s.evento->>'asiento')::integer
+      LEFT JOIN juego.jugadores j ON j.id = a.jugador
+     WHERE c.mesa = $1 AND c.evento->>'tipo' = 'cierre' AND c.evento->>'estado' = 'abandonado'`, [mesa]);
+  return cierre;
+}
+
+/** La vista de una partida cerrada por abandono: gana el equipo del cierre y nadie tiene jugadas. */
+function cerrada(partida: PartidaJugador, cierre: CierreAbandono): PartidaJugador {
+  if (!partida.vista) throw new Error("Un cierre por abandono requiere una mano repartida.");
+  return { ...partida, ganadorPartida: cierre.ganador, cierreAbandono: cierre,
+    contexto: { versionVista: 1, fase: "chico-terminado" }, vista: { ...partida.vista, legales: [] } } as PartidaJugador;
 }
 
 /** Humanos para las reglas y el replay, incluidos los asientos cedidos. */
@@ -225,6 +250,34 @@ export async function reanudarComputadoras(db: PoolClient, id: string) {
   }
 }
 
+/**
+ * La mesa está bloqueada por el llamador y el chico empezó sin cierre. Registra la salida del asiento y,
+ * según quién queda, una computadora lo juega o la partida se cierra a favor del otro equipo.
+ */
+export async function salirDeMesa(db: PoolClient, mesa: string, asiento: number, motivo: Motivo): Promise<Efecto> {
+  const { rows: [registro] } = await db.query<MesaComputadoras>(
+    "SELECT id, modo, meta, politica, version_senas, perfil_tercetos FROM juego.mesas WHERE id=$1", [mesa]);
+  await db.query("UPDATE juego.asientos SET salida=$3, salida_fecha=now() WHERE mesa=$1 AND asiento=$2", [mesa, asiento, motivo]);
+  const { rows: asientos } = await db.query<{ asiento: number; activo: boolean; computadora: boolean }>(`
+    SELECT asiento, computadora, NOT computadora AND NOT cedido AND salida IS NULL AS activo
+      FROM juego.asientos WHERE mesa=$1`, [mesa]);
+  const efecto = efectoDeSalida(registro.modo, asientos, asiento);
+  if (efecto.tipo === "ceder") {
+    await db.query("UPDATE juego.asientos SET cedido = true WHERE mesa=$1 AND asiento=$2", [mesa, asiento]);
+    await guardarSalidaReplayDB(db, mesa, asiento, motivo);
+    await reanudarComputadoras(db, mesa);
+    return efecto;
+  }
+  verificarPerfil(registro.modo, registro.perfil_tercetos);
+  const fila = await ultimaMano(db, mesa);
+  const humanos = asientos.filter(a => !a.computadora).map(a => a.asiento);
+  const { estado } = recuperar(fila, formatoMesa(registro.modo, registro.version_senas), registro.meta, humanos);
+  await guardarSalidaReplayDB(db, mesa, asiento, motivo, { ganador: efecto.ganador, puntos: marcadorOnline(estado) });
+  // Una computadora programada no juega después del cierre.
+  await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
+  return efecto;
+}
+
 export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) => void = () => {}) {
   async function resolver(db: PoolClient, id: string, jugador: string, op?: Operacion, datos: Record<string, unknown> = {}) {
     if (!uuid.test(id)) throw new ErrorPeticion(404, "No se encontró tu mesa.");
@@ -233,6 +286,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       WHERE m.id=$1 AND a.jugador=$2 FOR UPDATE OF m`, [id, jugador]);
     if (!lock.rowCount) throw new ErrorPeticion(404, "No se encontró tu mesa.");
     const mesa = await leerMesa(db, id, jugador, web);
+    if (!mesa) await exigirSinSalida(db, id, jugador);
     if (!mesa) throw new ErrorPeticion(404, "No se encontró tu mesa.");
     if (mesa.cancelada) throw new ErrorPeticion(409, "La mesa se canceló.");
     const asiento = mesa.miAsiento as Asiento;
@@ -245,6 +299,8 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       return { cambio: false, partida: normalizarPartida({ version: 0, formato: mesa.formato, manoNumero: 0,
         puntos: [0, 0], meta: mesa.meta, ganadorPartida: null, vista: null, ...(alPie && { versionSenas: versionSenasPie }) }) };
     }
+    const cierre = await leerCierreAbandono(db, id);
+    if (cierre && comando) throw new ErrorPeticion(409, "La partida ya terminó.");
     if (comando) {
       const { rows: [previo] } = await db.query(`SELECT respuesta, peticion = $4::jsonb AS coincide
         FROM juego.comandos WHERE mesa=$1 AND jugador=$2 AND id=$3`, [id, jugador, comando.id, comando]);
@@ -268,6 +324,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const mano = recuperar(fila, mesa.formato, mesa.meta, humanos);
     mano.politicaPie = politicaPie;
     const estado = mano.estado;
+    if (cierre) return { cambio: false, partida: cerrada(vista(mano, mesa.formato, fila.numero, fila.version, asiento, humanos), cierre) };
     if (!comando) {
       // Una mano guardada antes de esta regla puede estar esperando la salida humana.
       if (mesa.formato === "duel" && estado.antesDeSalida !== undefined) {
@@ -346,19 +403,44 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     return { cambio: !pase, partida };
   }
 
-  async function transaccion(id: string, jugador: string, op?: Operacion, datos?: Record<string, unknown>) {
+  /** Abandono pedido por el propio jugador. Sin reparto, equivale a retirarse de la mesa. */
+  async function abandonar(db: PoolClient, id: string, jugador: string) {
+    if (!uuid.test(id)) throw new ErrorPeticion(404, "No se encontró tu mesa.");
+    // El mismo bloqueo que las jugadas y el retiro: un único escritor por mesa.
+    const { rows: [mesa] } = await db.query<{ id: string; creador: string; cancelada: Date | null }>(`
+      SELECT m.id, m.creador, m.cancelada FROM juego.mesas m JOIN juego.asientos a ON a.mesa=m.id
+       WHERE m.id=$1 AND a.jugador=$2 FOR UPDATE OF m`, [id, jugador]);
+    if (!mesa) throw new ErrorPeticion(404, "No se encontró tu mesa.");
+    if (mesa.cancelada) throw new ErrorPeticion(409, "La mesa se canceló.");
+    const { rows: [propio] } = await db.query(`
+      SELECT a.asiento, a.cedido, a.salida,
+             EXISTS (SELECT 1 FROM juego.manos h WHERE h.mesa = a.mesa) AS empezada,
+             EXISTS (SELECT 1 FROM juego.eventos_chico e WHERE e.mesa = a.mesa AND e.evento->>'tipo' = 'cierre') AS terminada
+        FROM juego.asientos a WHERE a.mesa=$1 AND a.jugador=$2`, [id, jugador]);
+    const salida = textoDeSalida(propio);
+    if (salida) throw new ErrorPeticion(409, salida);
+    if (propio.terminada) throw new ErrorPeticion(409, "La partida ya terminó.");
+    if (propio.empezada) await salirDeMesa(db, id, propio.asiento, "abandonada");
+    else await retirarSinReparto(db, mesa, jugador);
+  }
+
+  async function enTransaccion<T>(trabajo: (db: PoolClient) => Promise<T>) {
     const db = await pool.connect();
-    let resultado;
     try {
       await db.query("BEGIN");
-      resultado = await resolver(db, id, jugador, op, datos);
+      const resultado = await trabajo(db);
       await db.query("COMMIT");
+      return resultado;
     } catch (error) {
       await db.query("ROLLBACK");
       throw error;
     } finally {
       db.release();
     }
+  }
+
+  async function transaccion(id: string, jugador: string, op?: Operacion, datos?: Record<string, unknown>) {
+    const resultado = await enTransaccion(db => resolver(db, id, jugador, op, datos));
     if (resultado.cambio) alCambiar(id);
     return resultado.partida;
   }
@@ -376,6 +458,12 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       }
       if (op === "partida" || req.method !== "POST") throw new ErrorPeticion(405, "Método no permitido.");
       if (!origenValido(req, web)) throw new ErrorPeticion(403, "El origen no corresponde al juego.");
+      if (op === "abandonar") {
+        await enTransaccion(db => abandonar(db, id, jugador.id));
+        alCambiar(id);
+        res.writeHead(204).end();
+        return;
+      }
       responderJson(res, 200, await transaccion(id, jugador.id, op as Operacion, await leerJson(req)));
     } catch (error) {
       if (!(error instanceof ErrorPeticion)) throw error;

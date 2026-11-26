@@ -103,6 +103,7 @@ for formato in duel pairs pairs-private-senas; do
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-retiro.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-abandono.mjs
 for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
 "${compose[@]}" run --no-deps --rm -T api node --input-type=module < scripts/verificar-inferencia.mjs
