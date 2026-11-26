@@ -112,3 +112,18 @@ test("el retiro concede el truco vigente después de la flor del sexto asiento, 
     assert.deepEqual(aDecidir(estado), []);
   }
 });
+
+test("el envido querido de la redondilla anuncia quién canta y quién dice «son buenas»", () => {
+  let estado = iniciarOnline(empate, [9, 35], 50);
+  estado = enviar(estado, { tipo: "real-envido", asiento: 0 });
+  estado = declaraciones(enviar(estado, { tipo: "quiero", asiento: aDecidir(estado)[0] }));
+  // El mano gana con 31: los rivales no le ganan y dicen «son buenas»; sus compañeros callan. Se
+  // comparan al terminar la consulta de la flor, en la última acción de esa ronda.
+  const comparacionEnvido = { indiceAccion: estado.acciones.length - 1, participantes: [
+    { asiento: 0, total: 31 }, { asiento: 1, total: null }, { asiento: 3, total: null }, { asiento: 5, total: null },
+  ] };
+  for (const asiento of [0, 1, 2, 3, 4, 5] as const) {
+    assert.deepEqual(vistaTercetos(estado, asiento).cobros,
+      [{ equipo: 0, tantos: 3, valor: 3, motivo: "envido", asiento: 0, tantoGanador: 31, comparacionEnvido }]);
+  }
+});

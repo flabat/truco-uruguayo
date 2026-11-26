@@ -1,6 +1,6 @@
 import type { PoolClient } from "pg";
 import {
-  aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, versionReglasTercetos, vistaTercetos,
+  aDecidir, aplicarOnline, historialPublico, iniciarOnline, marcadorOnline, versionReglasTercetos, vistaTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline,
 } from "@eltruco/motor/mesa-online.ts";
 import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
@@ -81,5 +81,5 @@ export function proyectarTercetos(estado: EstadoOnline, numero: number, version:
   const ganadorPartida = puntos[0] >= estado.meta ? 0 : puntos[1] >= estado.meta ? 1 : null;
   if (!estado.lance || !estado.historialLances) throw new RangeError("Se necesita una mesa de tercetos.");
   return normalizarPartida({ formato: "triples", version, manoNumero: numero, meta: estado.meta, puntos, ganadorPartida,
-    lance: estado.lance, historialLances: estado.historialLances, vista: vistaTercetos(estado, asiento) });
+    lance: estado.lance, historialLances: historialPublico(estado.historialLances), vista: vistaTercetos(estado, asiento) });
 }

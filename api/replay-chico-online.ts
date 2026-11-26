@@ -3,7 +3,7 @@ import { signals, type PublicTurn, type Signal } from "../training/contracts/ind
 import { vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { esCardId } from "@eltruco/motor/cartas.ts";
 import {
-  anticiparAnteFlor, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos,
+  anticiparAnteFlor, aplicarOnline, historialPublico, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos,
   type AccionOnline, type Cobro, type EstadoOnline,
 } from "@eltruco/motor/mesa-online.ts";
 import { esAsientoOnline, esRepartoOnline } from "@eltruco/motor/reparto.ts";
@@ -87,7 +87,7 @@ export function vistaChicoOnline({ motor, perfil, turnos }: EstadoChicoOnline, a
   if (!esAsientoOnline(asiento) || asiento >= motor.mano.reparto.manos.length) throw new RangeError("Asiento fuera de la mesa.");
   const comunicacion = indicaciones && { pie: vistaDelPie(motor, asiento, indicaciones), indicaciones };
   if (perfil === "tercetos-v1") {
-    return { ...comunicacion, ...vistaTercetos(motor, asiento), lance: motor.lance, historialLances: motor.historialLances };
+    return { ...comunicacion, ...vistaTercetos(motor, asiento), lance: motor.lance, historialLances: historialPublico(motor.historialLances!) };
   }
   return { ...vistaOnline(motor, asiento), ...comunicacion, ...(indicaciones === undefined && perfil === "pairs-private-senas" && { turnos: turnosDeEquipo(turnos, asiento) }) };
 }

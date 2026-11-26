@@ -80,7 +80,8 @@ function cerrarLance(estado: EstadoOnline): EstadoOnline {
   const puntos = marcadorOnline(estado);
   const resumen: ResumenLance = { ...lance, resultado, puntos, acciones: estado.acciones,
     cobros: estado.cobros, vueltas: estado.mano.vueltas,
-    ...(estado.indiceCobroLateral !== undefined && { indiceCobroLateral: estado.indiceCobroLateral }) };
+    ...(estado.indiceCobroLateral !== undefined && { indiceCobroLateral: estado.indiceCobroLateral }),
+    ...(estado.comparacionEnvido && { comparacionEnvido: estado.comparacionEnvido }) };
   const historial = [...estado.historialLances!, resumen];
   if (!puntos.includes(estado.meta) && lance.tipo === "pico-a-pico" && lance.duelo < 3) {
     const proximo = dueloDelPico(estado.mano.reparto.mano, lance.duelo === 1 ? 2 : 3);
@@ -248,12 +249,23 @@ export function vistaOnline(estado: EstadoOnline, asiento: Asiento): VistaOnline
   }
   const vista = { ...privadaJugable(estado, asiento), ...cantosPublicos(estado),
     resumenTantos: resumirTantos(estado.cobros, estado.puntosInicio, estado.meta) };
-  const { comparacionFlor, comparacionEnvido } = estado;
+  return conComparaciones(vista, estado);
+}
+
+type Comparaciones = Pick<EstadoOnline, "comparacionFlor" | "comparacionEnvido">;
+
+/** El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1. */
+function conComparaciones<V extends { cobros: readonly Cobro[] }>(vista: V, { comparacionFlor, comparacionEnvido }: Comparaciones):
+    V & { cobros: VistaOnline["cobros"] } {
   if (!comparacionFlor && !comparacionEnvido) return vista;
-  // El desglose del historial es público. El registro de cobros del árbitro conserva su formato V1.
   return { ...vista, cobros: vista.cobros.map(c =>
     c.motivo === "flor" && comparacionFlor ? { ...c, comparacionFlor: structuredClone(comparacionFlor) }
     : c.motivo === "envido" && comparacionEnvido ? { ...c, comparacionEnvido: structuredClone(comparacionEnvido) } : c) };
+}
+
+/** Los duelos archivados de tercetos, con lo que dijo cada uno en el envido querido junto a su cobro. */
+export function historialPublico(historial: readonly ResumenLance[]): ResumenLance[] {
+  return historial.map(({ comparacionEnvido, ...resumen }) => conComparaciones(resumen, { comparacionEnvido }));
 }
 
 export interface VistaOnlineV1 extends VistaOnline {
@@ -285,10 +297,10 @@ export function vistaTercetos(estado: EstadoOnline, asiento: Asiento): VistaTerc
     resumenReparto: resumirTantos(cobrosReparto), faltaPorEquipo: estado.puntosInicio.map(p => faltaDelGanador(p, estado.meta)) as [number, number],
     ...cantosPublicos(estado) };
   if (estado.resultado || !estado.lance.activos.includes(asiento)) {
-    return { ...vistaPublicaOnline(estado, asiento), ...comunes,
+    return { ...conComparaciones(vistaPublicaOnline(estado, asiento), estado), ...comunes,
       estado: estado.resultado ? "terminado" : "esperando", legales: [] };
   }
-  return { ...privadaJugable(estado, asiento), ...comunes, estado: "jugando" };
+  return { ...conComparaciones(privadaJugable(estado, asiento), estado), ...comunes, estado: "jugando" };
 }
 
 /** Las políticas ya entrenadas expresan la entrega eligiendo una de sus cartas. */
