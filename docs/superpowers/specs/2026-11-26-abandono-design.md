@@ -77,7 +77,7 @@ Alcanza con que **uno** acepte. «Seguir esperando» cierra el aviso para ese ju
 
 **Abandonar no se deshace.** Quien abandonó no vuelve al asiento.
 
-**Quien salió no vuelve a la mesa.** Como hoy con el cedido, la mesa deja de aparecer en sus mesas pendientes y `GET` de la mesa responde 409. El texto del 409 distingue el caso: «Abandonaste esta partida.», «Una computadora te reemplazó porque te desconectaste.» o el actual para la baja. La app muestra ese texto y vuelve al salón. El resultado lo ve en su historial.
+**Quien salió no vuelve a la mesa.** Como hoy con el cedido, la mesa deja de aparecer en sus mesas pendientes y `GET` de la mesa responde 409. El texto del 409 distingue el caso: «Abandonaste esta partida.», «Una computadora te reemplazó porque te desconectaste.» (parejas y tercetos), «Tu rival cobró la partida porque te desconectaste.» (duelo cobrado) o el actual para la baja. La app muestra ese texto y vuelve al salón. El resultado lo ve en su historial.
 
 ### Datos
 

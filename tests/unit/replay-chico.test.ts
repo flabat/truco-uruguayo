@@ -147,6 +147,21 @@ test("rechaza una salida mal formada y un abandono con ganador inválido", () =>
   assert.throws(() => reproducirChico(con(salida, { ...final, ganador: 2 }), 0), /Cierre incompatible/);
 });
 
+test("rechaza un cierre abandonado que no gana el rival de la última salida", () => {
+  const juego = fixture("duelo");
+  const { salida, final } = abandonado(juego);
+  const con = (...resto: object[]) => ({ ...juego, eventos: [juego.eventos[0], juego.eventos[1], ...resto] });
+  assert.throws(() => reproducirChico(con(salida, { ...final, ganador: 0 }), 0), /Cierre incompatible/);
+  const deB = { ...salida, asiento: 1 };
+  assert.equal(reproducirChico(con(deB, { ...final, ganador: 0 }), 0).ganador, 0);
+  assert.throws(() => reproducirChico(con(deB, final), 0), /Cierre incompatible/);
+  // Con dos salidas, el cierre corresponde a la última.
+  const dos = con({ ...salida, secuencia: 3 }, { ...deB, secuencia: 4 }, { ...final, secuencia: 5, ganador: 0 });
+  assert.equal(reproducirChico(dos, 0).ganador, 0);
+  assert.throws(() => reproducirChico(con({ ...deB, secuencia: 3 }, { ...salida, secuencia: 4 }, { ...final, secuencia: 5, ganador: 0 }), 0),
+    /Cierre incompatible/);
+});
+
 test("una salida sin cierre no cambia el resultado", () => {
   const juego = fixture("duelo");
   const { salida } = abandonado(juego);

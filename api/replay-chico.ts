@@ -140,7 +140,8 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
   let puntos: Puntos = [0, 0];
   let cierre: "terminado" | "inconcluso" | "abandonado" | undefined;
   let ganadorAbandono: number | undefined;
-  let salida = false;
+  // El asiento de la última salida: un cierre por abandono lo gana el equipo rival.
+  let ultimaSalida: number | undefined;
   for (let i = 0; i < fin; i++) {
     const e = eventos[i];
     const secuencia = i + 1;
@@ -186,10 +187,10 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
         if (!Number.isInteger(e.asiento) || (e.asiento as number) < 0 || (e.asiento as number) >= asientos.length
           || (e.motivo !== "abandonada" && e.motivo !== "desconectada") || !fechaUTC(e.fecha)
           || Date.parse(e.fecha) < Date.parse(cabecera.inicio)) throw new Error("Salida inválida.");
-        salida = true;
+        ultimaSalida = e.asiento as number;
       } else if (e.tipo === "cierre" && e.estado === "abandonado") {
-        if (!mano || !salida || !fechaUTC(e.fecha) || Date.parse(e.fecha) < Date.parse(cabecera.inicio)
-          || !isDeepStrictEqual(e.puntos, puntos) || puntos.includes(meta) || (e.ganador !== 0 && e.ganador !== 1)) {
+        if (!mano || ultimaSalida === undefined || !fechaUTC(e.fecha) || Date.parse(e.fecha) < Date.parse(cabecera.inicio)
+          || !isDeepStrictEqual(e.puntos, puntos) || puntos.includes(meta) || e.ganador !== 1 - (ultimaSalida % 2)) {
           throw new Error("Cierre incompatible con el resultado del chico.");
         }
         cierre = "abandonado";

@@ -585,7 +585,6 @@ async function probarEscritorio() {
   console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}tras tocar Sonido, 1 y 2 seguidos juegan una sola carta.`);
 }
 
-/** El interruptor «Modo liviano» de la hoja Más (en el teléfono, el ☰ de la barra). */
 /** luis abandona un duelo contra la computadora desde «Más», confirma y vuelve al salón; la mesa ya no lo recibe. */
 async function probarAbandono() {
   const luis = await entrar("luis");
@@ -654,6 +653,7 @@ async function probarEsperaYCobro() {
   console.log(`Duelo entre personas: ${nombre} se desconectó, el rival vio la cuenta, siguió esperando y cobró la partida.`);
 }
 
+/** El interruptor «Modo liviano» de la hoja Más (en el teléfono, el ☰ de la barra). */
 async function abrirModoLiviano(p) {
   await boton(p, "Más").click();
   await expect(p.getByTestId("hoja-mas")).toBeVisible(espera);

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  accionDeEspera, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera,
+  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, recibidaEn, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera,
 } from "../../app/src/mesa/abandono.ts";
 import { mesaDeJugador, mesaDeTercetos } from "../../app/src/mesa/modelo.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
@@ -14,13 +14,38 @@ test("la confirmación dice la consecuencia y, fuera del duelo, quién juega el 
   }
 });
 
-test("segundosRestantes redondea hacia arriba y no baja de cero", () => {
-  const ahora = Date.parse("2026-11-26T12:00:00.000Z");
-  const en = (ms: number) => new Date(ahora + ms).toISOString();
-  assert.equal(segundosRestantes(en(0), ahora), 0);
-  assert.equal(segundosRestantes(en(1_000), ahora), 1);
-  assert.equal(segundosRestantes(en(59_100), ahora), 60);
-  assert.equal(segundosRestantes(en(-5_000), ahora), 0);
+test("segundosRestantes cuenta el plazo desde que llegó la espera, redondea hacia arriba y no baja de cero", () => {
+  const espera = { desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
+  const recibida = 5_000_000;
+  assert.equal(segundosRestantes(espera, recibida, recibida), 60);
+  assert.equal(segundosRestantes(espera, recibida, recibida + 900), 60);
+  assert.equal(segundosRestantes(espera, recibida, recibida + 59_000), 1);
+  assert.equal(segundosRestantes(espera, recibida, recibida + 60_000), 0);
+  assert.equal(segundosRestantes(espera, recibida, recibida + 90_000), 0);
+});
+
+test("la cuenta no depende del reloj del dispositivo, adelantado o atrasado respecto del servidor", () => {
+  const espera = { desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
+  const servidor = Date.parse(espera.desde);
+  for (const desfase of [-3_600_000, -45_000, 0, 45_000, 3_600_000]) {
+    const recibida = servidor + desfase;
+    assert.equal(segundosRestantes(espera, recibida, recibida + 20_000), 40, `desfase ${desfase} ms`);
+  }
+});
+
+test("anclarEsperas conserva cuándo llegó cada espera y olvida las que se fueron", () => {
+  const ana = { asiento: 0, nombre: "Ana", desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
+  const beto = { ...ana, asiento: 3, nombre: "Beto" };
+  const primera = anclarEsperas({}, [ana], 1_000);
+  assert.equal(recibidaEn(primera, ana, 9_999), 1_000);
+  const segunda = anclarEsperas(primera, [ana, beto], 4_000);
+  assert.equal(recibidaEn(segunda, ana, 9_999), 1_000, "una relectura no reinicia la cuenta");
+  assert.equal(recibidaEn(segunda, beto, 9_999), 4_000);
+  const otroPlazo = { ...ana, desde: "2026-11-26T12:05:00.000Z", disponible: "2026-11-26T12:06:00.000Z" };
+  const tercera = anclarEsperas(segunda, [otroPlazo], 7_000);
+  assert.deepEqual(Object.values(tercera), [7_000], "un plazo nuevo se ancla de nuevo y los viejos se olvidan");
+  assert.deepEqual(anclarEsperas(tercera, undefined, 8_000), {});
+  assert.equal(recibidaEn({}, ana, 9_999), 9_999);
 });
 
 test("el aviso de espera muestra la cuenta mientras falta", () => {

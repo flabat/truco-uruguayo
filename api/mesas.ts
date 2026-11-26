@@ -99,22 +99,25 @@ export async function leerMesa(db: Pool | PoolClient, id: string, jugadorId: str
   };
 }
 
-const textoSalida = {
-  abandonada: "Abandonaste esta partida.",
-  desconectada: "Una computadora te reemplazó porque te desconectaste.",
-} as const;
+type Salida = "abandonada" | "desconectada";
 
-/** Por qué alguien que tuvo asiento ya no ve la mesa: abandonó, lo reemplazaron o se dio de baja. */
-export function textoDeSalida(asiento: { cedido: boolean; salida: keyof typeof textoSalida | null }) {
-  if (asiento.salida) return textoSalida[asiento.salida];
+/**
+ * Por qué alguien que tuvo asiento ya no ve la mesa: abandonó, lo reemplazaron, el rival cobró la partida
+ * o se dio de baja. Una desconexión sin asiento cedido cerró la mesa: nadie lo reemplazó.
+ */
+export function textoDeSalida(asiento: { cedido: boolean; salida: Salida | null }) {
+  if (asiento.salida === "abandonada") return "Abandonaste esta partida.";
+  if (asiento.salida === "desconectada") {
+    return asiento.cedido ? "Una computadora te reemplazó porque te desconectaste." : "Tu rival cobró la partida porque te desconectaste.";
+  }
   return asiento.cedido ? "Una computadora juega tu asiento en esta mesa." : null;
 }
 
 /** Si el jugador salió de la mesa por abandono o desconexión, responde 409 con el motivo. */
 export async function exigirSinSalida(db: Pool | PoolClient, mesa: string, jugador: string) {
   if (!esId(mesa)) return;
-  const { rows: [propio] } = await db.query("SELECT salida FROM juego.asientos WHERE mesa=$1 AND jugador=$2", [mesa, jugador]);
-  if (propio?.salida) throw new ErrorPeticion(409, textoSalida[propio.salida as keyof typeof textoSalida]);
+  const { rows: [propio] } = await db.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND jugador=$2", [mesa, jugador]);
+  if (propio?.salida) throw new ErrorPeticion(409, textoDeSalida(propio)!);
 }
 
 export function verificarPerfil(modo: Modo, perfil: string | null) {

@@ -34,9 +34,9 @@ async function resultadoEnPerfil(persona, id) {
   assert.equal(res.status, 200);
   return (await res.json()).partidas.find(p => p.id === id)?.resultado;
 }
-async function mesa(modo, creador, asientos, { meta = 4, politica = "incumbent-online-v1" } = {}) {
-  const { rows: [m] } = await pool.query(`INSERT INTO juego.mesas (modo, creador, invitacion, meta, politica)
-    VALUES ($1,$2,$3,$4,$5) RETURNING id, invitacion`, [modo, creador.id, randomUUID(), meta, politica]);
+async function mesa(modo, creador, asientos, { meta = 4, politica = "incumbent-online-v1", perfil = null } = {}) {
+  const { rows: [m] } = await pool.query(`INSERT INTO juego.mesas (modo, creador, invitacion, meta, politica, perfil_tercetos)
+    VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, invitacion`, [modo, creador.id, randomUUID(), meta, politica, perfil]);
   for (const [asiento, persona] of asientos.entries()) {
     if (persona !== undefined) await pool.query("INSERT INTO juego.asientos (mesa,asiento,jugador,computadora) VALUES ($1,$2,$3,$4)",
       [m.id, asiento, persona?.id ?? null, persona === null]);
@@ -318,6 +318,10 @@ async function probarCobroDuelo() {
   assert.equal(deB.ganadorPartida, 1);
   assert.deepEqual(deB.cierreAbandono, { asiento: 0, nombre: a.nombre, motivo: "desconectada", ganador: 1 });
   assert.equal(reproducirChico(await replayDe(m.id), 1).ganador, 1);
+  const cobrada = "Tu rival cobró la partida porque te desconectaste.";
+  await assert.rejects(servicio.leer(m.id, a.id), { status: 409, message: cobrada });
+  await rechazo(await fetch(base + "/api/mesas/" + m.id, { headers: { cookie: a.cookie } }), 409, cobrada);
+  await rechazo(await fetch(base + "/api/mesas/" + m.id + "/partida", { headers: { cookie: a.cookie } }), 409, cobrada);
   await desconectar(enVivo);
 }
 
@@ -468,6 +472,35 @@ async function probarParejas() {
   return replay.eventos.findIndex(e => e.tipo === "salida") < replay.eventos.findLastIndex(e => e.tipo === "reparto");
 }
 
+/** Tercetos con A (0) y B (1): A sale y lo juega una computadora; cuando sale B, el último humano, la mesa se cierra. */
+async function probarTercetos() {
+  const a = await jugador("a"), b = await jugador("b");
+  const m = await mesa("3v3", a, [a, b, null, null, null, null], { meta: 50, politica: "tercetos-basica-v1", perfil: "tercetos-v1" });
+  await servicio.leer(m.id, a.id);
+  assert.equal((await abandonar(a, m.id)).status, 204);
+  const { rows: [deA] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
+  assert.deepEqual(deA, { cedido: true, salida: "abandonada" });
+  const sigue = await servicio.leer(m.id, b.id);
+  assert.equal(sigue.ganadorPartida, null);
+  assert.equal(sigue.cierreAbandono, undefined);
+  assert.equal((await abandonar(b, m.id)).status, 204);
+  const { rows: [deB] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=1", [m.id]);
+  assert.deepEqual(deB, { cedido: false, salida: "abandonada" }, "el último humano cierra la mesa en lugar de ceder");
+  await assert.rejects(servicio.leer(m.id, b.id), { status: 409, message: abandono });
+  assert.equal(await salidas(m.id), 2);
+  assert.equal(Number((await pool.query("SELECT count(*) FROM juego.turnos_bot WHERE mesa=$1", [m.id])).rows[0].count), 0);
+  const replay = await replayDe(m.id);
+  assert.ok(replay, "el replay de tercetos sigue completo");
+  const [salida, cierre] = replay.eventos.slice(-2);
+  assert.deepEqual([salida.tipo, salida.asiento, cierre.tipo, cierre.estado, cierre.ganador], ["salida", 1, "cierre", "abandonado", 0]);
+  for (const asiento of [0, 1, 2, 3, 4, 5]) {
+    const fin = reproducirChico(replay, asiento);
+    assert.deepEqual([fin.estado, fin.ganador], ["abandonado", 0], "asiento " + asiento);
+  }
+  assert.equal(await resultadoEnPerfil(a, m.id), "abandonada");
+  assert.equal(await resultadoEnPerfil(b, m.id), "abandonada");
+}
+
 /** Sin reparto, abandonar es retirarse: libera el asiento y cancela la mesa propia. */
 async function probarSinReparto() {
   const a = await jugador("a"), b = await jugador("b");
@@ -494,6 +527,7 @@ try {
   for (let intento = 0; intento < 3 && !repartoDespues; intento++) repartoDespues = await probarParejas();
   assert.ok(repartoDespues, "hubo un reparto después de la salida");
   await probarSinReparto();
+  await probarTercetos();
   assert.ok(plazo > 0 && plazo <= 5000, "la pila usa un plazo de espera corto (PLAZO_ESPERA_MS)");
   await probarReemplazoParejas();
   await probarCantoSinRespuesta();
@@ -501,7 +535,7 @@ try {
   await probarCobroDuelo();
   await probarRegreso();
   await probarReemplazoSimultaneo();
-  console.log("Abandono verificado · duelo cerrado (computadora en cola y humano), parejas cedidas hasta el final, mesas sin reparto liberadas,"
+  console.log("Abandono verificado · duelo cerrado (computadora en cola y humano), parejas cedidas hasta el final, tercetos cerrados al salir el último humano, mesas sin reparto liberadas,"
     + " reemplazo y cobro por desconexión después del plazo (también con un canto sin responder y con el pie esperado), regreso a tiempo y un único reemplazo simultáneo.");
 } finally {
   await pool.end();

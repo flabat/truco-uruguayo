@@ -21,9 +21,35 @@ export function textoConfirmarAbandono(modo: Modo): string {
   return modo === "1v1" ? consecuencia : consecuencia + " Una computadora va a jugar tu lugar.";
 }
 
-/** Los segundos que faltan hasta `disponible` (ISO del servidor), hacia arriba y nunca negativos. */
-export function segundosRestantes(disponible: string, ahora: number): number {
-  return Math.max(0, Math.ceil((Date.parse(disponible) - ahora) / 1000));
+/** Por espera (asiento y plazo), cuándo la recibió la app (ms de `Date.now()`). */
+export type Anclas = Readonly<Record<string, number>>;
+
+const claveDe = (espera: Espera) => espera.asiento + "@" + espera.disponible;
+
+/**
+ * Anota cuándo llegó cada espera nueva y olvida las que ya no están. Una espera que vuelve con el
+ * mismo plazo conserva su ancla, así la cuenta no se reinicia en cada relectura.
+ */
+export function anclarEsperas(anclas: Anclas, esperas: readonly Espera[] | undefined, ahora: number): Anclas {
+  const nuevas: Record<string, number> = {};
+  for (const espera of esperas ?? []) nuevas[claveDe(espera)] = anclas[claveDe(espera)] ?? ahora;
+  return nuevas;
+}
+
+/**
+ * Los segundos que faltan, hacia arriba y nunca negativos. Las fechas son del reloj del servidor:
+ * solo se usa su diferencia (`disponible - desde`) y lo que pasó en el dispositivo desde que llegó
+ * la espera, así un reloj del dispositivo adelantado o atrasado no cambia la cuenta. Quien recibe
+ * la espera tarde la ve más larga; el servidor igual rechaza un reemplazo adelantado.
+ */
+export function segundosRestantes(espera: Pick<Espera, "desde" | "disponible">, recibida: number, ahora: number): number {
+  const plazo = Date.parse(espera.disponible) - Date.parse(espera.desde);
+  return Math.max(0, Math.ceil((plazo - (ahora - recibida)) / 1000));
+}
+
+/** Cuándo llegó una espera según las anclas; sin ancla, recién llegó. */
+export function recibidaEn(anclas: Anclas, espera: Espera, ahora: number): number {
+  return anclas[claveDe(espera)] ?? ahora;
 }
 
 export function textoEspera(nombre: string, restantes: number): string {

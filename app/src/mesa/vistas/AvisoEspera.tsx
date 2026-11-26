@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { mensajeDe } from "@eltruco/cliente/cliente.ts";
 import { colores, fuentes } from "../../tema.ts";
 import {
-  accionDeEspera, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, type Espera, type EsperasOcultas,
+  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, recibidaEn, segundosRestantes,
+  type Anclas, type Espera, type EsperasOcultas,
 } from "../abandono.ts";
 import { BotonDeHoja, estilosDeHoja } from "./PartesDeHoja.tsx";
 import { mesaColores } from "./estilo.ts";
@@ -21,6 +22,9 @@ export function AvisoEspera({ esperas, modo, reemplazar }: {
   const [ocultas, cambiarOcultas] = useState<EsperasOcultas>({});
   const [enviando, cambiarEnviando] = useState<number | null>(null);
   const [errores, cambiarErrores] = useState<Readonly<Record<number, string>>>({});
+  // La cuenta corre desde que llegó cada espera, con el reloj del dispositivo solo para medir lo que pasó.
+  const anclas = useRef<Anclas>({});
+  anclas.current = anclarEsperas(anclas.current, esperas, Date.now());
   const hayEsperas = (esperas?.length ?? 0) > 0;
   useEffect(() => {
     if (!hayEsperas) return;
@@ -47,7 +51,7 @@ export function AvisoEspera({ esperas, modo, reemplazar }: {
   return (
     <View style={estilos.columna} pointerEvents="box-none">
       {visibles.map(espera => {
-        const restantes = segundosRestantes(espera.disponible, ahora);
+        const restantes = segundosRestantes(espera, recibidaEn(anclas.current, espera, ahora), ahora);
         const error = errores[espera.asiento];
         const { anuncio, cuenta } = partesDeEspera(espera.nombre, restantes);
         return (
