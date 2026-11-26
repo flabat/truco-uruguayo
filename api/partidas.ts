@@ -5,7 +5,7 @@ import type { Asiento } from "@eltruco/motor/reparto.ts";
 import {
   iniciarOnline, marcadorOnline, repartirOnline, versionReglasOnline, vistaOnline,
 } from "@eltruco/motor/mesa-online.ts";
-import { crearIndicacionPie, textoFrasePie, versionSenasPie } from "@eltruco/motor/senas-pie.ts";
+import { crearIndicacionPie, pieQueResponde, textoFrasePie, versionSenasPie } from "@eltruco/motor/senas-pie.ts";
 import { confirmarJugadaPieDB, continuarAlPie, destinosAtendidos, esperaDelPie, guardarPalabraPie, programarBotPie, vistaPiePrivada } from "./partidas-pie.ts";
 import { aDecidir } from "@eltruco/motor/cantos-online.ts";
 import { jugadorDeSesion } from "./auth.ts";
@@ -291,7 +291,10 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const activos = asientosQueEsperan(mesa);
     const { rows } = await db.query<{ asiento: number }>("SELECT asiento FROM juego.asientos WHERE mesa=$1 AND jugador = ANY($2)",
       [mesa.id, [...conectados(mesa.id)]]);
-    const trabando = asientosQueTraban(aDecidir(mano.estado), esperaDelPie(mano, activos), activos, rows.map(r => r.asiento));
+    // Con señas al pie, la computadora al pie responde el envido aunque haya compañeros humanos.
+    const respondePie = mesa.versionSenas === versionSenasPie && pieQueResponde(mano.estado, activos) !== undefined;
+    const posibles = respondePie ? [] : aDecidir(mano.estado);
+    const trabando = asientosQueTraban(posibles, esperaDelPie(mano, activos), activos, rows.map(r => r.asiento));
     return esperas.actualizar(mesa.id, trabando).map(({ asiento, desde, disponible }) => ({
       asiento, nombre: mesa.asientos[asiento].nombre ?? `Jugador ${asiento + 1}`,
       desde: new Date(desde).toISOString(), disponible: new Date(disponible).toISOString() }));

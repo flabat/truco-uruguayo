@@ -24,7 +24,10 @@ test("en 3v3 la salida del único activo cierra a favor del otro equipo", () => 
 test("traban los asientos que deben decidir y están activos sin conexión", () => {
   assert.deepEqual(asientosQueTraban([0], undefined, [0, 1], [1]), [0]);
   assert.deepEqual(asientosQueTraban([0, 2], undefined, [0, 2], [2]), []);
-  assert.deepEqual(asientosQueTraban([0, 2], undefined, [0], []), []);
+  // La computadora compañera no responde por A mientras A puede decidir.
+  assert.deepEqual(asientosQueTraban([0, 2], undefined, [0], []), [0]);
+  // Solo deciden computadoras: juegan ellas.
+  assert.deepEqual(asientosQueTraban([1, 3], undefined, [0], []), []);
   assert.deepEqual(asientosQueTraban([0, 2], undefined, [0, 2], []), [0, 2]);
   assert.deepEqual(asientosQueTraban([], undefined, [0, 1], []), []);
 });

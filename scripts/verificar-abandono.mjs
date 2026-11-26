@@ -201,6 +201,57 @@ async function probarReemplazoParejas() {
   await desconectar(enVivo);
 }
 
+/**
+ * Lleva la mano hasta que B (rival) canta truco o envido y el canto queda esperando al equipo de A,
+ * donde también podría responder su compañero computadora.
+ */
+async function llevarAlCantoDeB(id, a, b) {
+  for (let pasos = 0; pasos < 200; pasos++) {
+    const deA = await servicio.leer(id, a.id), deB = await servicio.leer(id, b.id);
+    if (deB.vista.resultado) {
+      if (deB.ganadorPartida !== null) return false;
+      await servicio.ejecutar(id, b.id, "siguiente", comando(deB.version));
+      continue;
+    }
+    const canto = ["envido", "truco"].find(t => deB.vista.legales.includes(t));
+    if (canto) {
+      const respuesta = await servicio.ejecutar(id, b.id, "acciones", comando(deB.version, { tipo: canto }));
+      const ahora = await servicio.leer(id, a.id);
+      if (ahora.vista.legales.includes("quiero") && !elegirAccionOnline(respuesta.vista)) return true;
+      continue;
+    }
+    const [quien, vista] = elegirAccionOnline(deB.vista) ? [b, deB] : elegirAccionOnline(deA.vista) ? [a, deA] : [];
+    if (quien) {
+      const { asiento: _, ...accion } = elegirAccionOnline(vista.vista);
+      await servicio.ejecutar(id, quien.id, "acciones", comando(vista.version, accion));
+    } else {
+      const version = deB.version;
+      assert.ok(await esperar(async () => (await servicio.leer(id, b.id)).version !== version), "las computadoras juegan");
+    }
+  }
+  return false;
+}
+
+/** Parejas: B canta y espera la respuesta del equipo de A; la computadora compañera no responde por A desconectado. */
+async function probarCantoSinRespuesta() {
+  let a, b, m;
+  for (let intento = 1; ; intento++) {
+    a = await jugador("a"); b = await jugador("b");
+    m = await mesa("2v2", a, [a, b, null, null], { meta: 12 });
+    if (await llevarAlCantoDeB(m.id, a, b)) break;
+    assert.ok(intento < 5, "B llega a cantar y esperar la respuesta del equipo de A");
+  }
+  const enVivo = await conectar(b, m.id);
+  assert.deepEqual((await leerPorHttp(b, m.id)).esperas.map(e => e.asiento), [0]);
+  await dormir(plazo + 300);
+  const respuesta = await reemplazar(b, m.id, 0);
+  assert.equal(respuesta.status, 200);
+  assert.deepEqual((await respuesta.json()).esperas, []);
+  const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
+  assert.deepEqual(asiento, { cedido: true, salida: "desconectada" });
+  await desconectar(enVivo);
+}
+
 /** Duelo con A desconectado en su turno: B cobra la partida. */
 async function probarCobroDuelo() {
   const a = await jugador("a"), b = await jugador("b");
@@ -388,11 +439,12 @@ try {
   await probarSinReparto();
   assert.ok(plazo > 0 && plazo <= 5000, "la pila usa un plazo de espera corto (PLAZO_ESPERA_MS)");
   await probarReemplazoParejas();
+  await probarCantoSinRespuesta();
   await probarCobroDuelo();
   await probarRegreso();
   await probarReemplazoSimultaneo();
   console.log("Abandono verificado · duelo cerrado (computadora en cola y humano), parejas cedidas hasta el final, mesas sin reparto liberadas,"
-    + " reemplazo y cobro por desconexión después del plazo, regreso a tiempo y un único reemplazo simultáneo.");
+    + " reemplazo y cobro por desconexión después del plazo (también con un canto sin responder), regreso a tiempo y un único reemplazo simultáneo.");
 } finally {
   await pool.end();
 }

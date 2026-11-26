@@ -23,8 +23,10 @@ export function efectoDeSalida(
 }
 
 /**
- * Asientos que traban la mesa, en orden ascendente: todos los que deben decidir
- * cuando son humanos activos y ninguno está conectado; más el pie, que espera una indicación suya.
+ * Asientos que traban la mesa, en orden ascendente: los humanos activos que deben decidir cuando
+ * ninguno de ellos está conectado; más el pie, que espera una indicación suya.
+ * Una computadora o un asiento cedido no responde por el equipo mientras espera un humano que puede
+ * decidir. Si entre los que deciden no hay humanos activos, la computadora juega y nadie traba.
  * `posibles` vacío: el «siguiente» lo puede pedir cualquiera.
  */
 export function asientosQueTraban(
@@ -33,11 +35,9 @@ export function asientosQueTraban(
   activos: readonly number[],
   conectados: readonly number[],
 ): number[] {
-  // Si alguno de los que deciden es computadora o está cedido, la mesa sigue sola;
-  // si alguno humano está conectado, puede responder por el equipo.
-  const responde = posibles.some((p) => !activos.includes(p) || conectados.includes(p));
+  const deciden = posibles.filter((p) => activos.includes(p));
   const traban = new Set<number>();
-  if (!responde) for (const p of posibles) traban.add(p);
+  if (!deciden.some((p) => conectados.includes(p))) for (const p of deciden) traban.add(p);
   if (esperaPie !== undefined && activos.includes(esperaPie) && !conectados.includes(esperaPie)) {
     traban.add(esperaPie);
   }
