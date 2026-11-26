@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  accionDeEspera, esperasVisibles, ocultarEspera, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera,
+  accionDeEspera, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera,
 } from "../../app/src/mesa/abandono.ts";
 import { mesaDeJugador, mesaDeTercetos } from "../../app/src/mesa/modelo.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
@@ -26,6 +26,16 @@ test("segundosRestantes redondea hacia arriba y no baja de cero", () => {
 test("el aviso de espera muestra la cuenta mientras falta", () => {
   assert.equal(textoEspera("Ana", 42), "Esperando a Ana… · 42 s");
   assert.equal(textoEspera("Ana", 0), "Esperando a Ana…");
+});
+
+test("lo que se anuncia no cambia con la cuenta: solo la cuenta visible baja cada segundo", () => {
+  assert.deepEqual(partesDeEspera("Ana", 42), { anuncio: "Esperando a Ana…", cuenta: " · 42 s" });
+  assert.deepEqual(partesDeEspera("Ana", 41).anuncio, partesDeEspera("Ana", 42).anuncio);
+  assert.deepEqual(partesDeEspera("Ana", 0), { anuncio: "Esperando a Ana…", cuenta: null });
+  for (const n of [0, 1, 42]) {
+    const { anuncio, cuenta } = partesDeEspera("Ana", n);
+    assert.equal(anuncio + (cuenta ?? ""), textoEspera("Ana", n));
+  }
 });
 
 test("al vencer, el duelo cobra la partida y el resto reemplaza", () => {

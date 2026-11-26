@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { mensajeDe } from "@eltruco/cliente/cliente.ts";
 import { colores, fuentes } from "../../tema.ts";
 import {
-  accionDeEspera, esperasVisibles, ocultarEspera, segundosRestantes, textoEspera, type Espera, type EsperasOcultas,
+  accionDeEspera, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, type Espera, type EsperasOcultas,
 } from "../abandono.ts";
 import { BotonDeHoja, estilosDeHoja } from "./PartesDeHoja.tsx";
 import { mesaColores } from "./estilo.ts";
@@ -49,9 +49,18 @@ export function AvisoEspera({ esperas, modo, reemplazar }: {
       {visibles.map(espera => {
         const restantes = segundosRestantes(espera.disponible, ahora);
         const error = errores[espera.asiento];
+        const { anuncio, cuenta } = partesDeEspera(espera.nombre, restantes);
         return (
           <View key={espera.asiento} testID={"aviso-espera-" + espera.asiento} style={estilos.aviso} accessibilityLiveRegion="polite">
-            <Text style={estilos.texto}>{textoEspera(espera.nombre, restantes)}</Text>
+            {/* La región viva cambia solo al aparecer el aviso, la acción o un error: la cuenta queda fuera. */}
+            <View style={estilos.fila}>
+              <Text style={estilos.texto}>{anuncio}</Text>
+              {cuenta ? (
+                <Text style={estilos.texto} aria-hidden accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                  {cuenta}
+                </Text>
+              ) : null}
+            </View>
             {error ? <Text style={estilosDeHoja.nota}>{error}</Text> : null}
             {restantes === 0 ? (
               <View style={estilos.botones}>
@@ -79,6 +88,7 @@ const estilos = StyleSheet.create({
   aviso: {
     backgroundColor: mesaColores.hoja, borderRadius: 14, boxShadow: "0 6px 18px rgba(0, 0, 0, 0.45)", gap: 6, padding: 12,
   },
+  fila: { flexDirection: "row", flexWrap: "wrap" },
   texto: { color: colores.tinta, fontFamily: fuentes.textoFuerte, fontSize: 15, lineHeight: 20 },
   botones: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 });

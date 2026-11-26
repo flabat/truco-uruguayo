@@ -27,7 +27,16 @@ export function segundosRestantes(disponible: string, ahora: number): number {
 }
 
 export function textoEspera(nombre: string, restantes: number): string {
-  return `Esperando a ${nombre}…` + (restantes > 0 ? ` · ${restantes} s` : "");
+  const { anuncio, cuenta } = partesDeEspera(nombre, restantes);
+  return anuncio + (cuenta ?? "");
+}
+
+/**
+ * El aviso en dos partes: `anuncio` es lo que leen los lectores de pantalla y no cambia con la cuenta;
+ * `cuenta` es la que baja cada segundo, solo a la vista, para no anunciarla 60 veces seguidas.
+ */
+export function partesDeEspera(nombre: string, restantes: number): { anuncio: string; cuenta: string | null } {
+  return { anuncio: `Esperando a ${nombre}…`, cuenta: restantes > 0 ? ` · ${restantes} s` : null };
 }
 
 export function accionDeEspera(modo: Modo): string {
