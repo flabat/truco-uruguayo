@@ -13,12 +13,13 @@ test("el rápido ejecuta en la cola solo los planes amplios y --plan nunca toma 
   const env = {
     ...process.env, PATH: `${tmp}:${process.env.PATH}`, REGISTRO: registro, TRUCO_COLA_DIR: cola,
     PYTHON_REAL: execFileSync("python3", ["-c", "import sys; print(sys.executable)"], { encoding: "utf8" }).trim(),
+    GIT_REAL: execFileSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).trim(),
   };
   // Las etapas anotan el puesto y salen sin correr nada. Solo la cola usa Python de verdad.
   const anotar = 'echo "${TRUCO_COLA_PUESTO:-libre} $*" >> "$REGISTRO"\n';
   writeFileSync(join(tmp, "python3"), '#!/bin/sh\nif [ "$1" = scripts/cola-pila.py ]; then exec "$PYTHON_REAL" "$@"; fi\n' + anotar, { mode: 0o755 });
   for (const nombre of ["npm", "node"]) writeFileSync(join(tmp, nombre), "#!/bin/sh\n" + anotar, { mode: 0o755 });
-  function probar(archivo: string, ...args: string[]) {
+  function probar(archivo: string = "", ...args: string[]) {
     rmSync(registro, { force: true });
     const entorno: NodeJS.ProcessEnv = { ...env, CHECK_RAPIDO_ARCHIVOS: archivo };
     delete entorno.TRUCO_COLA_PUESTO;
@@ -47,4 +48,18 @@ test("el rápido ejecuta en la cola solo los planes amplios y --plan nunca toma 
 
   probar(["docs", "cambio-aislado.md"].join("/"));
   assert.deepEqual(etapas(), ["libre run cartas:verificar"]);
+
+  // Git informa otro archivo modificado al entrar en la cola, como si se hubiera editado durante la espera.
+  writeFileSync(join(tmp, "git"), `#!/bin/sh
+case "$1 $2 $3" in
+  "diff --name-only HEAD")
+    echo public/recurso-de-prueba.sin-import
+    if [ -n "$TRUCO_COLA_PUESTO" ]; then echo package.json; fi ;;
+  "ls-files --others --exclude-standard") ;;
+  *) exec "$GIT_REAL" "$@" ;;
+esac
+`, { mode: 0o755 });
+  probar();
+  assert.ok(etapas().includes("0 run test:unit"), "incluye las unitarias requeridas por el cambio durante la espera");
+  assert.ok(etapas().includes("0 exec -- playwright test"));
 });

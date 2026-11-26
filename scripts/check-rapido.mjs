@@ -17,12 +17,8 @@ const raiz = join(dirname(new URL(import.meta.url).pathname), "..");
 process.chdir(raiz);
 
 const args = process.argv.slice(2);
-// La cola devuelve el plan ya seleccionado al mismo ejecutor, sin volver a planificar.
-if (args[0] === "--ejecutar-plan") {
-  ejecutarPlan(JSON.parse(args[1]));
-  process.exit(0);
-}
 const soloPlan = args.includes("--plan");
+const tienePuesto = args.includes("--con-puesto") && process.env.TRUCO_COLA_PUESTO !== undefined;
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
 const lineas = (texto) => texto.split("\n").filter(Boolean);
 
@@ -195,6 +191,17 @@ if (specsElegidas.length) {
   plan.push([`${specsElegidas.length} de ${specs.length} archivos de Playwright`, ["npm", "exec", "--", "playwright", "test", ...filtro]]);
 }
 
+const planAmplio = todoGlobal.length > 0
+  || (specs.length > 0 && specsElegidas.length === specs.length)
+  || (unitarias.length > 0 && unitariasElegidas.length === unitarias.length);
+if (planAmplio && !soloPlan && !tienePuesto) {
+  console.log("check:rapido entra en la cola y vuelve a seleccionar las pruebas al tomar el puesto.");
+  // El proceso de la cola recibe las señales mientras espera. El selector vuelve a leer el checkout al entrar.
+  process.execve("/usr/bin/env", [
+    "env", "python3", "scripts/cola-pila.py", process.execPath, process.argv[1], ...args, "--con-puesto",
+  ], process.env);
+}
+
 console.log(`check:rapido contra ${desde.slice(0, 7)}: ${cambiados.size} archivos cambiados.`);
 for (const m of motivos) console.log(`  · ${m}`);
 const resumir = (comando) => {
@@ -207,31 +214,18 @@ for (const [nombre, comando] of plan) console.log(`  → ${nombre}: ${resumir(co
 if ([...cambiados].some((c) => c.startsWith("api/") || c.startsWith("infra/") || c.startsWith("scripts/verificar"))) {
   console.log("  ! El cambio toca la API, la infraestructura o la pila: antes del PR corré CHECK_STACK=1 npm run check.");
 }
-const planAmplio = todoGlobal.length > 0
-  || (specs.length > 0 && specsElegidas.length === specs.length)
-  || (unitarias.length > 0 && unitariasElegidas.length === unitarias.length);
 if (planAmplio) console.log("  · Este plan usa la cola de verificaciones de la máquina.");
 if (soloPlan) process.exit(0);
 
-if (planAmplio) {
-  const r = spawnSync("python3", [
-    "scripts/cola-pila.py", process.execPath, process.argv[1], "--ejecutar-plan", JSON.stringify(plan),
-  ], { stdio: "inherit" });
-  process.exit(r.status ?? 1);
-}
-ejecutarPlan(plan);
-
-function ejecutarPlan(etapas) {
-  const inicio = Date.now();
-  for (const [nombre, [comando, ...resto]] of etapas) {
-    const t = Date.now();
-    const r = spawnSync(comando, resto, { stdio: "inherit" });
-    const segundos = Math.round((Date.now() - t) / 1000);
-    if (r.status !== 0) {
-      console.error(`✗ ${nombre} falló tras ${segundos} s.`);
-      process.exit(r.status ?? 1);
-    }
-    console.log(`✓ ${nombre} (${segundos} s)`);
+const inicio = Date.now();
+for (const [nombre, [comando, ...resto]] of plan) {
+  const t = Date.now();
+  const r = spawnSync(comando, resto, { stdio: "inherit" });
+  const segundos = Math.round((Date.now() - t) / 1000);
+  if (r.status !== 0) {
+    console.error(`✗ ${nombre} falló tras ${segundos} s.`);
+    process.exit(r.status ?? 1);
   }
-  console.log(`check:rapido terminó en ${Math.round((Date.now() - inicio) / 1000)} s.`);
+  console.log(`✓ ${nombre} (${segundos} s)`);
 }
+console.log(`check:rapido terminó en ${Math.round((Date.now() - inicio) / 1000)} s.`);
