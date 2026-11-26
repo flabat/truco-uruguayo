@@ -1,4 +1,5 @@
 import { pieza, rangoDe, type CardId, type RangoPieza } from "./cartas.ts";
+import { aDecidir, legalesOnline } from "./cantos-online.ts";
 import { participantesDe } from "./mano.ts";
 import type { EstadoOnline } from "./mesa-online.ts";
 import { equipoDelAsiento, esAsientoOnline, type Asiento } from "./reparto.ts";
@@ -81,6 +82,8 @@ export interface VistaPie {
   vuelta: number;
   /** Sólo el pie humano recibe el asiento de la computadora que espera para tirar su carta. */
   esperando?: Asiento;
+  /** El compañero humano recibe el pie de la computadora que responde el envido por el equipo. */
+  responde?: Asiento;
   /** El pie recibe un grupo por compañero en el orden de esta vuelta; el emisor ve sólo su propio grupo. */
   grupos: { emisor: Asiento; gestos: GestoPie[] }[];
   opciones: { destinatario: Asiento; frases: FrasePie[] }[];
@@ -103,6 +106,22 @@ export function gestosDeCartas(cartas: readonly CardId[], muestra: CardId): Gest
   const presentes = new Set(cartas.map(carta => gestoDeCarta(carta, muestra)));
   const gestos = ordenGestos.filter(gesto => presentes.has(gesto));
   return gestos.length || !cartas.length ? gestos : ["ojos-cerrados"];
+}
+
+/**
+ * Con señas al pie, el envido del rival lo responde el pie cuando lo juega la computadora: es quien reúne las
+ * señas del equipo. Los compañeros humanos esperan su palabra. Si el pie es humano, cualquiera del equipo
+ * responde, como antes. Un compañero humano que todavía debe cantar su flor conserva su oportunidad.
+ */
+export function pieQueResponde(estado: EstadoOnline, humanos: readonly number[]): Asiento | undefined {
+  const lado = estado.lateral;
+  if (!lado || lado.querido || estado.flores.length || estado.consultaFlor.length || estado.resultado) return undefined;
+  const posibles = aDecidir(estado);
+  if (!posibles.some(asiento => humanos.includes(asiento))) return undefined;
+  const pie = vistaDelPie(estado, posibles[0], [])?.pie;
+  if (pie === undefined || humanos.includes(pie) || !posibles.includes(pie)) return undefined;
+  if (posibles.some(asiento => humanos.includes(asiento) && legalesOnline(estado, asiento).includes("flor"))) return undefined;
+  return pie;
 }
 
 export function vistaDelPie(estado: EstadoOnline, asiento: Asiento, atendidos: readonly DestinoPie[]): VistaPie | undefined {

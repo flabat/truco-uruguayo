@@ -4,7 +4,7 @@ import { cartaParaJugar, elegirAccionConPie, elegirIndicacionesPie } from "@eltr
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { aplicarOnline, iniciarOnline, vistaOnline, type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento, TresCartas } from "@eltruco/motor/reparto.ts";
-import { cartasPedidas, catalogoGestosPie, crearIndicacionPie, gestosDeCartas, significadoDeGesto, textoDeIndicacion, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
+import { cartasPedidas, catalogoGestosPie, crearIndicacionPie, gestosDeCartas, significadoDeGesto, textoDeIndicacion, pieQueResponde, vistaDelPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 
 const manos: TresCartas[] = [
   ["copas-02", "bastos-01", "oros-04"], ["bastos-06", "copas-03", "oros-06"],
@@ -261,4 +261,33 @@ test("si la muestra es una pieza, el pie nombra el 12 del palo, que es la carta 
   assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-derecho" }, "copas-10"), "Jugá el 11 de copas");
   assert.equal(significadoDeGesto("labio-inferior", "copas-03"), "Tres");
   assert.equal(textoDeIndicacion({ frase: "juga", carta: "ojo-izquierdo" }), "Jugá el 10 de la muestra");
+});
+
+test("con señas al pie, el pie de la computadora responde el envido del rival por sus compañeros humanos", () => {
+  for (const cantidad of [4, 6] as const) {
+    const inicio = iniciarOnline(reparto(cantidad));
+    const pie = (cantidad - 1) as Asiento;
+    const canto = aplicar(inicio, { tipo: "real-envido", asiento: 0 });
+    assert.equal(pieQueResponde(canto, [1]), pie);
+    if (cantidad === 6) assert.equal(pieQueResponde(canto, [1, 3]), pie);
+    // Con el pie humano, cualquiera del equipo responde como antes.
+    assert.equal(pieQueResponde(canto, [pie]), undefined);
+    assert.equal(pieQueResponde(canto, [1, pie]), undefined);
+    // Sin humanos que responden no hay nada que cambiar.
+    assert.equal(pieQueResponde(canto, []), undefined);
+    assert.equal(pieQueResponde(canto, [0]), undefined);
+    assert.equal(pieQueResponde(inicio, [1]), undefined);
+    // El truco sigue su curso: lo responde cualquiera del equipo.
+    assert.equal(pieQueResponde(aplicar(inicio, { tipo: "truco", asiento: 0 }), [1]), undefined);
+    // Una vez respondido, la mano sigue sin esperar al pie.
+    assert.equal(pieQueResponde(aplicar(canto, { tipo: "quiero", asiento: pie }), [1]), undefined);
+  }
+});
+
+test("el compañero humano que debe cantar su flor conserva su oportunidad ante el envido", () => {
+  const conFlor = reparto(4);
+  conFlor.manos = [conFlor.manos[0], ["bastos-04", "bastos-05", "bastos-06"], ...conFlor.manos.slice(2)];
+  const canto = aplicar(iniciarOnline(conFlor), { tipo: "envido", asiento: 0 });
+  assert.ok(vistaOnline(canto, 1).legales.includes("flor"));
+  assert.equal(pieQueResponde(canto, [1]), undefined);
 });

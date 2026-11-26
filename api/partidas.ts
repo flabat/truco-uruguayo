@@ -74,13 +74,18 @@ function ganador(puntos: Tanteador, meta: number) {
 function vista(mano: ManoPublicable, formato: FormatoMesa, numero: number, version: number, asiento: Asiento, humanos: readonly number[]) {
   const pie = mano.indicaciones && { versionSenas: versionSenasPie, indicaciones: mano.indicaciones,
     pie: vistaPiePrivada(mano, asiento, humanos) };
-  if (formato === "triples") return { ...proyectarTercetos(mano.estado, numero, version, asiento), ...pie };
+  // Mientras el pie de la computadora responde el envido, el compañero humano no tiene respuesta que elegir.
+  const callar = <V extends { legales: readonly unknown[] }>(v: V): V => pie?.pie?.responde === undefined ? v : { ...v, legales: [] };
+  if (formato === "triples") {
+    const partida = proyectarTercetos(mano.estado, numero, version, asiento);
+    return { ...partida, ...pie, vista: callar(partida.vista) };
+  }
   const puntos = marcadorOnline(mano.estado);
   const { meta } = mano.estado;
   const versionSenas = signalVersionFor(formato);
   return normalizarPartida({ version, formato, manoNumero: numero, puntos, meta, ganadorPartida: ganador(puntos, meta),
     ...pie, ...(!pie && versionSenas && {versionSenas, turnos: turnosDeEquipo(mano.turnos, asiento)}),
-    vista: vistaOnline(mano.estado, asiento) });
+    vista: callar(vistaOnline(mano.estado, asiento)) });
 }
 
 /** Humanos para las reglas y el replay, incluidos los asientos cedidos. */

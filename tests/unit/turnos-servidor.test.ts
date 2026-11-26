@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { guardarAcciones, jugarComputadoras, leerAccion, restaurar, turnosDeEquipo, type Registro } from "../../api/turnos.ts";
-import { esperaDelPie } from "../../api/partidas-pie.ts";
+import { asientoBotPie, confirmarJugadaPieDB, esperaDelPie, vistaPiePrivada } from "../../api/partidas-pie.ts";
 import { versionSenasPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { hasSignals, signalVersionFor, supportedFormats } from "../../training/contracts/index.ts";
-import { iniciarOnline, marcadorOnline, vistaOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { dueloFlor } from "../fixtures/duelo-mazo.ts";
 
 const parejas: RepartoOnline = {versionReparto: "online-1", mano: 0, dador: 3, muestra: "oros-01", manos: [
@@ -100,4 +100,29 @@ test("solo la computadora que va a tirar una carta espera una decisión de su pi
   const tercetos: RepartoOnline = { ...reparto, versionReparto: "online-2", dador: 5,
     manos: [...reparto.manos, ["espadas-06", "oros-07", "bastos-02"], ["copas-02", "copas-03", "copas-04"]] };
   assert.equal(esperaDelPie({ ...mano, estado: iniciarOnline(tercetos, [0, 0], 50, 2) }, [4]), undefined);
+});
+
+test("ante el envido del rival responde el pie de la computadora y el compañero humano espera su palabra", async () => {
+  const reparto: RepartoOnline = { ...parejas, reglaFlor: "inmediata-v2", versionReparto: "online-2", dador: 5, manos: [
+    ["bastos-06", "oros-03", "espadas-05"], ["copas-05", "bastos-07", "oros-06"],
+    ["oros-12", "bastos-03", "espadas-07"], ["espadas-03", "copas-07", "bastos-04"],
+    ["espadas-06", "oros-07", "bastos-02"], ["copas-10", "oros-11", "espadas-12"],
+  ] };
+  const paso = aplicarOnline(iniciarOnline(reparto, [0, 0], 50), { tipo: "real-envido", asiento: 0 });
+  assert.ok(paso.ok);
+  // En el pico a pico no hay pie: responde el rival del duelo.
+  const pico = aplicarOnline(iniciarOnline(reparto, [0, 0], 50, 2), { tipo: "real-envido", asiento: 0 });
+  assert.ok(pico.ok);
+  assert.equal(asientoBotPie(pico.estado, [1]), 3);
+  const mano = { estado: paso.estado, turnos: [], indicaciones: [] };
+  // El pie del equipo que responde es el asiento 5; el humano del asiento 1 no decide.
+  assert.equal(asientoBotPie(mano.estado, [1]), 5);
+  assert.equal(vistaPiePrivada(mano, 1, [1])?.responde, 5);
+  assert.equal(vistaPiePrivada(mano, 3, [1])?.responde, 5);
+  assert.equal(vistaPiePrivada(mano, 0, [1])?.responde, undefined);
+  await assert.rejects(confirmarJugadaPieDB({} as never, { mesa: "m", numero: 1, version: 1 }, mano,
+    { tipo: "quiero", asiento: 1 }, [1]), /lo responde tu pie/);
+  // Con el pie humano, la computadora espera su respuesta como antes.
+  assert.equal(asientoBotPie(mano.estado, [5]), undefined);
+  assert.equal(vistaPiePrivada(mano, 1, [1, 5])?.responde, undefined);
 });
