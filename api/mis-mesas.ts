@@ -71,7 +71,7 @@ async function leerMesas(pool: Pool, jugador: string, anteriores: ReadonlyMap<st
          WHERE ultima.mesa = m.id ORDER BY ultima.numero DESC LIMIT 1
       ) h ON true
       LEFT JOIN juego.replays_chico r ON r.mesa = m.id
-     WHERE propio.jugador = $1 AND NOT propio.cedido AND m.cancelada IS NULL AND NOT m.solo_computadoras
+     WHERE propio.jugador = $1 AND NOT propio.cedido AND propio.salida IS NULL AND m.cancelada IS NULL AND NOT m.solo_computadoras
        AND NOT EXISTS (SELECT 1 FROM juego.eventos_chico c WHERE c.mesa = m.id AND c.evento->>'tipo' = 'cierre')
      ORDER BY actividad DESC NULLS LAST, m.id`, [jugador, JSON.stringify(revisiones)]);
 

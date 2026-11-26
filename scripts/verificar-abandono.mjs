@@ -43,6 +43,11 @@ async function replayDe(id) {
   const { rows: [fila] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [id]);
   return fila?.replay;
 }
+async function enMisMesas(persona, id) {
+  const respuesta = await fetch(base + "/api/mis-mesas", { headers: { cookie: persona.cookie } });
+  assert.equal(respuesta.status, 200);
+  return (await respuesta.json()).mesas.some(m => m.id === id);
+}
 const salidas = async id => Number((await pool.query(
   "SELECT count(*) FROM juego.eventos_chico WHERE mesa=$1 AND evento->>'tipo'='salida'", [id])).rows[0].count);
 const versionMano = async id => (await pool.query(
@@ -76,13 +81,16 @@ async function jugarHastaElFinal(id, b, asientoB) {
   return partida;
 }
 
-/** Deja la mano en el turno de A (asiento 0): B juega, reparte o espera a las computadoras. */
+/**
+ * Deja la mano en una decisión que solo puede tomar A (asiento 0): B juega, responde por el equipo,
+ * reparte o espera a las computadoras. Si B también puede responder, la computadora no responde por A.
+ */
 async function llevarAlTurnoDeA(id, a, b) {
   for (let pasos = 0; ; pasos++) {
     assert.ok(pasos < 200, "la mano debe llegar al turno de A");
     const partida = await servicio.leer(id, a.id);
-    if (!partida.vista.resultado && elegirAccionOnline(partida.vista)) return partida;
     const deB = await servicio.leer(id, b.id);
+    if (!partida.vista.resultado && elegirAccionOnline(partida.vista) && !elegirAccionOnline(deB.vista)) return partida;
     if (deB.vista.resultado) {
       if (deB.ganadorPartida !== null) throw new Error("El chico terminó antes del turno de A.");
       await servicio.ejecutar(id, b.id, "siguiente", comando(deB.version));
@@ -106,7 +114,9 @@ async function probarDueloComputadora(pin) {
   await servicio.leer(m.id, a.id);
   await pool.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [m.id]);
   const antes = await versionMano(m.id);
+  assert.ok(await enMisMesas(a, m.id));
   assert.equal((await abandonar(a, m.id)).status, 204);
+  assert.equal(await enMisMesas(a, m.id), false, "la mesa abandonada sale de las mesas de A");
   await assert.rejects(servicio.leer(m.id, a.id), { status: 409, message: abandono });
   await rechazo(await fetch(base + "/api/mesas/" + m.id, { headers: { cookie: a.cookie } }), 409, abandono);
   assert.equal(await leerMesa(pool, m.id, a.id, web), null);
@@ -130,8 +140,20 @@ async function probarDueloComputadora(pin) {
 async function probarDueloHumano() {
   const a = await jugador("a"), b = await jugador("b");
   const m = await mesa("1v1", a, [a, b], { meta: 12 });
-  const inicial = await servicio.leer(m.id, b.id);
+  let inicial = await servicio.leer(m.id, b.id);
+  // B hace una jugada antes del cierre; su reintento después del cierre recibe el mismo recibo.
+  if (!elegirAccionOnline(inicial.vista)) {
+    const deA = await servicio.leer(m.id, a.id);
+    const { asiento: _, ...accion } = elegirAccionOnline(deA.vista);
+    await servicio.ejecutar(m.id, a.id, "acciones", comando(deA.version, accion));
+    inicial = await servicio.leer(m.id, b.id);
+  }
+  const { asiento: _, ...accion } = elegirAccionOnline(inicial.vista);
+  const pedido = comando(inicial.version, accion);
+  const recibo = await servicio.ejecutar(m.id, b.id, "acciones", pedido);
+  inicial = await servicio.leer(m.id, b.id);
   assert.equal((await abandonar(a, m.id)).status, 204);
+  assert.deepEqual(await servicio.ejecutar(m.id, b.id, "acciones", pedido), recibo, "el reintento conserva su recibo");
   const deB = await servicio.leer(m.id, b.id);
   assert.equal(deB.ganadorPartida, 1);
   assert.deepEqual(deB.cierreAbandono, { asiento: 0, nombre: a.nombre, motivo: "abandonada", ganador: 1 });
@@ -158,7 +180,10 @@ async function probarParejas() {
       if (intento === 3 || !(error instanceof Error) || error.message !== "El chico terminó antes del turno de A.") throw error;
     }
   }
+  assert.ok(await enMisMesas(a, m.id));
   assert.equal((await abandonar(a, m.id)).status, 204);
+  assert.equal(await enMisMesas(a, m.id), false, "la mesa abandonada sale de las mesas de A");
+  assert.ok(await enMisMesas(b, m.id), "B sigue viendo la mesa");
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
   assert.deepEqual(asiento, { cedido: true, salida: "abandonada" });
   // La computadora jugó enseguida el turno de A.
@@ -178,8 +203,8 @@ async function probarParejas() {
   const replay = await replayDe(m.id);
   assert.ok(replay, "el replay sigue completo después de la salida");
   assert.equal(replay.eventos.at(-1).estado, "terminado");
-  // Hubo repartos después de la salida: la secuencia de la mano siguiente cuenta el evento.
-  assert.ok(replay.eventos.findIndex(e => e.tipo === "salida") < replay.eventos.findLastIndex(e => e.tipo === "reparto"));
+  // Si hubo repartos después de la salida, la secuencia de la mano siguiente contó el evento.
+  return replay.eventos.findIndex(e => e.tipo === "salida") < replay.eventos.findLastIndex(e => e.tipo === "reparto");
   for (const s of [0, 1, 2, 3]) reproducirChico(replay, s);
 }
 
@@ -204,7 +229,10 @@ try {
   assert.ok(enCola, "falta una política de duelo registrada");
   await probarDueloComputadora(enCola.pin);
   await probarDueloHumano();
-  await probarParejas();
+  // Un falta envido puede cerrar el chico en la mano de la salida: se repite hasta que haya un reparto después.
+  let repartoDespues = false;
+  for (let intento = 0; intento < 3 && !repartoDespues; intento++) repartoDespues = await probarParejas();
+  assert.ok(repartoDespues, "hubo un reparto después de la salida");
   await probarSinReparto();
   console.log("Abandono verificado · duelo cerrado (computadora en cola y humano), parejas cedidas hasta el final, mesas sin reparto liberadas.");
 } finally {

@@ -270,7 +270,7 @@ export async function salirDeMesa(db: PoolClient, mesa: string, asiento: number,
   verificarPerfil(registro.modo, registro.perfil_tercetos);
   const fila = await ultimaMano(db, mesa);
   const humanos = asientos.filter(a => !a.computadora).map(a => a.asiento);
-  const { estado } = recuperar(fila, formatoMesa(registro.modo, registro.version_senas), registro.meta, humanos);
+  const { estado } = recuperarMano(fila, formatoMesa(registro.modo, registro.version_senas), registro.meta, humanos);
   await guardarSalidaReplayDB(db, mesa, asiento, motivo, { ganador: efecto.ganador, puntos: marcadorOnline(estado) });
   // Una computadora programada no juega después del cierre.
   await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
@@ -298,8 +298,6 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       return { cambio: false, partida: normalizarPartida({ version: 0, formato: mesa.formato, manoNumero: 0,
         puntos: [0, 0], meta: mesa.meta, ganadorPartida: null, vista: null, ...(alPie && { versionSenas: versionSenasPie }) }) };
     }
-    const cierre = await leerCierreAbandono(db, id);
-    if (cierre && comando) throw new ErrorPeticion(409, "La partida ya terminó.");
     if (comando) {
       const { rows: [previo] } = await db.query(`SELECT respuesta, peticion = $4::jsonb AS coincide
         FROM juego.comandos WHERE mesa=$1 AND jugador=$2 AND id=$3`, [id, jugador, comando.id, comando]);
@@ -311,6 +309,9 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
         return { cambio: false, partida };
       }
     }
+    // Un comando ya aplicado conserva su recibo; uno nuevo no se aplica después de un cierre por abandono.
+    const cierre = await leerCierreAbandono(db, id);
+    if (cierre && comando) throw new ErrorPeticion(409, "La partida ya terminó.");
     const humanos = asientosHumanos(mesa);
     const esperan = asientosQueEsperan(mesa);
     const fila = await ultimaMano(db, id);
