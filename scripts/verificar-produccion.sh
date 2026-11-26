@@ -4,6 +4,7 @@ cd "$(dirname "$0")/.."
 # Avisa (sin fallar) si .env o el entorno no tienen los datos de las cuentas para abrir la app.
 node scripts/enlaces-app.mjs verificar .env
 tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
 project="truco-dr-$(date +%s)-$$"
 network="$project-copias"
 export SITE_HOST=mesa.internal HTTP_BIND=127.0.0.1: HTTPS_BIND=127.0.0.1:
@@ -48,16 +49,18 @@ SALON_HABILITADO=0 VOZ_ESPECTADORA_HABILITADA=0 EXHIBICIONES_HABILITADAS=0 \
 EXHIBICIONES_OBJETIVO=10 verificar_config_salon 1 1 1 10 0
 
 cleanup() {
-  local status=$?
-  if ((status)); then "${dc[@]}" logs --tail=15 api identidad backup >&2 || true; fi
-  "${dc[@]}" down -v --remove-orphans --rmi local >/dev/null
-  docker rm -fv "$project-almacen" >/dev/null
-  docker network rm "$network" >/dev/null
-  rm -rf "$tmp"
-  exit "$status"
+  local status=$? limpieza=0
+  if [[ -s "$tmp/red.id" ]]; then
+    if ((status)); then "${dc[@]}" logs --tail=15 api identidad backup >&2 || true; fi
+    "${dc[@]}" down -v --remove-orphans --rmi local >/dev/null || limpieza=$?
+    docker rm -fv "$project-almacen" >/dev/null || limpieza=$?
+    docker network rm "$(<"$tmp/red.id")" >/dev/null || limpieza=$?
+  fi
+  rm -rf "$tmp" || limpieza=$?
+  exit "$((status ? status : limpieza))"
 }
-docker network create --internal "$network" >/dev/null
 trap cleanup EXIT
+docker network create --internal "$network" > "$tmp/red.id"
 docker run -d --name "$project-almacen" --network "$network" --network-alias almacen \
   -e DISABLE_AUTHENTICATION=1 restic/rest-server:0.14.0 >/dev/null
 "${dc[@]}" build

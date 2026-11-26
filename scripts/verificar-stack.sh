@@ -22,12 +22,12 @@ export DISCORD_GUILD_ID= DISCORD_CATEGORY_ID= DISCORD_BOT_TOKEN= DISCORD_BOT_TOK
 eval "$(node scripts/version.mjs --exportar)"
 
 cleanup() {
-  local status=$?
-  if [[ $status != 0 ]]; then "${compose[@]}" logs --tail=60 >&2; fi
-  if [[ -n ${caddy:-} ]]; then docker rm -f "$caddy" >/dev/null 2>&1 || true; fi
+  local status=$? limpieza=0
+  if [[ $status != 0 ]]; then "${compose[@]}" logs --tail=60 >&2 || true; fi
+  docker rm -f "$project-caddy" >/dev/null 2>&1 || true
   docker image rm "$project-caddy" >/dev/null 2>&1 || true
-  "${compose[@]}" down --volumes --rmi local
-  exit "$status"
+  "${compose[@]}" down --volumes --rmi local || limpieza=$?
+  exit "$((status ? status : limpieza))"
 }
 trap cleanup EXIT
 
@@ -44,12 +44,12 @@ node scripts/verificar-enlaces-app.mjs "$web"
 # La misma imagen web con el Caddyfile de producción sirve la app en /jugar/.
 docker build -q --target produccion -f infra/web.Dockerfile --build-arg APPLE_TEAM_ID --build-arg ANDROID_CERT_SHA256 \
   -t "$project-caddy" . >/dev/null
-caddy=$(docker run -d -e SITE_HOST=:80 -v "$PWD/infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro" -p 127.0.0.1::80 "$project-caddy")
+caddy=$(docker run -d --name "$project-caddy" -e SITE_HOST=:80 -v "$PWD/infra/produccion/Caddyfile:/etc/caddy/Caddyfile:ro" -p 127.0.0.1::80 "$project-caddy")
 caddy_web="http://$(docker port "$caddy" 80/tcp | head -1)"
 for _ in $(seq 40); do curl -fsS -o /dev/null "$caddy_web/" && break; sleep 0.25; done
 bash scripts/verificar-app-web.sh "$caddy_web"
 node scripts/verificar-enlaces-app.mjs "$caddy_web"
-docker rm -f "$caddy" >/dev/null && caddy=
+docker rm -f "$caddy" >/dev/null
 curl -fsS "$(url api 3001)/health" | node -e 'const s = JSON.parse(require("node:fs").readFileSync(0)); if (s.api !== "ok" || s.postgres !== "ok") process.exit(1)'
 node scripts/verificar-version.mjs "$web"
 curl -fsS "$issuer/.well-known/openid-configuration" | node -e '

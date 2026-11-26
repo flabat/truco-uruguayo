@@ -22,15 +22,17 @@ export function Pantalla({ titulo, children }: { titulo: string; children: React
 
 type Variante = "principal" | "secundario" | "peligro" | "claro";
 
-export function Boton({ children, onPress, variante = "principal", ocupado = false, etiqueta }: {
+export function Boton({ children, onPress, variante = "principal", ocupado = false, etiqueta, expandido }: {
   children: string; onPress: () => void; variante?: Variante; ocupado?: boolean;
   /** Nombre accesible cuando el texto visible no alcanza («Agregar computadora al asiento 2»). */
   etiqueta?: string;
+  expandido?: boolean;
 }) {
   return (
     <Pressable
       role="button"
       aria-label={etiqueta}
+      aria-expanded={expandido}
       aria-disabled={ocupado}
       disabled={ocupado}
       onPress={onPress}

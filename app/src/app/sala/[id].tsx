@@ -15,7 +15,7 @@ import { faltanParaRepartir, papelDelAsiento } from "../../salon/asientos.ts";
 import { compartirInvitacion } from "../../salon/compartir.ts";
 import { destinoDeEnlace, enlaceParaCompartir } from "../../salon/enlaces.ts";
 import { textoVisibilidad } from "../../salon/mesa-nueva.ts";
-import { avisosDeApp, compartirConElSistema, contar, copiarEnlace, memoriaDeMesa, origenWeb } from "../../salon/plataforma.ts";
+import { avisosDeApp, compartirConElSistema, contar, copiarEnlace, origenWeb } from "../../salon/plataforma.ts";
 import { RequiereJugador } from "../../salon/RequiereJugador.tsx";
 import { colores, fuentes } from "../../tema.ts";
 
@@ -47,12 +47,8 @@ function SalaDeEspera({ id, jugador, recienCreada, avisoInicial }: {
   const [aviso, setAviso] = useState(avisoInicial);
 
   useEffect(() => {
-    if (mesa) void memoriaDeMesa.recordar(jugador.id, mesa.id);
-  }, [mesa?.id, jugador.id]);
-  useEffect(() => {
-    if (error && [403, 404].includes(error.status)) void memoriaDeMesa.olvidar(jugador.id, id);
     if (error?.status === 401) recargarSesion();
-  }, [error, id, jugador.id, recargarSesion]);
+  }, [error, recargarSesion]);
   const lista = mesa?.lista === true;
   useEffect(() => {
     if (lista) entrarALaMesa(id);

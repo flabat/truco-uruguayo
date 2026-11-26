@@ -139,18 +139,22 @@ La publicación de producción abre el salón a todas las cuentas autenticadas y
 
 ## Publicación automática desde main
 
-El VPS consulta el repositorio privado cada tres minutos y publica el último commit de `main` cuando está verificado. Acepta cualquiera de estas señales para ese commit exacto:
+El VPS consulta el repositorio privado cada tres minutos. Para el último commit de `main`, #399 reconoce la corrida exitosa de **Verificar el sitio** (`check.yml`) por el evento `push` a `main`. Después de un squash, abrí la corrida de ese push y comprobá que el SHA coincide con el commit integrado. La corrida de `pull_request` corresponde a un commit de integración previo. La decisión de aprobación del PR se documenta por separado. [Verificación remota del PR](../CONTRIBUTING.md#verificación-remota-del-pr)
 
-- el estado de commit `verificado-local` en `success`, que publica quien corrió `CHECK_STACK=1 npm run check`;
-- una corrida exitosa del workflow **Verificar el sitio** (`check.yml`) por el evento `push`, cuando haya runner;
-- `DESPLIEGUE_SIN_VERIFICAR=1` en `/etc/truco-oriental/production.env`, que publica `main` sin esperar. Mientras el VPS sea un entorno de desarrollo sin jugadores externos, dejala activa. Quitala o ponela en `0` cuando vuelva a haber un check obligatorio.
-
-Con un squash merge, el commit de `main` es nuevo. Para marcarlo después de verificarlo, desde un checkout de ese commit:
+Durante una caída de GitHub Actions, el mantenedor puede publicar el estado `verificado-local` en `success` después de cumplir el [respaldo completo](verificacion-linux.md#caída-de-github-actions) sobre el SHA exacto del squash. Reservá ese estado para la revisión que se comprobó localmente. Desde el checkout limpio de esa revisión, registrá en el PR los comandos y sus resultados y comprobá de nuevo la punta de `main` antes de publicar el estado.
 
 ```sh
-gh api repos/flabat/truco-uruguayo/statuses/$(git rev-parse HEAD) \
-  -f state=success -f context=verificado-local -f description="CHECK_STACK=1 npm run check"
+(
+  set -eu
+  sha=$(git rev-parse HEAD)
+  test -z "$(git status --porcelain)"
+  test "$sha" = "$(gh api repos/flabat/truco-uruguayo/git/ref/heads/main --jq .object.sha)"
+  gh api "repos/flabat/truco-uruguayo/statuses/$sha" \
+    -f state=success -f context=verificado-local -f description="Pila y restauración verificadas localmente"
+)
 ```
+
+El ejecutor también admite `DESPLIEGUE_SIN_VERIFICAR=1` como excepción operativa del servidor de desarrollo. La adopción del runner de GitHub y los ensayos del verificador se hacen en el repositorio, con las credenciales, la configuración del VPS y la decisión sobre esa excepción bajo control del operador.
 
 El VPS construye las imágenes con el SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents**, **Actions** y **Commit statuses** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa los otros dos para comprobar la verificación. Sin **Commit statuses**, el registro muestra `HTTP 403` al leer el estado y sólo cuenta el workflow o la variable.
 

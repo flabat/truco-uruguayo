@@ -172,6 +172,7 @@ try {
   assert.ok((await jugador(ana, personas[1])).mesasConectadas.includes(abierta.id));
   const historial = gestion + "historial?jugador=" + personas[0].id;
   assert.ok(!(await leer(ana, historial)).elementos.some(m => m.id === abierta.id));
+  assert.ok((await leer(ana, "/api/mis-mesas")).mesas.some(m => m.id === abierta.id));
   assert.equal(await sqlDeMesa(abierta.id, "SELECT count(*) FROM juego.manos WHERE mesa=$mesa"), "0",
     "Inspeccionar una mesa lista no puede repartir cartas.");
 
@@ -212,6 +213,7 @@ try {
 
   // Un chico anterior a la captura de replays conserva las manos originales, sin cabecera ni cierre.
   await sqlDeMesa(mixta.id, "DELETE FROM juego.eventos_chico WHERE mesa=$mesa; DELETE FROM juego.replays_chico WHERE mesa=$mesa");
+  assert.ok(!(await leer(ana, "/api/mis-mesas")).mesas.some(m => m.id === mixta.id), "el chico antiguo también quedó terminado");
   const antigua = (await leer(ana, historial + "&estado=terminada")).elementos.find(m => m.id === mixta.id);
   assert.equal(antigua?.inicio, null);
   assert.equal(antigua.fin, null);
