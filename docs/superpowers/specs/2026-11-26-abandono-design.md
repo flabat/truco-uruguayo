@@ -113,7 +113,7 @@ Los replays existentes no cambian y siguen validando.
 
 Textos: «Abandonada» y «Desconectada». Ambas se cuentan con las derrotas donde se sumen resultados.
 
-**Gestión.** La vista `mesas` de [api/migrations/022-gestion.sql](../../../api/migrations/022-gestion.sql) y las estadísticas por jugador de [api/gestion-datos.ts](../../../api/gestion-datos.ts) también deducen el ganador del tanteador. Entran en el alcance: una migración nueva reescribe la vista para que un cierre `abandonado` cuente como terminado con su `ganador`, y las estadísticas cuentan como derrota toda partida con `salida` no nula aunque su equipo haya ganado. Gestión y el historial del jugador tienen que coincidir.
+**Gestión.** Las mesas y las estadísticas por jugador de [api/gestion-datos.ts](../../../api/gestion-datos.ts) también deducen el ganador del tanteador (en el CTE `marcadores()`, no en la vista de la migración 022). Entran en el alcance: un cierre `abandonado` cuenta como terminado con su `ganador`, y las estadísticas cuentan como derrota toda partida con `salida` no nula aunque su equipo haya ganado. Gestión y el historial del jugador tienen que coincidir.
 
 ### Interfaz
 
