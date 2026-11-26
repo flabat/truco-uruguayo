@@ -10,8 +10,8 @@ import { mirarMesa } from "../mesa/entrada.tsx";
 import { usePrecargaDeMesa } from "../precarga/usePrecargaDeMesa.ts";
 import { colores, fuentes } from "../tema.ts";
 import { crearAvisoDeComunidad, discordComunidad } from "./comunidad.ts";
-import { rutaDe } from "./enlaces.ts";
-import { contar, guardadoDelDispositivo, memoriaDeMesa } from "./plataforma.ts";
+import { MisMesas } from "./MisMesas.tsx";
+import { contar, guardadoDelDispositivo } from "./plataforma.ts";
 import { useConsulta } from "./useConsulta.ts";
 
 const avisoDeComunidad = crearAvisoDeComunidad(guardadoDelDispositivo);
@@ -49,12 +49,6 @@ function Comunidad({ jugador }: { jugador: string }) {
 export function Salon({ jugador }: { jugador: Jugador }) {
   usePrecargaDeMesa();
   const { reintentar: recargarSesion } = useSesion();
-  const [anterior, setAnterior] = useState<string | null>(null);
-  useEffect(() => {
-    let vigente = true;
-    void memoriaDeMesa.leer(jugador.id).then(id => { if (vigente) setAnterior(id); });
-    return () => { vigente = false; };
-  }, [jugador.id]);
   const habilitado = jugador.salonHabilitado === true;
   const { datos, estado, reintentar } = useConsulta<{ mesas: ResumenMesa[] }>(habilitado ? "/api/salon/mesas" : null, 15_000);
   useEffect(() => {
@@ -69,11 +63,7 @@ export function Salon({ jugador }: { jugador: Jugador }) {
         <Text style={estilos.saludo}>Hola, {jugador.nombre}</Text>
         <EnlaceTexto alTocar={() => router.push("/perfil" as Href)}>Tu perfil</EnlaceTexto>
       </View>
-      {anterior ? (
-        <Boton variante="secundario" onPress={() => router.push(rutaDe({ tipo: "mesa", id: anterior }) as Href)}>
-          Volver a mi mesa
-        </Boton>
-      ) : null}
+      <MisMesas key={jugador.id} />
       <Boton onPress={() => router.push("/crear" as Href)}>Crear mesa</Boton>
       <Comunidad jugador={jugador.id} />
       {!habilitado ? <Parrafo suave>El salón está cerrado. Podés crear una mesa privada e invitar a quien quieras.</Parrafo> : null}

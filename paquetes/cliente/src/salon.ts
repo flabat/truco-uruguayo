@@ -1,5 +1,18 @@
 import type { Format } from "@eltruco/motor/contratos.ts";
 
+export interface MesaRetomable {
+  id: string;
+  modo: "1v1" | "2v2" | "3v3";
+  /** Los demás asientos ocupados, en orden de mesa. */
+  participantes: string[];
+  mano: number | null;
+  /** Primero los tantos del equipo propio. */
+  puntos: [number, number] | null;
+  meta: number;
+  teToca: boolean;
+  ultimaActividad: string | null;
+}
+
 export interface ResumenMesa {
   id: string;
   modo: "1v1" | "2v2";

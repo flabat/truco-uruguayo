@@ -217,6 +217,10 @@ async function verificar(cantidad) {
 
   const orden = indicacion(0, "veni");
   const antes = await leer(par);
+  const propia = async asiento => (await json(asiento, "/mis-mesas")).mesas.find(mesa => mesa.id === id);
+  const desdeElSalon = await propia(1);
+  assert.equal(desdeElSalon.teToca, false);
+  assert.equal((await propia(0)).teToca, true);
   if (cantidad === 4) {
     orden.id = "00000000-0000-4000-8000-000000000314";
     await intentoSinCommit(id, par, orden);
@@ -227,6 +231,7 @@ async function verificar(cantidad) {
   await hablar(par, indicacion(0, "juga"), 409);
   assert.equal(primera.version, antes.version);
   assert.deepEqual(primera.vista, antes.vista);
+  assert.deepEqual(await propia(1), desdeElSalon, "en Mis mesas el rival conserva el mismo resumen al dar la indicación");
   const palabra = { emisor: par, destinatario: 0, frase: "veni", vuelta: 1, indiceAccion: 0 };
   for (const asiento of asientos) assert.deepEqual((await leer(asiento)).indicaciones, [palabra]);
 
@@ -245,6 +250,9 @@ async function verificar(cantidad) {
 
   const jugar = (asiento, carta, version) => json(asiento, ruta + "/acciones", { id: randomUUID(), version, accion: { tipo: "carta", carta } });
   const jugada = await jugar(0, "oros-04", antes.version);
+  const deQuienSigue = await propia(1);
+  assert.equal(deQuienSigue.teToca, true);
+  assert.deepEqual(deQuienSigue.puntos, [jugada.puntos[1], jugada.puntos[0]]);
   const [carrera, jugadaRival] = await Promise.all([
     pedir(impar, ruta + "/indicaciones", indicacion(1, "juga", jugada.version)),
     jugar(1, "bastos-06", jugada.version),

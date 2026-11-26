@@ -30,6 +30,11 @@ async function llamar(persona, metodo, ruta, datos, origen = process.env.WEB_ORI
 const invitacion = mesa => "/api/invitaciones/" + new URL(mesa.invitacion).searchParams.get("invitacion") + "/unirse";
 const bot = (p, mesa, asiento) => llamar(p, "POST", "/api/mesas/" + mesa.id + "/computadoras", { asiento });
 const entrar = (p, mesa) => llamar(p, "POST", invitacion(mesa));
+async function misMesas(p) {
+  const r = await llamar(p, "GET", "/api/mis-mesas");
+  assert.equal(r.estado, 200);
+  return r.datos.mesas;
+}
 async function crear(p, modo, meta, publica) {
   const r = await llamar(p, "POST", "/api/mesas", {modo, meta, publica});
   assert.equal(r.datos.publica, publica ?? false);
@@ -127,9 +132,13 @@ try {
       assert.deepEqual(await r.json(), { error: "No se encontró la mesa en el salón." });
     }
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"1v1", publica:true})).estado, 409);
-    await crear(ana, "1v1");
+    const privada = await crear(ana, "1v1");
+    const propias = await misMesas(ana);
+    for (const id of [publica.id, privada.id]) assert.ok(propias.some(m => m.id === id), "con el salón cerrado se puede retomar " + id);
     console.log("Salón cerrado aun con ETag. Se conservaron las mesas, las invitaciones y la creación privada.");
   } else {
+    assert.equal((await llamar(null, "GET", "/api/mis-mesas")).estado, 401);
+    assert.deepEqual(await misMesas(ana), []);
     assert.equal((await llamar(null, "POST", "/api/mesas", {modo:"2v2"})).estado, 401);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"2v2"}, "https://example.org")).estado, 403);
     assert.equal((await llamar(ana, "POST", "/api/mesas", {modo:"4v4"})).estado, 400);
@@ -154,6 +163,15 @@ try {
     assert.equal(dupla.asientos.length, 4);
     assert.deepEqual(dupla.asientos.map(a=>a.equipo), [0,1,0,1]);
     assert.equal((await llamar(eva, "GET", "/api/mesas/" + dupla.id)).estado, 404);
+    const espera = await misMesas(ana);
+    assert.deepEqual(espera.map(m => m.id).sort(), [seis.id, dupla.id].sort());
+    for (const m of espera) {
+      assert.equal(m.mano, null);
+      assert.equal(m.puntos, null);
+      assert.equal(m.teToca, false);
+      assert.deepEqual(m.participantes, []);
+    }
+    assert.deepEqual(await misMesas(eva), [], "la vista previa de una invitación no ocupa asiento");
     const dos = await Promise.all([entrar(bruno, dupla), entrar(bruno, dupla)]);
     assert.deepEqual(dos.map(r=>r.datos.miAsiento), [1,1]);
     assert.equal((await bot(bruno, dupla, 3)).estado, 403);
@@ -199,6 +217,12 @@ try {
     const partida = await llamar(ana, "GET", "/api/mesas/" + mixta.id + "/partida");
     assert.equal(partida.datos.manoNumero, 1);
     assert.equal(await listada(), 1);
+    const personal = (await misMesas(ana)).find(m => m.id === mixta.id);
+    assert.equal(personal.modo, "2v2");
+    assert.equal(personal.meta, 40);
+    assert.equal(personal.mano, 1);
+    assert.deepEqual(personal.participantes, ["Jugador 4", "Computadora 3", "Computadora 4"]);
+    assert.deepEqual(Object.keys(personal).sort(), ["id", "mano", "meta", "modo", "participantes", "puntos", "teToca", "ultimaActividad"]);
     console.log("Mesas de 2 y 4: invitación, carreras, reingreso y computadoras verificados.");
     await verificarPublicaciones(ana);
   }

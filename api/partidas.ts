@@ -133,7 +133,7 @@ async function ultimaMano(db: PoolClient, id: string) {
   return fila;
 }
 
-function recuperar(fila: RegistroTercetos, formato: FormatoMesa, meta: number, humanos: readonly number[]): ManoPublicable {
+export function recuperarMano(fila: RegistroTercetos, formato: FormatoMesa, meta: number, humanos: readonly number[]): ManoPublicable {
   if (formato === "triples") {
     const estado = restaurarTercetosDB(fila);
     if (estado.meta !== meta) throw new Error("La meta del reparto difiere de la pactada.");
@@ -156,7 +156,7 @@ export async function avanzarManoComputadoras(db: PoolClient, mesa: MesaComputad
     throw new Error("El ensayo requiere un asiento de computadora por posición.");
   }
   const fila = await ultimaMano(db, mesa.id);
-  const previo = fila && recuperar(fila, formato, mesa.meta, []);
+  const previo = fila && recuperarMano(fila, formato, mesa.meta, []);
   const puntos: Tanteador = previo ? marcadorOnline(previo.estado) : [0, 0];
   if (previo && !previo.estado.resultado) {
     if (formato === "triples") await registrarPendienteTercetos(db, mesa.id, previo.estado, []);
@@ -209,7 +209,7 @@ export async function reanudarComputadoras(db: PoolClient, id: string) {
     "SELECT asiento, computadora, cedido FROM juego.asientos WHERE mesa=$1", [id]);
   const humanos = asientos.filter(a => !a.computadora).map(a => a.asiento);
   const esperan = asientos.filter(a => !a.computadora && !a.cedido).map(a => a.asiento);
-  const mano = recuperar(fila, formato, registro.meta, humanos);
+  const mano = recuperarMano(fila, formato, registro.meta, humanos);
   if (registro.version_senas === versionSenasPie) mano.politicaPie = registro.politica;
   if (mano.estado.resultado) return;
   if (formato === "triples") await registrarPendienteTercetos(db, id, mano.estado, humanos);
@@ -265,7 +265,7 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       return { cambio: true, partida: vista(mano, mesa.formato, 1, 1, asiento, humanos) };
     }
     if ((fila.version_senas ?? undefined) !== mesa.versionSenas) throw new ErrorPeticion(503, "La mano y la mesa tienen versiones de señas diferentes.");
-    const mano = recuperar(fila, mesa.formato, mesa.meta, humanos);
+    const mano = recuperarMano(fila, mesa.formato, mesa.meta, humanos);
     mano.politicaPie = politicaPie;
     const estado = mano.estado;
     if (!comando) {
