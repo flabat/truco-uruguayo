@@ -18,6 +18,7 @@ process.chdir(raiz);
 
 const args = process.argv.slice(2);
 const soloPlan = args.includes("--plan");
+const tienePuesto = args.includes("--con-puesto") && process.env.TRUCO_COLA_PUESTO !== undefined;
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
 const lineas = (texto) => texto.split("\n").filter(Boolean);
 
@@ -176,7 +177,8 @@ const tocaDespliegue = todoGlobal.length || [...cambiados].some((c) => c.endsWit
 plan.push(["cartas", ["npm", "run", "cartas:verificar"]]);
 if (unitariasElegidas.length === unitarias.length) plan.push(["todas las unitarias", ["npm", "run", "test:unit"]]);
 else if (unitariasElegidas.length) {
-  const concurrencia = process.env.TEST_CONCURRENCY ? [`--test-concurrency=${process.env.TEST_CONCURRENCY}`] : [];
+  const limite = process.env.TEST_CONCURRENCY || (process.env.CI ? undefined : "2");
+  const concurrencia = limite ? [`--test-concurrency=${limite}`] : [];
   plan.push([`${unitariasElegidas.length} de ${unitarias.length} archivos de unitarias`, ["node", "--test", ...concurrencia, ...unitariasElegidas]]);
 }
 if (tocaApp) plan.push(["tipos de la app", ["npm", "run", "app:tipos"]]);
@@ -187,6 +189,17 @@ if (specsElegidas.length) {
   plan.push(["cartas del sitio", ["python3", ".github/scripts/check_cards.py", "dist"]]);
   const filtro = specsElegidas.length === specs.length ? [] : specsElegidas;
   plan.push([`${specsElegidas.length} de ${specs.length} archivos de Playwright`, ["npm", "exec", "--", "playwright", "test", ...filtro]]);
+}
+
+const planAmplio = todoGlobal.length > 0
+  || (specs.length > 0 && specsElegidas.length === specs.length)
+  || (unitarias.length > 0 && unitariasElegidas.length === unitarias.length);
+if (planAmplio && !soloPlan && !tienePuesto) {
+  console.log("check:rapido entra en la cola y vuelve a seleccionar las pruebas al tomar el puesto.");
+  // El proceso de la cola recibe las señales mientras espera. El selector vuelve a leer el checkout al entrar.
+  process.execve("/usr/bin/env", [
+    "env", "python3", "scripts/cola-pila.py", process.execPath, process.argv[1], ...args, "--con-puesto",
+  ], process.env);
 }
 
 console.log(`check:rapido contra ${desde.slice(0, 7)}: ${cambiados.size} archivos cambiados.`);
@@ -201,6 +214,7 @@ for (const [nombre, comando] of plan) console.log(`  → ${nombre}: ${resumir(co
 if ([...cambiados].some((c) => c.startsWith("api/") || c.startsWith("infra/") || c.startsWith("scripts/verificar"))) {
   console.log("  ! El cambio toca la API, la infraestructura o la pila: antes del PR corré CHECK_STACK=1 npm run check.");
 }
+if (planAmplio) console.log("  · Este plan usa la cola de verificaciones de la máquina.");
 if (soloPlan) process.exit(0);
 
 const inicio = Date.now();

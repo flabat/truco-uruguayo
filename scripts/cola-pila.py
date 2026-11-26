@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
-"""Corre un comando solo cuando hay un puesto libre en la cola de pilas de la máquina.
+"""Encola verificaciones pesadas de todos los worktrees de la máquina.
 
 Uso: python3 scripts/cola-pila.py <comando> [argumentos...]
 
-Varias sesiones (Claude Code, Codex, el runner de Actions) comparten la misma
-computadora. Cada pila completa levanta PostgreSQL, Keycloak, la API y la web en
-Docker; con más de dos a la vez la máquina se satura y las pruebas fallan por
-tiempo. Esta cola limita las pilas simultáneas y atiende en orden de llegada.
+El turno cubre desde la primera prueba hasta el cierre de la pila. Cada
+proceso en espera publica un archivo bloqueado en orden de llegada. La
+verificación recibe TRUCO_COLA_PUESTO para elegir sus puertos. Los comandos
+de desarrollo y las comprobaciones dirigidas se pueden usar mientras tanto.
 
-- Puestos: archivos `puesto-<n>.lock` con `flock` exclusivo. El candado lo tiene
-  este proceso, no el comando, así que se libera aunque el comando deje hijos.
-- Espera: cada proceso en espera deja un turno `espera/<llegada>-<pid>` con su
-  propio candado. Un turno sin candado es de un proceso que murió y se descarta.
-- El comando recibe `TRUCO_COLA_PUESTO` (0, 1, ...) para elegir puertos propios.
-
-Variables: `TRUCO_COLA_DIR` (por defecto `~/.cache/truco/cola-pila`),
-`TRUCO_COLA_PILAS` (por defecto 2) y `TRUCO_COLA_INTERVALO` (segundos entre
-consultas, por defecto 2).
+TRUCO_COLA_DIR cambia el directorio compartido (~/.cache/truco/cola-verificacion).
+TRUCO_COLA_PILAS cambia la cantidad de puestos (1 por defecto).
+TRUCO_COLA_INTERVALO cambia los segundos entre consultas (2 por defecto).
 """
 
 import fcntl
@@ -27,13 +21,13 @@ import sys
 import time
 from pathlib import Path
 
-DIRECTORIO = Path(os.environ.get("TRUCO_COLA_DIR") or Path.home() / ".cache/truco/cola-pila")
-PILAS = max(1, int(os.environ.get("TRUCO_COLA_PILAS") or 2))
+DIRECTORIO = Path(os.environ.get("TRUCO_COLA_DIR") or Path.home() / ".cache/truco/cola-verificacion")
+PILAS = max(1, int(os.environ.get("TRUCO_COLA_PILAS") or 1))
 INTERVALO = float(os.environ.get("TRUCO_COLA_INTERVALO") or 2)
 
 
 def avisar(texto):
-    print(f"[cola de pilas] {texto}", file=sys.stderr, flush=True)
+    print(f"[cola de verificación] {texto}", file=sys.stderr, flush=True)
 
 
 def tomar(ruta, modo="a+"):
@@ -64,7 +58,10 @@ def turnos_vivos(espera):
     for ruta in sorted(espera.iterdir()):
         if ruta.name.startswith("."):
             continue
-        huerfano = tomar(ruta)
+        try:
+            huerfano = tomar(ruta, "r")
+        except FileNotFoundError:
+            continue  # Otro proceso ya retiró ese turno.
         if huerfano:
             ruta.unlink(missing_ok=True)
             huerfano.close()
@@ -126,7 +123,7 @@ def esperar_puesto():
             aviso = (posicion, tuple(ocupantes()))
             if aviso != ultimo_aviso:
                 corriendo = "; ".join(aviso[1]) or "ninguna"
-                avisar(f"posición {posicion + 1} en la fila; {len(aviso[1])} de {PILAS} pilas corriendo: {corriendo}")
+                avisar(f"posición {posicion + 1} en la fila; {len(aviso[1])} de {PILAS} verificaciones corriendo: {corriendo}")
                 ultimo_aviso = aviso
             time.sleep(INTERVALO)
     finally:
@@ -148,12 +145,57 @@ def main():
         return 130
     espera = round(time.monotonic() - inicio)
     avisar(f"puesto {n} de {PILAS} tomado" + (f" tras {espera} s de espera" if espera >= 1 else ""))
-    hijo = subprocess.Popen(sys.argv[1:], env={**os.environ, "TRUCO_COLA_PUESTO": str(n)})
+    with puesto:
+        return ejecutar(sys.argv[1:], n, puesto)
+
+
+def ejecutar(comando, n, puesto):
+    # npm, el navegador y los scripts de Docker deben recibir la cancelación.
+    # El hijo hereda el candado para que, si muere el coordinador, no se
+    # adelante el siguiente checkout mientras siga corriendo el comando.
+    cancelacion = None
+    hijo = None
+
+    def reenviar(senal, _):
+        nonlocal cancelacion
+        if cancelacion is None:
+            cancelacion = (senal, time.monotonic())
+        if hijo is not None:
+            try:
+                os.killpg(hijo.pid, senal)
+            except ProcessLookupError:
+                pass
+
     for senal in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
-        signal.signal(senal, lambda s, _: hijo.send_signal(s))
-    codigo = hijo.wait()
-    puesto.close()
-    return codigo if codigo >= 0 else 128 - codigo
+        signal.signal(senal, reenviar)
+    try:
+        hijo = subprocess.Popen(
+            comando, env={**os.environ, "TRUCO_COLA_PUESTO": str(n)},
+            start_new_session=True, pass_fds=(puesto.fileno(),),
+        )
+    except FileNotFoundError as error:
+        avisar(str(error))
+        return 127
+    if cancelacion:
+        reenviar(cancelacion[0], None)
+    while True:
+        try:
+            codigo = hijo.wait(timeout=0.5)
+            if not cancelacion:
+                return codigo if codigo >= 0 else 128 - codigo
+            # El proceso principal puede terminar antes que sus workers.
+            try:
+                os.killpg(hijo.pid, 0)
+            except ProcessLookupError:
+                break
+            time.sleep(0.1)
+        except subprocess.TimeoutExpired:
+            pass
+        if cancelacion and time.monotonic() - cancelacion[1] >= 30:
+            reenviar(signal.SIGKILL, None)
+            hijo.wait()
+            break
+    return 128 + cancelacion[0]
 
 
 if __name__ == "__main__":
