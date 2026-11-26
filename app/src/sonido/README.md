@@ -21,7 +21,7 @@ const [sonido, cambiarSonido] = useSonidoActivado();            // interruptor d
 
 Tipos (`frases.ts` y `efectos.ts`):
 
-- `FraseVoz = { tipo: "canto"; canto: CantoVoz } | { tipo: "pie"; frase: FrasePie } | { tipo: "tantos"; motivo: "envido" | "flor"; total: number }`.
+- `FraseVoz = { tipo: "canto"; canto: CantoVoz } | { tipo: "pie"; frase: FrasePie } | { tipo: "son-buenas" } | { tipo: "tantos"; motivo: "envido" | "flor"; total: number }`.
 - `CantoVoz` es `TipoAccionOnline` sin `"carta"`. `mazo` dice «Me voy al mazo» y `paso-flor`, «Yo no canto».
 - `Efecto = "naipe" | "reparto" | "ficha" | "festejo"`.
 
@@ -45,7 +45,10 @@ Para regenerarlos (la caché en `scripts/voces/.cache/` evita pagar dos veces el
 ```sh
 ELEVENLABS_API_KEY=… npm run voces:generar -- --muestra   # muestra para aprobar
 ELEVENLABS_API_KEY=… npm run voces:generar               # lote completo y manifiesto
+ELEVENLABS_API_KEY=… npm run voces:generar -- --faltantes # solo los clips que no están, sin tocar los demás
 ```
+
+Sin la caché, el lote completo vuelve a grabar y cobrar todos los clips. Para sumar una frase nueva, usá `--faltantes`.
 
 El script busca el ffmpeg de Remotion en `video/node_modules` (`npm run reel:instalar`) o usa el de `FFMPEG`. Recorta el silencio de los bordes, lleva la voz a −18 dBFS de RMS sin pasar −1 dBFS de pico y codifica MP3 mono de 24 kHz y 48 kbps.
 

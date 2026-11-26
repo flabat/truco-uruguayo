@@ -3,6 +3,7 @@
 //
 //   ELEVENLABS_API_KEY=… node scripts/voces/generar.ts --muestra   # muestra para aprobar
 //   ELEVENLABS_API_KEY=… node scripts/voces/generar.ts             # lote completo en app/assets/sonido/voces
+//   ELEVENLABS_API_KEY=… node scripts/voces/generar.ts --faltantes # solo los clips que todavía no están
 //
 // Cada pedido se guarda en scripts/voces/.cache (ignorado por git), así que repetir el
 // comando no vuelve a cobrar. La clave llega solo por el entorno y nunca se imprime.
@@ -162,21 +163,24 @@ function escribirManifiesto(clips: readonly Clip[]) {
   writeFileSync(path.join(raiz, "app/src/sonido/recursos.ts"), lineas.join("\n"));
 }
 
-async function lote() {
+/** Con `faltantes`, conserva los clips grabados y pide solo los que no están. */
+async function lote(faltantes: boolean) {
   const clips = clipsDeVoz();
-  rmSync(path.join(destino, "voces"), { recursive: true, force: true });
+  if (!faltantes) rmSync(path.join(destino, "voces"), { recursive: true, force: true });
+  const pendientes = voces.flatMap(voz => clips.map(c => ({ voz, c, salida: path.join(destino, archivoDeClip(voz.asiento, c.clave)) })))
+    .filter(({ salida }) => !faltantes || !existsSync(salida));
   let hechos = 0;
-  await enParalelo(voces.flatMap(voz => clips.map(c => async () => {
-    await codificar(await clip(voz, c.texto, c.clave), path.join(destino, archivoDeClip(voz.asiento, c.clave)));
-    if (++hechos % 50 === 0) console.log(`${hechos} de ${clips.length * voces.length} clips`);
-  })));
-  await escribirEfectos(path.join(destino, "efectos"), codificar, frecuencia);
+  await enParalelo(pendientes.map(({ voz, c, salida }) => async () => {
+    await codificar(await clip(voz, c.texto, c.clave), salida);
+    if (++hechos % 50 === 0) console.log(`${hechos} de ${pendientes.length} clips`);
+  }));
+  if (!faltantes) await escribirEfectos(path.join(destino, "efectos"), codificar, frecuencia);
   escribirManifiesto(clips);
   const peso = globSync(path.join(destino, "**/*.mp3")).reduce((n, a) => n + readFileSync(a).length, 0);
-  console.log(`Listo: ${hechos} clips de voz y 4 efectos, ${(peso / 1024).toFixed(0)} KB en total.`);
+  console.log(`Listo: ${hechos} clips de voz${faltantes ? "" : " y 4 efectos"}, ${(peso / 1024).toFixed(0)} KB en total.`);
 }
 
 if (process.argv.includes("--efectos")) {
   await escribirEfectos(path.join(destino, "efectos"), codificar, frecuencia);
 } else if (process.argv.includes("--muestra")) await muestra();
-else await lote();
+else await lote(process.argv.includes("--faltantes"));

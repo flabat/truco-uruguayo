@@ -32,7 +32,12 @@ export function tableroEspectador(estado: EstadoOnline, indicaciones?: readonly 
     acciones: estado.acciones.filter(esPublica).map(a => a.tipo === "carta"
       ? { tipo: a.tipo, asiento: a.asiento, carta: a.carta } : { tipo: a.tipo, asiento: a.asiento }),
     cobros: estado.cobros.map(({ equipo, tantos, motivo, asiento, tantoGanador }) =>
-      ({ equipo, tantos, motivo, asiento, tantoGanador })),
+      ({ equipo, tantos, motivo, asiento, tantoGanador,
+        // Lo dicho al comparar el envido. Quien dijo «son buenas» no muestra su tanto.
+        ...(motivo === "envido" && estado.comparacionEnvido && { comparacionEnvido: {
+          indiceAccion: estado.acciones.slice(0, estado.comparacionEnvido.indiceAccion + 1).filter(esPublica).length - 1,
+          participantes: estado.comparacionEnvido.participantes.map(({ asiento, total }) => ({ asiento, total })),
+        } }) })),
     comparacionFlor: estado.comparacionFlor?.participantes.map(({ asiento, total }) => ({ asiento, total })),
     resultado: resultado && { equipo: resultado.equipo, tantos: resultado.tantos, motivo: resultado.motivo },
   };

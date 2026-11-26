@@ -51,6 +51,14 @@ export interface EstadoOnline {
     indiceAccion: number;
     participantes: readonly { asiento: Asiento; total: number }[];
   };
+  /**
+   * Lo que dijo cada uno al comparar un envido querido, en el orden en que habló. Quien no le
+   * gana a lo ya dicho dice «son buenas» (`total: null`) y su tanto no se publica.
+   */
+  comparacionEnvido?: {
+    indiceAccion: number;
+    participantes: readonly { asiento: Asiento; total: number | null }[];
+  };
   lance?: LanceTercetos;
   historialLances?: readonly ResumenLance[];
   mano: EstadoMano<RepartoOnline>;
@@ -199,6 +207,36 @@ function tantosEnOrden(estado: EstadoOnline, flor: boolean) {
   return participantes.map(asiento => ({ asiento, total: tantosPropios(estado, asiento).total }));
 }
 
+/**
+ * Habla el mano y siguen los demás en el orden del reparto. Quien le gana a lo ya dicho canta su
+ * tanto. Si va ganando su equipo, calla. Si no, dice «son buenas». Ante igualdad gana el más mano,
+ * así que alcanza con igualar a alguien que habló después. Los que callaron vuelven a hablar si
+ * después pasó adelante el otro equipo.
+ */
+export function vocesDelEnvido(participantes: readonly { asiento: Asiento; total: number }[]) {
+  const orden = new Map(participantes.map((p, i) => [p.asiento, i]));
+  const voces: { asiento: Asiento; total: number | null }[] = [];
+  const pendientes = new Set(participantes.map(p => p.asiento));
+  let mejor: { asiento: Asiento; total: number } | null = null;
+  const gana = (p: { asiento: Asiento; total: number }) => !mejor || p.total > mejor.total
+    || (p.total === mejor.total && orden.get(p.asiento)! < orden.get(mejor.asiento)!);
+  for (let cambio = true; cambio;) {
+    cambio = false;
+    for (const p of participantes) {
+      if (!pendientes.has(p.asiento)) continue;
+      if (gana(p)) {
+        voces.push({ ...p });
+        mejor = p;
+      } else if (equipoDelAsiento(mejor!.asiento) !== equipoDelAsiento(p.asiento)) {
+        voces.push({ asiento: p.asiento, total: null });
+      } else continue;
+      pendientes.delete(p.asiento);
+      cambio = true;
+    }
+  }
+  return voces;
+}
+
 function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   const oferta = estado.lateral!;
   const flor = estado.flores.length > 0;
@@ -219,6 +257,8 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   estado.indiceCobroLateral = estado.acciones.length - 1;
   if (flor && participantes && !esTerceto(estado)) {
     estado.comparacionFlor = { indiceAccion: estado.indiceCobroLateral, participantes };
+  } else if (participantes && !esTerceto(estado)) {
+    estado.comparacionEnvido = { indiceAccion: estado.indiceCobroLateral, participantes: vocesDelEnvido(participantes) };
   }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
     ...(ganador && { asiento: ganador.asiento, tantoGanador: ganador.total }) });

@@ -80,6 +80,7 @@ export function historialDeMano(
   const entradas: string[] = [];
   const pendientes = indicaciones ?? [];
   const flor = vista.cobros.find(c => c.comparacionFlor);
+  const envido = vista.cobros.find(c => c.comparacionEnvido)?.comparacionEnvido;
   let cursor = 0;
   for (let i = 0; i <= vista.acciones.length; i++) {
     while (cursor < pendientes.length && pendientes[cursor].indiceAccion === i) {
@@ -87,6 +88,10 @@ export function historialDeMano(
     }
     if (i === vista.acciones.length) break;
     entradas.push(descripcionDeJugada(vista.acciones, i, nombre));
+    if (envido?.indiceAccion === i) {
+      // Quien no le gana a lo ya dicho no muestra su tanto.
+      for (const p of envido.participantes) entradas.push(`${nombre(p.asiento)} dijo «${p.total ?? "Son buenas"}».`);
+    }
     if (flor?.comparacionFlor?.indiceAccion !== i) continue;
     const cantadas = enLista(flor.comparacionFlor.participantes.map(p => nombre(p.asiento) + " cantó " + p.total));
     entradas.push(`Flor querida. ${cantadas}. Ganó ${nombre(flor.asiento!)} con ${flor.tantoGanador} de flor. `
