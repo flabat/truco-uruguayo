@@ -92,6 +92,25 @@ test("las voces de una flor querida muestran las cuentas al volver", () => {
   ]);
 });
 
+test("las voces de un envido querido dicen «Son buenas» sin mostrar el tanto", () => {
+  const lance = {
+    acciones: [{ tipo: "envido", asiento: 0 }, { tipo: "real-envido", asiento: 1 }, { tipo: "quiero", asiento: 0 }],
+    cobros: [{ equipo: 1, tantos: 5, motivo: "envido", asiento: 1, tantoGanador: 31,
+      comparacionEnvido: { indiceAccion: 2, participantes: [{ asiento: 0, total: 27 }, { asiento: 1, total: 31 }] } }],
+    indiceCobroLateral: 2,
+  } as unknown as Parameters<typeof vocesEnReposo>[0];
+  assert.deepEqual(vocesEnReposo(lance), [
+    { asiento: 0, texto: "27 de envido", indice: 1 },
+    { asiento: 1, texto: "31 de envido", indice: 2 },
+  ]);
+  const perdida = { ...lance, cobros: [{ ...lance.cobros[0], equipo: 0, asiento: 0, tantoGanador: 33,
+    comparacionEnvido: { indiceAccion: 2, participantes: [{ asiento: 0, total: 33 }, { asiento: 1, total: null }] } }] };
+  assert.deepEqual(vocesEnAccion(perdida, 2).slice(1), [
+    { asiento: 0, texto: "33 de envido", indice: 1 },
+    { asiento: 1, texto: "Son buenas", indice: 2 },
+  ]);
+});
+
 test("los textos de jugadas nombran cartas y tantos", () => {
   assert.equal(nombrar("bastos-11"), "Caballo de bastos");
   assert.equal(tantos(1), "1 tanto");

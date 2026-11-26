@@ -12,6 +12,8 @@ export type MotivoTantos = "envido" | "flor";
 export type FraseVoz =
   | { tipo: "canto"; canto: CantoVoz }
   | { tipo: "pie"; frase: FrasePie }
+  /** Lo que dice quien pierde el envido y no muestra su tanto. */
+  | { tipo: "son-buenas" }
   /** Declaración de tantos: «treinta y tres de envido». Un total sin clip no suena. */
   | { tipo: "tantos"; motivo: MotivoTantos; total: number };
 
@@ -63,12 +65,14 @@ const mayuscula = (s: string) => s[0].toUpperCase() + s.slice(1);
 export function textoDeFrase(frase: FraseVoz): string {
   if (frase.tipo === "canto") return textoDeCanto[frase.canto];
   if (frase.tipo === "pie") return `¡${textoFrasePie[frase.frase]}!`;
+  if (frase.tipo === "son-buenas") return "Son buenas.";
   return `${mayuscula(numeroEnPalabras(frase.total))} de ${frase.motivo}.`;
 }
 
 export function tieneClip(frase: FraseVoz): boolean {
   if (frase.tipo === "canto") return Object.hasOwn(textoDeCanto, frase.canto);
   if (frase.tipo === "pie") return Object.hasOwn(textoFrasePie, frase.frase);
+  if (frase.tipo === "son-buenas") return true;
   return Object.hasOwn(tantosPosibles, frase.motivo) && tantosPosibles[frase.motivo].includes(frase.total);
 }
 
@@ -77,6 +81,7 @@ export function clavesDeFrase(frase: FraseVoz, metodo: MetodoDeclaracion = metod
   if (!tieneClip(frase)) return [];
   if (frase.tipo === "canto") return [frase.canto];
   if (frase.tipo === "pie") return ["pie-" + frase.frase];
+  if (frase.tipo === "son-buenas") return ["son-buenas"];
   return metodo === "entera"
     ? [`${frase.motivo}-${frase.total}`]
     : [`numero-${frase.total}`, `de-${frase.motivo}`];
@@ -87,6 +92,7 @@ export function frasesDeVoz(): FraseVoz[] {
   return [
     ...(Object.keys(textoDeCanto) as CantoVoz[]).map(c => ({ tipo: "canto", canto: c }) as const),
     ...(Object.keys(textoFrasePie) as FrasePie[]).map(f => ({ tipo: "pie", frase: f }) as const),
+    { tipo: "son-buenas" },
     ...(["envido", "flor"] as const).flatMap(motivo =>
       tantosPosibles[motivo].map(total => ({ tipo: "tantos", motivo, total }) as const)),
   ];

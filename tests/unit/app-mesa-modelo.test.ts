@@ -225,6 +225,33 @@ test("historialDeMano: la flor querida va después de la acción que la resolvi�
   ]);
 });
 
+test("historialDeMano: el envido querido cuenta lo que dijo cada uno y calla el tanto de quien pierde", () => {
+  const vista = vistaDe(2, 0, {
+    acciones: [
+      { tipo: "envido", asiento: 0 },
+      { tipo: "real-envido", asiento: 1 },
+      { tipo: "quiero", asiento: 0 },
+      { tipo: "carta", asiento: 0, carta: "copas-12" },
+    ],
+    cobros: [{
+      equipo: 1, tantos: 5, motivo: "envido", asiento: 1, tantoGanador: 31,
+      comparacionEnvido: { indiceAccion: 2, participantes: [{ asiento: 0, total: 27 }, { asiento: 1, total: 31 }] },
+    }],
+  });
+  const nombre = (a: number) => ["Fabian", "Computadora 2"][a];
+  assert.deepEqual(historialDeMano(vista, [], nombre), [
+    "Fabian dijo «Envido».",
+    "Computadora 2 dijo «Real envido».",
+    "Fabian dijo «Quiero».",
+    "Fabian dijo «27».",
+    "Computadora 2 dijo «31».",
+    "Fabian jugó rey de copas.",
+  ]);
+  const ganada = vistaDe(2, 0, { ...vista, cobros: [{ ...vista.cobros[0], equipo: 0, asiento: 0, tantoGanador: 33,
+    comparacionEnvido: { indiceAccion: 2, participantes: [{ asiento: 0, total: 33 }, { asiento: 1, total: null }] } }] });
+  assert.deepEqual(historialDeMano(ganada, [], nombre).slice(3, 5), ["Fabian dijo «33».", "Computadora 2 dijo «Son buenas»."]);
+});
+
 test("datosDeHojas: vueltas terminadas, la cuenta de la mano y los tantos cobrados como el panel web", () => {
   const vista = vistaDe(2, 0, {
     turno: 0,

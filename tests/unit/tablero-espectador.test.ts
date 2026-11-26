@@ -49,3 +49,13 @@ test("el espectador ve la respuesta de la computadora en los repartos que la hac
   assert.deepEqual(tablero.acciones, acciones);
   assert.deepEqual(tablero.cobros.map(c => c.tantos), [3]);
 });
+
+test("el espectador ve lo que dijo cada uno en el envido y no el tanto de quien dijo «son buenas»", () => {
+  const fila: Registro = { ...dueloMazo, acciones: [{ tipo: "envido", asiento: 1 }, { tipo: "quiero", asiento: 0 }] };
+  const { estado } = restaurar(fila, "duel", 40);
+  const [cobro] = tableroEspectador(estado).cobros;
+  const vista = vistaOnline(estado, 0).cobros[0];
+  assert.deepEqual(cobro.comparacionEnvido, vista.comparacionEnvido);
+  assert.equal(cobro.comparacionEnvido?.indiceAccion, 1);
+  assert.equal(cobro.comparacionEnvido?.participantes[0].asiento, 1);
+});
