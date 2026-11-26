@@ -81,7 +81,7 @@ Alcanza con que **uno** acepte. «Seguir esperando» cierra el aviso para ese ju
 
 ### Datos
 
-Migración nueva `029-abandono.sql`:
+Migración nueva `030-abandono.sql`:
 
 ```sql
 ALTER TABLE juego.asientos

@@ -203,9 +203,9 @@ async function probarParejas() {
   const replay = await replayDe(m.id);
   assert.ok(replay, "el replay sigue completo después de la salida");
   assert.equal(replay.eventos.at(-1).estado, "terminado");
+  for (const s of [0, 1, 2, 3]) reproducirChico(replay, s);
   // Si hubo repartos después de la salida, la secuencia de la mano siguiente contó el evento.
   return replay.eventos.findIndex(e => e.tipo === "salida") < replay.eventos.findLastIndex(e => e.tipo === "reparto");
-  for (const s of [0, 1, 2, 3]) reproducirChico(replay, s);
 }
 
 /** Sin reparto, abandonar es retirarse: libera el asiento y cancela la mesa propia. */
