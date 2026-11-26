@@ -13,5 +13,6 @@ python3 .github/scripts/check_cards.py dist
 npm exec -- playwright test
 
 if [[ "${CHECK_STACK:-0}" == 1 ]]; then
-  npm run check:stack
+  # La verificación completa ya tiene el puesto de la cola.
+  bash scripts/verificar-stack.sh
 fi
