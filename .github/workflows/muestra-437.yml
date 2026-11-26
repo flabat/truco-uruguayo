@@ -1,0 +1,64 @@
+name: Registrar la muestra de diez PR
+on:
+  workflow_run:
+    workflows: [Verificar el sitio]
+    types: [completed]
+  workflow_dispatch:
+  status:
+  pull_request_target:
+    branches: [main]
+    types: [closed]
+
+permissions: {}
+
+# Cada ejecución reconstruye la muestra completa. Un evento pendiente puede
+# reemplazar a otro sin perder sus corridas.
+concurrency:
+  group: muestra-ci-437
+  cancel-in-progress: false
+
+jobs:
+  registrar:
+    if: >-
+      vars.PILOTO_437_ACTIVO == '1' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'status' && github.event.context == 'verificado-local') ||
+       (github.event_name == 'pull_request_target' && github.event.pull_request.number > 453 &&
+       github.event.pull_request.merged == false) ||
+       github.event.workflow_run.event == 'pull_request' ||
+       (github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'))
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      statuses: read
+      issues: write
+    outputs:
+      completa: ${{ steps.informe.outputs.completa }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # workflow_run y pull_request_target aportan el commit de la base confiable.
+          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.base.sha || github.sha }}
+          persist-credentials: false
+      - name: Actualizar el comentario de la muestra en el issue
+        id: informe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 infra/ci/muestra_437.py --repo "$GITHUB_REPOSITORY" --publicar
+
+  terminar:
+    needs: registrar
+    if: needs.registrar.outputs.completa == 'true'
+    permissions:
+      actions: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Desactivar únicamente el recolector de la muestra
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/$GITHUB_REPOSITORY/actions/workflows/muestra-437.yml/disable"

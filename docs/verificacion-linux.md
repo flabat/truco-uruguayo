@@ -1,6 +1,22 @@
-# Medir la verificación de Linux y compararla con la Mac
+# Verificación de Linux y mediciones
 
-Para #436 usamos un solo job del runner estándar Linux x64 de GitHub, con `ubuntu-24.04`, dos procesos de pruebas unitarias y dos workers de Playwright. Mantener las etapas en la misma máquina permite reutilizar la instalación y las imágenes de Docker durante la corrida. La referencia en la Mac usa su cola local, dos procesos de unitarias y un worker de Playwright. El resultado remoto, el presupuesto y las reglas para revisar e integrar se deciden en [#437](https://github.com/flabat/truco-uruguayo/issues/437) y [#438](https://github.com/flabat/truco-uruguayo/issues/438). Mientras tanto se aplica [CONTRIBUTING.md](../CONTRIBUTING.md).
+La suite corre en una VM nueva de GitHub sobre el runner estándar Linux x64 de dos núcleos, imagen `ubuntu-24.04`. Las unitarias y Playwright usan dos workers. Un único job conserva las dependencias y las capas de Docker entre la prueba de la pila y el ensayo de restauración. Durante el desarrollo se usan pruebas dirigidas en la Mac. [Verificación remota del PR](../CONTRIBUTING.md#verificación-remota-del-pr)
+
+## Operación del runner
+
+- Para revisar un PR, abrí la corrida **Verificar el sitio** aceptada por `python3 infra/ci/verificar_pr.py NUMERO`. En Actions, el resumen muestra la revisión, el entorno y los tiempos por etapa. El log del paso fallido incluye la salida del comando. Abrí también el intento correspondiente si hubo reintentos. La retención configurada del repositorio es de 90 días para los logs. El artefacto de mediciones se conserva siete días. Copiá al PR el enlace y los SHA mientras estén disponibles.
+- Si la suite encuentra una regresión, reproducí la etapa afectada y verificá la corrección con otra corrida. Si el origen es una interrupción del runner, del registro o de la red, registrá el diagnóstico y reintentá el SHA vigente. Un intento cancelado, incompleto o fallido deja la integración pendiente.
+- `flabat` controla el consumo de Actions, los créditos y el presupuesto, y atiende las interrupciones de facturación. Consultá en [#437](https://github.com/flabat/truco-uruguayo/issues/437) el registro automático de los diez primeros PR nuevos contra `main` posteriores a #453. Cuenta borradores y cierres sin merge, los intentos de cada PR y el `push` del squash cuando corresponda. Se redondean los minutos de cada job por separado. La facturación de la cuenta determina el importe efectivo después de créditos.
+- Para contener el gasto, cada PR conserva una corrida vigente y cada push a `main` conserva su verificación. Solo el mantenedor cambia el presupuesto o el proveedor. El ensayo de la imagen de Chromium y su comparación con la instalación habitual están registrados en #437.
+
+## Caída de GitHub Actions
+
+Si GitHub Actions o su presupuesto impiden obtener la corrida, `flabat` puede autorizar el respaldo local para esa revisión. Registrá el motivo y la autorización en el PR. Una prueba fallida requiere investigación. Un job en cola o reemplazado sigue el procedimiento normal del PR.
+
+1. Prepará un checkout aislado y limpio del commit de integración vigente del PR (`refs/pull/NUMERO/merge`). Comprobá que `git rev-parse HEAD^1` coincide con la punta actual de `main` y `git rev-parse HEAD^2` con la cabeza actual del PR. Para respaldar un squash ya integrado, usá un checkout del SHA exacto de `main`. Antes de empezar, `git status --porcelain` debe salir vacío.
+2. Ejecutá el procedimiento completo de la sección **Correr la suite**, con Docker en marcha y en la cola de la Mac. Deben pasar instalación, Chromium, `CHECK_STACK=1 npm run check`, `npm run check:production` y `git diff --check`. Comprobá además `git diff --check HEAD^1 HEAD` para la revisión probada.
+3. Anotá commit, árbol, revisión del PR, base, comandos, resultados y quién los verificó. Antes de integrar, volvé a comprobar los SHA contra GitHub. Si cambiaron o no se pueden confirmar, esperá a verificar la combinación vigente.
+4. Para un PR, la evidencia se registra en el propio PR. Solo después de verificar localmente el SHA del squash que sigue en la punta de `main`, el mantenedor puede publicar `verificado-local` para ese SHA. [Estado de respaldo y publicación](produccion.md#publicación-automática-desde-main)
 
 ## Preparar la comparación
 
@@ -42,7 +58,7 @@ test "$estado_verificacion" -eq 0
 
 `TRUCO_MEDICIONES` activa la medición por etapa del check. Para medir otro paso, usá `python3 infra/ci/medir.py <etapa> <comando> [argumentos...]`. Cada etapa conserva un registro JSON en ese directorio. En GitHub, el workflow publica el resumen del job y guarda las mediciones durante siete días para las corridas que terminan, incluidas las fallidas. Registrá la espera del job por separado y obtené los minutos facturados de GitHub. El tiempo de etapas anidadas se superpone.
 
-La memoria máxima se obtiene por muestreo del sistema cada tres segundos y al inicio y al final de la etapa. Puede incluir otros procesos. Linux usa memoria total menos disponible. En macOS se suman las páginas activas, cableadas y comprimidas. Consultá el espacio libre inicial con `df -h .` y el directorio de datos con `docker info --format '{{.DockerRootDir}}'`. Si el daemon usa otra ruta local, indicásela al medidor con `TRUCO_DISCO_DOCKER`. En la Mac, registrá además el espacio de la VM antes y después con `colima ssh -- df -h /var/lib/docker`. Usá el mínimo observado con las imágenes, volúmenes y cachés instalados para dimensionar el disco del siguiente ensayo.
+La memoria máxima se obtiene por muestreo del sistema cada tres segundos y al inicio y al final de la etapa. Puede incluir otros procesos. Linux usa memoria total menos disponible. En macOS se suman las páginas activas, cableadas y comprimidas. Consultá el espacio libre inicial con `df -h .` y el directorio de datos con `docker info --format '{{.DockerRootDir}}'`. Si el daemon usa otra ruta local, indicásela al medidor con `TRUCO_DISCO_DOCKER`. En la Mac, registrá el espacio de la VM antes y después con `colima ssh --profile truco -- df -h /var/lib/docker` (usá el perfil activo que muestra `colima list`). Usá el mínimo observado con las imágenes, volúmenes y cachés instalados para dimensionar el disco del siguiente ensayo.
 
 ## Repetir, cancelar y recuperar
 
