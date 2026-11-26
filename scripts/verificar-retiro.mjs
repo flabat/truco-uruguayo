@@ -45,6 +45,11 @@ async function retirar(persona) {
     throw error;
   } finally { db.release(); }
 }
+async function puedeRetomar(persona, id) {
+  const respuesta = await fetch(base + "/api/mis-mesas", { headers: { cookie: persona.cookie } });
+  assert.equal(respuesta.status, 200);
+  return (await respuesta.json()).mesas.some(m => m.id === id);
+}
 async function replayDe(id) {
   const { rows: [fila] } = await pool.query("SELECT replay FROM juego.replays_chico_v1 WHERE mesa=$1", [id]);
   return fila?.replay;
@@ -141,10 +146,13 @@ async function probarCesion(politica) {
     const a = await jugador("a"), b = await jugador("b");
     return { a, b, m: await mesa("1v1", a, [a, b], { politica, meta: 12 }) };
   });
+  assert.equal(await puedeRetomar(a, m.id), true);
+  assert.equal(await puedeRetomar(b, m.id), true);
   assert.deepEqual(await retirar(a), [m.id]);
   // Quien se fue ya no ve ni controla la mesa; su historial la conserva.
   assert.equal(await leerMesa(pool, m.id, a.id, web), null);
   await assert.rejects(servicio.leer(m.id, a.id), { status: 404 });
+  assert.equal(await puedeRetomar(a, m.id), false, "el asiento cedido deja de pertenecerle");
   const perfil = await fetch(base + "/api/perfil", { headers: { cookie: a.cookie } }).then(r => r.json());
   assert.ok(perfil.partidas.some(p => p.id === m.id));
   // Los demás ven una computadora en ese asiento.
@@ -154,6 +162,7 @@ async function probarCesion(politica) {
   assert.ok(await esperar(async () => (await servicio.leer(m.id, b.id)).version > antes.version), "la computadora juega el turno de A");
   const final = await jugarHastaElFinal(m.id, b, 1);
   assert.notEqual(final.ganadorPartida, null);
+  assert.equal(await puedeRetomar(b, m.id), false, "el chico terminado sale de las mesas pendientes");
   // El replay se reproduce: el asiento sigue siendo humano y sus decisiones no llevan inferencia.
   const replay = await replayDe(m.id);
   assert.equal(replay.asientos[0].tipo, "humano");
@@ -192,6 +201,7 @@ try {
   assert.deepEqual(await retirar(a), [propia.id]);
   const vista = await leerMesa(pool, propia.id, b.id, web);
   assert.equal(vista.cancelada, true);
+  assert.equal(await puedeRetomar(b, propia.id), false, "una sala cancelada tampoco se puede retomar");
   assert.equal(vista.asientos[0].tipo, "vacio");
   const unirse = await fetch(base + "/api/invitaciones/" + propia.invitacion + "/unirse",
     { method: "POST", headers: { cookie: c.cookie, origin: web.origin } });

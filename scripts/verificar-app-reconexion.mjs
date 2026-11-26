@@ -5,7 +5,7 @@
 // - la hoja «Más» muestra la versión de reglas y el modelo que trae la mesa;
 // - «Reportar esta jugada» aparece solo con permiso y envía el reporte;
 // - al parar la API y la base, cada mesa dice «Reconectando…» y vuelve a la misma partida;
-// - dos «Quiero» tocados a la vez desde la mesa: uno solo prospera.
+// - dos rivales responden a la vez, uno desde dos dispositivos de su cuenta: un solo «Quiero» prospera.
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -171,34 +171,44 @@ try {
   await Promise.all(paginas.map(p => expect(reconectando(p)).toHaveCount(0, { timeout: 60_000 })));
   assert.deepEqual(await Promise.all(paginas.map(p => partida(p, id))), guardadas);
 
-  // Los dos «Quiero» salen de la hoja de respuesta de cada rival; la barrera deja pasar los dos POST juntos.
-  await Promise.all(rivales.map(p => expect(boton(p, "Quiero")).toBeVisible(espera)));
+  // Otro dispositivo abre el enlace sin sesión y recupera el mismo asiento sin desconectar al primero.
+  const otroDispositivo = await pagina();
+  await otroDispositivo.goto(`/jugar/?mesa=${id}`);
+  await expect(titulo(otroDispositivo, "Volvé a tu mesa")).toBeVisible(espera);
+  await boton(otroDispositivo, "Ingresar").click();
+  const numero = paginas.indexOf(rivales[0]);
+  await ingresarDesdeIdentidad(otroDispositivo, ["ana", "bruno", "clara", "diego"][numero]);
+  await otroDispositivo.waitForURL(`/jugar/mesa?id=${id}`, espera);
+  assert.deepEqual(await partida(otroDispositivo, id), guardadas[numero]);
+  const responden = [...rivales, otroDispositivo];
+  // La barrera deja pasar juntos los POST de las tres páginas con la misma versión.
+  await Promise.all(responden.map(p => expect(boton(p, "Quiero")).toBeVisible(espera)));
   let llegar;
   const juntas = new Promise(resolve => { llegar = resolve; });
   let esperando = 0;
-  for (const p of rivales) {
+  for (const p of responden) {
     await p.route("**/acciones", async r => {
-      if (++esperando === 2) llegar();
+      if (++esperando === responden.length) llegar();
       await juntas;
       await r.continue();
     }, { times: 1 });
   }
-  const respuestas = await Promise.all(rivales.map(async p => {
+  const respuestas = await Promise.all(responden.map(async p => {
     const [r] = await Promise.all([p.waitForResponse(r => r.url().endsWith("/acciones")), boton(p, "Quiero").click()]);
     return r.status();
   }));
-  assert.deepEqual(respuestas.sort(), [200, 409]);
+  assert.deepEqual(respuestas.sort(), [200, 409, 409]);
   const quieros = m => m.vista.acciones.filter(a => a.tipo === "quiero").length;
-  for (const p of paginas) {
+  for (const p of [...paginas, otroDispositivo]) {
     const m = await partida(p, id);
     assert.equal(m.version, guardadas[0].version + 1);
     assert.equal(quieros(m), quieros(guardadas[0]) + 1);
     assert.equal(m.vista.valorTruco, 2);
   }
   // La mesa que perdió la carrera no muestra un error: se refresca.
-  for (const p of rivales) await expect(boton(p, "Quiero")).toHaveCount(0, espera);
+  for (const p of responden) await expect(boton(p, "Quiero")).toHaveCount(0, espera);
 
-  await Promise.all(paginas.map(p => p.context().close()));
+  await Promise.all([...paginas, otroDispositivo].map(p => p.context().close()));
   console.log("App en parejas de cuatro personas · invitación con conteo y sin comunidad, cartas privadas en el DOM, versiones, reporte con permiso, reinicio de API y base, y dos respuestas simultáneas.");
 } finally {
   await browser.close();

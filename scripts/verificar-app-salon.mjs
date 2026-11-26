@@ -5,6 +5,8 @@
 // Además, lo que la app suma para no perder nada de la pantalla anterior (#403): ?crear=1, los conteos de
 // /eventos/, el aviso de la comunidad, el enlace a «Mis partidas» y el aviso sin red.
 import assert from "node:assert/strict";
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
 import { chromium, expect } from "@playwright/test";
 import { mazo } from "@eltruco/motor/cartas.ts";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
@@ -69,6 +71,9 @@ async function probarParejas() {
   await eva.goto("/jugar/");
   await ingresar(eva, "eva");
   await expect(titulo(eva, "Mesas en juego")).toBeVisible(espera);
+  assert.deepEqual((await api(eva, "/api/mis-mesas")).mesas, []);
+  await expect(eva.getByRole("region", { name: "Mis mesas" })).toHaveCount(0);
+  await expect(boton(eva, "Volver a mi mesa")).toHaveCount(0);
   // Las cartas se precargan en el salón, antes de la mesa.
   await expect.poll(() => cartas.size, espera).toBe(41);
   assert.deepEqual([...cartas.keys()].sort(), [...mazo, "reverso"].sort());
@@ -136,6 +141,7 @@ async function probarParejas() {
   await clara.goto(`/jugar/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/jugar/mirar/${id}`, espera);
   assert.equal((await clara.request.get("/api/mesas/" + id)).status(), 404, "mirar no sienta a clara");
+  assert.ok(!(await api(clara, "/api/mis-mesas")).mesas.some(m => m.id === id), "mirar no agrega la mesa a la cuenta");
 
   // eva vuelve al salón y retoma su mesa; las rutas profundas resisten una recarga.
   // Con una hoja que pide respuesta (eva tiene flor o le tocaron envido), «Más» no abre: eva responde primero.
@@ -170,6 +176,7 @@ async function probarParejas() {
   await desdeDiscord.waitForURL(`/jugar/mirar/${id}`, espera);
   await expect(desdeDiscord.getByText("👁 Mirando")).toBeVisible(espera);
   await Promise.all([eva, diego, clara, desdeDiscord].map(p => p.context().close()));
+  return id;
 }
 
 async function probarDuelo() {
@@ -186,6 +193,7 @@ async function probarDuelo() {
   assert.equal(mesa.versionSenas, undefined);
   assert.equal(mesa.lista, true);
   await eva.context().close();
+  return id;
 }
 
 async function probarParidadConJugar() {
@@ -228,13 +236,115 @@ async function probarParidadConJugar() {
   await expect(eva.getByText("Reconectando con tu mesa…")).toBeVisible();
   await eva.context().setOffline(false);
   await expect(eva.getByText("Reconectando con tu mesa…")).toHaveCount(0, espera);
+  const id = idDeLaRuta(eva, "/jugar/sala/");
+  await eva.goto("/jugar/perfil");
+  await boton(eva, "Cerrar sesión").click();
+  await expect(titulo(eva, "Entrá a jugar")).toBeVisible(espera);
   await eva.context().close();
+  return id;
+}
+
+async function probarMisMesasDesdeOtroDispositivo(parejas, duelo, sala) {
+  const nueva = await pagina();
+  await nueva.route("**/api/mis-mesas", r => r.fulfill({ status: 503, json: { error: "Temporalmente no disponible" } }), { times: 1 });
+  await nueva.goto("/jugar/");
+  await ingresar(nueva, "eva");
+  const propias = nueva.getByRole("region", { name: "Mis mesas" });
+  const fila = id => propias.getByTestId("mi-mesa-" + id);
+  await expect(boton(nueva, "Crear mesa")).toBeVisible(espera);
+  await expect(propias.getByText("No se pudieron cargar tus mesas.")).toBeVisible(espera);
+  await boton(propias, "Reintentar mis mesas").click();
+  await expect(propias).toBeVisible(espera);
+  await expect(propias.getByRole("listitem")).toHaveCount(3);
+  await expect(fila(sala)).toContainText("Esperando jugadores");
+  await expect(fila(parejas)).toContainText("Parejas");
+  await expect(fila(duelo)).toContainText("Duelo");
+  await expect(boton(nueva, "Volver a mi mesa")).toHaveCount(0);
+  const capturas = process.env.CAPTURAS_MIS_MESAS;
+  if (capturas) {
+    await mkdir(capturas, { recursive: true });
+    await nueva.screenshot({ path: join(capturas, "mis-mesas-movil.png") });
+    await nueva.setViewportSize({ width: 1280, height: 800 });
+    await nueva.screenshot({ path: join(capturas, "mis-mesas-escritorio.png") });
+  }
+  await fila(parejas).getByRole("button", { name: /^Continuar / }).click();
+  await nueva.waitForURL(`/jugar/mesa?id=${parejas}`, espera);
+  await expect(nueva.getByTestId("mesa")).toBeVisible(espera);
+
+  // Ocho días sin actividad: las tres siguen disponibles y abren su propio destino.
+  await nueva.clock.setFixedTime(new Date(Date.now() + 8 * 86_400_000));
+  await nueva.goto("/jugar/");
+  const anteriores = boton(propias, "Mesas anteriores (3)");
+  await expect(anteriores).toBeVisible(espera);
+  await expect(anteriores).toHaveAttribute("aria-expanded", "false");
+  await expect(fila(sala)).toHaveCount(0);
+  await anteriores.focus();
+  await nueva.keyboard.press("Space");
+  await expect(anteriores).toHaveAttribute("aria-expanded", "true");
+  await expect(propias.getByRole("listitem")).toHaveCount(3);
+  await fila(sala).getByRole("button", { name: /^Continuar / }).focus();
+  await nueva.keyboard.press("Enter");
+  await nueva.waitForURL(`/jugar/sala/${sala}`, espera);
+  await expect(titulo(nueva, "Esperando jugadores")).toBeVisible(espera);
+  // Un enlace explícito tiene prioridad incluso si la cuenta tiene más de una mesa.
+  await nueva.goto(`/jugar/?mesa=${duelo}`);
+  await nueva.waitForURL(`/jugar/mesa?id=${duelo}`, espera);
+  await nueva.context().close();
+}
+
+async function probarCambioDeCuentaEntrePestanas(dueloDeEva) {
+  const primera = await pagina();
+  const contexto = primera.context();
+  await primera.goto("/jugar/");
+  await ingresar(primera, "eva");
+  await expect(titulo(primera, "Mesas en juego")).toBeVisible(espera);
+  const eva = await api(primera, "/api/jugador");
+  await expect(primera.getByText("Hola, " + eva.nombre, { exact: true })).toBeVisible(espera);
+  await expect(primera.getByTestId("mi-mesa-" + dueloDeEva)).toBeVisible(espera);
+
+  // En Chromium sin ventana ambas pestañas pueden seguir visibles. Simulamos el aviso
+  // del navegador para que el primer salón consulte justo después del cambio de cookie.
+  const cambiarVisibilidad = estado => primera.evaluate(visibilidad => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: visibilidad });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, estado);
+  await cambiarVisibilidad("hidden");
+  const segunda = await contexto.newPage();
+  await segunda.goto("/jugar/perfil");
+  await boton(segunda, "Cerrar sesión").click();
+  await expect(titulo(segunda, "Entrá a jugar")).toBeVisible(espera);
+  // La sesión de juego ya se cerró. Sin el ingreso previo de Keycloak podemos elegir a Clara.
+  await contexto.clearCookies();
+  await ingresar(segunda, "clara");
+  await expect(titulo(segunda, "Mesas en juego")).toBeVisible(espera);
+  const clara = await api(segunda, "/api/jugador");
+  assert.notEqual(clara.id, eva.id);
+  const crear = await segunda.request.post("/api/mesas", {
+    data: { modo: "1v1", publica: false }, headers: { Origin: new URL(web).origin },
+  });
+  assert.equal(crear.status(), 201);
+  const salaDeClara = (await crear.json()).id;
+
+  await primera.bringToFront();
+  await cambiarVisibilidad("visible");
+  await expect(primera.getByText("Hola, " + clara.nombre, { exact: true })).toBeVisible(espera);
+  const propias = primera.getByRole("region", { name: "Mis mesas" });
+  await expect(propias.getByTestId("mi-mesa-" + salaDeClara)).toBeVisible(espera);
+  await expect(propias.getByTestId("mi-mesa-" + dueloDeEva)).toHaveCount(0);
+  const anteriores = propias.getByRole("button", { name: /^Mesas anteriores/ });
+  if (await anteriores.isVisible()) await anteriores.click();
+  const mostradas = await propias.getByRole("listitem").evaluateAll(filas =>
+    filas.map(fila => fila.getAttribute("data-testid").slice("mi-mesa-".length)).sort());
+  assert.deepEqual(mostradas, (await api(segunda, "/api/mis-mesas")).mesas.map(m => m.id).sort());
+  await contexto.close();
 }
 
 try {
-  await probarParejas();
-  await probarDuelo();
-  await probarParidadConJugar();
+  const parejas = await probarParejas();
+  const duelo = await probarDuelo();
+  const sala = await probarParidadConJugar();
+  await probarMisMesasDesdeOtroDispositivo(parejas, duelo, sala);
+  await probarCambioDeCuentaEntrePestanas(duelo);
   console.log("App web verificada en /jugar/ · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa, enlaces viejos, precarga de cartas, ?crear=1, conteos, comunidad y aviso sin red.");
 } finally {
   await browser.close();

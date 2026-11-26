@@ -11,7 +11,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Aviso, Boton, Cargando, Pantalla, Parrafo } from "../componentes/ui.tsx";
 import { useSesion } from "../ingreso/contexto.tsx";
 import { cliente } from "../ingreso/plataforma.ts";
-import { avisosDeApp, memoriaDeMesa } from "../salon/plataforma.ts";
+import { avisosDeApp } from "../salon/plataforma.ts";
 import { signalVersionFor } from "../../../training/contracts/index.ts";
 import { hojaDeLaMesa, type Canto } from "./hoja-cantos.ts";
 import { MesaPantalla, type AccionesMesa } from "./MesaPantalla.tsx";
@@ -43,7 +43,6 @@ const pasosDeLosTercetos: PasosNuevos<PartidaTercetos | undefined> = (anterior, 
 /** La mesa en juego, conectada a la mesa en vivo. */
 export function MesaEnJuego({ id }: { id: string }) {
   const { estado: sesion, reintentar: recargarSesion } = useSesion();
-  const jugadorId = sesion.tipo === "dentro" ? sesion.jugador.id : null;
   const puedeReportar = sesion.tipo === "dentro" && sesion.jugador.puedeReportar === true;
   const { preferencias, cargadas, cambiar, reducirMovimiento, liviano } = usePreferencias();
   // La cola anuncia aquí lo que se presenta; el lienzo y el tanteador lo escuchan para animarlo.
@@ -70,12 +69,8 @@ export function MesaEnJuego({ id }: { id: string }) {
   const rechazar = useCallback(() => setRechazos(n => n + 1), []);
 
   useEffect(() => {
-    if (mesa && jugadorId) void memoriaDeMesa.recordar(jugadorId, mesa.id);
-  }, [mesa?.id, jugadorId]);
-  useEffect(() => {
-    if (error && jugadorId && [403, 404].includes(error.status)) void memoriaDeMesa.olvidar(jugadorId, id);
     if (error?.status === 401) recargarSesion();
-  }, [error, id, jugadorId, recargarSesion]);
+  }, [error, recargarSesion]);
   const enEspera = mesa?.lista === false && !mesa.cancelada;
   useEffect(() => {
     if (enEspera) router.replace(("/sala/" + encodeURIComponent(id)) as Href);

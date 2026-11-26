@@ -56,6 +56,13 @@ try {
   r = await pedir("POST", "/api/mesas", bearer(a), { modo: "1v1" });
   assert.equal(r.estado, 201, JSON.stringify(r.datos));
   const mesa = r.datos.id;
+  const mismaCuentaWeb = await jugador("app-a");
+  const misMesas = headers => pedir("GET", "/api/mis-mesas", headers);
+  const desdeApp = await misMesas(bearer(a));
+  assert.equal(desdeApp.estado, 200);
+  assert.ok(desdeApp.datos.mesas.some(m => m.id === mesa));
+  assert.deepEqual((await misMesas(cookie(mismaCuentaWeb))).datos, desdeApp.datos);
+  assert.deepEqual((await misMesas(bearer(b))).datos.mesas, []);
   r = await pedir("POST", "/api/mesas", cookie(web), { modo: "1v1" });
   assert.equal(r.estado, 403);
 
@@ -86,6 +93,8 @@ try {
   assert.equal(r.r.headers.get("set-cookie"), null);
   assert.equal(await cierre, 1008);
   assert.equal((await pedir("GET", "/api/jugador", bearer(a))).estado, 401);
+  assert.equal((await misMesas(bearer(a))).estado, 401);
+  assert.deepEqual((await misMesas(cookie(mismaCuentaWeb))).datos, desdeApp.datos);
 
   // Un código de canje vencido no entrega sesión, aunque el verificador corresponda.
   const verificador = randomBytes(32).toString("base64url");

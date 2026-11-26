@@ -28,6 +28,7 @@ Como diagnóstico, contar cuántos ven el salón, abren una mesa, presencian dos
 
 ## Decisiones y entrega
 
+- [Cómo retomar tus mesas desde cualquier dispositivo](mis-mesas.md)
 - [Cuántas exhibiciones mantener y cómo jugarlas](adr/0001-exhibiciones.md)
 - [Qué puede leer un espectador y cómo se actualiza la mesa](adr/0002-vista-espectadora.md)
 - [Cómo se abre el mismo Discord desde la tribuna](adr/0003-voz.md)
