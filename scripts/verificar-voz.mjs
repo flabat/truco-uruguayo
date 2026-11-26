@@ -73,6 +73,18 @@ async function abrir(mesa, cookie, espectador = false) {
 }
 const caducar = id => pool.query("UPDATE juego.voz_discord SET vence=now()-interval '1 minute', reintentar='-infinity' WHERE mesa=$1",[id]);
 async function vinculo(id) { return (await pool.query("SELECT * FROM juego.voz_discord WHERE mesa=$1",[id])).rows[0]; }
+/**
+ * La sobremesa vence 30 minutos después del cierre del chico, medidos desde la fecha del cierre y no desde
+ * ahora: con la máquina cargada, entre el cierre y esta lectura puede pasar más de un minuto. Sigue abierta.
+ */
+async function comprobarSobremesa(id) {
+  const { rows: [r] } = await pool.query(`SELECT extract(epoch FROM v.vence - (e.evento->>'fecha')::timestamptz) * 1000 AS plazo,
+      v.vence > now() AS abierta
+    FROM juego.voz_discord v JOIN juego.eventos_chico e ON e.mesa=v.mesa AND e.evento->>'tipo'='cierre' WHERE v.mesa=$1`, [id]);
+  assert.ok(r, "la mesa tiene vínculo de voz y cierre");
+  assert.equal(Number(r.plazo), 30 * 60000);
+  assert.equal(r.abierta, true);
+}
 const categoria = async () => (await consultar("/guilds/" + config.servidor + "/channels")).filter(c => c.parent_id === config.categoria);
 async function probarEspectadores(a, b, espectador, privada) {
   const segundaCuenta = await persona();
@@ -198,8 +210,7 @@ async function probarEspectadores(a, b, espectador, privada) {
   assert.equal(resultado.estado, "terminada");
   assert.equal(resultado.vozDisponible, true);
   assert.equal(await abrir(finalista, espectador, true), canal);
-  const sobremesa = (await vinculo(finalista.id)).vence - Date.now();
-  assert.ok(sobremesa > 29*60000 && sobremesa <= 30*60000 + 1000);
+  await comprobarSobremesa(finalista.id);
   await pool.query("UPDATE juego.mesas SET fin_publico=now()-interval '31 minutes' WHERE id=$1", [finalista.id]);
   assert.equal((await post("/api/salon/mesas/" + finalista.id + "/voz", espectador)).status, 404);
   await caducar(finalista.id);
@@ -311,8 +322,7 @@ try {
     assert.ok(await vinculo(tercera.id));
     await pool.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,build,evento)
       VALUES ($1,1,1,1,'prueba',jsonb_build_object('tipo','cierre','fecha',now()))`, [una.id]);
-    const sobremesa = (await vinculo(una.id)).vence - Date.now();
-    assert.ok(sobremesa > 29*60000 && sobremesa <= 30*60000+1000);
+    await comprobarSobremesa(una.id);
     await voz.limpiarMesa(una.id);
     assert.ok(await vinculo(una.id));
     await pool.query(`UPDATE juego.eventos_chico SET evento=evento||jsonb_build_object('fecha',now()-interval '31 minutes')
