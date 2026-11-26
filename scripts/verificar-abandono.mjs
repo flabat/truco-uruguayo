@@ -193,8 +193,14 @@ async function probarReemplazoParejas() {
   assert.equal(espera.asiento, 0);
   assert.equal(espera.nombre, a.nombre);
   assert.equal(Date.parse(espera.disponible) - Date.parse(espera.desde), plazo);
+  assert.ok(espera.restanteMs > 0 && espera.restanteMs <= plazo, `restanteMs ${espera.restanteMs}`);
   await rechazo(await reemplazar(b, m.id, 0), 409, noVencida);
-  await dormir(plazo + 300);
+  await dormir(plazo / 2);
+  const recargada = (await leerPorHttp(b, m.id)).esperas[0];
+  assert.equal(recargada.desde, espera.desde, "releer no reinicia la espera");
+  assert.ok(recargada.restanteMs < espera.restanteMs, "releer a mitad de la espera trae lo que falta");
+  await dormir(plazo / 2 + 300);
+  assert.equal((await leerPorHttp(b, m.id)).esperas[0].restanteMs, 0);
   const respuesta = await reemplazar(b, m.id, 0);
   assert.equal(respuesta.status, 200);
   const deB = await respuesta.json();

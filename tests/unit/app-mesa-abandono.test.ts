@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, recibidaEn, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera,
+  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, textoCierreAbandono, textoConfirmarAbandono, textoEspera, vencimientoDe,
 } from "../../app/src/mesa/abandono.ts";
 import { mesaDeJugador, mesaDeTercetos } from "../../app/src/mesa/modelo.ts";
 import { mesaDe, mesaTercetosDe, partidaDe, partidaTercetosDe, vistaDe } from "./fixtures/app-mesa.ts";
@@ -14,38 +14,53 @@ test("la confirmación dice la consecuencia y, fuera del duelo, quién juega el 
   }
 });
 
-test("segundosRestantes cuenta el plazo desde que llegó la espera, redondea hacia arriba y no baja de cero", () => {
-  const espera = { desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
-  const recibida = 5_000_000;
-  assert.equal(segundosRestantes(espera, recibida, recibida), 60);
-  assert.equal(segundosRestantes(espera, recibida, recibida + 900), 60);
-  assert.equal(segundosRestantes(espera, recibida, recibida + 59_000), 1);
-  assert.equal(segundosRestantes(espera, recibida, recibida + 60_000), 0);
-  assert.equal(segundosRestantes(espera, recibida, recibida + 90_000), 0);
+test("segundosRestantes redondea hacia arriba y no baja de cero", () => {
+  const vence = 5_060_000;
+  assert.equal(segundosRestantes(vence, 5_000_000), 60);
+  assert.equal(segundosRestantes(vence, 5_000_900), 60);
+  assert.equal(segundosRestantes(vence, 5_059_000), 1);
+  assert.equal(segundosRestantes(vence, 5_060_000), 0);
+  assert.equal(segundosRestantes(vence, 5_090_000), 0);
+});
+
+const ana = { asiento: 0, nombre: "Ana", desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
+
+test("al recargar a mitad de la espera, la cuenta sigue desde lo que falta según el servidor", () => {
+  const recargada = { ...ana, restanteMs: 20_000 };
+  const anclas = anclarEsperas({}, [recargada], 1_000);
+  assert.equal(segundosRestantes(vencimientoDe(anclas, recargada, 1_000), 1_000), 20);
+  assert.equal(segundosRestantes(vencimientoDe(anclas, recargada, 21_000), 21_000), 0);
 });
 
 test("la cuenta no depende del reloj del dispositivo, adelantado o atrasado respecto del servidor", () => {
-  const espera = { desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
+  const espera = { ...ana, restanteMs: 40_000 };
   const servidor = Date.parse(espera.desde);
   for (const desfase of [-3_600_000, -45_000, 0, 45_000, 3_600_000]) {
-    const recibida = servidor + desfase;
-    assert.equal(segundosRestantes(espera, recibida, recibida + 20_000), 40, `desfase ${desfase} ms`);
+    const llegada = servidor + desfase;
+    const anclas = anclarEsperas({}, [espera], llegada);
+    assert.equal(segundosRestantes(vencimientoDe(anclas, espera, llegada), llegada + 20_000), 20, `desfase ${desfase} ms`);
   }
 });
 
-test("anclarEsperas conserva cuándo llegó cada espera y olvida las que se fueron", () => {
-  const ana = { asiento: 0, nombre: "Ana", desde: "2026-11-26T12:00:00.000Z", disponible: "2026-11-26T12:01:00.000Z" };
-  const beto = { ...ana, asiento: 3, nombre: "Beto" };
-  const primera = anclarEsperas({}, [ana], 1_000);
-  assert.equal(recibidaEn(primera, ana, 9_999), 1_000);
-  const segunda = anclarEsperas(primera, [ana, beto], 4_000);
-  assert.equal(recibidaEn(segunda, ana, 9_999), 1_000, "una relectura no reinicia la cuenta");
-  assert.equal(recibidaEn(segunda, beto, 9_999), 4_000);
-  const otroPlazo = { ...ana, desde: "2026-11-26T12:05:00.000Z", disponible: "2026-11-26T12:06:00.000Z" };
-  const tercera = anclarEsperas(segunda, [otroPlazo], 7_000);
-  assert.deepEqual(Object.values(tercera), [7_000], "un plazo nuevo se ancla de nuevo y los viejos se olvidan");
-  assert.deepEqual(anclarEsperas(tercera, undefined, 8_000), {});
-  assert.equal(recibidaEn({}, ana, 9_999), 9_999);
+test("sin restanteMs, la cuenta corre el plazo entero desde que llegó la espera", () => {
+  const anclas = anclarEsperas({}, [ana], 1_000);
+  assert.equal(vencimientoDe(anclas, ana, 9_999), 61_000);
+  assert.equal(vencimientoDe({}, ana, 9_999), 69_999);
+});
+
+test("anclarEsperas conserva el vencimiento, solo lo adelanta y olvida las esperas que se fueron", () => {
+  const beto = { ...ana, asiento: 3, nombre: "Beto", restanteMs: 60_000 };
+  const primera = anclarEsperas({}, [{ ...ana, restanteMs: 60_000 }], 1_000);
+  assert.equal(vencimientoDe(primera, ana, 9_999), 61_000);
+  const tarde = anclarEsperas(primera, [{ ...ana, restanteMs: 58_000 }, beto], 4_000);
+  assert.equal(vencimientoDe(tarde, ana, 9_999), 61_000, "una respuesta lenta no atrasa el vencimiento");
+  assert.equal(vencimientoDe(tarde, beto, 9_999), 64_000);
+  const adelantada = anclarEsperas(tarde, [{ ...ana, restanteMs: 40_000 }], 5_000);
+  assert.equal(vencimientoDe(adelantada, ana, 9_999), 45_000, "una lectura más precisa adelanta el vencimiento");
+  const otroPlazo = { ...ana, desde: "2026-11-26T12:05:00.000Z", disponible: "2026-11-26T12:06:00.000Z", restanteMs: 60_000 };
+  const nueva = anclarEsperas(adelantada, [otroPlazo], 7_000);
+  assert.deepEqual(Object.values(nueva), [67_000], "un plazo nuevo se ancla de nuevo y los viejos se olvidan");
+  assert.deepEqual(anclarEsperas(nueva, undefined, 8_000), {});
 });
 
 test("el aviso de espera muestra la cuenta mientras falta", () => {

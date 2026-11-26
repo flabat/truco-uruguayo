@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { mensajeDe } from "@eltruco/cliente/cliente.ts";
 import { colores, fuentes } from "../../tema.ts";
 import {
-  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, recibidaEn, segundosRestantes,
+  accionDeEspera, anclarEsperas, esperasVisibles, ocultarEspera, partesDeEspera, segundosRestantes, vencimientoDe,
   type Anclas, type Espera, type EsperasOcultas,
 } from "../abandono.ts";
 import { BotonDeHoja, estilosDeHoja } from "./PartesDeHoja.tsx";
@@ -22,7 +22,7 @@ export function AvisoEspera({ esperas, modo, reemplazar }: {
   const [ocultas, cambiarOcultas] = useState<EsperasOcultas>({});
   const [enviando, cambiarEnviando] = useState<number | null>(null);
   const [errores, cambiarErrores] = useState<Readonly<Record<number, string>>>({});
-  // La cuenta corre desde que llegó cada espera, con el reloj del dispositivo solo para medir lo que pasó.
+  // El servidor dice cuánto falta; el dispositivo anota cuándo vence con su propio reloj.
   const anclas = useRef<Anclas>({});
   anclas.current = anclarEsperas(anclas.current, esperas, Date.now());
   const hayEsperas = (esperas?.length ?? 0) > 0;
@@ -51,7 +51,7 @@ export function AvisoEspera({ esperas, modo, reemplazar }: {
   return (
     <View style={estilos.columna} pointerEvents="box-none">
       {visibles.map(espera => {
-        const restantes = segundosRestantes(espera, recibidaEn(anclas.current, espera, ahora), ahora);
+        const restantes = segundosRestantes(vencimientoDe(anclas.current, espera, ahora), ahora);
         const error = errores[espera.asiento];
         const { anuncio, cuenta } = partesDeEspera(espera.nombre, restantes);
         return (

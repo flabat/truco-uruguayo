@@ -13,7 +13,7 @@ test("un asiento que sigue trabando conserva desde y suma el plazo", () => {
   en(0);
   esperas.actualizar("m", [0]);
   en(30_000);
-  assert.deepEqual(esperas.actualizar("m", [0]), [{ asiento: 0, desde: 0, disponible: 60_000 }]);
+  assert.deepEqual(esperas.actualizar("m", [0]), [{ asiento: 0, desde: 0, disponible: 60_000, restante: 30_000 }]);
 });
 
 test("la espera vence recién al cumplirse el plazo", () => {
@@ -51,4 +51,14 @@ test("una mesa o asiento sin espera no está vencido", () => {
   assert.equal(esperas.vencida("otra", 0), false);
   esperas.actualizar("m", [1]);
   assert.equal(esperas.vencida("m", 0), false);
+});
+
+test("lo que falta baja con el tiempo y no pasa de cero", () => {
+  const { esperas, en } = crear();
+  en(0);
+  assert.equal(esperas.actualizar("m", [0])[0].restante, 60_000);
+  en(59_000);
+  assert.equal(esperas.actualizar("m", [0])[0].restante, 1_000);
+  en(90_000);
+  assert.equal(esperas.actualizar("m", [0])[0].restante, 0);
 });

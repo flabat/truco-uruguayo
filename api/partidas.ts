@@ -295,9 +295,9 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
     const respondePie = mesa.versionSenas === versionSenasPie && pieQueResponde(mano.estado, activos) !== undefined;
     const posibles = respondePie ? [] : aDecidir(mano.estado);
     const trabando = asientosQueTraban(posibles, pieEsperado(mano, activos), activos, rows.map(r => r.asiento));
-    return esperas.actualizar(mesa.id, trabando).map(({ asiento, desde, disponible }) => ({
+    return esperas.actualizar(mesa.id, trabando).map(({ asiento, desde, disponible, restante }) => ({
       asiento, nombre: mesa.asientos[asiento].nombre ?? `Jugador ${asiento + 1}`,
-      desde: new Date(desde).toISOString(), disponible: new Date(disponible).toISOString() }));
+      desde: new Date(desde).toISOString(), disponible: new Date(disponible).toISOString(), restanteMs: restante }));
   }
 
   /** La vista de una lectura suma quiénes traban la mesa. */
