@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import fixture from "../fixtures/pico-tercetos-v2.json" with { type: "json" };
-import { aDecidir, aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos, versionReglasTercetos,
+import { aDecidir, aplicarOnline, historialPublico, iniciarOnline, marcadorOnline, vistaOnline, vistaTercetos, versionReglasTercetos,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { esRepartoOnline, type Asiento } from "@eltruco/motor/reparto.ts";
 
@@ -134,4 +134,15 @@ test("cada mano física abre los tres pares enfrentados en orden", () => {
     }
     assert.ok(estado.resultado);
   }
+});
+
+test("el duelo archivado conserva quién cantó su tanto en el envido querido", () => {
+  let estado = abrir();
+  for (const accion of fixture.acciones.slice(0, 3)) estado = confirmar(estado, accion as AccionOnline);
+  assert.equal(estado.lance?.duelo, 2);
+  const [primero] = historialPublico(estado.historialLances!);
+  assert.deepEqual(primero.cobros[0], { equipo: 0, tantos: 2, valor: 2, motivo: "envido", asiento: 2, tantoGanador: 37,
+    comparacionEnvido: { indiceAccion: 1, participantes: [{ asiento: 5, total: 4 }, { asiento: 2, total: 37 }] } });
+  // Los cobros del árbitro conservan su formato: el replay los compara con lo registrado.
+  assert.equal("comparacionEnvido" in estado.historialLances![0].cobros[0], false);
 });

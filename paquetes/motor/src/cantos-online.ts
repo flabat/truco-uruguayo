@@ -40,6 +40,8 @@ export type ResumenLance = LanceTercetos & {
   acciones: readonly AccionOnline[];
   cobros: readonly Cobro[];
   indiceCobroLateral?: number;
+  /** Fuera de los cobros, que conservan el formato del registro del árbitro. */
+  comparacionEnvido?: EstadoOnline["comparacionEnvido"];
   vueltas: readonly VueltaCerrada[];
   puntos: readonly [number, number];
 };
@@ -257,7 +259,7 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
   estado.indiceCobroLateral = estado.acciones.length - 1;
   if (flor && participantes && !esTerceto(estado)) {
     estado.comparacionFlor = { indiceAccion: estado.indiceCobroLateral, participantes };
-  } else if (participantes && !esTerceto(estado)) {
+  } else if (participantes) {
     estado.comparacionEnvido = { indiceAccion: estado.indiceCobroLateral, participantes: vocesDelEnvido(participantes) };
   }
   cobrar(estado, { equipo, tantos, motivo: flor ? "flor" : "envido",
