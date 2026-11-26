@@ -14,7 +14,7 @@ npm run trabajo -- 42
 
 El comando reserva `codex/issue-42` desde `origin/main` con la operación exclusiva, crea el worktree `../truco-issue-42`, comenta en el issue la rama, la sesión, el worktree y los puertos, y corre `npm ci` con la caché de npm. Si la rama o la carpeta ya existen, falla sin tocar nada. Para nombrar la sesión en el comentario, agregá `--sesion <identificador>`; si no, usa el identificador de la sesión de Claude Code o Codex.
 
-Cada worktree recibe una de ocho ranuras de puertos, registradas en `~/.cache/truco/ranuras`, y las escribe en `.env.trabajo`: `WEB_PORT`, `OIDC_PORT`, `API_PORT`, `METRO_PORT`, `APP_WEB_PORT`, `TEST_PORT`, `TEST_WEB_PORT`, `TEST_OIDC_PORT` y `COMPOSE_PROJECT_NAME=truco-issue-42`. `npm run check`, `npm run check:stack` y Playwright leen ese archivo, así que varias sesiones verifican a la vez sin chocar. Una variable definida en el entorno tiene prioridad. El worktree también recibe un `.env` que apunta a `.env.trabajo`, por lo que `docker compose up` levanta la mesa local con sus propios puertos y volúmenes. Para Metro, usá `source scripts/trabajo-entorno.sh && npm --workspace app run ios -- --port "$METRO_PORT"`. Al borrar el worktree, su ranura queda libre. Sin `.env.trabajo`, todo usa los puertos predeterminados.
+Cada worktree recibe una de ocho ranuras de puertos, registradas en `~/.cache/truco/ranuras`, y las escribe en `.env.trabajo`: `WEB_PORT`, `OIDC_PORT`, `API_PORT`, `METRO_PORT`, `APP_WEB_PORT`, `TEST_PORT`, `TEST_WEB_PORT`, `TEST_OIDC_PORT` y `COMPOSE_PROJECT_NAME=truco-issue-42`. `npm run check`, `npm run check:stack` y Playwright leen ese archivo. Cada sesión conserva sus puertos para desarrollar, probar y esperar su turno de verificación. Una variable definida en el entorno tiene prioridad. El worktree también recibe un `.env` que apunta a `.env.trabajo`, por lo que `docker compose up` levanta la mesa local con sus propios puertos y volúmenes. Para Metro, usá `source scripts/trabajo-entorno.sh && npm --workspace app run ios -- --port "$METRO_PORT"`. Al borrar el worktree, su ranura queda libre. Sin `.env.trabajo`, todo usa los puertos predeterminados.
 
 El comando sigue estos pasos. Para hacerlo a mano, ejecutá el bloque completo para que el worktree se cree solo si la reserva tuvo éxito.
 
@@ -54,17 +54,25 @@ git diff --check
 
 Varias sesiones comparten la misma computadora. Elegí el nivel según el momento:
 
-| Nivel | Cuándo | Qué corre | Tiempo aproximado |
-|---|---|---|---|
-| `npm run check:rapido` | Mientras trabajás, después de cada cambio. | Las cartas, las unitarias cuyo árbol de imports toca lo que cambió respecto de `origin/main`, los tipos de la app si cambió `app/` o `paquetes/`, las pruebas de despliegue si cambió Python o `infra/`, y Playwright solo para las rutas afectadas. Sin Docker. | Menos de 2 minutos |
-| `npm run check` | Antes de un commit que vas a publicar. | Todo lo anterior completo: unitarias en paralelo, build, enlaces, cartas y todas las pruebas de Playwright. | Unos 3 minutos |
-| `CHECK_STACK=1 npm run check` | Antes de pedir revisión y antes de integrar, sobre el último commit. | `npm run check` más la pila completa en Docker. | Unos 12 minutos, más la espera en la cola |
+| Nivel | Cuándo | Qué corre |
+|---|---|---|
+| `npm run check:rapido` | Mientras trabajás. | Pruebas afectadas por el cambio respecto de `origin/main`. Muestra la selección con `-- --plan`. |
+| `npm run check` | Antes de publicar un commit. | Unitarias, tipos, pruebas de despliegue, build, enlaces, cartas y todos los casos de Playwright. |
+| `CHECK_STACK=1 npm run check` | Antes de pedir revisión y antes de integrar, sobre el último commit. | La verificación anterior y la pila de Docker, en el mismo turno. |
 
-`npm run check:rapido -- --plan` muestra qué correría y por qué, sin correr nada. Si cambia `package.json`, `package-lock.json`, `astro.config.mjs` o `playwright.config.mjs`, corre todo lo que no usa Docker. Lo que el sitio carga sin `import` (por ejemplo `public/`) hace correr todas las pruebas de navegador. Es una ayuda para iterar: no reemplaza la verificación completa del PR.
+La Mac comparte **un turno de verificación pesada** entre los worktrees del mismo usuario. `npm run check`, `npm run check:stack` y `npm run check:production` esperan en orden de llegada. El turno empieza antes de la primera prueba y termina al salir el comando. La cola muestra la posición y el checkout que está verificando. Podés seguir editando, levantar la app o correr pruebas dirigidas mientras esperás. Si la selección rápida se amplía a todas las pruebas unitarias o de navegador, también espera un turno y vuelve a seleccionar las pruebas al entrar, para incluir lo que hayas editado durante la espera. Consultar el plan es inmediato.
 
-`node --test` usa por defecto tantos procesos como núcleos menos uno; `TEST_CONCURRENCY=4` lo limita. Playwright usa la mitad de los núcleos (2 workers en CI); `PLAYWRIGHT_WORKERS=2` o `PLAYWRIGHT_WORKERS=25%` lo cambian si la máquina está cargada.
+En desarrollo local, las unitarias usan dos procesos y Playwright un worker. Para una prueba puntual podés elegir otros valores con `TEST_CONCURRENCY` y `PLAYWRIGHT_WORKERS`. En CI, Node usa su concurrencia habitual y Playwright usa dos workers. Los puertos de `.env.trabajo` conservan prioridad sobre los puertos asignados por puesto. Para interrumpir una corrida o abandonar la fila, usá Ctrl-C desde esa sesión.
 
-`npm run check:stack` (y por lo tanto `CHECK_STACK=1`) entra en una cola de la máquina: `scripts/cola-pila.py` deja correr 2 pilas a la vez como máximo y atiende en orden de llegada. Mientras esperás, muestra tu posición y qué checkouts tienen los puestos. Los candados están en `~/.cache/truco/cola-pila` y se liberan solos si el proceso termina o se corta. Cada puesto usa sus propios puertos (18080/18081 el primero, 18090/18091 el segundo), salvo que fijes `TEST_WEB_PORT` y `TEST_OIDC_PORT`. `TRUCO_COLA_PILAS` cambia el máximo; no lo subas en esta Mac.
+La cola usa `~/.cache/truco/cola-verificacion`. `TRUCO_COLA_DIR` y `TRUCO_COLA_PILAS` permiten configurar otro entorno. Todas las sesiones de una máquina deben compartir directorio y cantidad de puestos. En esta Mac usá los valores predeterminados.
+
+Una rama anterior incorpora la cola al actualizarse desde `main`. Si todavía estás verificando un commit anterior, desde **el checkout de esa rama** podés usar la cola del checkout actualizado. Por ejemplo, con `COLA_MAC` apuntando a la ruta absoluta de su `scripts/cola-pila.py`:
+
+```sh
+env -u TRUCO_COLA_DIR TEST_CONCURRENCY=2 PLAYWRIGHT_WORKERS=1 CHECK_STACK=1 python3 "$COLA_MAC" bash .github/scripts/check_site.sh
+```
+
+El comando ejecuta los scripts y dependencias de la rama bajo prueba. La cola antigua de Docker usa otro directorio, de modo que ese paso puede ejecutarse dentro del turno. Las verificaciones que ya empezaron siguen hasta terminar.
 
 ## Pull requests
 
