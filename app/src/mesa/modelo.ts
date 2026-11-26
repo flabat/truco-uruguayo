@@ -13,6 +13,7 @@ import type { AccionOnline, LanceTercetos, PruebaDeTantos, ResumenLance, VistaOn
 import { resumirTantos, type ResumenTantos } from "@eltruco/motor/resumen-tantos.ts";
 import type { IndicacionPie, VistaPie } from "@eltruco/motor/senas-pie.ts";
 import type { tableroEspectador } from "../../../api/tablero-espectador.ts";
+import { textoCierreAbandono } from "./abandono.ts";
 import { avisoDeCanto, type EntradaHoja } from "./hoja-cantos.ts";
 
 export interface AsientoVisible {
@@ -234,6 +235,14 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
       boton: fase === "chico-terminado" ? "Crear otra mesa" : "Repartir otra mano",
     };
   }
+  // Si la partida se cerró porque alguien salió, el fin lo dice aunque la mano haya quedado a medias.
+  const salida = partida.cierreAbandono;
+  if (salida && !p.presentando) {
+    const titulo = partida.ganadorPartida === propio ? "Ganaste la partida" : "Ganó el rival";
+    const motivo = textoCierreAbandono(salida.nombre, salida.motivo);
+    estado = { titulo, indicacion: motivo };
+    fin = { cobros: [], pruebas: [], tituloCobros: "Tantos de esta mano", ...fin, titulo, motivo, boton: "Crear otra mesa" };
+  }
 
   const datos = tanteador(partida.meta, partida.puntos, propio, equipo);
   const [nos, ellos] = datos.equipos;
@@ -365,6 +374,11 @@ export function mesaDeTercetos(mesa: Mesa, partida: PartidaTercetos,
       })),
       tituloCobros: "Tantos de este reparto",
     };
+  }
+  if (partida.cierreAbandono && base.fin) {
+    const titulo = palabraDeTercetos(mesa, partida);
+    estado = { ...base.estado, titulo };
+    fin = { ...(fin ?? base.fin), titulo, motivo: base.fin.motivo };
   }
 
   return {

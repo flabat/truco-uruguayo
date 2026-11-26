@@ -60,6 +60,8 @@ interface Props {
   liviano?: boolean;
   /** Hápticos al levantar y apoyar una carta. */
   hapticos?: boolean;
+  /** Arriba del paño: el aviso de que se espera a alguien que se desconectó. */
+  aviso?: ReactNode;
 }
 
 type HojaAbierta = "cantos" | Pestana | null;
@@ -68,7 +70,9 @@ type HojaAbierta = "cantos" | Pestana | null;
  * La mesa entera. Una sola geometría (`calcularMesa`) ubica el lienzo del fondo, la mano que se
  * toca y las vistas de texto. Con una hoja abierta, la geometría recibe su alto y la mano sube.
  */
-export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false, hapticos = false }: Props) {
+export function MesaPantalla({
+  mesa, senas, hojaCantos, acciones, extra, rechazos, conectada, eventos, liviano = false, hapticos = false, aviso,
+}: Props) {
   const ventana = useWindowDimensions();
   const area = useSafeAreaInsets();
   const ancho = Math.max(0, ventana.width - area.left - area.right);
@@ -199,6 +203,9 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
                 <CapaFestejo cantidad={festejo.particulas} demora={festejo.juntar + festejo.cartel} duracion={festejo.duracion} />
               ) : null} />
           ) : null}
+          {aviso && !conFin ? (
+            <View style={[enRect(geometria.pano), estilos.aviso]} pointerEvents="box-none">{aviso}</View>
+          ) : null}
           {geometria.cantos && hojaCantos ? (
             <Pressable accessibilityRole="button" onPress={() => abrir("cantos")}
               style={({ pressed }) => [enRect(geometria.cantos!), estilos.cantos, pressed && estilos.apretado]}>
@@ -229,6 +236,7 @@ const estilos = StyleSheet.create({
   },
   apretado: { opacity: 0.85 },
   textoCantos: { color: "#ffffff", fontFamily: fuentes.textoFuerte, fontSize: 15 },
+  aviso: { alignItems: "center", padding: 8 },
   pestana: { gap: 8 },
   tituloPestana: { color: colores.tinta, fontFamily: fuentes.titulo, fontSize: 20 },
 });

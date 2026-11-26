@@ -70,6 +70,16 @@ test("un error HTTP conserva el estado y el mensaje del servidor", async () => {
   assert.equal(mensajeDe(new TypeError("red")), "No se pudo contactar con el servidor. Revisá tu conexión.");
 });
 
+test("una respuesta 204 resuelve sin cuerpo", async () => {
+  const llamadas: Llamada[] = [];
+  const fetch = (async (url: string, init: RequestInit) => {
+    llamadas.push({ url, init });
+    return new Response(null, { status: 204 });
+  }) as unknown as typeof globalThis.fetch;
+  assert.equal(await crearCliente({ fetch }).pedir("/api/mesas/x/abandonar", {}), undefined);
+  assert.equal(llamadas[0].init.method, "POST");
+});
+
 test("el vivo usa wss o ws según la base, truco.v1 y el encabezado solo con sesión", () => {
   SocketFalso.abiertos = [];
   crearCliente({ base: "https://eltru.co/", sesion: () => "abc", WebSocket }).vivo("/api/mesas/m1/vivo");

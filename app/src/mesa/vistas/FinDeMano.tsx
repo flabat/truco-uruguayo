@@ -47,7 +47,7 @@ export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = n
         <ScrollView bounces={false} contentContainerStyle={estilos.contenido}>
           <Text role="heading" aria-level={2} style={estilos.titulo}>{fin.titulo}</Text>
           {fin.motivo ? <Text style={estilos.nota}>{fin.motivo}</Text> : null}
-          <Text style={estilos.rotulo}>{fin.tituloCobros}</Text>
+          {fin.cobros.length ? <Text style={estilos.rotulo}>{fin.tituloCobros}</Text> : null}
           {fin.cobros.map(c => (
             <View key={c.equipo} style={estilos.fila}>
               <Text style={estilos.equipo}>{c.equipo}</Text>
