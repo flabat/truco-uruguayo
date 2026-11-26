@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, vistaOnline, vistaOnlineV1, type AccionOnline, type EstadoOnline,
+  aDecidir, aplicarOnline, elegirAccionOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaOnlineV1, type AccionOnline, type EstadoOnline,
   type RepartoOnline, type TipoAccionOnline,
 } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { vocesDelEnvido } from "@eltruco/motor/cantos-online.ts";
+import { florAlMazo } from "../fixtures/duelo-mazo.ts";
 import { reparto as tresFlores, hastaLaSubida } from "../fixtures/flor-querida.ts";
 
 const envite: RepartoOnline = {
@@ -133,6 +134,25 @@ test("el motor exige cantar una flor propia y anula el envido sin filtrar la flo
   assert.deepEqual(cantar(conFlor, [1, "flor"]).cobros, [{ equipo: 1, tantos: 3, motivo: "flor" }]);
 });
 
+test("mano 6 del reporte #451: la flor se prueba cuando el cantor se va al mazo en la segunda vuelta", () => {
+  const { reparto, acciones } = florAlMazo;
+  const inicio = iniciarOnline(reparto, [8, 11]);
+  let estado = inicio;
+  for (const accion of acciones.slice(0, -1)) {
+    estado = aplicar(estado, accion);
+    const vista = vistaOnline(estado, 0);
+    assert.equal(vista.pruebasDeTantos, undefined);
+    assert.doesNotMatch(JSON.stringify(vista), /bastos-04|bastos-06/);
+  }
+  const fin = aplicar(estado, acciones[4]);
+  assert.deepEqual(marcadorOnline(fin), [9, 14]);
+  assert.deepEqual(fin.cobros, [{ equipo: 1, tantos: 3, motivo: "flor" }, { equipo: 0, tantos: 1, motivo: "truco" }]);
+  const prueba = [{ asiento: 1, motivo: "flor", total: 30, cartas: reparto.manos[1] }];
+  assert.deepEqual(vistaOnline(fin, 0).pruebasDeTantos, prueba);
+  assert.deepEqual(vistaOnline(fin.acciones.reduce(aplicar, inicio), 0).pruebasDeTantos, prueba);
+  assert.equal(vistaOnlineV1(fin, 0).pruebasDeTantos, undefined);
+});
+
 test("flor contra flor, con flor envido y contraflor al resto en el chico a 40", () => {
   const primero = cantar(iniciarOnline(flores, [34, 22]), [0, "flor"]);
   assert.equal(vistaOnline(primero, 0).porDeclararFlor, 1);
@@ -167,13 +187,20 @@ test("en parejas una flor tardía cancela un envido aceptado y la collera vale s
   // 0 y 2 no tienen flor. El primer rival en responder tiene que declararla.
   const cantado = cantar(iniciarOnline(collera), [0, "truco"], [1, "flor"], [2, "paso-flor"], [3, "flor"]);
   assert.deepEqual(cantado.cobros, [{ equipo: 1, tantos: 6, motivo: "flor" }]);
-  assert.deepEqual(cantar(cantado, [3, "no-quiero"]).cobros[1], { equipo: 0, tantos: 1, motivo: "truco" });
+  assert.equal(vistaOnline(cantado, 0).pruebasDeTantos, undefined);
+  const cierre = cantar(cantado, [3, "no-quiero"]);
+  assert.deepEqual(cierre.cobros[1], { equipo: 0, tantos: 1, motivo: "truco" });
+  assert.deepEqual(vistaOnline(cierre, 0).pruebasDeTantos, [
+    { asiento: 1, motivo: "flor", total: 26, cartas: collera.manos[1] },
+    { asiento: 3, motivo: "flor", total: 35, cartas: collera.manos[3] },
+  ]);
   // Si el 1 puede rechazar temprano, la flor aún no declarada del 3 tiene prioridad.
   const sinCollera = { ...collera, manos: [envite.manos[0], envite.manos[1], ["oros-03", "copas-01", "bastos-01"] as const, reparto.manos[3]] };
   const rechazo = cantar(iniciarOnline(sinCollera, [39, 38]), [0, "truco"], [1, "no-quiero"], [2, "paso-flor"], [3, "flor"]);
   assert.deepEqual(rechazo.resultado, { equipo: 1, tantos: 3, motivo: "flor" });
   assert.equal(rechazo.cobros.length, 1);
-  assert.equal(vistaOnline(rechazo, 0).pruebasDeTantos, undefined);
+  assert.deepEqual(vistaOnline(rechazo, 0).pruebasDeTantos,
+    [{ asiento: 3, motivo: "flor", total: 35, cartas: sinCollera.manos[3] }]);
 });
 
 test("los empates de tantos se deciden por el orden desde mano también en parejas", () => {

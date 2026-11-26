@@ -9,8 +9,9 @@ import { elegirJugada } from "./jugadores.ts";
 import { iniciarMano, jugarCarta, vistaPublicaPara, type VistaAsiento, type ErrorJugada } from "./mano.ts";
 import { esAsientoOnline, esRepartoOnline, sonAsientosDeMesa, type Asiento, type AsientoV1, type RepartoOnline, type TresCartas } from "./reparto.ts";
 import {
-  aDecidir, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios, type AccionOnline, type AccionOnlineV1, type Cobro,
-  type EstadoOnline, type LanceTercetos, type ResumenLance, type Oferta, type TipoAccionOnline, type TipoAccionOnlineV1,
+  aDecidir, asientosConPrueba, cobrarVueltas, legalesOnline, marcadorOnline, resolverCanto, tantosPropios,
+  type AccionOnline, type AccionOnlineV1, type Cobro, type EstadoOnline, type LanceTercetos, type ResumenLance,
+  type Oferta, type TipoAccionOnline, type TipoAccionOnlineV1,
 } from "./cantos-online.ts";
 
 export { aDecidir };
@@ -232,12 +233,14 @@ function cantosPublicos(estado: EstadoOnline): Pick<VistaOnline, "indiceCobroLat
   for (const { cobros, duelo, acciones } of lances) {
     const jugadas = new Set(acciones.flatMap(a => a.tipo === "carta" ? [a.carta] : []));
     const porMostrar = (d: Desglose) => d.aportes.filter(a => !jugadas.has(a.carta)).length;
-    for (const { motivo, asiento, tantoGanador } of cobros) {
-      if (motivo === "truco" || asiento === undefined || tantoGanador === undefined) continue;
-      const { desgloses } = evaluarTantos(manos[asiento], muestra);
-      const prueba = desgloses.reduce((mejor, otra) => porMostrar(otra) < porMostrar(mejor) ? otra : mejor);
-      pruebasDeTantos.push({ asiento, motivo, total: tantoGanador, cartas: prueba.aportes.map(a => a.carta),
-        ...(duelo !== null && { duelo }) });
+    for (const cobro of cobros) {
+      if (cobro.motivo === "truco") continue;
+      for (const asiento of asientosConPrueba(cobro, acciones)) {
+        const { desgloses, total } = evaluarTantos(manos[asiento], muestra);
+        const prueba = desgloses.reduce((mejor, otra) => porMostrar(otra) < porMostrar(mejor) ? otra : mejor);
+        pruebasDeTantos.push({ asiento, motivo: cobro.motivo, total, cartas: prueba.aportes.map(a => a.carta),
+          ...(duelo !== null && { duelo }) });
+      }
     }
   }
   return pruebasDeTantos.length ? { ...indice, pruebasDeTantos } : indice;

@@ -123,7 +123,7 @@ test("al cerrar la mano, el fin resume los tantos, las pruebas y el botón", () 
       { equipo: "Vos", texto: "+4 tantos · 2 tantos por envido (Ana con 31), 2 tantos por truco querido" },
       { equipo: "Rival", texto: "0 tantos" },
     ],
-    pruebas: [{ nombre: "Ana", titulo: "Envido ganador · 31 tantos", cartas: ["espadas-01", "oros-07"] }],
+    pruebas: [{ asiento: 0, motivo: "envido", nombre: "Ana", titulo: "Envido ganador · 31 tantos", cartas: ["espadas-01", "oros-07"] }],
     tituloCobros: "Tantos de esta mano",
     boton: "Repartir otra mano",
   });
@@ -151,6 +151,25 @@ test("con resultado, el asiento que muestra su prueba de tantos no deja dorsos",
   assert.deepEqual(m.fin?.cobros[1], { equipo: "Rival", texto: "+1 tanto · 1 tanto por truco sin gritar" });
   const enJuego = mesaDeJugador(mesaDe("1v1", 0), partidaDe(vistaDe(2, 0, { acciones: vista.acciones, pruebasDeTantos: vista.pruebasDeTantos })), enReposo);
   assert.equal(enJuego.asientos[1].enMano, 2, "sin resultado la prueba no oculta dorsos");
+});
+
+test("la collera muestra las tres cartas de cada asiento y distingue quién ganó si hubo comparación", () => {
+  const mesa = mesaDe("2v2", 1);
+  const pruebas = [
+    { asiento: 0, motivo: "flor", total: 30, cartas: ["oros-04", "oros-05", "oros-01"] },
+    { asiento: 2, motivo: "flor", total: 30, cartas: ["copas-04", "copas-05", "copas-01"] },
+  ] as const;
+  const cobro = { motivo: "flor", equipo: 0, tantos: 6 } as const;
+  const base = { resultado: { equipo: 1, tantos: 1, motivo: "rechazo" }, pruebasDeTantos: pruebas } as const;
+  const fin = mesaDeJugador(mesa, partidaDe(vistaDe(4, 1, { ...base, cobros: [cobro] })), enReposo);
+  assert.deepEqual(fin.fin?.pruebas, [
+    { asiento: 0, motivo: "flor", nombre: "Clara", titulo: "Flor · 30 tantos", cartas: pruebas[0].cartas },
+    { asiento: 2, motivo: "flor", nombre: "Ana", titulo: "Flor · 30 tantos", cartas: pruebas[1].cartas },
+  ]);
+  assert.deepEqual(fin.asientos.map(a => a.enMano), [0, 3, 0, 3]);
+  const comparada = vistaDe(4, 1, { ...base, cobros: [{ ...cobro, asiento: 0, tantoGanador: 30 }] });
+  assert.deepEqual(mesaDeJugador(mesa, partidaDe(comparada), enReposo).fin?.pruebas.map(p => p.titulo),
+    ["Flor ganadora · 30 tantos", "Flor · 30 tantos"]);
 });
 
 test("las voces vienen del reposo o del paso que se presenta", () => {
