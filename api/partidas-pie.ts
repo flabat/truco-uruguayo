@@ -40,6 +40,12 @@ export function esperaDelPie(mano: ManoPublicable, humanos: readonly number[], a
   return jugada?.tipo === "carta" ? asiento : undefined;
 }
 
+/** El pie humano cuya indicación espera la computadora antes de su carta; `undefined` si nadie espera. */
+export function pieEsperado(mano: ManoPublicable, humanos: readonly number[]): Asiento | undefined {
+  const asiento = esperaDelPie(mano, humanos);
+  return asiento === undefined ? undefined : vistaDelPie(mano.estado, asiento, mano.indicaciones ?? [])?.pie;
+}
+
 export function vistaPiePrivada(mano: ManoPublicable, asiento: Asiento, humanos: readonly number[]) {
   const vista = vistaDelPie(mano.estado, asiento, destinosAtendidos(mano));
   if (vista?.pie === asiento) {

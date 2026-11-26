@@ -6,7 +6,8 @@ import pg from "pg";
 import WebSocket from "ws";
 import { crearPartidas } from "./partidas.ts";
 import { leerMesa } from "./mesas.ts";
-import { elegirAccionOnline } from "@eltruco/motor/mesa-online.ts";
+import { elegirAccionOnline, iniciarOnline } from "@eltruco/motor/mesa-online.ts";
+import { iniciarReplayDB } from "./replay-db.ts";
 import { reproducirChico } from "./replay-chico.ts";
 
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
@@ -181,7 +182,8 @@ async function probarReemplazoParejas() {
   const a = await jugador("a"), b = await jugador("b");
   const m = await mesaEnTurnoDeA("2v2", () => [a, b, null, null], a, [b]);
   const enVivo = await conectar(b, m.id);
-  const { esperas: [espera, ...otras] } = await leerPorHttp(b, m.id);
+  const antes = await leerPorHttp(b, m.id);
+  const { esperas: [espera, ...otras] } = antes;
   assert.deepEqual(otras, []);
   assert.equal(espera.asiento, 0);
   assert.equal(espera.nombre, a.nombre);
@@ -191,6 +193,7 @@ async function probarReemplazoParejas() {
   const respuesta = await reemplazar(b, m.id, 0);
   assert.equal(respuesta.status, 200);
   const deB = await respuesta.json();
+  assert.ok(await esperar(async () => await versionMano(m.id) > antes.version, 5000), "la computadora juega el asiento reemplazado");
   assert.equal(deB.ganadorPartida, null);
   assert.deepEqual(deB.esperas, [], "la computadora ya juega el asiento de A");
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
@@ -249,6 +252,50 @@ async function probarCantoSinRespuesta() {
   assert.deepEqual((await respuesta.json()).esperas, []);
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
   assert.deepEqual(asiento, { cedido: true, salida: "desconectada" });
+  await desconectar(enVivo);
+}
+
+/**
+ * Señas al pie: la computadora en el asiento 1 espera la indicación de su pie humano (3), que se desconecta.
+ * El rival (0) ve la espera del pie, lo reemplaza y la computadora sigue jugando.
+ */
+async function probarPieDesconectado() {
+  const personas = [await jugador("rival"), null, await jugador("companero"), await jugador("pie")];
+  const [rival, , companero, pie] = personas;
+  const crear = await fetch(base + "/api/mesas", { method: "POST",
+    headers: { cookie: rival.cookie, origin: web.origin, "content-type": "application/json" },
+    body: JSON.stringify({ modo: "2v2", meta: 50, formato: "pairs-private-senas", versionSenas: "senas-pie-v1", publica: false }) });
+  assert.equal(crear.status, 201);
+  const m = await crear.json();
+  const postear = (persona, ruta, datos) => fetch(base + "/api" + ruta, { method: "POST",
+    headers: { cookie: persona.cookie, origin: web.origin, "content-type": "application/json" }, body: JSON.stringify(datos) });
+  assert.equal((await postear(rival, "/mesas/" + m.id + "/computadoras", { asiento: 1 })).status, 200);
+  const token = new URL(m.invitacion).searchParams.get("invitacion");
+  for (const persona of [companero, pie]) assert.equal((await postear(persona, "/invitaciones/" + token + "/unirse", {})).status, 200);
+  // Con los dos seises y el tres, la computadora en el asiento 1 espera la indicación de su pie.
+  const reparto = { versionReparto: "online-1", reglaFlor: "inmediata-v2", mano: 0, dador: 3, muestra: "copas-06",
+    manos: [["copas-02", "bastos-01", "oros-04"], ["bastos-06", "copas-03", "oros-06"],
+      ["copas-04", "espadas-06", "oros-07"], ["oros-12", "bastos-07", "espadas-07"]], respondenSinFlor: [1] };
+  const db = await pool.connect();
+  try {
+    await db.query("BEGIN");
+    await db.query(`INSERT INTO juego.manos(mesa,numero,version,version_reglas,version_senas,reparto,puntos_inicio,acciones)
+      VALUES ($1,1,1,1,'senas-pie-v1',$2,ARRAY[0,0],'[]')`, [m.id, reparto]);
+    await iniciarReplayDB(db, m.id, "pairs-private-senas", [0, 2, 3], iniciarOnline(reparto, [0, 0], 50), 1);
+    await db.query("COMMIT");
+  } catch (error) { await db.query("ROLLBACK"); throw error; } finally { db.release(); }
+  const jugada = await postear(rival, "/mesas/" + m.id + "/acciones",
+    { id: randomUUID(), version: 1, accion: { tipo: "carta", carta: "oros-04" } });
+  assert.equal(jugada.status, 200);
+  const enVivo = await conectar(rival, m.id);
+  const antes = await leerPorHttp(rival, m.id);
+  assert.deepEqual(antes.esperas.map(e => e.asiento), [3], "el pie desconectado traba la mesa");
+  await dormir(plazo + 300);
+  const respuesta = await reemplazar(rival, m.id, 3);
+  assert.equal(respuesta.status, 200);
+  assert.deepEqual((await respuesta.json()).esperas, []);
+  assert.ok(await esperar(async () => (await leerPorHttp(rival, m.id)).version > antes.version, 10000),
+    "la computadora sigue sin esperar al pie reemplazado");
   await desconectar(enVivo);
 }
 
@@ -440,11 +487,12 @@ try {
   assert.ok(plazo > 0 && plazo <= 5000, "la pila usa un plazo de espera corto (PLAZO_ESPERA_MS)");
   await probarReemplazoParejas();
   await probarCantoSinRespuesta();
+  await probarPieDesconectado();
   await probarCobroDuelo();
   await probarRegreso();
   await probarReemplazoSimultaneo();
   console.log("Abandono verificado · duelo cerrado (computadora en cola y humano), parejas cedidas hasta el final, mesas sin reparto liberadas,"
-    + " reemplazo y cobro por desconexión después del plazo (también con un canto sin responder), regreso a tiempo y un único reemplazo simultáneo.");
+    + " reemplazo y cobro por desconexión después del plazo (también con un canto sin responder y con el pie esperado), regreso a tiempo y un único reemplazo simultáneo.");
 } finally {
   await pool.end();
 }
