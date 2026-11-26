@@ -209,45 +209,47 @@ async function probarDueloConComputadora() {
   await expect(cartasEnMano(luis)).toHaveCount(3, espera);
   await capturar(luis, "duelo-375x760");
   const enviadas = [];
-  let respondida = Infinity;
+  let respondida = false;
   luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
   luis.on("response", r => {
-    if (/\/acciones$/.test(r.url()) && r.request().method() === "POST") respondida = Math.min(respondida, Date.now());
+    if (/\/acciones$/.test(r.url()) && r.request().method() === "POST") respondida = true;
   });
-  // La ruta retiene el envío: el segundo toque llega mientras el primero sigue en viaje.
+  // La ruta confirma que el primer toque envió la jugada y la retiene hasta después del segundo.
+  let primeraRetenida;
   let soltar;
   const retenida = new Promise(listo => { soltar = listo; });
   await luis.route("**/acciones", async r => {
-    // Se suelta al comprobar la segunda carta; el plazo solo evita colgar la prueba si falla antes.
-    await Promise.race([retenida, new Promise(listo => setTimeout(listo, 60_000))]);
+    if (r.request().method() !== "POST") return r.continue();
+    primeraRetenida ??= r.request();
+    await retenida;
     await r.continue();
   });
   const lugar = async carta => {
     const caja = await carta.boundingBox();
     return caja && { x: Math.round(caja.x), y: Math.round(caja.y) };
   };
-  // Mientras la mesa presenta lo último que pasó, los toques se rechazan sin enviarse y se repiten. Con la
-  // máquina cargada, el pedido puede notarse después de la espera de un intento: cada envío se atribuye al
-  // intento en que se tocó esa carta, no al último.
-  const intentos = [];
-  for (let intento = 0; enviadas.length === 0 && intento < 20; intento++) {
-    const [primeraId, segundaId] = await cartasEnMano(luis).evaluateAll(cs => cs.map(c => c.dataset.testid));
-    const segunda = luis.getByTestId(segundaId);
+  const [primeraId, segundaId] = await cartasEnMano(luis).evaluateAll(cs => cs.map(c => c.dataset.testid));
+  assert.notEqual(primeraId, segundaId, "se tocan dos cartas distintas");
+  const primera = luis.getByTestId(primeraId);
+  const segunda = luis.getByTestId(segundaId);
+  try {
+    // La API puede dar el turno antes de que la mesa termine de presentarlo. Repetimos solo la
+    // primera carta hasta interceptar su POST, antes de tocar la otra por primera vez.
+    await expect(async () => {
+      if (!primeraRetenida) await primera.click();
+      await expect.poll(() => Boolean(primeraRetenida), { timeout: 1_000 }).toBe(true);
+    }).toPass(espera);
+    assert.equal("carta-" + primeraRetenida.postDataJSON().accion?.carta, primeraId, "sale la carta del primer toque");
+    assert.equal(enviadas.length, 1, "el primer toque envió una sola carta");
     const antes = await lugar(segunda);
-    await luis.getByTestId(primeraId).click();
+    assert.ok(antes, "la segunda carta tiene lugar en la mano");
     await segunda.click();
-    intentos.push({ primeraId, segundaId, segunda, antes, segundoToque: Date.now() });
-    await luis.waitForTimeout(1_000);
+    assert.equal(respondida, false, "el segundo toque terminó antes de la respuesta del primero");
+    await expect.poll(() => lugar(segunda), espera).toEqual(antes);
+  } finally {
+    soltar();
   }
-  assert.equal(enviadas.length, 1, "un intento envió una sola carta: " + JSON.stringify(enviadas));
-  const enviada = "carta-" + enviadas[0].accion?.carta;
-  const tocado = intentos.find(t => t.primeraId === enviada);
-  assert.ok(tocado, `sale la carta del primer toque: salió ${enviada}, tocadas ${JSON.stringify(intentos.map(t => [t.primeraId, t.segundaId]))}`);
-  assert.ok(tocado.segundoToque < respondida, "el segundo toque terminó antes de la respuesta del primero");
-  // Con el envío retenido, la segunda carta volvió a su lugar en la mano.
-  await expect.poll(() => lugar(tocado.segunda), espera).toEqual(tocado.antes);
-  soltar();
-  await expect.poll(() => respondida < Infinity, espera).toBe(true);
+  await expect.poll(() => respondida, espera).toBe(true);
   await luis.unroute("**/acciones");
   assert.equal(enviadas.length, 1, "dos toques rápidos envían una sola carta: " + JSON.stringify(enviadas));
   const tras = await partida(luis, id);
@@ -495,9 +497,10 @@ async function tercetosConPico(luis) {
 }
 
 async function probarEspectador() {
-  const luis = await entrar("luis");
-  await crearMesa(luis, "2 contra 2", true);
-  const id = await enLaMesa(luis);
+  // Las cuatro cuentas esperan nuestras jugadas hasta que Clara esté mirando desde otra sesión.
+  const jugadores = [];
+  for (const usuario of ["luis", "ana", "bruno", "diego"]) jugadores.push(await entrar(usuario));
+  const id = await mesaConInvitados(jugadores[0], "2 contra 2", jugadores.slice(1));
   const clara = await entrar("clara");
   await clara.goto(`/jugar/mirar/${id}`);
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
@@ -512,28 +515,18 @@ async function probarEspectador() {
   await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(tanteador), espera);
   // Una mano entera: el espectador nunca tiene cartas propias ni Cantos, y el estado sigue la mano.
   await observar(clara, '[data-testid^="carta-"]');
-  await clara.evaluate(() => {
-    window.estados = new Set();
-    const revisar = () => {
-      for (const h of document.querySelectorAll('[data-testid="mesa"] [role="heading"][aria-level="2"]')) {
-        window.estados.add(h.parentElement.textContent);
-      }
-    };
-    revisar();
-    new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
-  });
-  await avanzar([luis], id, terminada);
-  // El visor presenta cada jugada a su ritmo, detrás de la API: cuando la API termina la mano, puede seguir
-  // en la primera. Se espera a que el estado cambie.
-  const estados = () => clara.evaluate(() => [...window.estados]);
-  await expect.poll(async () => (await estados()).length, { ...espera, message: "el estado del visor cambió durante la mano" })
-    .toBeGreaterThanOrEqual(2);
+  const mesa = clara.getByTestId("mesa");
+  await expect(mesa.getByText("Se repartieron las cartas.", { exact: true })).toBeVisible(espera);
+  const fin = await avanzar(jugadores, id, terminada);
+  // La API puede terminar antes de que el visor presente la última jugada.
+  const ganador = fin.vista.resultado.equipo + 1;
+  await expect(mesa.getByText(`El equipo ${ganador} ganó la mano.`, { exact: true })).toBeVisible(espera);
   assert.deepEqual(await clara.evaluate(() => window.vistos), [], "el espectador vio cartas para tocar");
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   await capturar(clara, "espectador-375x760");
   await boton(clara, "Volver al salón").click();
   await expect(titulo(clara, "Mesas en juego")).toBeVisible(espera);
-  await Promise.all([luis, clara].map(p => p.context().close()));
+  await Promise.all([...jugadores, clara].map(p => p.context().close()));
   console.log("Espectador con la mesa nueva: 👁 Mirando, tanteador con las parejas, sin cartas ni Cantos, y vuelta al salón.");
 }
 

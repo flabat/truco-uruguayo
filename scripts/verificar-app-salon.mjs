@@ -95,6 +95,10 @@ async function probarParejas() {
   assert.match(enlace, new RegExp(`^${web}/jugar/\\?invitacion=[A-Za-z0-9_-]+$`));
   assert.equal(new URL(enlace).searchParams.get("invitacion"), new URL(mesa.invitacion).searchParams.get("invitacion"));
 
+  // Eva y Diego quedan en el mismo equipo. Así controlamos toda respuesta a una
+  // apuesta al resto y el chico sigue abierto para probar que se puede retomar.
+  await boton(eva, "Agregar computadora al asiento 2").click();
+  await expect(eva.getByText("Faltan 2 jugadores para repartir.")).toBeVisible(espera);
   // diego abre la invitación sin sesión: ingresa y vuelve a la invitación.
   const diego = await pagina();
   await diego.goto(enlace);
@@ -103,16 +107,13 @@ async function probarParejas() {
   await boton(diego, "Ocupar mi asiento").click();
   await diego.waitForURL(new RegExp(`/jugar/sala/${id}$`));
   await expect(titulo(diego, "Esperando jugadores")).toBeVisible();
-  await expect(eva.getByText("Faltan 2 jugadores para repartir.")).toBeVisible(espera);
+  await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
   // La misma invitación, ya sentado, lleva a la sala.
   await diego.goto(enlace);
   await diego.waitForURL(new RegExp(`/jugar/sala/${id}$`), espera);
 
-  // Las computadoras completan la mesa y todos pasan a la mesa en juego.
-  for (const asiento of [3, 4]) {
-    await boton(eva, `Agregar computadora al asiento ${asiento}`).click();
-    if (asiento === 3) await expect(eva.getByText("Falta un jugador para repartir.")).toBeVisible(espera);
-  }
+  // La segunda computadora completa la mesa.
+  await boton(eva, "Agregar computadora al asiento 4").click();
   await Promise.all([eva, diego].map(p => p.waitForURL(`/jugar/mesa?id=${id}`, espera)));
   // La mesa carga CanvasKit: con la máquina cargada tarda más que el plazo por defecto.
   await Promise.all([eva, diego].map(p => expect(p.getByTestId("mesa")).toBeVisible(espera)));
@@ -136,7 +137,7 @@ async function probarParejas() {
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   // Las computadoras pueden haber cobrado algo (una flor) mientras clara entraba. Entre las piezas del
   // tanteador van espacios duros (\u00a0): `\s` los acepta.
-  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador\s1\sy\sComputadora\s3\s\d+\s·\s\d+\sJugador\s2\sy\sComputadora\s4\s·\sa\s\d+$/);
+  await expect(clara.getByLabel("Tanteador")).toHaveText(/^Jugador\s1\sy\sJugador\s3\s\d+\s·\s\d+\sComputadora\s2\sy\sComputadora\s4\s·\sa\s\d+$/);
   // El enlace ?mirar= nunca ocupa un asiento, aunque lleve también una invitación.
   await clara.goto(`/jugar/?mirar=${id}&invitacion=${new URL(enlace).searchParams.get("invitacion")}`);
   await clara.waitForURL(`/jugar/mirar/${id}`, espera);
@@ -146,13 +147,14 @@ async function probarParejas() {
   // eva vuelve al salón y retoma su mesa; las rutas profundas resisten una recarga.
   // Con una hoja que pide respuesta (eva tiene flor o le tocaron envido), «Más» no abre: eva responde primero.
   await expect(async () => {
-    for (const respuesta of ["Flor", "Quiero"]) {
+    for (const respuesta of ["Flor", "Yo no canto", "No quiero"]) {
       if (await boton(eva, respuesta).isVisible()) await boton(eva, respuesta).click();
     }
     await boton(eva, "Más").click({ timeout: 2_000 });
     await boton(eva, "Salir al salón").click({ timeout: 2_000 });
   }).toPass(espera);
   await expect(titulo(eva, "Mesas en juego")).toBeVisible();
+  assert.deepEqual((await api(eva, "/api/mis-mesas")).mesas.map(m => m.id), [id]);
   await boton(eva, "Volver a mi mesa").click();
   await eva.waitForURL(`/jugar/mesa?id=${id}`, espera);
   await eva.reload();

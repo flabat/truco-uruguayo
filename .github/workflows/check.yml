@@ -28,6 +28,9 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
 
+      - name: Revisión recibida ${{ github.sha }}
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
       - uses: actions/setup-node@v7
         id: node
         with:
@@ -106,3 +109,16 @@ jobs:
           path: ${{ env.TRUCO_MEDICIONES }}/
           retention-days: 7
           compression-level: 1
+
+      # La API de jobs conserva el SHA probado cuando caducan los artefactos.
+      - name: Revisión comprobada ${{ github.sha }}
+        env:
+          BASE_PR: ${{ github.event.pull_request.base.sha }}
+          CABEZA_PR: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            test "$(git rev-parse HEAD^1)" = "$BASE_PR"
+            test "$(git rev-parse HEAD^2)" = "$CABEZA_PR"
+          fi
