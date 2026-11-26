@@ -237,7 +237,11 @@ test("el análisis opcional conserva la mano y el progreso, y comparte cifras co
   await page.getByRole("link", { name: "Volver a aprender" }).click();
   await page.getByRole("link", { name: /Probabilidad de ganar la mano/ }).click();
   await expect(page).toHaveURL("aprender/probabilidad/");
+  // El servidor dibuja «Ver chances» activo antes de hidratar la isla: con la máquina
+  // cargada, un clic temprano se pierde y la tabla nunca se pide.
+  await expect(page.locator("astro-island:not([ssr])")).toHaveCount(1, { timeout: 30000 });
   await boton(page, "Ver chances").click();
+  await expect(boton(page, "Ocultar chances")).toBeVisible();
   const otra = page.getByRole("table", { name: "Victorias de tu pareja por carta jugada" });
   await expect(otra).toBeVisible({ timeout: 45000 });
   expect((await otra.locator("tbody tr").allTextContents()).toSorted()).toEqual(filas.toSorted());
