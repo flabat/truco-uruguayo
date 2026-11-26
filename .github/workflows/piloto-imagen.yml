@@ -1,0 +1,202 @@
+name: Comparar la imagen de Chromium
+run-name: Comparar Chromium con y sin imagen en 7d4ddce8
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/issue-437]
+    paths:
+      - .github/workflows/piloto-imagen.yml
+      - infra/ci/navegador.Dockerfile
+      - infra/ci/ejecutar-en-imagen.sh
+      - infra/ci/medir-disco-piloto.py
+
+permissions:
+  contents: read
+
+# El código del ensayo y la revisión de la aplicación tienen checkouts independientes.
+env:
+  REVISION: 7d4ddce8ce5f7d56b541f9e46bce49dd32255f3d
+  ARBOL: ddedbca8b9d5d5b3b9d1f555d88904e6ff445a9a
+  TEST_CONCURRENCY: '2'
+  PLAYWRIGHT_WORKERS: '2'
+
+jobs:
+  construir:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      imagen: ${{ steps.publicar.outputs.imagen }}
+    steps:
+      - &checkout_piloto
+        uses: actions/checkout@v7
+        with:
+          path: piloto
+          persist-credentials: false
+      - &iniciar_disco
+        name: Iniciar el muestreo del disco del runner
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/medidas-piloto"
+          mkdir -p "$dir"
+          echo "TRUCO_MEDICIONES=$dir" >> "$GITHUB_ENV"
+          python3 piloto/infra/ci/medir-disco-piloto.py "$dir" > "$dir/monitor.log" 2>&1 &
+          for _ in {1..20}; do
+            [[ -s "$dir/disco.json" ]] && exit 0
+            sleep 1
+          done
+          cat "$dir/monitor.log"
+          exit 1
+      - &checkout_app
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ env.REVISION }}
+          path: app
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Publicar una imagen reutilizable por digest
+        id: publicar
+        env:
+          TOKEN_PAQUETE: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$(git -C app rev-parse HEAD)" = "$REVISION"
+          version=$(jq -er '.packages["node_modules/playwright"].version' app/package-lock.json)
+          repo="ghcr.io/${GITHUB_REPOSITORY,,}/ci-navegador-437"
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d)
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          printf '%s' "$TOKEN_PAQUETE" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker buildx build --platform linux/amd64 --push --provenance=false \
+            --build-arg "PLAYWRIGHT_VERSION=$version" --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+            --metadata-file "$TRUCO_MEDICIONES/imagen.json" --tag "$repo:piloto-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            - < piloto/infra/ci/navegador.Dockerfile
+          digest=$(jq -er '."containerimage.digest" | select(test("^sha256:[0-9a-f]{64}$"))' "$TRUCO_MEDICIONES/imagen.json")
+          echo "imagen=$repo@$digest" >> "$GITHUB_OUTPUT"
+      - &cerrar_disco
+        name: Guardar el uso de disco inicial, mínimo y final
+        if: ${{ always() && env.TRUCO_MEDICIONES != '' }}
+        run: |
+          touch "$TRUCO_MEDICIONES/fin"
+          for _ in {1..15}; do
+            if [[ -e "$TRUCO_MEDICIONES/listo" ]]; then
+              cat "$TRUCO_MEDICIONES/disco.json"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$TRUCO_MEDICIONES/monitor.log"
+          exit 1
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && env.TRUCO_MEDICIONES != '' }}
+        with:
+          name: preparacion-imagen-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.TRUCO_MEDICIONES }}/*.json
+          retention-days: 7
+
+  comparar:
+    name: Suite · ${{ matrix.modo }}
+    needs: construir
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        modo: [sin-imagen, con-imagen]
+    env:
+      IMAGEN: ${{ needs.construir.outputs.imagen }}
+      MODO: ${{ matrix.modo }}
+    steps:
+      - *checkout_piloto
+      - *iniciar_disco
+      - *checkout_app
+      - uses: actions/setup-node@v7
+        id: node
+        with:
+          node-version: 24.22.3
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Comprobar la revisión y registrar el entorno
+        working-directory: app
+        env:
+          CACHE_NPM: ${{ steps.node.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$REVISION"
+          test "$(git rev-parse 'HEAD^{tree}')" = "$ARBOL"
+          test -z "$(git status --porcelain)"
+          git diff --check HEAD^1 HEAD
+          {
+            echo "Modo=$MODO"
+            echo "SHA=$REVISION"
+            echo "Arbol=$ARBOL"
+            echo "Imagen_ensayo=$IMAGEN"
+            echo "Runner=$RUNNER_NAME $ImageOS $ImageVersion"
+            echo "CPU=$(nproc)"
+            echo "Cache_npm=$CACHE_NPM"
+            node -v
+            npm -v
+            python3 --version
+            docker version --format 'Docker {{.Client.Version}}/{{.Server.Version}}'
+            docker compose version
+          } | tee "$TRUCO_MEDICIONES/entorno.txt"
+      - name: Instalar dependencias de la revisión
+        working-directory: app
+        run: python3 infra/ci/medir.py dependencias npm ci --prefer-offline --no-audit --no-fund
+      - name: Preparar Chromium en el runner
+        if: matrix.modo == 'sin-imagen'
+        working-directory: app
+        run: python3 infra/ci/medir.py chromium npm exec -- playwright install --with-deps --only-shell chromium
+      - name: Descargar y descomprimir la imagen publicada
+        if: matrix.modo == 'con-imagen'
+        working-directory: app
+        env:
+          TOKEN_PAQUETE: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          export DOCKER_CONFIG
+          DOCKER_CONFIG=$(mktemp -d)
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          printf '%s' "$TOKEN_PAQUETE" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          python3 infra/ci/medir.py descarga-imagen docker pull "$IMAGEN"
+          docker image inspect "$IMAGEN" --format 'imagen={{.Id}} bytes={{.Size}}' >> "$TRUCO_MEDICIONES/entorno.txt"
+      - name: Verificar el navegador, la app y la pila
+        working-directory: app
+        env:
+          CHECK_STACK: '1'
+        run: |
+          set -euo pipefail
+          entorno=()
+          if [[ "$MODO" == con-imagen ]]; then
+            entorno=(bash ../piloto/infra/ci/ejecutar-en-imagen.sh "$IMAGEN")
+          fi
+          "${entorno[@]}" bash -seuo pipefail <<'SUITE'
+          node -v
+          npm -v
+          python3 --version
+          docker compose version
+          node --input-type=module -e 'import { chromium } from "@playwright/test"; const b = await chromium.launch(); console.log("Chromium " + b.version()); await b.close()' | tee -a "$TRUCO_MEDICIONES/entorno.txt"
+          npm run check
+          SUITE
+      - name: Ensayar la copia y restauración en el host
+        working-directory: app
+        run: |
+          python3 infra/ci/medir.py produccion npm run check:production
+          git diff --check
+      - *cerrar_disco
+      - name: Publicar las mediciones
+        if: ${{ !cancelled() && env.TRUCO_MEDICIONES != '' }}
+        working-directory: app
+        run: python3 infra/ci/medir.py --resumen | tee "$TRUCO_MEDICIONES/resumen.md" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && env.TRUCO_MEDICIONES != '' }}
+        with:
+          name: piloto-${{ matrix.modo }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.TRUCO_MEDICIONES }}/
+          retention-days: 7
