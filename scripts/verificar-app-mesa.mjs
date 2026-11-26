@@ -495,9 +495,10 @@ async function tercetosConPico(luis) {
 }
 
 async function probarEspectador() {
-  const luis = await entrar("luis");
-  await crearMesa(luis, "2 contra 2", true);
-  const id = await enLaMesa(luis);
+  // Las cuatro cuentas esperan nuestras jugadas hasta que Clara esté mirando desde otra sesión.
+  const jugadores = [];
+  for (const usuario of ["luis", "ana", "bruno", "diego"]) jugadores.push(await entrar(usuario));
+  const id = await mesaConInvitados(jugadores[0], "2 contra 2", jugadores.slice(1));
   const clara = await entrar("clara");
   await clara.goto(`/jugar/mirar/${id}`);
   await expect(clara.getByTestId("mesa")).toBeVisible(espera);
@@ -512,28 +513,18 @@ async function probarEspectador() {
   await expect(clara.getByLabel("Tanteador")).toHaveText(new RegExp(tanteador), espera);
   // Una mano entera: el espectador nunca tiene cartas propias ni Cantos, y el estado sigue la mano.
   await observar(clara, '[data-testid^="carta-"]');
-  await clara.evaluate(() => {
-    window.estados = new Set();
-    const revisar = () => {
-      for (const h of document.querySelectorAll('[data-testid="mesa"] [role="heading"][aria-level="2"]')) {
-        window.estados.add(h.parentElement.textContent);
-      }
-    };
-    revisar();
-    new MutationObserver(revisar).observe(document.body, { childList: true, subtree: true, characterData: true });
-  });
-  await avanzar([luis], id, terminada);
-  // El visor presenta cada jugada a su ritmo, detrás de la API: cuando la API termina la mano, puede seguir
-  // en la primera. Se espera a que el estado cambie.
-  const estados = () => clara.evaluate(() => [...window.estados]);
-  await expect.poll(async () => (await estados()).length, { ...espera, message: "el estado del visor cambió durante la mano" })
-    .toBeGreaterThanOrEqual(2);
+  const mesa = clara.getByTestId("mesa");
+  await expect(mesa.getByText("Se repartieron las cartas.", { exact: true })).toBeVisible(espera);
+  const fin = await avanzar(jugadores, id, terminada);
+  // La API puede terminar antes de que el visor presente la última jugada.
+  const ganador = fin.vista.resultado.equipo + 1;
+  await expect(mesa.getByText(`El equipo ${ganador} ganó la mano.`, { exact: true })).toBeVisible(espera);
   assert.deepEqual(await clara.evaluate(() => window.vistos), [], "el espectador vio cartas para tocar");
   await expect(boton(clara, "Cantos")).toHaveCount(0);
   await capturar(clara, "espectador-375x760");
   await boton(clara, "Volver al salón").click();
   await expect(titulo(clara, "Mesas en juego")).toBeVisible(espera);
-  await Promise.all([luis, clara].map(p => p.context().close()));
+  await Promise.all([...jugadores, clara].map(p => p.context().close()));
   console.log("Espectador con la mesa nueva: 👁 Mirando, tanteador con las parejas, sin cartas ni Cantos, y vuelta al salón.");
 }
 
