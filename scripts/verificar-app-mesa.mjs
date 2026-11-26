@@ -209,45 +209,47 @@ async function probarDueloConComputadora() {
   await expect(cartasEnMano(luis)).toHaveCount(3, espera);
   await capturar(luis, "duelo-375x760");
   const enviadas = [];
-  let respondida = Infinity;
+  let respondida = false;
   luis.on("request", r => { if (/\/acciones$/.test(r.url()) && r.method() === "POST") enviadas.push(r.postDataJSON()); });
   luis.on("response", r => {
-    if (/\/acciones$/.test(r.url()) && r.request().method() === "POST") respondida = Math.min(respondida, Date.now());
+    if (/\/acciones$/.test(r.url()) && r.request().method() === "POST") respondida = true;
   });
-  // La ruta retiene el envío: el segundo toque llega mientras el primero sigue en viaje.
+  // La ruta confirma que el primer toque envió la jugada y la retiene hasta después del segundo.
+  let primeraRetenida;
   let soltar;
   const retenida = new Promise(listo => { soltar = listo; });
   await luis.route("**/acciones", async r => {
-    // Se suelta al comprobar la segunda carta; el plazo solo evita colgar la prueba si falla antes.
-    await Promise.race([retenida, new Promise(listo => setTimeout(listo, 60_000))]);
+    if (r.request().method() !== "POST") return r.continue();
+    primeraRetenida ??= r.request();
+    await retenida;
     await r.continue();
   });
   const lugar = async carta => {
     const caja = await carta.boundingBox();
     return caja && { x: Math.round(caja.x), y: Math.round(caja.y) };
   };
-  // Mientras la mesa presenta lo último que pasó, los toques se rechazan sin enviarse y se repiten. Con la
-  // máquina cargada, el pedido puede notarse después de la espera de un intento: cada envío se atribuye al
-  // intento en que se tocó esa carta, no al último.
-  const intentos = [];
-  for (let intento = 0; enviadas.length === 0 && intento < 20; intento++) {
-    const [primeraId, segundaId] = await cartasEnMano(luis).evaluateAll(cs => cs.map(c => c.dataset.testid));
-    const segunda = luis.getByTestId(segundaId);
+  const [primeraId, segundaId] = await cartasEnMano(luis).evaluateAll(cs => cs.map(c => c.dataset.testid));
+  assert.notEqual(primeraId, segundaId, "se tocan dos cartas distintas");
+  const primera = luis.getByTestId(primeraId);
+  const segunda = luis.getByTestId(segundaId);
+  try {
+    // La API puede dar el turno antes de que la mesa termine de presentarlo. Repetimos solo la
+    // primera carta hasta interceptar su POST, antes de tocar la otra por primera vez.
+    await expect(async () => {
+      if (!primeraRetenida) await primera.click();
+      await expect.poll(() => Boolean(primeraRetenida), { timeout: 1_000 }).toBe(true);
+    }).toPass(espera);
+    assert.equal("carta-" + primeraRetenida.postDataJSON().accion?.carta, primeraId, "sale la carta del primer toque");
+    assert.equal(enviadas.length, 1, "el primer toque envió una sola carta");
     const antes = await lugar(segunda);
-    await luis.getByTestId(primeraId).click();
+    assert.ok(antes, "la segunda carta tiene lugar en la mano");
     await segunda.click();
-    intentos.push({ primeraId, segundaId, segunda, antes, segundoToque: Date.now() });
-    await luis.waitForTimeout(1_000);
+    assert.equal(respondida, false, "el segundo toque terminó antes de la respuesta del primero");
+    await expect.poll(() => lugar(segunda), espera).toEqual(antes);
+  } finally {
+    soltar();
   }
-  assert.equal(enviadas.length, 1, "un intento envió una sola carta: " + JSON.stringify(enviadas));
-  const enviada = "carta-" + enviadas[0].accion?.carta;
-  const tocado = intentos.find(t => t.primeraId === enviada);
-  assert.ok(tocado, `sale la carta del primer toque: salió ${enviada}, tocadas ${JSON.stringify(intentos.map(t => [t.primeraId, t.segundaId]))}`);
-  assert.ok(tocado.segundoToque < respondida, "el segundo toque terminó antes de la respuesta del primero");
-  // Con el envío retenido, la segunda carta volvió a su lugar en la mano.
-  await expect.poll(() => lugar(tocado.segunda), espera).toEqual(tocado.antes);
-  soltar();
-  await expect.poll(() => respondida < Infinity, espera).toBe(true);
+  await expect.poll(() => respondida, espera).toBe(true);
   await luis.unroute("**/acciones");
   assert.equal(enviadas.length, 1, "dos toques rápidos envían una sola carta: " + JSON.stringify(enviadas));
   const tras = await partida(luis, id);
