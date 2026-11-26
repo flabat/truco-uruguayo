@@ -94,14 +94,17 @@ function cerrarLance(estado: EstadoOnline): EstadoOnline {
 
 type PasoOnline = { ok: true; estado: EstadoOnline } | { ok: false; error: ErrorJugada | "accion-invalida" | "accion-no-permitida" };
 
-/** La parda en la segunda también le da la mano a quien ganó la primera. */
+/** En duelo, ¿todas las cartas que responden a la segunda le dan la mano al rival? */
 export function segundaPerdidaEnDuelo({ mano }: EstadoOnline, asiento: Asiento): boolean {
-  const primera = mano.vueltas[0]?.resultado;
   const salida = mano.vueltaActual?.jugadas[0];
-  return mano.reparto.manos.length === 2 && mano.vueltas.length === 1
-    && primera?.tipo === "ganada" && primera.asiento !== asiento
-    && mano.turno === asiento && salida?.asiento === primera.asiento
-    && mano.restantes[asiento].every(carta => compararCartas(carta, salida.carta, mano.reparto.muestra) <= 0);
+  if (mano.reparto.manos.length !== 2 || mano.vueltas.length !== 1 || mano.turno !== asiento
+      || !salida || salida.asiento === asiento) return false;
+  const primera = mano.vueltas[0].resultado;
+  if (primera.tipo === "ganada" && primera.asiento === asiento) return false;
+  return mano.restantes[asiento].every(carta => {
+    const comparacion = compararCartas(carta, salida.carta, mano.reparto.muestra);
+    return comparacion < 0 || (comparacion === 0 && primera.tipo === "ganada");
+  });
 }
 
 /** Solo las cartas propias y los hechos públicos pueden justificar interrumpir la salida rival. */

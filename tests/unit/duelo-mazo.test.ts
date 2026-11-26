@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable } from "../../api/turnos.ts";
+import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable, type Registro } from "../../api/turnos.ts";
 import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { mazo } from "@eltruco/motor/cartas.ts";
 import { evaluarTantos } from "@eltruco/motor/tantos.ts";
@@ -60,15 +60,52 @@ test("empardar la segunda no alcanza, pero una pieza que puede ganarla mantiene 
   assert.equal(confirmarComputadora(conPieza, "duel", 1, "bastos-01").estado.resultado?.motivo, "vueltas");
 });
 
-test("una primera parda y una mesa de parejas conservan la jugada de la computadora", () => {
-  const reparto: RepartoOnline = { ...dueloMazo.reparto, mano: 0, dador: 1,
-    manos: [["espadas-02", "espadas-01", "bastos-06"], dueloMazo.reparto.manos[1]] };
-  const parda = restaurar({ ...dueloMazo, reparto, acciones: [
-    { tipo: "carta", asiento: 0, carta: "espadas-02" }, { tipo: "carta", asiento: 1, carta: "oros-02" },
-    { tipo: "carta", asiento: 0, carta: "espadas-01" },
-  ] }, "duel");
-  assert.equal(confirmarComputadora(parda, "duel", 1, "oros-07").turnos.at(-1)?.action.tipo, "carta");
+// Secuencia pública del reporte #449, con cartas de ejemplo para las que quedaron tapadas.
+const primeraParda: Registro = {
+  ...dueloMazo, puntos_inicio: [5, 11],
+  reparto: { versionReparto: "online-1", mano: 0, dador: 1, muestra: "copas-10", reglaFlor: "inmediata-v2",
+    manos: [["copas-03", "bastos-03", "espadas-04"], ["oros-03", "bastos-06", "oros-04"]] },
+  acciones: [
+    { tipo: "real-envido", asiento: 0 }, { tipo: "no-quiero", asiento: 1 },
+    { tipo: "carta", asiento: 0, carta: "copas-03" }, { tipo: "truco", asiento: 1 }, { tipo: "quiero", asiento: 0 },
+    { tipo: "carta", asiento: 1, carta: "oros-03" }, { tipo: "carta", asiento: 0, carta: "bastos-03" },
+  ],
+};
 
+test("tras la primera parda las dos cartas que pierden la segunda se entregan tapadas", () => {
+  const mano = restaurar(primeraParda, "duel");
+  for (const carta of ["bastos-06", "oros-04"] as const) {
+    const fin = confirmarComputadora(mano, "duel", 1, carta);
+    assert.deepEqual(fin.estado.resultado, { equipo: 0, tantos: 2, motivo: "mazo" });
+    assert.deepEqual(marcadorOnline(fin.estado), [8, 11]);
+    assert.deepEqual(guardarAcciones(fin), [...primeraParda.acciones, { tipo: "mazo", asiento: 1 }]);
+    assert.doesNotMatch(JSON.stringify(vistaOnline(fin.estado, 0)), /bastos-06|oros-04/);
+  }
+});
+
+test("tras la primera parda la computadora conserva su bluff si el truco está disponible", () => {
+  const acciones = primeraParda.acciones.filter(a => a.tipo !== "truco" && a.tipo !== "quiero");
+  const mano = restaurar({ ...primeraParda, acciones }, "duel");
+  const amago = confirmarComputadora(mano, "duel", 1, "truco");
+  assert.deepEqual(amago.turnos.at(-1)?.action, { tipo: "truco", asiento: 1 });
+  const aceptado = confirmar(amago, "duel", { tipo: "quiero", asiento: 0 });
+  const fin = confirmarComputadora(aceptado, "duel", 1, "bastos-06");
+  assert.deepEqual(fin.estado.resultado, { equipo: 0, tantos: 2, motivo: "mazo" });
+});
+
+test("tras la primera parda la computadora puede empardar la segunda y jugar la tercera", () => {
+  const reparto: RepartoOnline = { ...primeraParda.reparto,
+    manos: [primeraParda.reparto.manos[0], ["oros-03", "bastos-06", "espadas-03"]] };
+  const mano = restaurar({ ...primeraParda, reparto }, "duel");
+  assert.equal(confirmarComputadora(mano, "duel", 1, "bastos-06").turnos.at(-1)?.action.tipo, "carta");
+  const empate = confirmarComputadora(mano, "duel", 1, "espadas-03");
+  assert.deepEqual(empate.turnos.at(-1)?.action, { tipo: "carta", asiento: 1, carta: "espadas-03" });
+  const salida = confirmar(empate, "duel", { tipo: "carta", asiento: 0, carta: "espadas-04" });
+  const fin = confirmarComputadora(salida, "duel", 1, "bastos-06");
+  assert.deepEqual(fin.estado.resultado, { equipo: 1, tantos: 2, motivo: "vueltas" });
+});
+
+test("una mesa de parejas conserva la jugada de la computadora", () => {
   const parejas: RepartoOnline = { ...dueloMazo.reparto, mano: 0, dador: 3, manos: [
     ...dueloMazo.reparto.manos, ["copas-06", "bastos-05", "oros-05"], ["bastos-07", "copas-04", "espadas-06"],
   ] };
