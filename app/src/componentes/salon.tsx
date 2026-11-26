@@ -1,6 +1,7 @@
 // Piezas del salón y la sala con el lenguaje de la mesa nueva: paño, píldoras y hojas de papel.
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 import { colores, fuentes } from "../tema.ts";
 
 /** Tarjeta de paño, como el centro de la mesa. */
@@ -37,7 +38,14 @@ export function Opcion({ titulo, detalle, elegida, alElegir, tipo = "radio", des
       onPress={alElegir}
       style={[estilos.opcion, elegida && estilos.opcionElegida]}
     >
-      <View style={[estilos.marca, tipo === "radio" && estilos.marcaRadio, elegida && estilos.marcaElegida]} />
+      <View style={[estilos.marca, tipo === "radio" && estilos.marcaRadio, elegida && (tipo === "radio" ? estilos.marcaRadioElegida : estilos.marcaElegida)]}>
+        {elegida && tipo === "radio" ? <View style={estilos.puntoRadio} /> : null}
+        {elegida && tipo === "checkbox" ? (
+          <Svg width={14} height={14} viewBox="0 0 14 14" aria-hidden>
+            <Path d="M2.5 7.5l3 3 6-7" fill="none" stroke={colores.panoClaro} strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        ) : null}
+      </View>
       <View style={estilos.textos}>
         <Text style={[estilos.tituloOpcion, elegida && estilos.textoElegido]}>{titulo}</Text>
         {detalle ? <Text style={[estilos.detalle, elegida && estilos.textoElegido]}>{detalle}</Text> : null}
@@ -97,9 +105,11 @@ export const estilos = StyleSheet.create({
     paddingVertical: 8,
   },
   opcionElegida: { backgroundColor: colores.panoClaro, borderColor: colores.panoOscuro },
-  marca: { borderColor: colores.tintaSuave, borderRadius: 4, borderWidth: 2, height: 18, width: 18 },
-  marcaRadio: { borderRadius: 9 },
+  marca: { alignItems: "center", borderColor: colores.tintaSuave, borderRadius: 4, borderWidth: 2, height: 20, justifyContent: "center", width: 20 },
+  marcaRadio: { borderRadius: 10 },
   marcaElegida: { backgroundColor: colores.papel, borderColor: colores.papel },
+  marcaRadioElegida: { borderColor: colores.papel },
+  puntoRadio: { backgroundColor: colores.papel, borderRadius: 4, height: 8, width: 8 },
   textos: { flex: 1 },
   tituloOpcion: { color: colores.tinta, fontFamily: fuentes.textoFuerte, fontSize: 16 },
   detalle: { color: colores.tintaSuave, fontFamily: fuentes.texto, fontSize: 14 },
