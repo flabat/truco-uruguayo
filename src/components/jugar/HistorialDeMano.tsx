@@ -19,7 +19,7 @@ export function HistorialDeMano({ acciones, cobros, nombre, indicaciones = [], t
       entradas.push(descripcionDeIndicacion(indicaciones[cursor++], nombre));
     }
     if (i === acciones.length) break;
-    entradas.push(descripcionDeJugada(acciones[i], nombre));
+    entradas.push(descripcionDeJugada(acciones, i, nombre));
     if (flor?.comparacionFlor?.indiceAccion !== i) continue;
     const { participantes } = flor.comparacionFlor;
     entradas.push(<>

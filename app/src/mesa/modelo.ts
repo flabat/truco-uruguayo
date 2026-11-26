@@ -86,7 +86,7 @@ export function historialDeMano(
       entradas.push(descripcionDeIndicacion(pendientes[cursor++], nombre));
     }
     if (i === vista.acciones.length) break;
-    entradas.push(descripcionDeJugada(vista.acciones[i], nombre));
+    entradas.push(descripcionDeJugada(vista.acciones, i, nombre));
     if (flor?.comparacionFlor?.indiceAccion !== i) continue;
     const cantadas = enLista(flor.comparacionFlor.participantes.map(p => nombre(p.asiento) + " cantó " + p.total));
     entradas.push(`Flor querida. ${cantadas}. Ganó ${nombre(flor.asiento!)} con ${flor.tantoGanador} de flor. `
@@ -486,7 +486,7 @@ export function datosDeTercetos(mesa: Mesa, partida: PartidaTercetos, visible: M
       resultado: (l.resultado.equipo === propio ? "Ganó tu equipo" : "Ganaron los rivales") + " por " + motivoDelCierre[l.resultado.motivo]
         + ` · Nos ${l.puntos[propio]} · ${l.puntos[1 - propio]} Ellos`,
       tantos: [propio, 1 - propio].map(e => equipo(e) + " " + (totales[e] > 0 ? "+" : "") + tantos(totales[e])).join(" · "),
-      historial: esElLance(l, lance) ? [] : l.acciones.map(a => descripcionDeJugada(a, nombre)),
+      historial: esElLance(l, lance) ? [] : l.acciones.map((_, i) => descripcionDeJugada(l.acciones, i, nombre)),
       vueltas: filasDeVueltas(l.vueltas, equipo, nombre),
       cobros: filasDeCobros(l.cobros, l.acciones, l.resultado, equipo, nombre),
     };
@@ -528,8 +528,8 @@ function resumenDeLaMano(m: MesaObservada, nombre: Nombre) {
   if (m.tablero.resultado) return "El equipo " + (m.tablero.resultado.equipo + 1) + " ganó la mano.";
   const frase = fraseEnElAire(m);
   if (frase) return descripcionDeIndicacion(frase, nombre);
-  const ultima = m.tablero.acciones.at(-1);
-  return ultima ? descripcionDeJugada(ultima, nombre) : "Se repartieron las cartas.";
+  const { acciones } = m.tablero;
+  return acciones.length ? descripcionDeJugada(acciones, acciones.length - 1, nombre) : "Se repartieron las cartas.";
 }
 
 /**
