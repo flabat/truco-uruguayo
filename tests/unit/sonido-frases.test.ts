@@ -8,6 +8,7 @@ import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import {
   clavesDeFrase, clipsDeVoz, frasesDeVoz, numeroEnPalabras, tantosPosibles, textoDeFrase, type CantoVoz, type FraseVoz,
 } from "../../app/src/sonido/frases.ts";
+import { fraseDeCanto } from "../../app/src/mesa/efectos.ts";
 
 const clavesGrabadas = (metodo: "entera" | "partes") => new Set(clipsDeVoz(metodo).map(c => c.clave));
 const suena = (frase: FraseVoz, metodo: "entera" | "partes") => {
@@ -75,6 +76,13 @@ test("las frases del pie y todos los cantos del cliente tienen clip", () => {
   for (const canto of tipos) assert.ok(suena({ tipo: "canto", canto }, "entera"), canto);
 });
 
+test("«Son buenas» tiene su clip y lo pide el globo de quien pierde el envido", () => {
+  const frase = fraseDeCanto("Son buenas");
+  assert.deepEqual(frase, { tipo: "son-buenas" });
+  for (const metodo of ["entera", "partes"] as const) assert.ok(suena(frase!, metodo), metodo);
+  assert.equal(textoDeFrase(frase!), "Son buenas.");
+});
+
 test("los números de los tantos se dicen en palabras", () => {
   assert.equal(numeroEnPalabras(0), "cero");
   assert.equal(numeroEnPalabras(7), "siete");
@@ -106,6 +114,7 @@ test("los nombres de los clips son estables, únicos y seguros", () => {
     assert.equal(new Set(claves).size, claves.length);
     for (const clave of claves) assert.match(clave, /^[a-z0-9-]+$/);
   }
-  assert.equal(clipsDeVoz("entera").length, 14 + 3 + 26 + 28);
-  assert.equal(frasesDeVoz().length, 14 + 3 + 26 + 28);
+  assert.deepEqual(clavesDeFrase({ tipo: "son-buenas" }), ["son-buenas"]);
+  assert.equal(clipsDeVoz("entera").length, 14 + 3 + 1 + 26 + 28);
+  assert.equal(frasesDeVoz().length, 14 + 3 + 1 + 26 + 28);
 });

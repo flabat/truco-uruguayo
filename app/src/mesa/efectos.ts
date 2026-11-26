@@ -23,11 +23,12 @@ cantoPorTexto.set("Me voy al mazo", "mazo");
 
 /**
  * La frase que dice la voz de un globo de canto: un canto («Truco», «Me voy al mazo») o la declaración
- * de tantos que hace el árbitro («33 de envido»). Un texto que no es ninguna de las dos no suena.
+ * de tantos que hace el árbitro («33 de envido», «Son buenas»). Un texto que no es ninguna de las dos no suena.
  */
 export function fraseDeCanto(texto: string): FraseVoz | null {
   const tantos = /^(\d+) de (envido|flor)$/.exec(texto);
   if (tantos) return { tipo: "tantos", motivo: tantos[2] as MotivoTantos, total: Number(tantos[1]) };
+  if (texto === "Son buenas") return { tipo: "son-buenas" };
   const accion = cantoPorTexto.get(texto);
   return accion ? { tipo: "canto", canto: accion } : null;
 }
