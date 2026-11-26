@@ -6,6 +6,7 @@ import { setTimeout as esperar } from "node:timers/promises";
 import WebSocket from "ws";
 import pg from "pg";
 import { iniciarReplayDB } from "./replay-db.ts";
+import { retirarJugador } from "./retiro.ts";
 import { politicaPieParejas } from "@eltruco/motor/modelo-pie.ts";
 import { iniciarOnline } from "@eltruco/motor/mesa-online.ts";
 import { normalizarPartida } from "@eltruco/motor/partida-jugador.ts";
@@ -40,7 +41,7 @@ async function json(asiento, ruta, datos, esperado = 200) {
   return cuerpo;
 }
 
-async function mesa(cantidad, { alternativa = false, computadoras = [] } = {}) {
+async function mesa(cantidad, { alternativa = false, computadoras = [], manos = cartas.slice(0, cantidad) } = {}) {
   const tercetos = cantidad === 6;
   const formato = tercetos ? "triples" : "pairs-private-senas";
   const m = await json(0, "/mesas", { modo: tercetos ? "3v3" : "2v2", meta: 50, formato, versionSenas, publica: !tercetos }, 201);
@@ -56,7 +57,6 @@ async function mesa(cantidad, { alternativa = false, computadoras = [] } = {}) {
     if (computadoras.includes(i)) await json(0, "/mesas/" + m.id + "/computadoras", { asiento: i });
     else await json(i, "/invitaciones/" + token + "/unirse", {});
   }
-  const manos = cartas.slice(0, cantidad);
   if (alternativa) manos[0] = ["copas-11", "espadas-01", "oros-04"];
   const reparto = { versionReparto: tercetos ? "online-2" : "online-1", reglaFlor: "inmediata-v2", mano: 0, dador: cantidad - 1, muestra: "copas-06", manos,
     ...(computadoras.length && { respondenSinFlor: computadoras }) };
@@ -348,6 +348,42 @@ async function esperarJugada(ruta, pie, version) {
   }
 }
 
+async function verificarPieDelAsientoCedido() {
+  // Con los dos seises y el tres, la computadora en A0 elige una carta y espera a A2.
+  const id = await mesa(4, { manos: [cartas[1], cartas[2], cartas[3], cartas[0]] });
+  const ruta = "/mesas/" + id;
+  const turno = async asiento => (await json(asiento, "/mis-mesas")).mesas.find(m => m.id === id)?.teToca;
+  assert.equal(await turno(0), true);
+  assert.equal(await turno(2), false);
+  const db = await pool.connect();
+  try {
+    await db.query("BEGIN");
+    assert.deepEqual(await retirarJugador(db, jugadores[0].id), [id]);
+    await db.query("COMMIT");
+  } catch (e) { await db.query("ROLLBACK"); throw e; } finally { db.release(); }
+
+  assert.equal(await turno(0), undefined);
+  assert.equal(await turno(2), true, "Mis mesas le avisa al pie que la computadora espera su decisión");
+  const pie = await json(2, ruta + "/partida");
+  assert.equal(pie.pie.esperando, 0);
+  assert.equal(await turno(1), false);
+  const rival = await json(1, ruta + "/partida");
+  assert.equal(rival.pie.esperando, undefined);
+  const recibo = await json(2, ruta + "/indicaciones", indicacion(pie.version, 0, "sin-indicacion"));
+  assert.equal(recibo.version, pie.version);
+  assert.equal(recibo.pie.esperando, undefined);
+  assert.equal(await turno(2), false);
+
+  // El rival sólo ve la carta del asiento cedido y después le toca a él.
+  const siguiente = await esperarJugada(ruta, 1, rival.version);
+  assert.equal(siguiente.version, rival.version + 1);
+  const [carta] = siguiente.vista.vueltaActual.jugadas;
+  assert.equal(carta.asiento, 0);
+  assert.deepEqual(siguiente.vista.acciones, [...rival.vista.acciones, { tipo: "carta", asiento: 0, carta: carta.carta }]);
+  assert.deepEqual(siguiente.indicaciones, rival.indicaciones);
+  assert.equal(await turno(1), true);
+}
+
 async function continuarEspera(cantidad, id) {
   const ruta = "/mesas/" + id;
   const pie = cantidad - 1;
@@ -396,6 +432,7 @@ try {
       cantidad integer PRIMARY KEY, mesa uuid, mesa_con_bots uuid, orden jsonb, recibo jsonb, vistas jsonb, replay jsonb)`);
     for (let i = 0; i < 7; i++) jugadores.push(await cuenta(i));
     await pool.query("INSERT INTO juego.reporteros(jugador) VALUES ($1)", [jugadores[0].id]);
+    await verificarPieDelAsientoCedido();
     await verificar(4);
     await verificar(6);
     await Promise.all([prepararEspera(4), prepararEspera(6)]);

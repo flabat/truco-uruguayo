@@ -17,6 +17,7 @@ interface FilaMesa {
   asiento: Asiento;
   participantes: string[];
   humanos: number[];
+  esperan: number[];
   actividad: Date | null;
   politica: string;
   version_senas: string | null;
@@ -38,7 +39,7 @@ function resumirMano(fila: FilaMesa, registro: RegistroTercetos): EstadoDeAsient
   if (puntos.some(tantos => tantos >= meta)) return null;
   const equipo = asiento % 2;
   mano.politicaPie = fila.politica;
-  const pie = mano.indicaciones && vistaPiePrivada(mano, asiento, fila.humanos);
+  const pie = mano.indicaciones && vistaPiePrivada(mano, asiento, fila.esperan);
   return {
     puntos: [puntos[equipo], puntos[1 - equipo]],
     teToca: pie?.esperando !== undefined || (pie?.responde === undefined && aDecidir(mano.estado).includes(asiento)),
@@ -49,7 +50,7 @@ async function leerMesas(pool: Pool, jugador: string, anteriores: ReadonlyMap<st
   const revisiones = Object.fromEntries(Array.from(anteriores, ([id, r]) => [id, r.revision]));
   const { rows } = await pool.query<FilaMesa>(`
     SELECT m.id, m.modo, m.meta, m.politica, m.version_senas, propio.asiento,
-           ocupantes.participantes, ocupantes.humanos, h.numero, h.revision,
+           ocupantes.participantes, ocupantes.humanos, ocupantes.esperan, h.numero, h.revision,
            CASE WHEN h.revision IS DISTINCT FROM ($2::jsonb ->> m.id::text) THEN to_jsonb(h.registro) END AS registro,
            coalesce(m.actividad_jugadores, (r.cabecera->>'inicio')::timestamptz) AS actividad
       FROM juego.asientos propio JOIN juego.mesas m ON m.id = propio.mesa
@@ -57,13 +58,15 @@ async function leerMesas(pool: Pool, jugador: string, anteriores: ReadonlyMap<st
         SELECT coalesce(array_agg(CASE WHEN a.computadora OR a.cedido THEN 'Computadora ' || (a.asiento + 1)
                                       ELSE j.nombre END ORDER BY a.asiento)
                           FILTER (WHERE a.asiento <> propio.asiento), '{}'::text[]) AS participantes,
-               array_agg(a.asiento ORDER BY a.asiento) FILTER (WHERE NOT a.computadora) AS humanos
+               array_agg(a.asiento ORDER BY a.asiento) FILTER (WHERE NOT a.computadora) AS humanos,
+               array_agg(a.asiento ORDER BY a.asiento) FILTER (WHERE NOT a.computadora AND NOT a.cedido) AS esperan
           FROM juego.asientos a LEFT JOIN juego.jugadores j ON j.id = a.jugador
          WHERE a.mesa = m.id
       ) ocupantes
       LEFT JOIN LATERAL (
         SELECT ultima AS registro, ultima.numero,
-               concat_ws('/', ultima.numero, ultima.version, ultima.xmin, m.xmin, propio.asiento, ocupantes.humanos) AS revision
+               concat_ws('/', ultima.numero, ultima.version, ultima.xmin, m.xmin, propio.asiento,
+                         ocupantes.humanos, ocupantes.esperan) AS revision
           FROM juego.manos ultima
          WHERE ultima.mesa = m.id ORDER BY ultima.numero DESC LIMIT 1
       ) h ON true
@@ -115,6 +118,6 @@ export function crearMisMesas(pool: Pool) {
       if (porJugador.size >= 128) porJugador.delete(porJugador.keys().next().value!);
       porJugador.set(jugador.id, actuales);
     }
-    responderJson(res, 200, { mesas });
+    responderJson(res, 200, { jugadorId: jugador.id, mesas });
   };
 }

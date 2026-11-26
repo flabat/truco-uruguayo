@@ -39,14 +39,16 @@ function FilaMesa({ mesa, unica, numero }: { mesa: MesaRetomable; unica: boolean
   );
 }
 
-export function MisMesas() {
+export function MisMesas({ jugadorId }: { jugadorId: string }) {
   const { reintentar: recargarSesion } = useSesion();
-  const { datos, estado, reintentar } = useConsulta<{ mesas: MesaRetomable[] }>("/api/mis-mesas", 15_000);
+  const { datos, estado, reintentar } = useConsulta<{ jugadorId: string; mesas: MesaRetomable[] }>("/api/mis-mesas", 15_000);
   const [expandidas, setExpandidas] = useState(false);
+  const cambioDeSesion = estado === "sin-sesion" || (datos !== null && datos.jugadorId !== jugadorId);
   useEffect(() => {
-    if (estado === "sin-sesion") recargarSesion();
-  }, [estado, recargarSesion]);
+    if (cambioDeSesion) recargarSesion();
+  }, [cambioDeSesion, recargarSesion]);
 
+  if (cambioDeSesion) return null;
   const mesas = datos?.mesas ?? [];
   const error = estado === "error" || estado === "no-disponible";
   if (!mesas.length && !error) return estado === "cargando" ? <Aviso>Buscando tus mesas…</Aviso> : null;

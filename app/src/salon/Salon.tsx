@@ -63,7 +63,7 @@ export function Salon({ jugador }: { jugador: Jugador }) {
         <Text style={estilos.saludo}>Hola, {jugador.nombre}</Text>
         <EnlaceTexto alTocar={() => router.push("/perfil" as Href)}>Tu perfil</EnlaceTexto>
       </View>
-      <MisMesas key={jugador.id} />
+      <MisMesas key={jugador.id} jugadorId={jugador.id} />
       <Boton onPress={() => router.push("/crear" as Href)}>Crear mesa</Boton>
       <Comunidad jugador={jugador.id} />
       {!habilitado ? <Parrafo suave>El salón está cerrado. Podés crear una mesa privada e invitar a quien quieras.</Parrafo> : null}

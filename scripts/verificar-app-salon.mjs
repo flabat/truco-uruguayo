@@ -292,11 +292,59 @@ async function probarMisMesasDesdeOtroDispositivo(parejas, duelo, sala) {
   await nueva.context().close();
 }
 
+async function probarCambioDeCuentaEntrePestanas(dueloDeEva) {
+  const primera = await pagina();
+  const contexto = primera.context();
+  await primera.goto("/jugar/");
+  await ingresar(primera, "eva");
+  await expect(titulo(primera, "Mesas en juego")).toBeVisible(espera);
+  const eva = await api(primera, "/api/jugador");
+  await expect(primera.getByText("Hola, " + eva.nombre, { exact: true })).toBeVisible(espera);
+  await expect(primera.getByTestId("mi-mesa-" + dueloDeEva)).toBeVisible(espera);
+
+  // En Chromium sin ventana ambas pestañas pueden seguir visibles. Simulamos el aviso
+  // del navegador para que el primer salón consulte justo después del cambio de cookie.
+  const cambiarVisibilidad = estado => primera.evaluate(visibilidad => {
+    Object.defineProperty(document, "visibilityState", { configurable: true, value: visibilidad });
+    document.dispatchEvent(new Event("visibilitychange"));
+  }, estado);
+  await cambiarVisibilidad("hidden");
+  const segunda = await contexto.newPage();
+  await segunda.goto("/jugar/perfil");
+  await boton(segunda, "Cerrar sesión").click();
+  await expect(titulo(segunda, "Entrá a jugar")).toBeVisible(espera);
+  // La sesión de juego ya se cerró. Sin el ingreso previo de Keycloak podemos elegir a Clara.
+  await contexto.clearCookies();
+  await ingresar(segunda, "clara");
+  await expect(titulo(segunda, "Mesas en juego")).toBeVisible(espera);
+  const clara = await api(segunda, "/api/jugador");
+  assert.notEqual(clara.id, eva.id);
+  const crear = await segunda.request.post("/api/mesas", {
+    data: { modo: "1v1", publica: false }, headers: { Origin: new URL(web).origin },
+  });
+  assert.equal(crear.status(), 201);
+  const salaDeClara = (await crear.json()).id;
+
+  await primera.bringToFront();
+  await cambiarVisibilidad("visible");
+  await expect(primera.getByText("Hola, " + clara.nombre, { exact: true })).toBeVisible(espera);
+  const propias = primera.getByRole("region", { name: "Mis mesas" });
+  await expect(propias.getByTestId("mi-mesa-" + salaDeClara)).toBeVisible(espera);
+  await expect(propias.getByTestId("mi-mesa-" + dueloDeEva)).toHaveCount(0);
+  const anteriores = propias.getByRole("button", { name: /^Mesas anteriores/ });
+  if (await anteriores.isVisible()) await anteriores.click();
+  const mostradas = await propias.getByRole("listitem").evaluateAll(filas =>
+    filas.map(fila => fila.getAttribute("data-testid").slice("mi-mesa-".length)).sort());
+  assert.deepEqual(mostradas, (await api(segunda, "/api/mis-mesas")).mesas.map(m => m.id).sort());
+  await contexto.close();
+}
+
 try {
   const parejas = await probarParejas();
   const duelo = await probarDuelo();
   const sala = await probarParidadConJugar();
   await probarMisMesasDesdeOtroDispositivo(parejas, duelo, sala);
+  await probarCambioDeCuentaEntrePestanas(duelo);
   console.log("App web verificada en /jugar/ · salón, crear mesa con señas al pie, invitación, mirar, volver a la mesa, enlaces viejos, precarga de cartas, ?crear=1, conteos, comunidad y aviso sin red.");
 } finally {
   await browser.close();

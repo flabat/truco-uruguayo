@@ -9,7 +9,6 @@ import { ErrorPeticion } from "./http.ts";
 import { asientoBotTercetos, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { decisionReplay, decisionTercetos, guardarDecisionesReplayDB, guardarIndicacionReplayDB, type DecisionReplay } from "./replay-db.ts";
 import { confirmar, identificador, type ManoPublicable } from "./turnos.ts";
-import { esperanDe } from "./cedidos.ts";
 
 /** El llamador ya tiene el bloqueo de mesa. La palabra y su replay quedan en la misma transacción. */
 export async function guardarPalabraPie(db: PoolClient, mesa: string, numero: number, palabra: IndicacionPie) {
@@ -53,28 +52,26 @@ export function vistaPiePrivada(mano: ManoPublicable, asiento: Asiento, humanos:
 }
 
 /** El trabajo bloqueado persiste y no compite con otras mesas en la cola del trabajador. */
-export async function programarBotPie(db: PoolClient, mesa: string, mano: ManoPublicable, reglas: readonly number[]) {
-  // Un compañero cedido no da indicaciones: la computadora no espera su palabra.
-  const humanos = await esperanDe(db, mesa, reglas);
-  if (asientoBotPie(mano.estado, humanos) === undefined) {
+export async function programarBotPie(db: PoolClient, mesa: string, mano: ManoPublicable, esperan: readonly number[]) {
+  if (asientoBotPie(mano.estado, esperan) === undefined) {
     await db.query("DELETE FROM juego.turnos_bot WHERE mesa=$1", [mesa]);
     return;
   }
-  const disponible = esperaDelPie(mano, humanos) === undefined ? "-infinity" : "infinity";
+  const disponible = esperaDelPie(mano, esperan) === undefined ? "-infinity" : "infinity";
   await db.query(`INSERT INTO juego.turnos_bot (mesa, disponible_desde) VALUES ($1, $2)
     ON CONFLICT (mesa) DO UPDATE SET disponible_desde=EXCLUDED.disponible_desde`, [mesa, disponible]);
 }
 
 /** Se llama al abrir el reparto o después de persistir exactamente una jugada y su replay. */
 export async function continuarAlPie(db: PoolClient, mesa: string, numero: number, mano: ManoPublicable,
-    humanos: readonly number[], palabras: readonly IndicacionPie[], anterior?: EstadoOnline): Promise<ManoPublicable> {
+    esperan: readonly number[], palabras: readonly IndicacionPie[], anterior?: EstadoOnline): Promise<ManoPublicable> {
   const estado = mano.estado;
   const indicaciones = [...palabras];
   const abreVuelta = !anterior || anterior.mano.vueltas.length !== estado.mano.vueltas.length;
   if (abreVuelta && !estado.resultado && estado.lance?.tipo !== "pico-a-pico") {
     for (const asiento of estado.mano.reparto.manos.keys()) {
       const emisor = asiento as Asiento;
-      if (humanos.includes(emisor)) continue;
+      if (esperan.includes(emisor)) continue;
       const pie = vistaDelPie(estado, emisor, indicaciones);
       if (pie?.pie !== emisor) continue;
       for (const propuesta of elegirIndicacionesPie(vistaOnline(estado, emisor), pie)) {
@@ -87,13 +84,13 @@ export async function continuarAlPie(db: PoolClient, mesa: string, numero: numbe
     }
   }
   const actual = { ...mano, indicaciones };
-  await programarBotPie(db, mesa, actual, humanos);
+  await programarBotPie(db, mesa, actual, esperan);
   return actual;
 }
 
 export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTercetos, "mesa" | "numero" | "version">,
-    mano: ManoPublicable, accion: AccionOnline, humanos: readonly number[], bot?: DecisionBotV1) {
-  const pie = bot ? undefined : pieQueResponde(mano.estado, humanos);
+    mano: ManoPublicable, accion: AccionOnline, esperan: readonly number[], bot?: DecisionBotV1) {
+  const pie = bot ? undefined : pieQueResponde(mano.estado, esperan);
   if (pie !== undefined && pie !== accion.asiento) throw new ErrorPeticion(409, "El envido lo responde tu pie.");
   let nueva: ManoPublicable;
   let decision: DecisionReplay;
@@ -119,5 +116,5 @@ export async function confirmarJugadaPieDB(db: PoolClient, fila: Pick<RegistroTe
   await guardarDecisionesReplayDB(db, fila.mesa, [decision], mano.estado.meta);
   nueva.pasesPie = mano.pasesPie;
   nueva.politicaPie = mano.politicaPie;
-  return continuarAlPie(db, fila.mesa, fila.numero, nueva, humanos, mano.indicaciones ?? [], mano.estado);
+  return continuarAlPie(db, fila.mesa, fila.numero, nueva, esperan, mano.indicaciones ?? [], mano.estado);
 }
