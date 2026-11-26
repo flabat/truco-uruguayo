@@ -134,12 +134,13 @@ while not Path("../continuar").exists():
         (binarios / "node").write_text('#!/bin/sh\necho "node $*" >> etapas\n')
         (binarios / "python3").write_text(
             '#!/bin/sh\ncase "$1" in *cola-pila.py) exec "$PYTHON_TEST" "$@";; esac\n'
+            'if [ "$1" = infra/ci/medir.py ]; then shift; echo "$1" >> medidas; shift; exec "$@"; fi\n'
             'echo "python3 $*" >> etapas\n'
         )
         for binario in binarios.iterdir():
             binario.chmod(0o755)
         entorno = {**self.entorno, "PATH": str(binarios) + os.pathsep + self.entorno["PATH"],
-                   "PYTHON_TEST": sys.executable, "CHECK_STACK": "1"}
+                   "PYTHON_TEST": sys.executable, "CHECK_STACK": "1", "TRUCO_MEDICIONES": str(self.raiz / "metricas")}
         comandos = json.loads((RAIZ / "package.json").read_text())["scripts"]
         def lanzar_script(nombre):
             return self.lanzar(proyecto, ["/bin/sh", "-c", "exec " + comandos[nombre]], entorno)
@@ -159,3 +160,6 @@ while not Path("../continuar").exists():
         self.assertIn("npm run test:unit", registro)
         self.assertIn("npm exec -- playwright test", registro)
         self.assertEqual(registro[-3:], ["stack", "stack", "produccion"])
+        self.assertEqual((proyecto / "medidas").read_text().splitlines(),
+                         ["cartas", "unitarias", "tipos", "pruebas-despliegue", "compilacion",
+                          "enlaces", "cartas-sitio", "playwright", "pila"])

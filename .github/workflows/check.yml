@@ -8,18 +8,101 @@ on:
 permissions:
   contents: read
 
+# Cada PR reemplaza su intento anterior. Cada push a main conserva su corrida.
+concurrency:
+  group: verificar-${{ github.event_name }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # Runner estándar x64 del repositorio privado. Un único job reutiliza las capas
+    # de Docker entre la pila y el ensayo de producción.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TEST_CONCURRENCY: '2'
+      PLAYWRIGHT_WORKERS: '2'
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          fetch-depth: 2
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        id: node
+        with:
+          node-version-file: .nvmrc
           cache: npm
-      - run: npm ci
-      - run: npm exec -- playwright install --with-deps --only-shell chromium
-      - run: npm run check
+          cache-dependency-path: package-lock.json
+
+      - name: Registrar la revisión y el entorno
         env:
-          CHECK_STACK: 1
-      - run: npm run check:production
+          PR: ${{ github.event.pull_request.number }}
+          CABEZA: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          CACHE_NPM: ${{ steps.node.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          medidas="$RUNNER_TEMP/mediciones"
+          mkdir -p "$medidas"
+          echo "TRUCO_MEDICIONES=$medidas" >> "$GITHUB_ENV"
+          echo "TRUCO_DISCO_DOCKER=$(docker info --format '{{.DockerRootDir}}')" >> "$GITHUB_ENV"
+          sha=$(git rev-parse HEAD)
+          padre=$(git rev-parse HEAD^1)
+          test "$sha" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain)"
+          if [[ "$GITHUB_EVENT_NAME" == pull_request ]]; then
+            test "$padre" = "$BASE"
+            test "$(git rev-parse HEAD^2)" = "$CABEZA"
+          fi
+          git diff --check "$padre" "$sha"
+          git diff --check
+          {
+            echo "## Referencia de Linux"
+            echo
+            echo "Evento \`$GITHUB_EVENT_NAME\` · PR \`${PR:-—}\` · intento $GITHUB_RUN_ATTEMPT · [corrida]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+            echo
+            echo '~~~text'
+            echo "Commit probado: $sha"
+            echo "Árbol probado: $(git rev-parse HEAD^{tree})"
+            echo "Cabeza del PR: ${CABEZA:-—}"
+            echo "Base comprobada: $padre"
+            echo "Imagen: ${ImageOS:-ubuntu-24.04} ${ImageVersion:-desconocida}; arquitectura: $(uname -m); vCPU disponibles: $(nproc)"
+            awk '/MemTotal:/ {print "RAM total (KiB):", $2}' /proc/meminfo
+            echo "Usuario: $(id -un); Node: $(node -v); npm: $(npm -v); $(python3 --version)"
+            docker version --format 'Docker cliente {{.Client.Version}}, servidor {{.Server.Version}}'
+            docker compose version
+            echo "Procesos unitarios: $TEST_CONCURRENCY; workers de Chromium: $PLAYWRIGHT_WORKERS"
+            echo "Caché de paquetes npm restaurada por clave exacta: ${CACHE_NPM:-false}"
+            df -h .
+            echo '~~~'
+          } | tee "$medidas/entorno.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Instalar dependencias
+        run: python3 infra/ci/medir.py dependencias npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Instalar Chromium
+        run: |
+          python3 infra/ci/medir.py chromium npm exec -- playwright install --with-deps --only-shell chromium
+          node --input-type=module -e 'import { chromium } from "@playwright/test"; const b = await chromium.launch(); console.log("Chromium " + b.version()); await b.close()' | tee -a "$TRUCO_MEDICIONES/entorno.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verificar sitio, app y pila
+        env:
+          CHECK_STACK: '1'
+        run: npm run check
+
+      - name: Ensayar arranque, copias y restauración
+        run: python3 infra/ci/medir.py produccion npm run check:production
+
+      - name: Publicar mediciones
+        if: ${{ !cancelled() && env.TRUCO_MEDICIONES != '' }}
+        run: python3 infra/ci/medir.py --resumen | tee "$TRUCO_MEDICIONES/resumen.md" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Guardar mediciones del piloto
+        if: ${{ !cancelled() && env.TRUCO_MEDICIONES != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mediciones-linux-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.TRUCO_MEDICIONES }}/
+          retention-days: 7
+          compression-level: 1
