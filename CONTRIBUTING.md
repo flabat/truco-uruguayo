@@ -35,7 +35,7 @@ Después de reservar, registrá en el issue la rama, un identificador de sesión
 
 ## Verificación local
 
-Los PR se verifican en la computadora de quien los abre: GitHub Actions no corre por falta de créditos. Con Node.js 24, npm, Python 3 y Docker en marcha, ejecutá desde la raíz del checkout, sobre el último commit del PR.
+Durante el piloto de [verificación en Linux](docs/verificacion-linux.md), registrá el resultado remoto para la comparación. La verificación que habilita pedir revisión e integrar sigue haciéndose en la computadora de quien abre el PR hasta #438. Con Node.js 24, npm, Python 3 y Docker en marcha, ejecutá desde la raíz del checkout, sobre el último commit del PR.
 
 ```sh
 npm ci
@@ -78,11 +78,11 @@ El comando ejecuta los scripts y dependencias de la rama bajo prueba. La cola an
 
 - Abrí un PR acotado contra `main` y enlazá el issue. Usá `Closes #42` si el cambio resuelve el issue. Usá `Refs #42` si el debate o el trabajo sigue abierto. [Enlace y cierre de issues en GitHub](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/linking-a-pull-request-to-an-issue)
 - Describí el cambio y cómo verificarlo. Incluí los comandos y resultados reales, los casos manuales, las fuentes de reglas y capturas si cambia la interfaz. Indicá cualquier comprobación pendiente antes de marcar el PR como listo.
-- Actualizá la rama desde `main` cuando corresponda, resolvé los comentarios y repetí la verificación local tras el último cambio. No esperes el check de GitHub: los comandos y resultados del PR son la verificación. La persona responsable de la revisión o del repositorio confirma la integración. Preferí squash merge y eliminá la rama y el worktree cuando el PR esté integrado y el checkout esté limpio.
+- Actualizá la rama desde `main` cuando corresponda, resolvé los comentarios y repetí la verificación local tras el último cambio. En el piloto, enlazá la corrida remota que estés midiendo y registrá por separado los comandos y resultados locales que habilitan la integración. La persona responsable de la revisión o del repositorio confirma la integración. Preferí squash merge y eliminá la rama y el worktree cuando el PR esté integrado y el checkout esté limpio.
 
 ## Configuración recomendada en GitHub
 
-En un repositorio privado del plan gratuito de GitHub, los rulesets no se aplican. Si el repositorio pasa a ser público o a un plan que los admita, creá un ruleset activo para `main` que requiera PR, una rama actualizada y la resolución de conversaciones, y que bloquee el borrado y los force pushes de `main`. No requieras el job `check` del workflow **Verificar el sitio** mientras no haya créditos de GitHub Actions: sin ejecución, bloquearía todas las integraciones. Cuando haya otra persona habilitada para revisar, requerí una aprobación independiente. Si solo hay una cuenta mantenedora, puede revisar y autorizar la integración con la verificación local registrada en el PR. [Reglas disponibles en GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
+En un repositorio privado del plan gratuito de GitHub, los rulesets no se aplican. Si el repositorio pasa a ser público o a un plan que los admita, creá un ruleset activo para `main` que requiera PR, una rama actualizada y la resolución de conversaciones, y que bloquee el borrado y los force pushes de `main`. La adopción del job remoto `check` como evidencia para integrar se decide en #438. Cuando haya otra persona habilitada para revisar, requerí una aprobación independiente. Si solo hay una cuenta mantenedora, puede revisar y autorizar la integración con la verificación local registrada en el PR. [Reglas disponibles en GitHub](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)
 
 ## Etiquetas, hito y puntos de conflicto
 
