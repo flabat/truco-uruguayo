@@ -55,9 +55,17 @@ function conectar(s, id) {
   };
 }
 
+/**
+ * Conecta de a uno: cada conexión nueva avisa a toda la mesa, la propia incluida. Esperar ese aviso
+ * en todos antes de seguir deja las colas vacías, así un aviso de llegada no se confunde después con
+ * el de una jugada ni con una confirmación.
+ */
 async function suscribir(sesiones, id) {
-  const clientes = sesiones.map((s, i) => conectar(s, i === 0 ? id.toUpperCase() : id));
-  for (const c of clientes) assert.deepEqual(await c.recibir(), { tipo: "actualizar" });
+  const clientes = [];
+  for (const [i, s] of sesiones.entries()) {
+    clientes.push(conectar(s, i === 0 ? id.toUpperCase() : id));
+    for (const c of clientes) assert.deepEqual(await c.recibir(), { tipo: "actualizar" });
+  }
   return clientes;
 }
 

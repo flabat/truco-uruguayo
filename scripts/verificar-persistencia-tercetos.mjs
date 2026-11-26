@@ -13,6 +13,8 @@ const origin = new URL(process.env.WEB_ORIGIN).origin;
 const hash = valor => createHash("sha256").update(valor).digest("hex");
 /** La huella de una vista: las esperas cuentan por asiento, porque su hora empieza de nuevo al reiniciar la API. */
 const huella = p => hash(JSON.stringify({ ...p, esperas: p.esperas?.map(e => e.asiento) }));
+/** Una vista sin lo que falta de cada espera, que baja entre una lectura y la siguiente. */
+const sinRestante = p => ({ ...p, esperas: p.esperas?.map(({ restanteMs: _, ...e }) => e) });
 const comando = (version, tipo) => ({ id: randomUUID(), version, ...(tipo && {accion: {tipo}}) });
 const sinFlor = {
   versionReparto: "online-2", dador: 5, mano: 0, muestra: "copas-06",
@@ -225,7 +227,7 @@ async function reconectar(personas) {
     assert.deepEqual(recibida, historica);
     assert.deepEqual(normalizarPartida(recibida), previa.respuesta);
     await confirmarPorSocket(mesa, previa.asiento, previa.orden, historica);
-    assert.deepEqual(await vistas(mesa), actuales);
+    assert.deepEqual((await vistas(mesa)).map(sinRestante), actuales.map(sinRestante));
   }
 }
 
