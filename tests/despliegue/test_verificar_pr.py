@@ -100,6 +100,14 @@ class EvidenciaPRTest(unittest.TestCase):
         with self.assertRaises(ci.SinEvidencia):
             self.verificar()
 
+    def test_una_corrida_de_un_fork_sin_asociacion_no_bloquea_el_pr_interno(self):
+        externa = dict(self.run, run_number=40, pull_requests=[], head_repository={"full_name": "otro/truco"})
+        self.runs.append(externa)
+        self.assertIn(self.merge, self.verificar())
+        self.runs = [externa]
+        with self.assertRaises(ci.SinEvidencia):
+            self.verificar()
+
     def test_otro_workflow_un_fork_o_un_evento_de_push_no_acreditan_el_pr(self):
         for campo, valor in (("path", ".github/workflows/piloto.yml"), ("event", "push"),
                              ("head_repository", {"full_name": "externo/truco"})):

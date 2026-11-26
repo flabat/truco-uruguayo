@@ -78,13 +78,17 @@ def ultima_corrida(leer, repo, numero, rev):
                                     per_page=100, page=pagina))
         datos = leer(f"actions/workflows/check.yml/runs?{parametros}")
         for run in sorted(datos["workflow_runs"], key=lambda r: r["run_number"], reverse=True):
+            # Un fork puede usar el mismo nombre de rama y partir del mismo SHA.
+            # GitHub devuelve pull_requests vacío para algunas de esas corridas.
+            origen = run.get("head_repository") or {}
+            if origen.get("full_name", "").lower() != repo:
+                continue
             asociados = [pr["number"] for pr in run["pull_requests"]]
             exigir(asociados, "Hay una corrida para esta rama y SHA cuya asociación con el PR aún no se conoce.")
             if numero not in asociados:
                 continue
             exigir(run["path"] == WORKFLOW and run["event"] == "pull_request"
                    and run["repository"]["full_name"].lower() == repo
-                   and run["head_repository"]["full_name"].lower() == repo
                    and run["head_branch"] == rev.rama and run["head_sha"] == rev.cabeza,
                    "La corrida no corresponde al workflow, repositorio y revisión esperados.")
             exigir(run["status"] == "completed" and run["conclusion"] == "success",
