@@ -1,15 +1,16 @@
 // `npm run app:nativo -- ios|android [--api local|vps]`: reusa el cliente de desarrollo si no cambió nada nativo.
 // Calcula la huella con @expo/fingerprint; si `~/.cache/truco/builds/<plataforma>-<huella>` existe, instala ese
 // build; si no, compila con `expo run:<plataforma>` y lo guarda. Después arranca Metro (o reusa el que ya corre en
-// el puerto) con EXPO_PUBLIC_API_URL del perfil y abre la app contra ese Metro.
+// el puerto) con EXPO_PUBLIC_API_URL del perfil y abre la app contra ese Metro. Con `--fisico`, el destino es un
+// iPhone conectado: compila firmado, instala con devicectl y apunta Metro a la IP de la Mac en la red local.
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createFingerprintAsync } from "@expo/fingerprint";
 import {
-  carpetaBuild, elegirSimulador, enlaceDevClient, esMetro, leerArgumentos, leerEnv, puertoMetro, urlApi, USO,
+  carpetaBuild, elegirDispositivoFisico, elegirSimulador, enlaceDevClient, esMetro, leerArgumentos, leerEnv, puertoMetro, urlApi, USO,
   type Opciones,
 } from "./app-nativo-opciones.ts";
 import { direccionDeLaApi } from "../app/src/direccion-api.ts";
@@ -66,6 +67,31 @@ async function simulador(pedido?: string): Promise<Destino> {
   return { id: sim.udid, nombre: sim.name };
 }
 
+function iphoneFisico(pedido?: string): Destino {
+  const dir = mkdtempSync(join(tmpdir(), "truco-devicectl-"));
+  try {
+    const archivo = join(dir, "dispositivos.json");
+    salida("xcrun", ["devicectl", "list", "devices", "--json-output", archivo]);
+    const iphone = elegirDispositivoFisico(JSON.parse(readFileSync(archivo, "utf8")), pedido);
+    if (!iphone) {
+      throw new Error(pedido
+        ? `No hay un iPhone físico emparejado "${pedido}". Revisá \`xcrun devicectl list devices\`.`
+        : "No hay un iPhone físico emparejado. Conectalo por cable, aceptá «Confiar en esta computadora» y activá el modo desarrollador.");
+    }
+    return { id: iphone.udid, nombre: iphone.name };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** La IP de la Mac en la red local: el iPhone físico llega por ahí a Metro (y a la API local). */
+function ipLocal(): string {
+  for (const interfaz of ["en0", "en1"]) {
+    try { const ip = salida("ipconfig", ["getifaddr", interfaz]); if (ip) return ip; } catch {}
+  }
+  throw new Error("No encontré la IP de la Mac en la red local (en0 ni en1). El iPhone tiene que estar en la misma red.");
+}
+
 const adb = (serie: string | undefined, ...args: string[]) => salida(adbRuta, [...(serie ? ["-s", serie] : []), ...args]);
 
 function nombreAvd(serie: string): string {
@@ -111,7 +137,11 @@ async function compilar(opciones: Opciones, destino: Destino, dir: string): Prom
   mkdirSync(temporal, { recursive: true });
   try {
     if (opciones.plataforma === "ios") {
-      await correr("npx", ["expo", "run:ios", "--no-bundler", "--device", destino.id, "--output", temporal], { cwd: dirApp, env });
+      // En el simulador, `generic` compila para "generic/platform=iOS Simulator" sin firmar y no instala: eso lo hace
+      // instalar(). Con el UDID, Expo toma el simulador encendido por un iPhone físico, porque Xcode 27 lo lista en
+      // `devicectl list devices`, y pide un certificado de firma (#418). En el iPhone físico sí hace falta firmar.
+      const dispositivo = opciones.fisico ? destino.id : "generic";
+      await correr("npx", ["expo", "run:ios", "--no-bundler", "--device", dispositivo, "--output", temporal], { cwd: dirApp, env });
     } else {
       await correr("npx", ["expo", "run:android", "--no-bundler", "--device", destino.nombre], { cwd: dirApp, env });
       const salidas = join(dirApp, "android", "app", "build", "outputs", "apk", "debug");
@@ -130,12 +160,15 @@ async function compilar(opciones: Opciones, destino: Destino, dir: string): Prom
 }
 
 function instalar(opciones: Opciones, destino: Destino, binario: string) {
-  if (opciones.plataforma === "ios") salida("xcrun", ["simctl", "install", destino.id, binario]);
+  if (opciones.fisico) salida("xcrun", ["devicectl", "device", "install", "app", "--device", destino.id, binario]);
+  else if (opciones.plataforma === "ios") salida("xcrun", ["simctl", "install", destino.id, binario]);
   else adb(destino.id, "install", "-r", "-d", binario);
 }
 
-function abrir(opciones: Opciones, destino: Destino, enlace: string, puerto: number) {
-  if (opciones.plataforma === "ios") {
+function abrir(opciones: Opciones, destino: Destino, enlace: string, puerto: number, bundle: string) {
+  if (opciones.fisico) {
+    salida("xcrun", ["devicectl", "device", "process", "launch", "--device", destino.id, "--terminate-existing", "--payload-url", enlace, bundle]);
+  } else if (opciones.plataforma === "ios") {
     salida("xcrun", ["simctl", "openurl", destino.id, enlace]);
   } else {
     adb(destino.id, "reverse", `tcp:${puerto}`, `tcp:${puerto}`);
@@ -156,9 +189,10 @@ async function main() {
   const archivoEnv = join(raiz, ".env.trabajo");
   const env = existsSync(archivoEnv) ? leerEnv(readFileSync(archivoEnv, "utf8")) : {};
   const puerto = puertoMetro(env);
-  const api = urlApi(opciones.api, env);
+  const host = opciones.fisico ? ipLocal() : "localhost";
+  const api = urlApi(opciones.api, env, host);
   const apiEnApp = direccionDeLaApi(api, opciones.plataforma);
-  const slug = JSON.parse(readFileSync(join(dirApp, "app.json"), "utf8")).expo.slug as string;
+  const { slug, ios } = JSON.parse(readFileSync(join(dirApp, "app.json"), "utf8")).expo as { slug: string; ios: { bundleIdentifier: string } };
 
   // Antes de compilar: si ya corre Metro en el puerto, tiene que ser de este worktree y con la misma API.
   const estado = await estadoMetro(puerto);
@@ -173,10 +207,11 @@ async function main() {
   }
 
   const { hash } = await createFingerprintAsync(dirApp, { platforms: [opciones.plataforma] });
-  const dir = carpetaBuild(cache, opciones.plataforma, hash);
+  const dir = carpetaBuild(cache, opciones.plataforma, hash, opciones.fisico);
   decir(`Huella ${opciones.plataforma}: ${hash}`);
 
-  const destino = opciones.plataforma === "ios" ? await simulador(opciones.dispositivo) : await emulador(opciones.dispositivo);
+  const destino = opciones.fisico ? iphoneFisico(opciones.dispositivo)
+    : opciones.plataforma === "ios" ? await simulador(opciones.dispositivo) : await emulador(opciones.dispositivo);
   decir(`Destino: ${destino.nombre} (${destino.id})`);
 
   let binario = opciones.recompilar ? undefined : binarioGuardado(dir, opciones.plataforma);
@@ -186,6 +221,8 @@ async function main() {
     decir(opciones.recompilar ? "Recompilando por --recompilar." : "No hay build con esta huella: compilo (tarda varios minutos la primera vez).");
     binario = await compilar(opciones, destino, dir);
     decir(`Build guardado en ${dir}`);
+    // La compilación tarda minutos: si en el medio se apagó el simulador, lo vuelve a encender.
+    if (opciones.plataforma === "ios" && !opciones.fisico) await simulador(destino.id);
   }
   instalar(opciones, destino, binario);
   decir("App instalada.");
@@ -207,8 +244,8 @@ async function main() {
     }
   }
 
-  abrir(opciones, destino, enlaceDevClient(slug, `http://localhost:${puerto}`), puerto);
-  decir(`App abierta en ${destino.nombre} contra Metro http://localhost:${puerto} (API ${apiEnApp}).`);
+  abrir(opciones, destino, enlaceDevClient(slug, `http://${host}:${puerto}`), puerto, ios.bundleIdentifier);
+  decir(`App abierta en ${destino.nombre} contra Metro http://${host}:${puerto} (API ${apiEnApp}).`);
   if (metro) {
     decir("Metro sigue en marcha: Ctrl+C para cerrarlo. La web está en la misma dirección.");
     const cerrar = () => metro!.kill("SIGINT");
