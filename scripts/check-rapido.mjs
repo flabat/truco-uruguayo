@@ -17,6 +17,11 @@ const raiz = join(dirname(new URL(import.meta.url).pathname), "..");
 process.chdir(raiz);
 
 const args = process.argv.slice(2);
+// La cola devuelve el plan ya seleccionado al mismo ejecutor, sin volver a planificar.
+if (args[0] === "--ejecutar-plan") {
+  ejecutarPlan(JSON.parse(args[1]));
+  process.exit(0);
+}
 const soloPlan = args.includes("--plan");
 const git = (...a) => execFileSync("git", a, { encoding: "utf8" }).trim();
 const lineas = (texto) => texto.split("\n").filter(Boolean);
@@ -176,7 +181,8 @@ const tocaDespliegue = todoGlobal.length || [...cambiados].some((c) => c.endsWit
 plan.push(["cartas", ["npm", "run", "cartas:verificar"]]);
 if (unitariasElegidas.length === unitarias.length) plan.push(["todas las unitarias", ["npm", "run", "test:unit"]]);
 else if (unitariasElegidas.length) {
-  const concurrencia = process.env.TEST_CONCURRENCY ? [`--test-concurrency=${process.env.TEST_CONCURRENCY}`] : [];
+  const limite = process.env.TEST_CONCURRENCY || (process.env.CI ? undefined : "2");
+  const concurrencia = limite ? [`--test-concurrency=${limite}`] : [];
   plan.push([`${unitariasElegidas.length} de ${unitarias.length} archivos de unitarias`, ["node", "--test", ...concurrencia, ...unitariasElegidas]]);
 }
 if (tocaApp) plan.push(["tipos de la app", ["npm", "run", "app:tipos"]]);
@@ -201,17 +207,31 @@ for (const [nombre, comando] of plan) console.log(`  → ${nombre}: ${resumir(co
 if ([...cambiados].some((c) => c.startsWith("api/") || c.startsWith("infra/") || c.startsWith("scripts/verificar"))) {
   console.log("  ! El cambio toca la API, la infraestructura o la pila: antes del PR corré CHECK_STACK=1 npm run check.");
 }
+const planAmplio = todoGlobal.length > 0
+  || (specs.length > 0 && specsElegidas.length === specs.length)
+  || (unitarias.length > 0 && unitariasElegidas.length === unitarias.length);
+if (planAmplio) console.log("  · Este plan usa la cola de verificaciones de la máquina.");
 if (soloPlan) process.exit(0);
 
-const inicio = Date.now();
-for (const [nombre, [comando, ...resto]] of plan) {
-  const t = Date.now();
-  const r = spawnSync(comando, resto, { stdio: "inherit" });
-  const segundos = Math.round((Date.now() - t) / 1000);
-  if (r.status !== 0) {
-    console.error(`✗ ${nombre} falló tras ${segundos} s.`);
-    process.exit(r.status ?? 1);
-  }
-  console.log(`✓ ${nombre} (${segundos} s)`);
+if (planAmplio) {
+  const r = spawnSync("python3", [
+    "scripts/cola-pila.py", process.execPath, process.argv[1], "--ejecutar-plan", JSON.stringify(plan),
+  ], { stdio: "inherit" });
+  process.exit(r.status ?? 1);
 }
-console.log(`check:rapido terminó en ${Math.round((Date.now() - inicio) / 1000)} s.`);
+ejecutarPlan(plan);
+
+function ejecutarPlan(etapas) {
+  const inicio = Date.now();
+  for (const [nombre, [comando, ...resto]] of etapas) {
+    const t = Date.now();
+    const r = spawnSync(comando, resto, { stdio: "inherit" });
+    const segundos = Math.round((Date.now() - t) / 1000);
+    if (r.status !== 0) {
+      console.error(`✗ ${nombre} falló tras ${segundos} s.`);
+      process.exit(r.status ?? 1);
+    }
+    console.log(`✓ ${nombre} (${segundos} s)`);
+  }
+  console.log(`check:rapido terminó en ${Math.round((Date.now() - inicio) / 1000)} s.`);
+}
