@@ -238,11 +238,21 @@ Este PR no activa nada. Los pesos quedan en `runs/regularized/` de la Mac.
 
 **Duelo.** El artefacto `truco-regularized-v1` ya es servible por `api/actor-registry.ts` y entra en la imagen de la API. Para activarlo se sigue el camino de siempre: campeonato con `training/championship/event.ts` y la entrada que arma `training/regularized/bundle.ts`, verificación y activación.
 
-**Parejas al pie y tercetos.** Falta el cableado:
+**Parejas al pie y tercetos.** Este PR agrega el cableado, inactivo hasta que se active un actor:
 
-1. Hoy `api/mesas.ts` fija `pie-parejas-v2`, `pie-clasico-v1` o la política de tercetos con constantes, y `juego.activaciones` solo admite `duel`, `pairs`, `pairs-senas` y `pairs-private-senas`. Hace falta una migración con claves propias para parejas al pie y tercetos, y que `mesas.ts` las lea como ya lee el duelo.
-2. Una rama en `api/partidas-pie.ts` que cargue el artefacto por su pin y decida con `openRegularizedPie` de `training/regularized/actor.ts`, en lugar de `elegirAccionPoliticaPie`.
-3. Registrar el modelo en `src/lib/modelos.ts` para que la app lo nombre.
+- La migración `030-pie-aprendido.sql` suma las claves `pairs-pie` y `triples-pie` a `juego.artefactos` y `juego.activaciones`. Al pie no se comparte la activación de `pairs-private-senas`, porque ahí las indicaciones siguen la regla clásica y el actor solo elige cartas y cantos.
+- `policyctl.ts` registra, activa y revierte con esas claves y valida que el artefacto declare el formato correcto.
+- `api/mesas.ts` crea las mesas al pie con el actor activado: en parejas, con las mismas condiciones que `pie-parejas-v2` (meta entre 20 y 80, `MODELO_PIE_PAREJAS` distinto de 0); en tercetos, siempre. Sin activación todo sigue como hoy.
+- `api/politica-pie.ts` abre el actor una vez por proceso y decide la jugada en `api/bot-pendiente.ts` con el tanteador y la meta del chico. Para anticipar si la computadora va a jugar carta y conviene esperar la seña de un pie humano se usa la política clásica, porque el actor recién muestrea su jugada en su turno.
+- `verificar-stack.sh` registra y activa actores chicos al azar en las dos claves, comprueba que las mesas nuevas los toman y ensaya chicos completos de parejas y tercetos al pie con ellos.
+
+Para activar, dentro del contenedor de la API:
+
+```sh
+node policyctl.ts register pairs-pie < pie-a-2954.json
+node policyctl.ts activate pairs-pie <pin>
+node policyctl.ts rollback pairs-pie
+```
 
 ## Cómo reproducirlo
 

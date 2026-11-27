@@ -17,12 +17,18 @@ const {rows: [creador]} = await pool.query(`INSERT INTO juego.jugadores (emisor,
   VALUES ('ensayo-local',$1,'Operador de prueba') RETURNING id`, [randomUUID()]);
 const mesas = [];
 const recuperado=process.argv[2]==="recuperado", aprendidos=process.argv[2]==="aprendidos";
-const alPie = process.argv[2] === "al-pie";
-const formatos = alPie ? ["pairs-private-senas"] : recuperado ? ["duel"] : aprendidos ? activeFormats : [...activeFormats, "triples"];
+const pieAprendido = process.argv[2] === "al-pie-aprendido";
+const alPie = process.argv[2] === "al-pie" || pieAprendido;
+// Con actores aprendidos al pie activados, cada modalidad al pie se ensaya con su pin.
+const pinesPie = pieAprendido ? Object.fromEntries((await pool.query(
+  "SELECT formato, pin FROM juego.activaciones WHERE formato IN ('pairs-pie','triples-pie')")).rows.map(f => [f.formato, f.pin])) : {};
+const pinPie = formato => pieAprendido ? pinesPie[formato === "triples" ? "triples-pie" : "pairs-pie"] : politicaPieParejas;
+const formatos = pieAprendido ? ["pairs-private-senas", "triples"] : alPie ? ["pairs-private-senas"] : recuperado ? ["duel"]
+  : aprendidos ? activeFormats : [...activeFormats, "triples"];
 try {
   for (const formato of formatos) {
     const previa = recuperado && (await pool.query("SELECT * FROM juego.prueba_reinicio_actor")).rows[0];
-    const id = previa ? previa.mesa : await crearEnsayo(pool, formato, creador.id, alPie ? politicaPieParejas : undefined);
+    const id = previa ? previa.mesa : await crearEnsayo(pool, formato, creador.id, alPie ? pinPie(formato) : undefined);
     mesas.push(id);
     const limite = Date.now() + 90_000;
     while (!(await pool.query("SELECT ensayo_terminado FROM juego.mesas WHERE id=$1", [id])).rows[0].ensayo_terminado) {
@@ -38,7 +44,9 @@ try {
     assert.equal(inferencias.length,filas.rows.reduce((n,h)=>n+h.acciones.length,0));
     if (alPie) {
       assert.ok(inferencias.length > 0);
-      assert.ok(inferencias.every(i => i.solicitada === politicaPieParejas && i.aplicada === politicaPieParejas && i.fallback === null));
+      const pin = pinPie(formato);
+      if (pieAprendido) assert.match(pin, /^[0-9a-f]{64}$/);
+      assert.ok(inferencias.every(i => i.solicitada === pin && i.aplicada === pin && i.fallback === null));
       assert.ok(filas.rows.every(fila => fila.version_senas === versionSenasPie));
     }
     if (aprendidos) {

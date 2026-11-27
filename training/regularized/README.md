@@ -48,6 +48,10 @@ node training/regularized/evaluate.ts --format duel --candidate net:runs/regular
 
 Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `actor:<archivo>` para cualquier actor de duelo del registro, `ceibo`, `v1`, `challenger`, los estilos (`caller`, `folder`, `frequent-bluff`, `rare-bluff`, `strong-cards`), y al pie `pie-clasico-v1`, `pie-parejas-v2` y `pie-<estilo>`. `diagnose.ts` desglosa los tantos por truco, envido y flor entre dos rivales o dos equipos, y `envido.ts` muestra cómo abre y cómo responde el envido cada lado según su tanto.
 
+## Servir
+
+En duelo, `api/actor-registry.ts` abre el artefacto como cualquier actor del registro. Al pie, `policyctl.ts` registra y activa con las claves `pairs-pie` y `triples-pie`, y `api/politica-pie.ts` decide en las mesas al pie. [El informe](../../docs/investigacion/computadoras-regularizadas/README.md#para-llevarlo-a-la-app) explica el recorrido. Para una instantánea intermedia, `export.ts` escribe el artefacto.
+
 ## Archivos
 
 | Archivo | Qué hace |

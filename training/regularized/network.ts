@@ -43,6 +43,17 @@ export function encodeNetwork(net: Network): { shapes: [number, number][]; weigh
   return { shapes: net.layers.map(l => [l.rows, l.cols]), weights: Buffer.from(all.buffer).toString("base64") };
 }
 
+/** Red chica con pesos al azar reproducibles, para el stack descartable y las pruebas. */
+export function randomArtifact(format: RegularizedArtifact["format"], seed = 7, hidden = [16, 16]): RegularizedArtifact {
+  let s = seed >>> 0;
+  const next = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const sizes = [featureSize(), ...hidden, slotCount];
+  const net = { layers: sizes.slice(1).map((rows, i) => ({ rows, cols: sizes[i],
+    w: Float32Array.from({ length: rows * sizes[i] }, () => (next() - 0.5) * 0.4), b: new Float32Array(rows) })) };
+  return { kind: regularizedKind, format, features: featureVersion, ...(format === "duel" && { memory: "opponent" as const }),
+    ...encodeNetwork(net) };
+}
+
 const scratch = new Map<number, Float32Array>();
 function buffer(size: number, slot: number) {
   const key = size * 8 + slot;
