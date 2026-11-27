@@ -47,3 +47,22 @@ El [diseño del juego de a seis](docs/multijugador/tercetos/README.md) describe 
 Seguí la [guía de contribución](CONTRIBUTING.md) para reservar un issue, trabajar en una rama aislada y abrir un pull request contra `main`. Después de instalar Chromium como indica la guía y con Python 3 disponible, ejecutá `npm run check` para repetir localmente la verificación de GitHub Actions.
 
 Las ilustraciones de ambiente se generaron para esta guía. La [baraja Tatú](scripts/tatu/README.md) se dibujó a partir de la digitalización de GlyphEnjoyer. Sus 50 caras y el reverso tienen fuentes SVG editables en `arte/tatu/`. Después de editar, ejecutá `npm run cartas:generar` para actualizar los WebP del sitio. Las fuentes tipográficas DM Sans y DM Serif Text se sirven con el sitio desde sus paquetes de Fontsource.
+
+## Licencia
+
+El código, la documentación y la baraja Tatú se publican con la [GNU Affero General Public License v3.0](LICENSE) (`AGPL-3.0-only`). Si modificás el juego y lo ofrecés a otras personas por la red, tenés que darles el código de tu versión con la misma licencia.
+
+La licencia no cubre la marca ni algunos recursos propios, que conservan todos los derechos:
+
+- el nombre «El Truco», el dominio y el logo (`public/favicon.svg` y su copia en `video/public/marca/favicon.svg`);
+- los íconos y la pantalla de inicio de la app (`app/assets/icono/`);
+- las ilustraciones de ambiente (`public/img/baraja.webp`, `mano.webp`, `mate.webp`, `mesa-social.jpg` y `video/public/marca/mesa-criolla.webp`);
+- las voces de la mesa (`app/assets/sonido/voces/`).
+
+Una versión derivada tiene que usar otro nombre y reemplazar esos archivos.
+
+De terceros:
+
+- La baraja Tatú parte de [Cartas Tatú 50, de GlyphEnjoyer](https://commons.wikimedia.org/wiki/File:Cartas_Tat%C3%BA_50.png), digitalización publicada como CC0 1.0.
+- DM Sans y DM Serif Text se distribuyen con la SIL Open Font License 1.1 ([public/licenses/](public/licenses/)).
+- Las voces se generaron con ElevenLabs. Los efectos de sonido se sintetizan en `scripts/voces/efectos.ts`, sin muestras de terceros.
