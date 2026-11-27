@@ -416,8 +416,23 @@ async function probarParejasConPie() {
     if (m.pie.pie === yo) {
       const grupo = m.pie.grupos.find(g => g.emisor === companero);
       if (grupo?.gestos.length) {
-        await expect(p.getByTestId("globo-senas-" + companero)).toBeVisible(espera);
-        if (globos++ === 0) await capturar(p, "parejas-globo-375x760");
+        const globo = p.getByTestId("globo-senas-" + companero);
+        await expect(globo).toBeVisible(espera);
+        if (globos++ === 0) {
+          await capturar(p, "parejas-globo-375x760");
+          // El globo no tapa el rótulo de la muestra (#474).
+          const [g, m] = await Promise.all([globo.boundingBox(), p.getByText(/^Muestra · /).boundingBox()]);
+          assert.ok(g.x + g.width <= m.x || m.x + m.width <= g.x || g.y + g.height <= m.y || m.y + m.height <= g.y,
+            `el globo ${JSON.stringify(g)} tapa la muestra ${JSON.stringify(m)}`);
+          // Tocarlo lo achica a una ficha junto al nombre; tocar la ficha lo vuelve a abrir.
+          await globo.getByRole("button").click();
+          const ficha = p.getByTestId("ficha-senas-" + companero);
+          await expect(ficha).toBeVisible(espera);
+          await expect(globo).toHaveCount(0);
+          await capturar(p, "parejas-ficha-375x760");
+          await ficha.click();
+          await expect(globo).toBeVisible(espera);
+        }
       }
     } else if (m.pie.grupos.some(g => g.emisor === yo)) {
       // Si el pie ya le habló en esta vuelta y no tiró, la frase reemplaza a la píldora junto a la mano (#425).
