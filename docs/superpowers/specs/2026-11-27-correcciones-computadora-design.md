@@ -18,7 +18,7 @@ Queremos que la computadora no cometa errores que se demuestran con lo que ve su
 ## Lo que no se busca
 
 - Prohibir las faroleadas. Si la computadora canta o sube con la mano perdida, la jugada queda como está, igual que el retruco del #460.
-- Elegir el orden de las cartas cuando la mano está ganada. Puede ser una corrección futura.
+- Elegir la carta cuando la mano no está ganada.
 - Cubrir 2v2, tercetos ni la computadora al pie en la v1. Para ellos la lista devuelve la decisión sin cambios.
 - Aplicar las correcciones en el entrenamiento o la evaluación. Las corridas siguen midiendo la política sin corregir.
 
@@ -78,6 +78,10 @@ Solo se aplica en duelo, cuando hay dos participantes. Ignorar las restricciones
 - **En su turno.** Si puede cantar la siguiente subida, la canta antes de jugar la carta. Reemplaza una carta o `mazo`. Después del canto, la política vuelve a decidir la carta en su próximo turno.
 
 Con la mano ganada, subir nunca es peor que querer: si el rival acepta, cobra más; si no quiere, cobra lo mismo que habría cobrado queriendo. Por eso la regla no necesita otra condición. Que la computadora también cante en su turno, y no solo al responder, fue mi decisión al interpretar «que siga subiendo».
+
+| `jugar-ganadora` | sin canto pendiente, `desenlaceSeguro` da `"ganada"` y la carta propuesta deja la mano abierta | la primera carta que conserva la mano ganada (`jugadasGanadoras`) |
+
+`jugar-ganadora` se sumó en la revisión final. Sin ella, `subir-ganada` puede subir la apuesta y la política después jugar una carta que pierde la mano. El ejemplo: muestra el 7 de espadas, sale el 6 de espadas y la computadora tiene el 2 de espadas, el 7 de copas y el rey de oros. Si juega primero el 2, la mano queda abierta. Con esta corrección, «subir nunca rinde menos que querer» vale también después del canto.
 
 Con la mano perdida, las subidas nunca se corrigen: responder un retruco con vale cuatro es una faroleada legítima.
 

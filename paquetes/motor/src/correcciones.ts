@@ -1,6 +1,6 @@
 import { esCardId, type CardId } from "./cartas.ts";
 import { legalesOnline, type EstadoOnline, type TipoAccionOnline } from "./cantos-online.ts";
-import { desenlaceSeguro } from "./desenlace.ts";
+import { desenlaceSeguro, jugadasGanadoras } from "./desenlace.ts";
 import { segundaPerdidaEnDuelo } from "./mesa-online.ts";
 import type { Asiento } from "./reparto.ts";
 
@@ -43,6 +43,15 @@ export const correcciones: readonly Correccion[] = [
       if (juega && !subida) return null;
       if (desenlaceSeguro(e, asiento) !== "ganada") return null;
       return subida ?? "quiero";
+    },
+  },
+  {
+    // Subir solo rinde si después se juega la línea ganadora: una carta que deja la mano abierta se cambia.
+    nombre: "jugar-ganadora",
+    corregir(e, asiento, decision) {
+      if (!sinCanto(e) || !esCardId(decision)) return null;
+      const ganadoras = jugadasGanadoras(e, asiento);
+      return ganadoras.length && !ganadoras.includes(decision) ? ganadoras[0] : null;
     },
   },
 ];

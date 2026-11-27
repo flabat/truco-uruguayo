@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { desenlaceSeguro } from "@eltruco/motor/desenlace.ts";
+import { desenlaceSeguro, jugadasGanadoras } from "@eltruco/motor/desenlace.ts";
 import { iniciarOnline, repartirOnline } from "@eltruco/motor/mesa-online.ts";
 import { restaurar } from "../../api/turnos.ts";
 import { dueloMazo, dueloVale, hasta, primeraParda } from "../fixtures/duelo-mazo.ts";
@@ -40,4 +40,11 @@ test("en un reparto recién hecho termina en menos de 250 ms y no decide", () =>
   const inicio = performance.now();
   assert.equal(desenlaceSeguro(iniciarOnline(dueloMazo.reparto), 1), null);
   assert.ok(performance.now() - inicio < 250, `tardó ${performance.now() - inicio} ms`);
+});
+
+test("las jugadas ganadoras son las cartas propias que conservan la mano ganada", () => {
+  // Tras el 4 de oros, con el 2 de la muestra, A1 gana con su única carta.
+  assert.deepEqual(jugadasGanadoras(hasta(9, conDos).estado, 1), ["oros-02"]);
+  // Sin desenlace ganado no hay jugadas ganadoras.
+  assert.deepEqual(jugadasGanadoras(hasta(9).estado, 1), []);
 });

@@ -14,6 +14,22 @@ type Clase = { carta: CardId; quedan: number };
  * El rival elige cada carta del pozo no visto al jugarla, lo que cubre cualquier mano oculta en cualquier orden.
  */
 export function desenlaceSeguro(estado: EstadoOnline, asiento: Asiento): "ganada" | "perdida" | null {
+  const juego = analizar(estado, asiento);
+  if (!juego) return null;
+  if (!juego.explorar(juego.inicio, false)) return "perdida";
+  if (juego.explorar(juego.inicio, true)) return "ganada";
+  return null;
+}
+
+/** Las cartas propias que, jugadas ahora, conservan la mano ganada contra cualquier carta del rival. */
+export function jugadasGanadoras(estado: EstadoOnline, asiento: Asiento): CardId[] {
+  const juego = analizar(estado, asiento);
+  if (!juego || juego.inicio.turno !== asiento) return [];
+  const { inicio, explorar, jugar } = juego;
+  return inicio.restantes[asiento].filter(carta => explorar(jugar(inicio, asiento, carta), true));
+}
+
+function analizar(estado: EstadoOnline, asiento: Asiento) {
   const { mano } = estado;
   if (estado.resultado || mano.vueltaActual === null || mano.reparto.manos.length !== 2) return null;
   const rival = (asiento === 0 ? 1 : 0) as Asiento;
@@ -53,7 +69,5 @@ export function desenlaceSeguro(estado: EstadoOnline, asiento: Asiento): "ganada
     return paso.estado;
   }
 
-  if (!explorar(inicio, false)) return "perdida";
-  if (explorar(inicio, true)) return "ganada";
-  return null;
+  return { inicio, explorar, jugar };
 }

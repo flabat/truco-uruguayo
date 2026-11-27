@@ -78,3 +78,23 @@ test("la regla del #452 se conserva como entregar-mazo", () => {
   assert.deepEqual(corregirDecision(restaurar(dueloMazo, "duel").estado, 1, "oros-07"),
     { decision: "mazo", correccion: "entregar-mazo" });
 });
+
+// Muestra espadas-07: Ana sale con el 6 de espadas. La computadora canta truco y Ana lo quiere.
+// Solo gana jugando ahora el 7 de copas y guardando el 2 de la muestra para la segunda.
+function ganadaConOrden(): EstadoOnline {
+  const reparto: RepartoOnline = { versionReparto: "online-1", reglaFlor: "inmediata-v2", dador: 1, mano: 0, muestra: "espadas-07",
+    manos: [["espadas-06", "bastos-03", "copas-05"], ["espadas-02", "copas-07", "oros-12"]] };
+  let estado = iniciarOnline(reparto);
+  for (const accion of [{ tipo: "carta", asiento: 0, carta: "espadas-06" }, { tipo: "truco", asiento: 1 }, { tipo: "quiero", asiento: 0 }] as const) {
+    const paso = aplicarOnline(estado, accion);
+    assert.ok(paso.ok);
+    estado = paso.estado;
+  }
+  return estado;
+}
+
+test("con la mano ganada, una carta que la deja abierta pasa a la que la gana", () => {
+  const estado = ganadaConOrden();
+  assert.deepEqual(corregirDecision(estado, 1, "espadas-02"), { decision: "copas-07", correccion: "jugar-ganadora" });
+  assert.deepEqual(corregirDecision(estado, 1, "copas-07"), { decision: "copas-07" });
+});
