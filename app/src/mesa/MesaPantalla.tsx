@@ -192,7 +192,7 @@ export function MesaPantalla({ mesa, senas, hojaCantos, acciones, extra, rechazo
           <Senas senas={senas} geometria={geometria} liviano={liviano} />
           {geometria.espectador ? <PieDelEspectador rect={geometria.espectador} salir={acciones.salir} /> : null}
           {mesa.fin && conFin ? (
-            <FinDeMano key={"fin-" + (numeroDeChico ?? 0)} fin={mesa.fin} rect={geometria.pano}
+            <FinDeMano key={"fin-" + (numeroDeChico ?? 0)} fin={mesa.fin} rect={geometria.pano} limiteInferior={geometria.tira?.y ?? alto}
               alPresionar={mesa.fin.boton === "Crear otra mesa" ? acciones.crearMesa : acciones.repartir}
               aparicion={festejando ? { demora: festejo.juntar, duracion: festejo.cartel } : null}
               festejo={festejando && hayParticulas(chico, mesa.propio) ? (

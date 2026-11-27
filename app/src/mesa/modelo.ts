@@ -37,7 +37,7 @@ export interface FinDeMano {
   titulo: string;
   motivo: string;
   cobros: { equipo: string; texto: string }[];
-  pruebas: { nombre: string; titulo: string; cartas: CardId[] }[];
+  pruebas: { asiento: number; motivo: PruebaDeTantos["motivo"]; nombre: string; titulo: string; cartas: CardId[] }[];
   tituloCobros: "Tantos de esta mano" | "Tantos de este reparto";
   boton: "Repartir otra mano" | "Crear otra mesa";
 }
@@ -146,14 +146,17 @@ function textoDeCobros(resumen: ResumenTantos, equipo: number, v: VistaOnline, n
   return [(total > 0 ? "+" : "") + tantos(total), detalle.join(", ")].filter(Boolean).join(" · ");
 }
 
-function tituloDePrueba(prueba: PruebaDeTantos, acciones: readonly AccionOnline[]) {
+function pruebaVisible(prueba: PruebaDeTantos, lance: Pick<VistaOnline, "acciones" | "cobros">, nombre: Nombre) {
   const tipos = prueba.motivo === "flor" ? ["contraflor-al-resto", "con-flor-envido"] : ["falta-envido", "real-envido"];
-  const subida = acciones.flatMap(a => a.tipo !== "carta" && tipos.includes(a.tipo) ? [a.tipo] : []).at(-1);
-  return [
-    (prueba.motivo === "flor" ? "Flor ganadora" : "Envido ganador") + " · " + tantos(prueba.total),
+  const subida = lance.acciones.flatMap(a => a.tipo !== "carta" && tipos.includes(a.tipo) ? [a.tipo] : []).at(-1);
+  const ganoFlor = lance.cobros.some(c => c.motivo === "flor" && c.asiento === prueba.asiento && c.tantoGanador != null);
+  const rotulo = prueba.motivo === "envido" ? "Envido ganador" : ganoFlor ? "Flor ganadora" : "Flor";
+  const titulo = [
+    rotulo + " · " + tantos(prueba.total),
     subida && canto[subida],
     prueba.duelo && "Duelo " + prueba.duelo,
   ].filter(Boolean).join(" · ");
+  return { asiento: prueba.asiento, motivo: prueba.motivo, nombre: nombre(prueba.asiento), titulo, cartas: [...prueba.cartas] };
 }
 
 function resumenDe(v: Pick<VistaOnline, "resumenTantos" | "cobros">): ResumenTantos {
@@ -229,7 +232,7 @@ export function mesaDeJugador(mesa: Mesa, partida: Partida, p: { voz?: Voz; pres
       titulo: cierre.titulo,
       motivo: cierre.indicacion,
       cobros: [propio, 1 - propio].map(e => ({ equipo: equipo(e), texto: textoDeCobros(resumen, e, v, nombre) })),
-      pruebas: (v.pruebasDeTantos ?? []).map(pr => ({ nombre: nombre(pr.asiento), titulo: tituloDePrueba(pr, v.acciones), cartas: [...pr.cartas] })),
+      pruebas: (v.pruebasDeTantos ?? []).map(pr => pruebaVisible(pr, v, nombre)),
       tituloCobros: "Tantos de esta mano",
       boton: fase === "chico-terminado" ? "Crear otra mesa" : "Repartir otra mano",
     };
@@ -354,15 +357,12 @@ export function mesaDeTercetos(mesa: Mesa, partida: PartidaTercetos,
   let fin: FinDeMano | null = null;
   if (resultado && base.fin) {
     const { totales } = v.resumenReparto ?? resumenDe(v);
-    const accionesDelDuelo = (duelo?: number) => historialLances.find(l => l.duelo === duelo)?.acciones ?? v.acciones;
     fin = {
       ...base.fin,
       titulo: palabraDeTercetos(mesa, partida),
       motivo: cierre!,
       cobros: [propio, 1 - propio].map(e => ({ equipo: e === propio ? "Nos" : "Ellos", texto: (totales[e] > 0 ? "+" : "") + tantos(totales[e]) })),
-      pruebas: (v.pruebasDeTantos ?? []).map(pr => ({
-        nombre: nombre(pr.asiento), titulo: tituloDePrueba(pr, accionesDelDuelo(pr.duelo)), cartas: [...pr.cartas],
-      })),
+      pruebas: (v.pruebasDeTantos ?? []).map(pr => pruebaVisible(pr, historialLances.find(l => l.duelo === pr.duelo) ?? v, nombre)),
       tituloCobros: "Tantos de este reparto",
     };
   }

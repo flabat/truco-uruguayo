@@ -37,6 +37,7 @@ test("replay por asiento y por acción, con la misma muestra y todos los cobros 
         assert.deepEqual(vista.pruebasDeTantos, [
           { duelo: 1, asiento: 2, motivo: "envido", total: 37, cartas: ["oros-02", "bastos-07"] },
           { duelo: 2, asiento: 0, motivo: "flor", total: 38, cartas: reparto.manos[0] },
+          { duelo: 2, asiento: 3, motivo: "flor", total: 29, cartas: reparto.manos[3] },
         ]);
         for (const futuro of [1, 4]) {
           for (const carta of reparto.manos[futuro]) assert.ok(!JSON.stringify(vista).includes(carta));
@@ -73,6 +74,27 @@ test("replay por asiento y por acción, con la misma muestra y todos los cobros 
   assert.equal(vivo.trucoPendiente, null);
   assert.deepEqual(aDecidir(vivo), []);
   assert.deepEqual(aplicarOnline(vivo, { tipo: "mazo", asiento: 1 }), { ok: false, error: "mano-cerrada" });
+});
+
+test("las flores sin oposición de distintos duelos se prueban juntas al terminar el reparto físico", () => {
+  const manos = [...reparto.manos];
+  [manos[2], manos[3]] = [manos[3], manos[2]];
+  let estado = abrir(50, [0, 0], { ...reparto, manos, reglaFlor: "inmediata-v2" });
+  const acciones: AccionOnline[] = [
+    { asiento: 5, tipo: "envido" }, { asiento: 2, tipo: "flor" }, { asiento: 5, tipo: "mazo" },
+    { asiento: 0, tipo: "flor" }, { asiento: 0, tipo: "truco" }, { asiento: 3, tipo: "no-quiero" },
+    { asiento: 1, tipo: "truco" }, { asiento: 4, tipo: "no-quiero" },
+  ];
+  for (const accion of acciones) {
+    for (const asiento of asientos) assert.equal(vistaTercetos(estado, asiento).pruebasDeTantos, undefined);
+    estado = confirmar(estado, accion);
+  }
+  for (const asiento of asientos) {
+    assert.deepEqual(vistaTercetos(estado, asiento).pruebasDeTantos, [
+      { duelo: 1, asiento: 2, motivo: "flor", total: 29, cartas: manos[2] },
+      { duelo: 2, asiento: 0, motivo: "flor", total: 38, cartas: manos[0] },
+    ]);
+  }
 });
 
 test("al entrar en buenas se completan ambos duelos restantes y el reparto siguiente es redondilla", () => {

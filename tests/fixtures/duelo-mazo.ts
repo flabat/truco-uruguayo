@@ -26,3 +26,16 @@ export const dueloFlor: Registro = {
     { tipo: "carta", asiento: 0, carta: "oros-06" }, { tipo: "carta", asiento: 1, carta: "espadas-05" },
   ],
 };
+
+// Mano 6 del reporte #451. Las cartas sin jugar completan un reparto compatible con las jugadas públicas.
+export const florAlMazo = {
+  reparto: {
+    versionReparto: "online-1", reglaFlor: "inmediata-v2", dador: 0, mano: 1, muestra: "oros-07",
+    manos: [["oros-11", "copas-02", "espadas-03"], ["bastos-10", "bastos-04", "bastos-06"]],
+  },
+  acciones: [
+    { tipo: "flor", asiento: 1 },
+    { tipo: "carta", asiento: 1, carta: "bastos-10" }, { tipo: "carta", asiento: 0, carta: "oros-11" },
+    { tipo: "carta", asiento: 0, carta: "copas-02" }, { tipo: "mazo", asiento: 1 },
+  ],
+} as const;
