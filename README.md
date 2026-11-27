@@ -56,7 +56,7 @@ La licencia no cubre la marca ni algunos recursos propios, que conservan todos l
 
 - el nombre «El Truco», el dominio y el logo (`public/favicon.svg` y su copia en `video/public/marca/favicon.svg`);
 - los íconos y la pantalla de inicio de la app (`app/assets/icono/`);
-- las ilustraciones de ambiente (`public/img/baraja.webp`, `mano.webp`, `mate.webp`, `mesa-social.jpg` y `video/public/marca/mesa-criolla.webp`);
+- las ilustraciones de ambiente (`public/img/baraja.webp`, `mano.webp`, `mate.webp`, `mesa-social.jpg`, `src/assets/mesa-criolla.webp` y su copia en `video/public/marca/mesa-criolla.webp`);
 - las voces de la mesa (`app/assets/sonido/voces/`).
 
 Una versión derivada tiene que usar otro nombre y reemplazar esos archivos.
