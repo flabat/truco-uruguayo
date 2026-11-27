@@ -6,6 +6,7 @@ import {
 import type { Carta, Punto } from "@eltruco/mesa-geometria";
 import type { CardId } from "@eltruco/motor/cartas.ts";
 import { curvaDeVuelo, dorado, movimiento, rebote } from "../movimiento.ts";
+import { scheduleOnUI } from "react-native-worklets";
 import { enMano, type CartaAnimada } from "../useManoAnimada.ts";
 import { useImagenDeCarta } from "./useImagenesDeCartas.ts";
 
@@ -166,26 +167,38 @@ function mezclar(a: Pose, b: Pose, t: number): Pose {
 export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano, alCentro = null }: {
   id: CardId;
   carta: Carta;
-  desde: Pose | Punto | null;
+  /** La carta animada de la mano propia, el ancla del asiento ajeno o null si ya estaba. */
+  desde: CartaAnimada | Punto | null;
   ganadora: boolean;
   oscura: boolean;
   liviano: boolean;
   alCentro?: Carta | null;
 }) {
   const { vuelo, ganadora: brillo, festejo } = movimiento(liviano);
-  const [origen] = useState<{ pose: Pose; propia: boolean } | null>(() => {
+  // La pose de la mano se lee en el hilo de la interfaz, nunca durante el render.
+  const [origen] = useState<{ ajena: Pose } | { propia: CartaAnimada } | null>(() => {
     if (!desde) return null;
-    if ("ancho" in desde) return { pose: desde, propia: true };
-    return { pose: { ...carta, x: desde.x - carta.ancho / 2, y: desde.y - carta.alto / 2, escala: 1 }, propia: false };
+    if ("fase" in desde) return { propia: desde };
+    return { ajena: { ...carta, x: desde.x - carta.ancho / 2, y: desde.y - carta.alto / 2, escala: 1 } };
   });
+  const propia = origen !== null && "propia" in origen ? origen.propia : null;
   // En liviano la carta aparece en su lugar, sin un cuadro de dorso en el asiento.
   const vuela = origen !== null && vuelo.duracion > 0;
   const avance = useSharedValue(vuela ? 0 : 1);
+  // De dónde sale: la ajena lo sabe al montarse; la propia lo toma al arrancar el vuelo. Hasta
+  // entonces se dibuja donde está en la mano, que es el mismo lugar.
+  const salida = useSharedValue<Pose | null>(origen !== null && "ajena" in origen ? origen.ajena : null);
   const destino = usePose(carta);
   useEffect(() => {
     if (!vuela) return;
-    if (origen.propia && vuelo.rebote) avance.value = withSpring(1, { duration: vuelo.duracion, ...rebote });
-    else avance.value = withTiming(1, { duration: vuelo.duracion, easing: curvaVuelo });
+    const conRebote = propia !== null && vuelo.rebote;
+    const { duracion } = vuelo;
+    scheduleOnUI(() => {
+      "worklet";
+      if (propia) salida.value = poseDeMano(propia);
+      if (conRebote) avance.value = withSpring(1, { duration: duracion, ...rebote });
+      else avance.value = withTiming(1, { duration: duracion, easing: curvaVuelo });
+    });
   }, [avance]);
 
   // En liviano el festejo no mueve las cartas.
@@ -197,11 +210,12 @@ export function CartaDelPano({ id, carta, desde, ganadora, oscura, liviano, alCe
   }, [junta, juntar]);
 
   const pose = useDerivedValue<Pose>(() => {
-    const lugar = vuela ? mezclar(origen.pose, destino.value, avance.value) : destino.value;
+    let lugar = destino.value;
+    if (vuela) lugar = mezclar(salida.value ?? (propia ? poseDeMano(propia) : lugar), lugar, avance.value);
     return junta.value > 0 ? mezclar(lugar, centro.value, junta.value) : lugar;
   });
   // La ajena vuela de dorso y se da vuelta en el aire; la propia ya se veía de cara.
-  const [gira] = useState(() => vuela && !origen.propia);
+  const [gira] = useState(() => vuela && propia === null);
 
   const luz = useSharedValue(ganadora ? 1 : 0);
   const sombra = useSharedValue(oscura ? 1 : 0);

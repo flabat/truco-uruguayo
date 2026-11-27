@@ -8,7 +8,7 @@ import type { MesaVisible } from "../modelo.ts";
 import { alCentroDelPano, type PlanDeReparto } from "../movimiento.ts";
 import type { RepartoEnCurso } from "../useReparto.ts";
 import type { CartaAnimada } from "../useManoAnimada.ts";
-import { CartaDeMano, CartaDelPano, CartaFija, CartaRepartida, poseDeMano, type Pose } from "./CartaSkia.tsx";
+import { CartaDeMano, CartaDelPano, CartaFija, CartaRepartida } from "./CartaSkia.tsx";
 
 export interface PropsLienzo {
   geometria: Geometria;
@@ -56,10 +56,11 @@ export default function Lienzo({ geometria, mesa, mano, liviano, reparto, juntar
   const radioX = (ancho / 2) * Math.SQRT2;
   const radioY = alto * 0.62 * Math.SQRT2;
 
-  const origenDe = (asiento: number, carta: CardId): Pose | { x: number; y: number } => {
+  // La propia pasa sus valores compartidos: la carta del paño toma la pose en el hilo de la interfaz.
+  const origenDe = (asiento: number, carta: CardId): CartaAnimada | { x: number; y: number } => {
     if (asiento === mesa.propio) {
       const animada = mano.get(carta) ?? manoAnterior.current.get(carta);
-      if (animada) return poseDeMano(animada);
+      if (animada) return animada;
     }
     return geometria.asientos[asiento]!.ancla;
   };

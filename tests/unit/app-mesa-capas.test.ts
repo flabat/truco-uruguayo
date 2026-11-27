@@ -29,3 +29,14 @@ test("la carga web de Skia solo aparece en archivos .web", () => {
     .map(f => f.ruta);
   assert.deepEqual(fuera, []);
 });
+
+// `poseDeMano` lee valores compartidos. Llamarla durante el render hace que Reanimated avise en modo
+// estricto y obliga al hilo de JS a esperar al de la interfaz: solo va dentro de worklets.
+test("poseDeMano solo se llama desde worklets de CartaSkia", () => {
+  const llamadas = fuentes
+    .filter(f => /\bposeDeMano\(/.test(f.texto.replace(/export function poseDeMano\(/, "")))
+    .map(f => f.ruta);
+  assert.deepEqual(llamadas, ["mesa/lienzo/CartaSkia.tsx"]);
+  const lienzo = fuentes.find(f => f.ruta === "mesa/lienzo/Lienzo.tsx")!;
+  assert.doesNotMatch(lienzo.texto, /poseDeMano/);
+});
