@@ -27,6 +27,8 @@ export interface DecisionBotV1 {
   fallback?: string;
   latenciaMs?: number;
   propuesta?: string;
+  /** Nombre de la corrección del motor que reemplazó la `propuesta` de la política. */
+  correccion?: string;
 }
 
 export type Motivo = "abandonada" | "desconectada";
@@ -118,6 +120,7 @@ function verificarBot(control: Controlador, bot: unknown) {
     || (bot.fallback !== undefined && (!texto(bot.fallback) || bot.latenciaMs === undefined))
     || (bot.aplicada !== bot.solicitada && !texto(bot.fallback))
     || (bot.propuesta !== undefined && !texto(bot.propuesta))
+    || (bot.correccion !== undefined && (!texto(bot.correccion) || bot.propuesta === undefined))
     || (bot.latenciaMs !== undefined && !(typeof bot.latenciaMs === "number" && Number.isFinite(bot.latenciaMs) && bot.latenciaMs >= 0))) {
     throw new Error("Procedencia de la decisión de computadora inválida.");
   }

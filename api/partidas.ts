@@ -126,7 +126,7 @@ function asientosQueEsperan(mesa: VistaMesa) {
 
 function jugarBotsConReplay(mano: ManoPublicable, formato: Format, humanos: readonly number[], decisiones: DecisionReplay[],
     esperan: readonly number[] = humanos) {
-  return jugarComputadoras(mano, formato, humanos, false, (paso, propuesta) => decisiones.push(decisionReplay(paso, propuesta)), esperan);
+  return jugarComputadoras(mano, formato, humanos, false, (paso, propuesta, correccion) => decisiones.push(decisionReplay(paso, propuesta, undefined, correccion)), esperan);
 }
 
 async function repartir(db: PoolClient, mesa: string, formato: FormatoMesa, { humanos, esperan }: { humanos: number[]; esperan: number[] }, numero: number,

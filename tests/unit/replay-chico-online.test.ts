@@ -95,3 +95,16 @@ test("el replay de una mesa conserva la oportunidad del bot tras la flor y la ar
   assert.deepEqual(decidirChicoOnline(mesa, { tipo: "mazo", asiento: 1 }).cobros, [{ equipo: 0, tantos: 1, motivo: "truco" }]);
   assert.equal(vistaChicoOnline(reproducirFlor(), 0).turno, 0);
 });
+
+test("una corrección de la computadora requiere la propuesta original", () => {
+  const conCorreccion = (bot: Record<string, unknown>) => {
+    const copia = structuredClone(duelo);
+    const decision = copia.eventos.find(e => e.tipo === "decision" && e.bot);
+    assert.ok(decision?.bot);
+    Object.assign(decision.bot, bot);
+    return copia;
+  };
+  assert.doesNotThrow(() => reproducirChico(conCorreccion({ propuesta: "no-quiero", correccion: "nunca-querer-perdida" }), 1));
+  assert.throws(() => reproducirChico(conCorreccion({ correccion: "nunca-querer-perdida" }), 1), /Procedencia/);
+  assert.throws(() => reproducirChico(conCorreccion({ propuesta: "no-quiero", correccion: 7 }), 1), /Procedencia/);
+});
