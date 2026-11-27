@@ -4,10 +4,12 @@
     npm run vps                 # el árbol actual, con cambios sin commit incluidos
     npm run vps -- <rama>       # una rama (origin/<rama> si existe, si no la local)
     npm run vps -- web [rama]   # reconstruye y reemplaza sólo la imagen web
+    npm run vps -- --reiniciar-datos  # borra los datos del juego y vuelve a migrar
 
 Construye las imágenes en esta máquina con la etiqueta del commit (`<commit>-sucio`
 si hay cambios sin commit), las envía con `docker save | ssh <vps> docker load` y
-hace `docker compose up` en el VPS con TRUCO_RELEASE. El host sale de TRUCO_VPS o
+hace `docker compose up` en el VPS con TRUCO_RELEASE, la rama, la fecha y la
+etiqueta que muestra GET /api/version. El host sale de TRUCO_VPS o
 del alias `truco-vps` de ~/.ssh/config; nunca del repositorio. scripts/vps-ensayo.sh
 lo prueba contra un contenedor local con sshd. docs/produccion.md
 explica la preparación y cómo vuelve main.
@@ -17,6 +19,7 @@ Para sumar una opción: agregala en `parser()`, guardala en `Plan` dentro de
 """
 import argparse
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import os
 from pathlib import Path
 import shlex
@@ -53,6 +56,10 @@ class Plan:
     services: tuple = SERVICES
     main: str = ""  # main de origin al publicar: el temporizador espera a que cambie.
     remote: Remote = field(default_factory=Remote)
+    # Lo que publica GET /api/version (paquetes/cliente/src/version.ts).
+    rama: str = ""
+    fecha: str = ""
+    etiqueta: str = ""
 
 
 def run(*args, **kwargs):
@@ -67,6 +74,9 @@ def parser():
     p = argparse.ArgumentParser(prog="npm run vps --", description=__doc__.split("\n\n")[0])
     p.add_argument("destino", nargs="*", metavar="[web] [rama|.]",
                    help="«web» reemplaza sólo la imagen web; «.» o nada usa el árbol actual")
+    p.add_argument("--reiniciar-datos", action="store_true", dest="reiniciar",
+                   help="guarda una copia, borra los datos del juego y deja que la API vuelva a migrar; "
+                        "conserva las cuentas de identidad y pide escribir el host")
     return p
 
 
@@ -78,6 +88,8 @@ def parse(argv):
         words.pop(0)
     if len(words) > 1:
         parser().error("indicá una sola rama")
+    if args.reiniciar and args.destino:
+        parser().error("--reiniciar-datos no publica: usalo solo")
     args.ref = None if not words or words[0] == "." else words[0]
     return args
 
@@ -104,8 +116,17 @@ def plan(args, repo, env=os.environ):
         main = out("git", "-C", repo, "ls-remote", "--exit-code", "origin", "refs/heads/main").split()[0]
     except subprocess.CalledProcessError:
         sys.exit("No se pudo leer main en origin: el temporizador necesita saber qué commit desplaza esta versión.")
+    rama = args.ref or out("git", "-C", repo, "branch", "--show-current")
+    etiqueta = "" if dirty else subprocess.run(["git", "-C", repo, "describe", "--exact-match", "--tags", sha],
+                                               capture_output=True, text=True).stdout.strip()
     return Plan(ref=args.ref, sha=sha, release=release_tag(sha, dirty), main=main,
-                services=("web",) if args.web else SERVICES, remote=Remote.from_env(env))
+                services=("web",) if args.web else SERVICES, remote=Remote.from_env(env),
+                rama=rama, fecha=build_date(), etiqueta=etiqueta)
+
+
+def build_date(now=None):
+    """Fecha del build en el formato que acepta GET /api/version: ISO 8601 en UTC con Z."""
+    return (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def host(env=os.environ):
@@ -138,6 +159,7 @@ def images(release, services):
 
 def compose_build(tree, plan_, target_platform):
     env = dict(os.environ, TRUCO_RELEASE=plan_.release, DOCKER_DEFAULT_PLATFORM=target_platform,
+               TRUCO_RAMA=plan_.rama, TRUCO_FECHA=plan_.fecha, TRUCO_ETIQUETA=plan_.etiqueta,
                # Compose interpola todo el archivo; estos valores no llegan a las imágenes.
                SITE_HOST="staging.invalid", RESTIC_REPOSITORY="rest:https://backup.invalid/", RESTIC_PASSWORD="unused",
                POSTGRES_PASSWORD="unused", GAME_DB_PASSWORD="unused", ID_DB_PASSWORD="unused",
@@ -154,6 +176,32 @@ def pipe(producer, consumer):
     codes = second.wait(), first.wait()
     if any(codes):
         raise subprocess.CalledProcessError(next(code for code in codes if code), producer)
+
+
+ESPERAR = r"""# Como `up --wait`, pero tolera que un servicio lento (Keycloak en su primer arranque)
+# pase por unhealthy antes de estar sano. Falla si un contenedor termina. Usa dc().
+esperar() {
+  limite=$(($(date +%s) + 600))
+  while :; do
+    pendientes=
+    for service in "$@"; do
+      estado=$(docker inspect --format '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "$(dc ps -q "$service")")
+      case "$estado" in
+        "running healthy"|"running ") ;;
+        running*) pendientes="$pendientes $service" ;;
+        *) echo "$service quedó en estado $estado" >&2; dc logs --tail=40 "$service" >&2; return 1 ;;
+      esac
+    done
+    [ -z "$pendientes" ] && return 0
+    if [ "$(date +%s)" -ge "$limite" ]; then
+      echo "Sin salud después de 10 minutos:$pendientes" >&2
+      dc logs --tail=40 $pendientes >&2
+      return 1
+    fi
+    sleep 5
+  done
+}
+"""
 
 
 def remote_script(plan_):
@@ -186,30 +234,7 @@ for service in {keep}; do
     echo "Aviso: $service no tiene contenedor; un despliegue completo lo vuelve a construir." >&2
   fi
 done
-# Como `up --wait`, pero tolera que un servicio lento (Keycloak en su primer arranque)
-# pase por unhealthy antes de estar sano. Falla si un contenedor termina.
-esperar() {{
-  limite=$(($(date +%s) + 600))
-  while :; do
-    pendientes=
-    for service in "$@"; do
-      estado=$(docker inspect --format '{{{{.State.Status}}}} {{{{if .State.Health}}}}{{{{.State.Health.Status}}}}{{{{end}}}}' "$(dc ps -q "$service")")
-      case "$estado" in
-        "running healthy"|"running ") ;;
-        running*) pendientes="$pendientes $service" ;;
-        *) echo "$service quedó en estado $estado" >&2; dc logs --tail=40 "$service" >&2; return 1 ;;
-      esac
-    done
-    [ -z "$pendientes" ] && return 0
-    if [ "$(date +%s)" -ge "$limite" ]; then
-      echo "Sin salud después de 10 minutos:$pendientes" >&2
-      dc logs --tail=40 $pendientes >&2
-      return 1
-    fi
-    sleep 5
-  done
-}}
-if [ -n "{keep}" ]; then
+{ESPERAR}if [ -n "{keep}" ]; then
   dc up -d --no-build --no-deps web
   esperar web
 elif [ -n "$paused" ]; then
@@ -238,6 +263,65 @@ echo "Publicado $release en el VPS"
 """
 
 
+# Todo lo que crean las migraciones de api/migrations vive en el esquema juego, salvo su registro.
+# Las cuentas de Keycloak están en el esquema identidad y no se tocan.
+BORRAR_DATOS = "DROP SCHEMA IF EXISTS juego CASCADE; DROP TABLE IF EXISTS public.schema_migrations;"
+
+
+def reset_script(remote):
+    """Copia, borra los datos del juego y reinicia la API, que vuelve a aplicar las migraciones al arrancar."""
+    q = shlex.quote
+    project = q(remote.project)
+    return f"""set -eu
+mkdir -p {q(remote.state)}
+exec 9>{q(remote.state + "/lock")}
+flock -w 900 9
+api=$(docker ps -q --filter label=com.docker.compose.project={project} --filter label=com.docker.compose.service=api)
+if [ -z "$api" ]; then
+  echo "La API no corre en el proyecto {remote.project}: no hay datos que reiniciar." >&2
+  exit 1
+fi
+# Los archivos de Compose y la etiqueta de la versión que corre, manual o automática.
+archivos=$(docker inspect --format '{{{{index .Config.Labels "com.docker.compose.project.config_files"}}}}' "$api")
+imagen=$(docker inspect --format '{{{{.Config.Image}}}}' "$api")
+export TRUCO_RELEASE="${{imagen##*:}}"
+opciones=
+for archivo in $(printf '%s' "$archivos" | tr ',' ' '); do opciones="$opciones -f $archivo"; done
+paused=
+if [ -f {q(os.path.dirname(remote.config) + "/copias-pausadas")} ]; then
+  paused=1
+  export RESTIC_REPOSITORY=/dev/null RESTIC_PASSWORD=unused
+fi
+dc() {{ docker compose -p {project} --env-file {q(remote.config)} $opciones "$@"; }}
+{ESPERAR}if [ -z "$paused" ]; then
+  dc run --rm --no-deps -T backup guardar
+else
+  echo "Aviso: las copias están pausadas; se borra sin copia previa." >&2
+fi
+dc stop api
+dc exec -T db psql -v ON_ERROR_STOP=1 -U postgres -d truco -c {q(BORRAR_DATOS)}
+dc start api
+esperar api
+echo "Datos del juego reiniciados en $TRUCO_RELEASE"
+"""
+
+
+def confirm(target, ask=input):
+    print(f"Esto borra jugadores, mesas, partidas y sesiones del juego en {target}.\n"
+          "Las cuentas de identidad se conservan. Antes guarda una copia, salvo con las copias pausadas.", flush=True)
+    try:
+        answer = ask(f"Escribí {target} para confirmar: ")
+    except EOFError:
+        answer = ""
+    if answer.strip() != target:
+        sys.exit("No coincide con el host: no se borró nada.")
+
+
+def reset(target, env=os.environ, ask=input):
+    confirm(target, ask)
+    run(*ssh_command(target, "sh -s", env), input=reset_script(Remote.from_env(env)))
+
+
 def deploy(plan_, repo, target, env=os.environ):
     target_platform = platform(target, env)
     with tempfile.TemporaryDirectory(prefix="truco-vps-") as tmp:
@@ -261,6 +345,8 @@ def deploy(plan_, repo, target, env=os.environ):
 
 def main(argv=None):
     args = parse(sys.argv[1:] if argv is None else argv)
+    if args.reiniciar:
+        return reset(host())
     repo = out("git", "rev-parse", "--show-toplevel")
     target = host()
     plan_ = plan(args, repo)
