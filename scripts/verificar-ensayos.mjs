@@ -19,11 +19,11 @@ const mesas = [];
 const recuperado=process.argv[2]==="recuperado", aprendidos=process.argv[2]==="aprendidos";
 const pieAprendido = process.argv[2] === "al-pie-aprendido";
 const alPie = process.argv[2] === "al-pie" || pieAprendido;
-// Con actores aprendidos al pie activados, cada modalidad al pie se ensaya con su pin.
+// Con actores aprendidos al pie activados, cada modalidad al pie que tenga uno se ensaya con su pin.
 const pinesPie = pieAprendido ? Object.fromEntries((await pool.query(
   "SELECT formato, pin FROM juego.activaciones WHERE formato IN ('pairs-pie','triples-pie')")).rows.map(f => [f.formato, f.pin])) : {};
 const pinPie = formato => pieAprendido ? pinesPie[formato === "triples" ? "triples-pie" : "pairs-pie"] : politicaPieParejas;
-const formatos = pieAprendido ? ["pairs-private-senas", "triples"] : alPie ? ["pairs-private-senas"] : recuperado ? ["duel"]
+const formatos = pieAprendido ? ["pairs-private-senas", "triples"].filter(pinPie) : alPie ? ["pairs-private-senas"] : recuperado ? ["duel"]
   : aprendidos ? activeFormats : [...activeFormats, "triples"];
 try {
   for (const formato of formatos) {
