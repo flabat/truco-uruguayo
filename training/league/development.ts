@@ -8,6 +8,7 @@ import { playMatch } from "../arena/index.ts";
 import { baseline, styles } from "../baselines/index.ts";
 import { formats, type Format, type Policy } from "../contracts/index.ts";
 import { loadDuelActor } from "../duel/actor.ts";
+import { openActor } from "../../api/actor-registry.ts";
 import { loadPartnerPolicy } from "../partners/policy.ts";
 import { incumbent } from "../seat/index.ts";
 
@@ -23,9 +24,14 @@ export function save(path: string, data: unknown) {
   writeFileSync(temp, JSON.stringify(data)+"\n",{flush:true});
   renameSync(temp,path);
 }
+/** Cualquier actor de duelo del registro (Ceibo, regularizado) o una exportación Monte Carlo. */
+export function loadDuelPolicy(path: string): Policy {
+  const data = json(path);
+  return data && typeof data === "object" && "kind" in data ? openActor(data, "duel", 0) : loadDuelActor(path);
+}
 export function loadTeam(format: Format, path: string): Team {
   if (format === "duel") {
-    const actor = loadDuelActor(path);
+    const actor = loadDuelPolicy(path);
     return () => actor;
   }
   const data = json(path);

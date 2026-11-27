@@ -1,4 +1,6 @@
-FROM node:24-bookworm-slim AS dependencias
+# La construcción produce archivos estáticos: corre en la plataforma de quien construye, también al publicar desde una Mac
+# con Apple Silicon para un VPS x86_64. Las imágenes finales siguen siendo de la plataforma de destino.
+FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS dependencias
 WORKDIR /app
 COPY package.json package-lock.json ./
 # npm ci enlaza los workspaces @eltruco/motor, @eltruco/cliente, @eltruco/mesa-geometria y @eltruco/app a partir de sus package.json.

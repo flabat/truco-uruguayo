@@ -13,6 +13,7 @@ COPY training/signals /app/training/signals
 COPY training/selfplay/duel-card-odds.ts training/selfplay/learner.ts training/selfplay/team-mixture.ts training/selfplay/team-transfer.ts /app/training/selfplay/
 COPY training/duel/actor.ts training/duel/math.ts /app/training/duel/
 COPY training/partners/policy.ts /app/training/partners/
+COPY training/regularized/actor.ts training/regularized/features.ts training/regularized/network.ts /app/training/regularized/
 # Node resuelve @eltruco/motor y @eltruco/cliente por estos enlaces; la ruta real queda
 # fuera de node_modules para que Node quite los tipos de los .ts de los paquetes.
 RUN mkdir -p /app/node_modules/@eltruco && ln -s ../../paquetes/motor /app/node_modules/@eltruco/motor \
