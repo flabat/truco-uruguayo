@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { nombrar } from "@eltruco/cliente/textos.ts";
 import type { Rect } from "@eltruco/mesa-geometria";
 import { imagenesDeCartas } from "../../cartas/imagenes.ts";
 import { colores, fuentes } from "../../tema.ts";
@@ -15,10 +16,11 @@ const proporcionCarta = 596 / 384;
  * Al ganar el chico es el cartel: con `aparicion`, aparece después de que las cartas se juntan, y
  * `festejo` (el segundo lienzo con las partículas) se dibuja encima de la tarjeta.
  */
-export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = null, festejo = null }: {
+export function FinDeMano({ fin, rect, limiteInferior, alPresionar, deshabilitado, aparicion = null, festejo = null }: {
   fin: DatosFin;
-  /** `geometria.pano`. */
   rect: Rect;
+  /** Con flor, el cierre también puede ocupar la mano hasta la tira inferior. */
+  limiteInferior: number;
   alPresionar: () => void;
   deshabilitado?: boolean;
   /** Se lee al montar; null aparece de una. */
@@ -41,29 +43,40 @@ export function FinDeMano({ fin, rect, alPresionar, deshabilitado, aparicion = n
     transform: [{ scale: 0.9 + 0.1 * visible.value }],
   }));
 
+  const hayFlor = fin.pruebas.some(p => p.motivo === "flor");
+  const cobros = (
+    <View>
+      {fin.cobros.length ? <Text style={estilos.rotulo}>{fin.tituloCobros}</Text> : null}
+      {fin.cobros.map(c => (
+        <View key={c.equipo} style={estilos.fila}>
+          <Text style={estilos.equipo}>{c.equipo}</Text>
+          <Text style={estilos.texto}>{c.texto}</Text>
+        </View>
+      ))}
+    </View>
+  );
+  const area = hayFlor ? { ...rect, alto: limiteInferior - rect.y } : rect;
   return (
-    <Animated.View testID="fin-de-mano" style={[enRect(rect), estilos.capa, animado]} pointerEvents={lista ? "box-none" : "none"}>
+    <Animated.View testID="fin-de-mano" style={[enRect(area), estilos.capa, animado]} pointerEvents={lista ? "box-none" : "none"}>
       <View style={estilos.tarjeta}>
         <ScrollView bounces={false} contentContainerStyle={estilos.contenido}>
           <Text role="heading" aria-level={2} style={estilos.titulo}>{fin.titulo}</Text>
           {fin.motivo ? <Text style={estilos.nota}>{fin.motivo}</Text> : null}
-          {fin.cobros.length ? <Text style={estilos.rotulo}>{fin.tituloCobros}</Text> : null}
-          {fin.cobros.map(c => (
-            <View key={c.equipo} style={estilos.fila}>
-              <Text style={estilos.equipo}>{c.equipo}</Text>
-              <Text style={estilos.texto}>{c.texto}</Text>
-            </View>
-          ))}
-          {fin.pruebas.map(p => (
-            <View key={p.nombre + p.titulo} style={estilos.prueba} accessibilityLabel={p.nombre + " · " + p.titulo}>
-              <Text style={estilos.nota}>{p.nombre} · {p.titulo}</Text>
-              <View style={estilos.cartas}>
-                {p.cartas.map(carta => (
-                  <Image key={carta} source={imagenesDeCartas[carta]} style={estilos.carta} accessibilityIgnoresInvertColors />
-                ))}
+          {!hayFlor && cobros}
+          <View style={hayFlor && estilos.flores}>
+            {fin.pruebas.map(p => (
+              <View key={p.asiento + "-" + p.titulo} style={estilos.prueba}>
+                <Text style={estilos.nota}>{p.nombre} · {p.titulo}</Text>
+                <View style={estilos.cartas}>
+                  {p.cartas.map(carta => (
+                    <Image key={carta} source={imagenesDeCartas[carta]} style={estilos.carta}
+                      accessible accessibilityLabel={nombrar(carta)} accessibilityIgnoresInvertColors />
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
+          </View>
+          {hayFlor && cobros}
         </ScrollView>
         {festejo}
       </View>
@@ -97,7 +110,8 @@ const estilos = StyleSheet.create({
   },
   equipo: { color: colores.tinta, fontFamily: fuentes.textoFuerte, fontSize: 14, lineHeight: 19, minWidth: 44 },
   texto: { color: colores.tinta, flex: 1, fontFamily: fuentes.texto, fontSize: 14, lineHeight: 19 },
-  prueba: { marginTop: 10 },
+  flores: { flexDirection: "row", flexWrap: "wrap", columnGap: 16 },
+  prueba: { marginTop: 10, maxWidth: "100%" },
   cartas: { flexDirection: "row", gap: 4, marginTop: 4 },
   carta: { borderRadius: 3, height: anchoCarta * proporcionCarta, width: anchoCarta },
   boton: {

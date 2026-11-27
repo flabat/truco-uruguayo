@@ -211,8 +211,21 @@ function cerrarRetiroORechazo(estado: EstadoOnline) {
   } else if (estado.rechazoTruco) cobrarRechazoTruco(estado);
 }
 
-function plenaFlor(estado: EstadoOnline, equipo: Equipo) {
-  return 3 * estado.flores.filter(a => equipoDelAsiento(a) === equipo).length;
+function floresDelCobro(flores: readonly Asiento[], equipo: Equipo, restoQuerido: boolean) {
+  return restoQuerido ? flores : flores.filter(a => equipoDelAsiento(a) === equipo);
+}
+
+/** También los cobros históricos sin comparación se pueden acreditar con los cantos del lance. */
+export function asientosConPrueba(cobro: Cobro, acciones: readonly AccionOnline[]): readonly Asiento[] {
+  const ganador = cobro.asiento !== undefined && cobro.tantoGanador !== undefined ? [cobro.asiento] : [];
+  if (cobro.motivo !== "flor") return ganador;
+  const cantos = acciones.filter(({ tipo }) => tipo === "flor" || tipo === "con-flor-quiero"
+    || tipo === "con-flor-envido" || tipo === "contraflor-al-resto");
+  // El resto es la última subida posible. Si se quiso, el cobro identifica al ganador de la comparación.
+  const restoQuerido = ganador.length > 0 && cantos.some(c => c.tipo === "contraflor-al-resto");
+  const cobradas = floresDelCobro(cantos.map(c => c.asiento), cobro.equipo, restoQuerido);
+  // Primero el ganador, después quienes acreditan otra flor. Una subida no duplica la declaración.
+  return [...new Set([...ganador, ...cobradas])];
 }
 
 function tantosEnOrden(estado: EstadoOnline, flor: boolean) {
@@ -264,8 +277,7 @@ function liquidarLateral(estado: EstadoOnline, querido: boolean) {
     const tipo = participantesDe(estado.mano).length === 2 ? "pico-a-pico" : "redondilla";
     tantos = restoQuerido(tipo, estado.puntosInicio[equipo], estado.meta);
   } else if (flor) {
-    // El resto querido se lleva todas las flores. En los otros casos suman las propias.
-    tantos += querido && oferta.tipo === "contraflor-al-resto" ? 3 * estado.flores.length : plenaFlor(estado, equipo);
+    tantos += 3 * floresDelCobro(estado.flores, equipo, querido && oferta.tipo === "contraflor-al-resto").length;
   }
   estado.indiceCobroLateral = estado.acciones.length - 1;
   if (flor && participantes && !esTerceto(estado)) {

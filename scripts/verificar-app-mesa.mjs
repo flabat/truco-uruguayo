@@ -9,6 +9,11 @@ import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect as expectBase } from "@playwright/test";
 import { canto } from "@eltruco/cliente/cantos.ts";
+import { nombrar } from "@eltruco/cliente/textos.ts";
+import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline } from "@eltruco/motor/mesa-online.ts";
+import { florAlMazo } from "../tests/fixtures/duelo-mazo.ts";
+import { reparto as repartoConFlores } from "../tests/fixtures/flor-querida.ts";
+import { mesaDe } from "../tests/unit/fixtures/app-mesa.ts";
 import { ingresarDesdeIdentidad } from "./ingreso-local-navegador.mjs";
 
 const web = process.argv[2];
@@ -320,6 +325,76 @@ async function probarEnvido() {
     return;
   }
   assert.fail("En 5 manos nadie pudo tocar envido");
+}
+
+/** Reproduce los cinco movimientos del reporte #451 sobre la app exportada usando la vista del árbitro. */
+async function probarFlorAlMazo() {
+  const p = await pagina(minima);
+  let mesa = { ...mesaDe("1v1", 0, 40), id: "00000000-0000-4000-8000-000000000451" };
+  mesa.asientos[1].tipo = "computadora";
+  let estado = iniciarOnline(florAlMazo.reparto, [8, 11], 40);
+  function aplicar(accion) {
+    const siguiente = aplicarOnline(estado, accion);
+    assert.ok(siguiente.ok, JSON.stringify(accion));
+    estado = siguiente.estado;
+  }
+  florAlMazo.acciones.slice(0, 3).forEach(aplicar);
+  // La página entra al turno de Ana y recibe las dos jugadas juntas, como al contestar la computadora.
+  await p.route("**/api/jugador", r => r.fulfill({ json: { id: "j0", nombre: "Ana" } }));
+  await p.route("**/api/mesas/*", r => r.fulfill({ json: mesa }));
+  await p.route("**/api/mesas/*/partida", r => r.fulfill({ json: {
+    version: estado.acciones.length, manoNumero: 6, puntos: marcadorOnline(estado), meta: mesa.meta,
+    ganadorPartida: null, vista: vistaOnline(estado, mesa.miAsiento),
+  } }));
+  await p.routeWebSocket("**/api/mesas/*/vivo", () => {});
+  await p.route("**/api/mesas/*/acciones", async r => {
+    const { accion } = r.request().postDataJSON();
+    assert.deepEqual({ ...accion, asiento: 0 }, florAlMazo.acciones[3]);
+    aplicar(florAlMazo.acciones[3]);
+    aplicar(florAlMazo.acciones[4]);
+    await r.fulfill({ json: {} });
+  });
+  await p.goto("/jugar/mesa?id=" + mesa.id);
+  const fin = p.getByTestId("fin-de-mano");
+  await expect(p.getByRole("heading", { name: "Tu turno", exact: true })).toBeVisible();
+  await expect(p.getByText("Reconectando…", { exact: true })).toHaveCount(0);
+  await expect(fin).toHaveCount(0);
+  for (const carta of florAlMazo.reparto.manos[1].slice(1)) await expect(p.getByRole("img", { name: nombrar(carta) })).toHaveCount(0);
+  await p.getByTestId("carta-copas-02").click();
+  const verificarPrueba = async () => {
+    await expect(fin.getByText("Diego · Flor · 30 tantos", { exact: true })).toBeVisible();
+    await expect(fin.getByRole("img")).toHaveCount(3);
+    for (const carta of florAlMazo.reparto.manos[1]) {
+      await expect(fin.getByRole("img", { name: nombrar(carta), exact: true })).toBeInViewport();
+    }
+    await expect(boton(fin, "Repartir otra mano")).toBeInViewport();
+    await expect(p.getByLabel("Tanteador")).toContainText("9 · 14");
+  };
+  await verificarPrueba();
+  await capturar(p, "flor-al-mazo-360x640");
+  await p.reload();
+  await verificarPrueba();
+
+  // En parejas, Clara y Ana cantan flor antes de rechazar el truco de Diego.
+  mesa = { ...mesaDe("2v2", 2, 40), id: "00000000-0000-4000-8000-000000000452" };
+  const reparto = { ...repartoConFlores, reglaFlor: "inmediata-v2",
+    manos: [...repartoConFlores.manos.slice(0, 3), ["espadas-03", "espadas-06", "oros-07"]] };
+  estado = iniciarOnline(reparto, [0, 0], mesa.meta);
+  for (const [asiento, tipo] of [[1, "truco"], [0, "flor"], [2, "flor"], [0, "no-quiero"]]) aplicar({ asiento, tipo });
+  await p.goto("/jugar/mesa?id=" + mesa.id);
+  for (const ancho of [minima, escritorio]) {
+    await p.setViewportSize(ancho);
+    await expect(fin.getByText("Clara · Flor · 32 tantos", { exact: true })).toBeVisible();
+    await expect(fin.getByText("Ana · Flor · 30 tantos", { exact: true })).toBeVisible();
+    await expect(fin.getByRole("img")).toHaveCount(6);
+    for (const carta of [...reparto.manos[0], ...reparto.manos[2]]) {
+      await expect(fin.getByRole("img", { name: nombrar(carta), exact: true })).toBeInViewport();
+    }
+    await expect(boton(fin, "Repartir otra mano")).toBeInViewport();
+  }
+  await capturar(p, "collera-1280x800");
+  await p.context().close();
+  console.log("Flor sin oposición: tres cartas en el cierre por mazo y al recargar, con tanteador 9–14.");
 }
 
 async function probarParejasConPie() {
@@ -821,7 +896,7 @@ async function probarPrivacidad() {
 }
 
 const todos = {
-  probarDueloConComputadora, probarEnvido, probarParejasConPie, probarPrivacidad, probarTercetos, probarEspectador, probarEscritorio,
+  probarDueloConComputadora, probarEnvido, probarFlorAlMazo, probarParejasConPie, probarPrivacidad, probarTercetos, probarEspectador, probarEscritorio,
   probarAnimaciones, probarAbandono, probarEsperaYCobro,
 };
 try {
