@@ -27,7 +27,7 @@ node training/regularized/run.ts --format pie --run runs/regularized/parejas --h
 node training/regularized/run.ts --format tercetos --run runs/regularized/tercetos --hours 6 --workers 2
 ```
 
-La primera orden clona al campeón del formato (Ceibo, `pie-parejas-v2` o `pie-clasico-v1`) y después entrena con PPO, KL hacia la política ancla y crítico con todas las manos. Para reanudar, repetí la orden con el mismo `--run`; se pueden cambiar `--hours`, `--workers`, `--shaping on|off` y las proporciones de la liga (`--self-share`, `--snap-share`, `--fixed-share`). `progress.jsonl` registra cada iteración y las evaluaciones periódicas. Al terminar quedan `actor.json`, servible por `api/actor-registry.ts`, y `checkpoint.pt`.
+La primera orden clona al campeón del formato (Ceibo, `pie-parejas-v2` o `pie-clasico-v1`) y después entrena con PPO, KL hacia la política ancla y crítico con todas las manos. Para reanudar, repetí la orden con el mismo `--run`; se pueden cambiar `--hours`, `--workers`, `--shaping on|off`, `--entropy`, `--eta` y las proporciones de la liga (`--self-share`, `--snap-share`, `--fixed-share`). `progress.jsonl` registra cada iteración y las evaluaciones periódicas. Al terminar quedan `actor.json`, servible por `api/actor-registry.ts`, y `checkpoint.pt`.
 
 Un contrajugador se entrena contra un actor congelado, desde sus mismos pesos y sin ancla:
 

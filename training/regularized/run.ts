@@ -21,8 +21,8 @@ const { values: args } = parseArgs({ options: {
   workers: { type: "string" }, rows: { type: "string", default: "65536" },
   "bc-rows": { type: "string", default: "786432" }, "bc-epochs": { type: "string", default: "4" },
   hidden: { type: "string", default: "256,256" }, seed: { type: "string", default: "1" },
-  eta: { type: "string", default: "0.05" }, "magnet-every": { type: "string", default: "50" },
-  lr: { type: "string", default: "0.0003" }, entropy: { type: "string", default: "0.005" },
+  eta: { type: "string" }, "magnet-every": { type: "string", default: "50" },
+  lr: { type: "string", default: "0.0003" }, entropy: { type: "string" },
   exploit: { type: "string" }, init: { type: "string" }, "eval-every": { type: "string", default: "40" },
   "eval-pairs": { type: "string", default: "96" }, "no-bc": { type: "boolean", default: false },
   mix: { type: "string", default: "league" },
@@ -35,12 +35,13 @@ const configPath = join(run, "config.json");
 const resumed = existsSync(configPath);
 const config = resumed ? JSON.parse(readFileSync(configPath, "utf8")) : {
   format: args.format, seed: Number(args.seed), hidden: args.hidden!.split(",").map(Number), workers: Number(args.workers ?? 8),
-  rows: Number(args.rows), eta: Number(args.eta), magnetEvery: Number(args["magnet-every"]), lr: Number(args.lr),
-  entropy: Number(args.entropy), exploit: args.exploit ? (existsSync(args.exploit) ? resolve(args.exploit) : args.exploit) : null, init: args.init ? resolve(args.init) : null,
+  rows: Number(args.rows), eta: Number(args.eta ?? 0.05), magnetEvery: Number(args["magnet-every"]), lr: Number(args.lr),
+  entropy: Number(args.entropy ?? 0.005), exploit: args.exploit ? (existsSync(args.exploit) ? resolve(args.exploit) : args.exploit) : null, init: args.init ? resolve(args.init) : null,
   mix: args.mix, featureVersion, created: new Date().toISOString(),
 };
-// Las proporciones de la liga se pueden cambiar al reanudar.
-for (const [key, arg] of [["selfShare", "self-share"], ["snapShare", "snap-share"], ["fixedShare", "fixed-share"]] as const) {
+// Las proporciones de la liga, la entropía y el peso del ancla se pueden cambiar al reanudar.
+for (const [key, arg] of [["selfShare", "self-share"], ["snapShare", "snap-share"], ["fixedShare", "fixed-share"],
+  ["entropy", "entropy"], ["eta", "eta"]] as const) {
   if (args[arg] !== undefined) config[key] = Number(args[arg]);
 }
 if (args.workers !== undefined) config.workers = Number(args.workers);

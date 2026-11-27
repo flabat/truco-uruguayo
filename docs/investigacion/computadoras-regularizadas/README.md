@@ -61,8 +61,29 @@ No encontré trabajos publicados de CFR ni de aprendizaje profundo para el truco
 
 **Fidelidad con las mesas reales.** En duelo se entrena con las reglas de la API (flor inmediata, respuestas sin flor de las computadoras, anticipación ante flor y conversión de una carta en irse al mazo como `confirmarComputadora`) y con el reparto V1 de la arena. Parejas y tercetos se juegan con señas al pie como las crea la app; las indicaciones del pie siguen la regla clásica y el modelo aprende cartas y cantos condicionados a lo que le indican.
 
-<!-- PROCESO -->
+## Cómo se desarrolló la jornada
+
+Horas en UTC.
+
+| Hora | Paso |
+| --- | --- |
+| Hasta 07:13 | Lectura del motor, de la API y de las ligas anteriores; investigación, diseño, simulador, rasgos, red, aprendiz y pruebas de cobertura de jugadas. |
+| 07:13 | Duelo A: clonación de Ceibo (787 mil decisiones, entropía cruzada 0,40). El clon solo le gana a Ceibo 41 %: copia el estilo, no la precisión. |
+| 07:16–07:21 | Parejas A clona a `pie-parejas-v2` (gana 38 %) y Tercetos A al bot clásico (33 %). |
+| 07:27 | Duelo B se separa de Duelo A en la iteración 150 con la recompensa moldeada: comparación A/B. |
+| 08:39 | Primera puerta: Duelo A 65 % y Duelo B 67 % contra Ceibo, pero ceden hasta 4 puntos frente a V1 y los faroleros. |
+| 08:40–10:20 | Diagnóstico: Ceibo saca su ventaja en el envido contra los estilos. Se sube la proporción de rivales fijos a 0,8, se suma el finalista de la liga y la ponderación según la puerta pasa a perseguir la tasa del campeón. |
+| 08:43–10:15 | Explotabilidad: un contrajugador PPO de 45 minutos contra Duelo B y otro igual contra Ceibo. |
+| 10:20 | Las marcas del campeón, medidas con 128 pares, salían hasta 5 puntos bajas. Se remiden con 512 a 1024 pares y la corrida las relee en cada instantánea. |
+| 10:15–12:33 | Tres rondas más de explotadores contra instantáneas de Duelo B, cada uno sumado a la liga de Duelo B al terminar. |
+| 12:34 | Parejas independiente: linaje desde cero, sin clonación, para la familia independiente de la puerta al pie. |
+
+<!-- PROCESO-RESTO -->
 
 <!-- RESULTADOS -->
 
-<!-- REPRODUCCION -->
+## Cómo reproducirlo
+
+Las órdenes, los nombres de los rivales y la preparación de los campeones están en [el README del entrenador](../../../training/regularized/README.md). Los modelos de la jornada quedaron en `runs/regularized/` de la Mac y no se versionan. Cada corrida guarda `config.json`, `progress.jsonl` con cada iteración y evaluación, `targets.json` con las marcas del campeón, `extra-opponents.json` con los rivales sumados durante la corrida, las instantáneas y `checkpoint.pt` para reanudar.
+
+<!-- REPRODUCCION-RESTO -->
