@@ -15,6 +15,7 @@ import { atenderPerfil } from "./perfil.ts";
 import { atenderReporte, rutaReporte } from "./reportes.ts";
 import { crearCuenta, crearInicioBaja, rutaEliminarCuenta } from "./cuenta.ts";
 import { crearCapturaApple, crearServiciosBaja, procesarBajas } from "./bajas.ts";
+import { crearNotificacionesApple, rutaNotificacionesApple } from "./notificaciones-apple.ts";
 import { crearVersion, rutaVersion } from "./version.ts";
 
 import { configDiscord, crearDiscord } from "./discord.ts";
@@ -58,6 +59,7 @@ const server = createServer(async (request, response) => {
       else if (ruta === "/api/salon/mesas" || ruta.startsWith("/api/salon/mesas/")) await salon(request, response);
       else if (ruta === "/api/perfil") await atenderPerfil(pool, request, response);
       else if (ruta === rutaEliminarCuenta) await cuenta(request, response);
+      else if (ruta === rutaNotificacionesApple) await notificacionesApple(request, response);
       else await auth(request, response);
     } catch {
       response.writeHead(503).end("El servicio de jugadores no está disponible.");
@@ -90,6 +92,9 @@ poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrump
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
 const iniciarBaja = crearInicioBaja(pool, jugador => vivo.cerrarJugador(jugador), alCambiar);
 const cuenta = crearCuenta(pool, web, iniciarBaja);
+const notificacionesApple = crearNotificacionesApple(pool, process.env, {
+  emisor: new URL(process.env.OIDC_ISSUER!).href, iniciarBaja, cerrarConexiones: jugador => vivo.cerrarJugador(jugador),
+});
 const salon = crearSalon(pool, salonHabilitado, web, process.env.VOZ_ESPECTADORA_HABILITADA === "1" ? voz : undefined);
 const misMesas = crearMisMesas(pool);
 const detenerLimpieza = voz?.iniciarLimpieza();
