@@ -375,9 +375,10 @@ async function probarDueloComputadora(pin) {
   const m = await mesa("1v1", a, [a, null], { politica: pin, meta: 12 });
   await servicio.leer(m.id, a.id);
   await pool.query("INSERT INTO juego.turnos_bot (mesa) VALUES ($1) ON CONFLICT DO NOTHING", [m.id]);
-  const antes = await versionMano(m.id);
   assert.ok(await enMisMesas(a, m.id));
   assert.equal((await abandonar(a, m.id)).status, 204);
+  // La computadora en cola puede jugar antes del abandono; desde el cierre, la mano queda quieta.
+  const antes = await versionMano(m.id);
   assert.equal(await enMisMesas(a, m.id), false, "la mesa abandonada sale de las mesas de A");
   await assert.rejects(servicio.leer(m.id, a.id), { status: 409, message: abandono });
   await rechazo(await fetch(base + "/api/mesas/" + m.id, { headers: { cookie: a.cookie } }), 409, abandono);
@@ -394,6 +395,7 @@ async function probarDueloComputadora(pin) {
   assert.equal(Number((await pool.query("SELECT count(*) FROM juego.turnos_bot WHERE mesa=$1", [m.id])).rows[0].count), 0);
   await new Promise(r => setTimeout(r, 1000));
   assert.equal(await versionMano(m.id), antes, "la computadora no juega después del cierre");
+  assert.deepEqual((await replayDe(m.id)).eventos.slice(-1).map(e => e.tipo), ["cierre"], "nada se suma al replay después del cierre");
   // Un reintento del pedido no duplica la salida.
   await rechazo(await abandonar(a, m.id), 409, abandono);
   assert.equal(await salidas(m.id), 1);
