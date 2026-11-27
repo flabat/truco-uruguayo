@@ -1,13 +1,14 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path, Rect as SvgRect } from "react-native-svg";
-import type { Geometria } from "@eltruco/mesa-geometria";
+import type { Geometria, GeometriaAsiento } from "@eltruco/mesa-geometria";
 import { textoFrasePie, type CartaPedida, type FrasePie } from "@eltruco/motor/senas-pie.ts";
 import { colores, fuentes } from "../../tema.ts";
 import type { SenasEnMesa } from "../senas.ts";
 import { CaraSena } from "./CaraSena.tsx";
 import { mesaColores } from "./estilo.ts";
-import { cajasDelMazo, Globo } from "./Globo.tsx";
+import { limitesDeGlobo } from "../lugar-globo.ts";
+import { Globo } from "./Globo.tsx";
 
 export type Indicar = (destinatario: number, frase: FrasePie | "sin-indicacion", vuelta: number, carta?: CartaPedida) => void;
 
@@ -23,21 +24,52 @@ function Candado({ color }: { color: string }) {
 const frasesDe = (senas: SenasEnMesa) =>
   senas.tipo === "pie" ? senas.frases.filter(f => f.frases.length > 0 || f.esperando) : [];
 
-/** Los globos con candado del pie, colgados del asiento de cada compañero. */
+const fichaAncho = 62;
+const fichaAlto = 24;
+
+/** La ficha del globo achicado: al lado del nombre del compañero, del lado que entra en la columna. */
+function lugarDeFicha(asiento: GeometriaAsiento, { columna }: Geometria) {
+  const r = asiento.rotulo ?? { x: asiento.ancla.x, y: asiento.ancla.y, ancho: 0, alto: 0 };
+  const top = r.y + (r.alto - fichaAlto) / 2;
+  const derecha = r.x + r.ancho + 4;
+  const left = derecha + fichaAncho <= columna.x + columna.ancho - 4 ? derecha : Math.max(columna.x + 4, r.x - 4 - fichaAncho);
+  return { left, top };
+}
+
+/**
+ * Los globos con candado del pie, colgados del asiento de cada compañero. Tocar un globo lo achica a
+ * una ficha junto al nombre; tocar la ficha lo vuelve a abrir. Si llegan señas nuevas, se abre solo.
+ */
 export function Senas({ senas, geometria, liviano = false }: { senas: SenasEnMesa; geometria: Geometria; liviano?: boolean }) {
+  const [achicados, cambiarAchicados] = useState<ReadonlySet<string>>(new Set());
   if (senas.tipo !== "pie") return null;
-  const limites = {
-    columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado,
-    evitar: cajasDelMazo(geometria),
-  };
+  const alternar = (clave: string) => cambiarAchicados(antes => {
+    const despues = new Set(antes);
+    if (!despues.delete(clave)) despues.add(clave);
+    return despues;
+  });
   return (
     <>
       {senas.globos.map(g => {
         const geo = geometria.asientos[g.emisor];
         if (!geo || g.gestos.length === 0) return null;
+        const clave = g.emisor + ":" + senas.vuelta + ":" + g.gestos.map(x => x.gesto).join(",");
+        if (achicados.has(clave)) {
+          return (
+            <Pressable key={clave} testID={"ficha-senas-" + g.emisor} accessibilityRole="button"
+              accessibilityLabel={"Ver las señas de " + g.nombre} onPress={() => alternar(clave)}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              style={({ pressed }) => [estilos.ficha, lugarDeFicha(geo, geometria), pressed && estilos.apretado]}>
+              <Candado color={colores.tinta} />
+              <CaraSena gesto={g.gestos[0].gesto} tamano={16} />
+              {g.gestos.length > 1 ? <Text style={estilos.textoFicha}>+{g.gestos.length - 1}</Text> : null}
+            </Pressable>
+          );
+        }
         return (
-          <Globo key={g.emisor + ":" + senas.vuelta} asiento={geo} posicion="debajo" limites={limites}
-            testID={"globo-senas-" + g.emisor} etiqueta={"Señas de " + g.nombre} liviano={liviano}>
+          <Globo key={clave} asiento={geo} posicion="debajo" limites={limitesDeGlobo(geometria, g.emisor)}
+            testID={"globo-senas-" + g.emisor} etiqueta={"Señas de " + g.nombre} liviano={liviano}
+            alTocar={() => alternar(clave)}>
             <View style={estilos.tituloGlobo}>
               <Candado color={colores.tinta} />
               <Text style={estilos.textoTitulo}>Señas de {g.nombre}</Text>
@@ -127,6 +159,12 @@ export function SenasRecibidas({ recibidas }: { recibidas: Extract<SenasEnMesa, 
 }
 
 const estilos = StyleSheet.create({
+  ficha: {
+    alignItems: "center", backgroundColor: mesaColores.hoja, borderRadius: 999, boxShadow: "0 2px 6px rgba(0, 0, 0, 0.4)",
+    flexDirection: "row", gap: 3, height: fichaAlto, justifyContent: "center", paddingHorizontal: 7, width: fichaAncho,
+    position: "absolute",
+  },
+  textoFicha: { color: colores.tinta, fontFamily: fuentes.textoFuerte, fontSize: 11 },
   tituloGlobo: { alignItems: "center", flexDirection: "row", gap: 5 },
   textoTitulo: { color: colores.tinta, fontFamily: fuentes.textoFuerte, fontSize: 12 },
   gestos: { flexDirection: "row", gap: 8, marginTop: 4 },
