@@ -97,6 +97,14 @@ function league(snapshots: string[]): Lineup[] {
   const boosted = fixed.map(([spec, w]) => [spec, w * boost(spec)] as const);
   const total = boosted.reduce((a, [, w]) => a + w, 0);
   for (const [spec, w] of boosted) mix.push({ a: solo("learner"), b: solo(spec), weight: w * share / total, name: spec });
+  // Rivales agregados durante la corrida (por ejemplo, explotadores entrenados contra instantáneas del aprendiz).
+  // Se releen en cada iteración: `extra-opponents.json` es una lista de {spec, weight, name}.
+  const extraPath = join(run, "extra-opponents.json");
+  if (existsSync(extraPath)) {
+    for (const e of JSON.parse(readFileSync(extraPath, "utf8")) as { spec: string; weight: number; name?: string }[]) {
+      mix.push({ a: solo("learner"), b: solo(e.spec), weight: e.weight, name: e.name ?? e.spec });
+    }
+  }
   if (format === "pie") mix.push({ a: ["learner", "pie-parejas-v2"], b: solo("pie-parejas-v2"), weight: 0.1, name: "partner-v2" });
   if (format === "tercetos") mix.push({ a: ["learner", "pie-clasico-v1", "pie-clasico-v1"], b: solo("pie-clasico-v1"), weight: 0.1,
     name: "partner-clasico" });
