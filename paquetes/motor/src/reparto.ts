@@ -34,6 +34,8 @@ export interface RepartoOnline extends Distribucion {
   readonly respondenSinFlor?: readonly Asiento[];
   /** Desde #431, solo contestan quienes todavía no actuaron en la mano. Sin el campo, también quienes ya actuaron. */
   readonly respuestaSinFlor?: "antes-de-actuar";
+  /** Desde #455, «Con flor envido» y «Contraflor al resto» exigen un rival que tenga o todavía pueda tener flor. Sin el campo, se ofrecen siempre. */
+  readonly subidaFlor?: "con-rival-posible";
   readonly versionReparto: "online-1" | "online-2";
 }
 
@@ -85,6 +87,7 @@ export function esRepartoOnline(valor: unknown): valor is RepartoOnline {
     && (!("respondenSinFlor" in valor) || ("reglaFlor" in valor && valor.reglaFlor === "inmediata-v2"
       && sonAsientosDeMesa(valor.respondenSinFlor, valor.manos.length)))
     && (!("respuestaSinFlor" in valor) || ("respondenSinFlor" in valor && valor.respuestaSinFlor === "antes-de-actuar"))
+    && (!("subidaFlor" in valor) || ("reglaFlor" in valor && valor.reglaFlor === "inmediata-v2" && valor.subidaFlor === "con-rival-posible"))
     && "versionReparto" in valor && valor.versionReparto === (valor.manos.length === 6 ? "online-2" : "online-1");
 }
 

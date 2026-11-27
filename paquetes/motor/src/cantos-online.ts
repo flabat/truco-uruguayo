@@ -118,9 +118,20 @@ function subidasEnvido(estado: EstadoOnline, tipo: CantoLateral): CantoEnvido[] 
     ? ["envido", "real-envido", "falta-envido"] : ["real-envido", "falta-envido"];
 }
 
-function subidasFlor(tipo: CantoLateral = "flor"): CantoFlor[] {
+function subidasFlor(estado: EstadoOnline, asiento: Asiento, tipo: CantoLateral = "flor"): CantoFlor[] {
+  if (!rivalPuedeTenerFlor(estado, asiento)) return [];
   if (tipo === "flor") return ["con-flor-envido", "contraflor-al-resto"];
   return tipo === "con-flor-envido" ? ["contraflor-al-resto"] : [];
+}
+
+/**
+ * La flor se declara en la primera acción: un rival que ya actuó sin cantarla no la tiene.
+ * Sin rival con flor posible, subir no tiene a quién apostarle (#455).
+ */
+function rivalPuedeTenerFlor(estado: EstadoOnline, asiento: Asiento): boolean {
+  if (estado.mano.reparto.subidaFlor !== "con-rival-posible") return true;
+  return participantesDe(estado.mano).some(rival => equipoDelAsiento(rival) !== equipoDelAsiento(asiento)
+    && (estado.flores.includes(rival) || !estado.acciones.some(j => j.asiento === rival)));
 }
 
 /** Solo se inspeccionan las cartas del asiento que pide su lista de acciones. */
@@ -133,14 +144,14 @@ export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccio
     const regla = estado.mano.reparto.reglaFlor;
     if (regla === "inmediata-v2") {
       const oferta = estado.flores.length ? lado : null;
-      const opciones: TipoAccionOnline[] = ["flor", ...subidasFlor(oferta?.tipo)];
+      const opciones: TipoAccionOnline[] = ["flor", ...subidasFlor(estado, asiento, oferta?.tipo)];
       if (oferta && oferta.tipo !== "flor" && !oferta.querido && equipoDelAsiento(oferta.asiento) !== equipoDelAsiento(asiento)) {
         opciones.push("con-flor-quiero");
       }
       return opciones;
     }
     if (regla && lado && estado.flores.length && (lado.tipo === "flor" || equipoDelAsiento(lado.asiento) !== equipoDelAsiento(asiento))) {
-      return ["flor", ...subidasFlor(lado.tipo)];
+      return ["flor", ...subidasFlor(estado, asiento, lado.tipo)];
     }
     return ["flor"];
   }
@@ -148,7 +159,7 @@ export function legalesOnline(estado: EstadoOnline, asiento: Asiento): TipoAccio
 
   if (lado) {
     if (!estado.flores.length) return ["quiero", "no-quiero", ...subidasEnvido(estado, lado.tipo)];
-    return ["quiero", "no-quiero", ...subidasFlor(lado.tipo)];
+    return ["quiero", "no-quiero", ...subidasFlor(estado, asiento, lado.tipo)];
   }
 
   const oferta = estado.trucoPendiente;
