@@ -102,4 +102,3 @@ La hace la sesión coordinadora junto con el responsable, después de integrar 1
 - La caché de las claves de Apple y qué pasa si no se pueden bajar.
 - Cómo se cierran las sesiones de Keycloak: la API de administración del cliente de servicio `truco-api`, que ya lee los tokens de Apple.
 - Si Keycloak o la API mandan correos a cuentas de Apple. Si es así, documentar el paso de registrar el dominio remitente en el servicio de retransmisión de correo de Apple.
-
