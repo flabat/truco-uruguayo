@@ -38,7 +38,7 @@ node training/regularized/run.ts --format duel --run runs/regularized/contra --e
 
 ## Medir
 
-`evaluate.ts` aplica la puerta del campeonato sobre los mismos repartos: cruce directo contra el campeón y cambio por familia frente a lo que logra el campeón, con bootstrap por pares y Bonferroni.
+`evaluate.ts` aplica la puerta del campeonato sobre los mismos repartos: cruce directo contra el campeón y cambio por familia frente a lo que logra el campeón, con bootstrap por pares y Bonferroni. El informe trae dos veredictos (`verdict.ts`): el estricto del campeonato y uno relajado, que pide una diferencia media de al menos −2 puntos y una cota inferior de al menos −5 contra cada familia, y deja a los explotadores (`explotador…`) como dato. `node training/regularized/verdict.ts puerta.json` vuelve a juzgar informes ya escritos.
 
 ```sh
 node training/regularized/evaluate.ts --format duel --candidate net:runs/regularized/duelo/actor.json \
@@ -60,4 +60,4 @@ Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `a
 | `learner.py` | Clonación, PPO regularizado y crítico, en Metal. |
 | `run.ts` | Liga, canalización, instantáneas, reanudación y exportación. |
 | `export.ts`, `bundle.ts` | Artefacto servible desde una instantánea y entrada del campeonato oficial de duelo. |
-| `evaluate.ts`, `potential.ts`, `diagnose.ts`, `envido.ts` | Puerta espejo, tablas de potencial, desglose de tantos y respuestas al envido. |
+| `evaluate.ts`, `verdict.ts`, `potential.ts`, `diagnose.ts`, `envido.ts` | Puerta espejo, tablas de potencial, desglose de tantos y respuestas al envido. |

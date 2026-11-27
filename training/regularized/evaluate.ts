@@ -3,6 +3,7 @@ import { parseArgs } from "node:util";
 import { Pool } from "./pool.ts";
 import type { Mode } from "./env.ts";
 import type { PairResult } from "./worker.ts";
+import { judge, type GateReport } from "./verdict.ts";
 
 /**
  * Puerta espejo del campeonato, sobre los mismos repartos:
@@ -75,8 +76,11 @@ async function main() {
   }
   report.worstFamilyLower = worst;
   report.pass = (report.direct as { pass: boolean }).pass && worst > -0.02;
+  report.verdict = judge(report as unknown as GateReport);
   report.seconds = (Date.now() - started) / 1000;
-  console.log("puerta:", report.pass ? "aprobada" : "fallida", `(${report.seconds} s)`);
+  const verdict = report.verdict as ReturnType<typeof judge>;
+  console.log("puerta estricta:", verdict.strict ? "aprobada" : "fallida", "· relajada:", verdict.relaxed ? "aprobada" : "fallida",
+    `(${report.seconds} s)`);
   if (args.out) writeFileSync(args.out, JSON.stringify(report, null, 2));
   await pool.close();
 }
