@@ -1,4 +1,5 @@
-import type { Registro } from "../../api/turnos.ts";
+import { restaurar, type ManoPublicable, type Registro } from "../../api/turnos.ts";
+import type { CardId } from "@eltruco/motor/cartas.ts";
 
 // Mano 5 del reporte, hasta que Ana abre la segunda vuelta.
 export const dueloMazo: Registro = {
@@ -39,3 +40,39 @@ export const florAlMazo = {
     { tipo: "carta", asiento: 0, carta: "copas-02" }, { tipo: "mazo", asiento: 1 },
   ],
 } as const;
+
+// Secuencia pública del reporte #449, con cartas de ejemplo para las que quedaron tapadas.
+export const primeraParda: Registro = {
+  ...dueloMazo, puntos_inicio: [5, 11],
+  reparto: { versionReparto: "online-1", mano: 0, dador: 1, muestra: "copas-10", reglaFlor: "inmediata-v2",
+    manos: [["copas-03", "bastos-03", "espadas-04"], ["oros-03", "bastos-06", "oros-04"]] },
+  acciones: [
+    { tipo: "real-envido", asiento: 0 }, { tipo: "no-quiero", asiento: 1 },
+    { tipo: "carta", asiento: 0, carta: "copas-03" }, { tipo: "truco", asiento: 1 }, { tipo: "quiero", asiento: 0 },
+    { tipo: "carta", asiento: 1, carta: "oros-03" }, { tipo: "carta", asiento: 0, carta: "bastos-03" },
+  ],
+};
+
+// Mano 16 del reporte #460: muestra el 7 de oros, así que el 4 de oros es pieza.
+export const dueloVale: Registro = {
+  numero: 16, version: 1, version_reglas: 1, version_senas: null, puntos_inicio: [23, 24],
+  reparto: {
+    versionReparto: "online-1", reglaFlor: "inmediata-v2", dador: 0, mano: 1, muestra: "oros-07",
+    manos: [["bastos-07", "bastos-12", "oros-04"], ["bastos-01", "espadas-06", "espadas-01"]],
+  },
+  acciones: [
+    { tipo: "envido", asiento: 1 }, { tipo: "flor", asiento: 0 },
+    { tipo: "carta", asiento: 1, carta: "bastos-01" }, { tipo: "carta", asiento: 0, carta: "bastos-07" },
+    { tipo: "carta", asiento: 1, carta: "espadas-06" }, { tipo: "carta", asiento: 0, carta: "bastos-12" },
+    { tipo: "truco", asiento: 0 }, { tipo: "quiero", asiento: 1 },
+    { tipo: "carta", asiento: 0, carta: "oros-04" }, { tipo: "retruco", asiento: 1 },
+    { tipo: "vale-cuatro", asiento: 0 },
+  ],
+};
+
+/** La mano del #460 hasta sus primeras `n` acciones, con otras cartas de ejemplo si hacen falta. */
+export function hasta(n: number, manoA1?: readonly CardId[], manoA0?: readonly CardId[]): ManoPublicable {
+  const { manos } = dueloVale.reparto;
+  return restaurar({ ...dueloVale, acciones: dueloVale.acciones.slice(0, n),
+    reparto: { ...dueloVale.reparto, manos: [manoA0 ?? manos[0], manoA1 ?? manos[1]] } }, "duel");
+}
