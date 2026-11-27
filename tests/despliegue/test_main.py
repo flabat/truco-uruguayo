@@ -184,6 +184,22 @@ class ChecksTest(unittest.TestCase):
                 self.assertEqual(d.locally_verified(sha), expected)
                 self.assertIn(f"/commits/{sha}/statuses", get.call_args.args[0].full_url)
 
+    def test_respaldo_del_mantenedor_durante_caida_solo_acredita_el_squash_verificado(self):
+        squash, siguiente = "c" * 40, "d" * 40
+        publicados = {squash: [{"context": d.LOCAL_CHECK, "state": "success"}]}
+
+        def proveedor(ruta):
+            for sha in (squash, siguiente):
+                if ruta == f"commits/{sha}/statuses?per_page=100":
+                    return publicados.get(sha, [])
+            raise d.urllib.error.URLError("Actions no disponible")
+
+        with patch.object(d, "CONFIG", self.credential.with_name("sin-bypass")), \
+                patch.object(d, "github_api", side_effect=proveedor):
+            self.assertTrue(d.verified(squash))
+            with self.assertRaises(d.urllib.error.URLError):
+                d.verified(siguiente)
+
     def test_status_permission_error_falls_back_to_workflow(self):
         error = d.urllib.error.HTTPError("https://api.github.com", 403, "Forbidden", {}, io.BytesIO())
         with patch.object(d.urllib.request, "urlopen", side_effect=error), patch("builtins.print"):

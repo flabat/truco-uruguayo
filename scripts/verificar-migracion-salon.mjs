@@ -66,6 +66,22 @@ try {
   const visible = () => db.query("SELECT id FROM juego.mesas_en_juego WHERE id=$1", [mesa.id]).then(r => r.rowCount);
   const evento = (pos, dato, id = mesa.id) => db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
     VALUES ($1,1,$2,$2::integer+1,$3,'prueba')`, [id, pos, dato]);
+
+  // Las salas anteriores sin fecha siguen sin fecha hasta la primera jugada visible.
+  const privada = anteriores.find(a => a.jugador === jugador.id).id;
+  const actividad = async () => (await db.query("SELECT actividad_jugadores::text AS fecha FROM juego.mesas WHERE id=$1", [privada])).rows[0].fecha;
+  assert.equal(await actividad(), null);
+  await evento(0, { tipo: "reparto" }, privada);
+  assert.ok(await actividad());
+  await db.query("UPDATE juego.mesas SET actividad_jugadores=now()-interval '8 days' WHERE id=$1", [privada]);
+  const antes = await actividad();
+  await evento(1, { tipo: "decision", accion: { tipo: "paso-flor", asiento: 0 } }, privada);
+  await db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
+    VALUES ($1,1,NULL,3,'{"tipo":"indicacion"}','prueba')`, [privada]);
+  assert.equal(await actividad(), antes);
+  await evento(3, { tipo: "decision", accion: { tipo: "truco", asiento: 0 } }, privada);
+  assert.notEqual(await actividad(), antes);
+
   assert.equal(await visible(), 0);
   await evento(0, { tipo: "reparto" });
   assert.equal(await visible(), 1);

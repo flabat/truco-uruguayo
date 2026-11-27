@@ -65,7 +65,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
     return { asiento, bot, espera: (esperan: Asiento[]) => esperaDelPie(mano, esperan, accion) !== undefined,
       actorActual: (esperan: Asiento[]) => asientoBotPie(mano.estado, esperan),
-      aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarJugadaPieDB(db, fila, mano, accion, humanos, bot) };
+      aplicar: (db: PoolClient, actual: Snapshot) => confirmarJugadaPieDB(db, fila, mano, accion, actual.esperan, bot) };
   }
   if (fila.modo === "3v3") {
     if (fila.politica !== politicaTercetos) throw new Error("Política de tercetos desconocida.");
@@ -80,7 +80,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     return {
       asiento, bot,
       actorActual: (esperan: Asiento[]) => asientoBotTercetos(estado, esperan),
-      aplicar: (db: PoolClient, humanos: Asiento[]) => confirmarTurnoTercetosDB(db, fila, estado, accion, humanos, bot),
+      aplicar: (db: PoolClient, actual: Snapshot) => confirmarTurnoTercetosDB(db, fila, estado, accion, actual.humanos, bot),
     };
   }
   const formato = formatoMesa(fila.modo, fila.version_senas);
@@ -101,7 +101,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
   return {
     asiento, bot,
     actorActual: (esperan: Asiento[]) => actor(mano, esperan),
-    async aplicar(db: PoolClient, humanos: Asiento[]) {
+    async aplicar(db: PoolClient, { humanos }: Snapshot) {
       const nueva = prepararTurno(confirmarAutomatica(mano, formato, asiento, decision.action, humanos), humanos);
       await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
         [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
@@ -112,7 +112,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
 }
 
 async function aplicarInferencia(db: PoolClient, fila: Fila, turno: NonNullable<Awaited<ReturnType<typeof decidirTurno>>>) {
-  await turno.aplicar(db, fila.humanos);
+  await turno.aplicar(db, fila);
   await db.query(`INSERT INTO juego.inferencias (mesa,mano,version_anterior,asiento,solicitada,aplicada,fallback,latencia_ms)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [fila.mesa,fila.numero,fila.version,turno.asiento,turno.bot.solicitada,
       turno.bot.aplicada,turno.bot.fallback ?? null,turno.bot.latenciaMs]);

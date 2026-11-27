@@ -139,18 +139,22 @@ La publicación de producción abre el salón a todas las cuentas autenticadas y
 
 ## Publicación automática desde main
 
-El VPS consulta el repositorio privado cada tres minutos y publica el último commit de `main` cuando está verificado. Acepta cualquiera de estas señales para ese commit exacto:
+El VPS consulta el repositorio privado cada tres minutos. Para el último commit de `main`, #399 reconoce la corrida exitosa de **Verificar el sitio** (`check.yml`) por el evento `push` a `main`. Después de un squash, abrí la corrida de ese push y comprobá que el SHA coincide con el commit integrado. La corrida de `pull_request` corresponde a un commit de integración previo. La decisión de aprobación del PR se documenta por separado. [Verificación remota del PR](../CONTRIBUTING.md#verificación-remota-del-pr)
 
-- el estado de commit `verificado-local` en `success`, que publica quien corrió `CHECK_STACK=1 npm run check`;
-- una corrida exitosa del workflow **Verificar el sitio** (`check.yml`) por el evento `push`, cuando haya runner;
-- `DESPLIEGUE_SIN_VERIFICAR=1` en `/etc/truco-oriental/production.env`, que publica `main` sin esperar. Mientras el VPS sea un entorno de desarrollo sin jugadores externos, dejala activa. Quitala o ponela en `0` cuando vuelva a haber un check obligatorio.
-
-Con un squash merge, el commit de `main` es nuevo. Para marcarlo después de verificarlo, desde un checkout de ese commit:
+Durante una caída de GitHub Actions, el mantenedor puede publicar el estado `verificado-local` en `success` después de cumplir el [respaldo completo](verificacion-linux.md#caída-de-github-actions) sobre el SHA exacto del squash. Reservá ese estado para la revisión que se comprobó localmente. Desde el checkout limpio de esa revisión, registrá en el PR los comandos y sus resultados y comprobá de nuevo la punta de `main` antes de publicar el estado.
 
 ```sh
-gh api repos/flabat/truco-uruguayo/statuses/$(git rev-parse HEAD) \
-  -f state=success -f context=verificado-local -f description="CHECK_STACK=1 npm run check"
+(
+  set -eu
+  sha=$(git rev-parse HEAD)
+  test -z "$(git status --porcelain)"
+  test "$sha" = "$(gh api repos/flabat/truco-uruguayo/git/ref/heads/main --jq .object.sha)"
+  gh api "repos/flabat/truco-uruguayo/statuses/$sha" \
+    -f state=success -f context=verificado-local -f description="Pila y restauración verificadas localmente"
+)
 ```
+
+El ejecutor también admite `DESPLIEGUE_SIN_VERIFICAR=1` como excepción operativa del servidor de desarrollo. La adopción del runner de GitHub y los ensayos del verificador se hacen en el repositorio, con las credenciales, la configuración del VPS y la decisión sobre esa excepción bajo control del operador.
 
 El VPS construye las imágenes con el SHA. Los secretos de producción permanecen en `/etc/truco-oriental/production.env`. El servicio usa un token de acceso personal de granularidad fina limitado a `flabat/truco-uruguayo`, con **Contents**, **Actions** y **Commit statuses** en **Read-only**. Git usa el primero para consultar y descargar `main`. La API usa los otros dos para comprobar la verificación. Sin **Commit statuses**, el registro muestra `HTTP 403` al leer el estado y sólo cuenta el workflow o la variable.
 
@@ -230,9 +234,16 @@ npm run vps                      # el árbol actual
 npm run vps -- codex/issue-381   # una rama: origin/<rama> recién traída o, si no existe, la local
 npm run vps -- web               # sólo la imagen web del árbol actual
 npm run vps -- web codex/issue-381
+npm run vps -- --reiniciar-datos # borra los datos del juego en el VPS
 ```
 
 Las imágenes llevan la etiqueta del commit, o `<commit>-sucio` si el árbol tiene cambios sin commit, y se publican con `TRUCO_RELEASE` igual a esa etiqueta. Con `web` sólo se reconstruye y reemplaza la web: la API, la identidad y las copias conservan su imagen, que recibe también la etiqueta nueva, y no se reinician. El comando usa el mismo candado que `truco-deploy.service`, así que espera a que termine una publicación automática en curso. Si `copias-pausadas` existe, arranca sin el servicio de copias, como el temporizador; si no, guarda una copia antes de reemplazar la API.
+
+La construcción también graba la rama, la fecha y, si el commit tiene una etiqueta exacta y el árbol está limpio, esa etiqueta. Con ellas, `GET /api/version` y el pie de la web y de la app muestran qué corre: por ejemplo `codex/issue-381 · 01234567-sucio`.
+
+### Reiniciar los datos
+
+`npm run vps -- --reiniciar-datos` deja el juego como recién instalado y no publica nada. Pide escribir el host para confirmar. Sobre la versión que esté corriendo, manual o automática, toma el mismo candado que una publicación, guarda una copia (salvo con `copias-pausadas`), para la API y borra el esquema `juego` y `schema_migrations`. Al volver a arrancar, la API aplica todas las migraciones. Se pierden jugadores, mesas, partidas, replays y sesiones. Las cuentas de Keycloak (esquema `identidad`) se conservan, y cada persona vuelve a quedar registrada como jugador cuando ingresa. No se cargan datos de prueba: el realm de producción no tiene los usuarios de `mesa-local`, así que no podrían ingresar.
 
 ### Preparación
 
@@ -264,4 +275,4 @@ Si `main` ya estaba publicado antes de la versión manual, `current` sigue apunt
 
 ### Ensayo local
 
-`bash scripts/vps-ensayo.sh` prueba el comando sin el VPS. Levanta un contenedor con sshd que usa el Docker local como si fuera el del servidor, publica el árbol completo con las copias pausadas y después sólo la web. Comprueba las etiquetas de las imágenes, que la API no se reinicie al publicar la web, la marca para el temporizador y la respuesta HTTPS de Caddy. Al terminar borra el proyecto, los volúmenes y las imágenes del ensayo. Las rutas del servidor se pueden cambiar con `TRUCO_VPS_RAIZ`, `TRUCO_VPS_ESTADO`, `TRUCO_VPS_ENV` y `TRUCO_VPS_PROYECTO`; en el VPS real no hace falta.
+`bash scripts/vps-ensayo.sh` prueba el comando sin el VPS. Levanta un contenedor con sshd que usa el Docker local como si fuera el del servidor, publica el árbol completo con las copias pausadas y después sólo la web. Comprueba las etiquetas de las imágenes, que la API no se reinicie al publicar la web, la marca para el temporizador, la respuesta HTTPS de Caddy y la rama y el commit de `GET /api/version`. Al final reinicia los datos: sin el host exacto no borra nada, y con él deja la base vacía, con todas las migraciones y el esquema de identidad. Al terminar borra el proyecto, los volúmenes y las imágenes del ensayo. Las rutas del servidor se pueden cambiar con `TRUCO_VPS_RAIZ`, `TRUCO_VPS_ESTADO`, `TRUCO_VPS_ENV` y `TRUCO_VPS_PROYECTO`; en el VPS real no hace falta.

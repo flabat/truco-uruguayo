@@ -28,6 +28,13 @@ class ArgumentsTest(unittest.TestCase):
         with patch("sys.stderr"), self.assertRaises(SystemExit):
             v.parse(["una", "otra"])
 
+    def test_reset_runs_alone(self):
+        self.assertTrue(v.parse(["--reiniciar-datos"]).reiniciar)
+        self.assertFalse(v.parse([]).reiniciar)
+        for argv in (["--reiniciar-datos", "."], ["--reiniciar-datos", "web"], ["rama", "--reiniciar-datos"]):
+            with self.subTest(argv=argv), patch("sys.stderr"), self.assertRaises(SystemExit):
+                v.parse(argv)
+
     def test_release_tag(self):
         self.assertEqual(v.release_tag("a" * 40, False), "a" * 40)
         self.assertEqual(v.release_tag("a" * 40, True), "a" * 40 + "-sucio")
@@ -151,12 +158,56 @@ class RemoteTest(unittest.TestCase):
         self.assertEqual(args[-2:], ("build", "web"))
         self.assertEqual((env["TRUCO_RELEASE"], env["DOCKER_DEFAULT_PLATFORM"]), (self.sha + "-sucio", "linux/amd64"))
 
+    def test_build_passes_version_for_the_footer(self):
+        plan = v.Plan(ref="rama", sha=self.sha, release=self.sha, rama="rama", fecha="2026-11-26T12:00:00Z", etiqueta="")
+        with patch.object(v, "run") as run:
+            v.compose_build("/arbol", plan, "linux/amd64")
+        env = run.call_args.kwargs["env"]
+        self.assertEqual((env["TRUCO_RAMA"], env["TRUCO_FECHA"], env["TRUCO_ETIQUETA"]), ("rama", "2026-11-26T12:00:00Z", ""))
+
+    def test_build_date_matches_the_api_format(self):
+        from datetime import datetime, timezone
+        self.assertEqual(v.build_date(datetime(2026, 11, 26, 9, 5, 3, 123, tzinfo=timezone.utc)), "2026-11-26T09:05:03Z")
+
     def test_pipe_reports_failures(self):
         v.pipe(["printf", "hola"], ["sh", "-c", "cat >/dev/null"])
         with self.assertRaises(subprocess.CalledProcessError):
             v.pipe(["false"], ["cat"])
         with self.assertRaises(subprocess.CalledProcessError):
             v.pipe(["printf", "hola"], ["false"])
+
+
+class ResetTest(unittest.TestCase):
+    def test_script_backs_up_drops_game_data_and_waits_for_the_api(self):
+        text = v.reset_script(v.Remote())
+        subprocess.run(["sh", "-n"], input=text, text=True, check=True)
+        self.assertIn("exec 9>/var/lib/truco-deploy/lock\nflock -w 900 9", text)
+        self.assertIn("label=com.docker.compose.project=truco-produccion", text)
+        order = [text.index(step) for step in ("dc run --rm --no-deps -T backup guardar", "dc stop api",
+                                               "DROP SCHEMA IF EXISTS juego CASCADE", "dc start api", "esperar api\n")]
+        self.assertEqual(order, sorted(order))
+        self.assertNotIn("identidad", v.BORRAR_DATOS)
+        # Con las copias pausadas, Compose necesita los valores de backup antes del primer dc.
+        self.assertLess(text.index("export RESTIC_REPOSITORY=/dev/null"), text.index("dc stop api"))
+
+    def test_confirmation_needs_the_exact_host(self):
+        for answer in ("", "otro", "root@vps"):
+            with self.subTest(answer=answer), patch("builtins.print"), patch.object(v, "run") as run, \
+                    self.assertRaises(SystemExit):
+                v.reset("root@vps.example", {}, ask=lambda _: answer)
+            run.assert_not_called()
+
+        def eof(_):
+            raise EOFError
+        with patch("builtins.print"), patch.object(v, "run") as run, self.assertRaises(SystemExit):
+            v.reset("root@vps.example", {}, ask=eof)
+        run.assert_not_called()
+
+    def test_confirmed_reset_sends_the_script(self):
+        with patch("builtins.print"), patch.object(v, "run") as run:
+            v.reset("root@vps.example", {}, ask=lambda _: " root@vps.example\n")
+        self.assertEqual(run.call_args.args, ("ssh", "-o", "BatchMode=yes", "root@vps.example", "sh -s"))
+        self.assertEqual(run.call_args.kwargs["input"], v.reset_script(v.Remote()))
 
 
 if __name__ == "__main__":

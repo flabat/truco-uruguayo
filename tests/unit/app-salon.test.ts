@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
 import { versionSenasPie } from "@eltruco/motor/senas-pie.ts";
-import { participantesMesa } from "@eltruco/cliente/salon.ts";
-import type { Guardado } from "../../app/src/ingreso/almacen.ts";
+import { participantesMesa, type MesaRetomable } from "@eltruco/cliente/salon.ts";
 import { cuerpoDeMesaNueva, modalidadesOfrecidas, textoDeMeta } from "../../app/src/salon/mesa-nueva.ts";
 import { destinoDeEnlace, destinoPendiente, enlaceParaCompartir, rutaDe, tokenDeInvitacion } from "../../app/src/salon/enlaces.ts";
 import { faltanParaRepartir, papelDelAsiento } from "../../app/src/salon/asientos.ts";
-import { crearMemoriaDeMesa } from "../../app/src/salon/memoria.ts";
+import { agruparMisMesas, estadoDeMiMesa } from "../../app/src/salon/mis-mesas.ts";
 import { crearConsulta, type Lectura, type VistaConsulta } from "../../app/src/salon/consulta.ts";
 import { compartirInvitacion } from "../../app/src/salon/compartir.ts";
 
@@ -104,39 +103,41 @@ test("la sala dice cuántos faltan y qué papel tiene cada asiento", () => {
   assert.equal(papelDelAsiento({ modo: "2v2", miAsiento: 0 }, asiento(3)), "Equipo 2");
 });
 
-function guardadoEnMemoria(): Guardado & { datos: Map<string, string> } {
-  const datos = new Map<string, string>();
-  return {
-    datos,
-    leer: async clave => datos.get(clave) ?? null,
-    guardar: async (clave, valor) => { datos.set(clave, valor); },
-    borrar: async clave => { datos.delete(clave); },
-  };
-}
-
-test("la última mesa se recuerda por jugador y se olvida solo si coincide", async () => {
-  const guardado = guardadoEnMemoria();
-  const memoria = crearMemoriaDeMesa(guardado);
-  assert.equal(await memoria.leer("j1"), null);
-  await memoria.recordar("j1", uuid);
-  assert.equal(guardado.datos.get("truco.ultima-mesa.j1"), uuid);
-  assert.equal(await memoria.leer("j2"), null);
-  await memoria.olvidar("j1", "otra");
-  assert.equal(await memoria.leer("j1"), uuid);
-  await memoria.olvidar("j1", uuid);
-  assert.equal(await memoria.leer("j1"), null);
+const ahora = Date.parse("2026-11-20T12:00:00Z");
+const mesaPropia = (id: string, ultimaActividad: string | null, teToca = false): MesaRetomable => ({
+  id, ultimaActividad, teToca, modo: "1v1", participantes: [], mano: null, puntos: null, meta: 40,
 });
 
-test("la memoria de la mesa no rompe si el almacenamiento falla", async () => {
-  const roto: Guardado = {
-    leer: async () => { throw new Error(); },
-    guardar: async () => { throw new Error(); },
-    borrar: async () => { throw new Error(); },
-  };
-  const memoria = crearMemoriaDeMesa(roto);
-  assert.equal(await memoria.leer("j1"), null);
-  await memoria.recordar("j1", uuid);
-  await memoria.olvidar("j1", uuid);
+test("antes del reparto distingue un asiento libre de una mesa lista para jugar", () => {
+  const cupos = [["1v1", 2], ["2v2", 4], ["3v3", 6]] as const;
+  for (const [modo, cantidad] of cupos) {
+    const participantes = Array.from({ length: cantidad - 1 }, (_, i) => "Jugador " + (i + 2));
+    const mesa = { ...mesaPropia("mesa", null), participantes, modo };
+    assert.equal(estadoDeMiMesa({ ...mesa, participantes: participantes.slice(1) }), "Esperando jugadores");
+    assert.equal(estadoDeMiMesa(mesa), "Lista para jugar");
+    assert.equal(estadoDeMiMesa({ ...mesa, mano: 3 }), "Mano 3");
+  }
+});
+
+test("sin mesas no ofrece volver y una sola siempre queda a la vista, aunque sea antigua o sin fecha", () => {
+  assert.deepEqual(agruparMisMesas([], ahora), { visibles: [], anteriores: [] });
+  for (const fecha of [null, "2024-11-20T12:00:00Z"]) {
+    const unica = mesaPropia("unica", fecha);
+    assert.deepEqual(agruparMisMesas([unica], ahora), { visibles: [unica], anteriores: [] });
+  }
+});
+
+test("entre varias mesas prioriza el turno en las recientes y pliega desde siete días exactos", () => {
+  const espera = mesaPropia("espera", "2026-11-20T11:59:00Z");
+  const primera = mesaPropia("primera", "2026-11-19T12:00:00Z", true);
+  const segunda = mesaPropia("segunda", "2026-11-18T12:00:00Z", true);
+  const reciente = mesaPropia("reciente", "2026-11-13T12:00:00.001Z");
+  const anterior = mesaPropia("anterior", "2026-11-13T12:00:00Z", true);
+  const sinFecha = mesaPropia("legada", null);
+  assert.deepEqual(agruparMisMesas([espera, primera, segunda, reciente, anterior, sinFecha], ahora), {
+    visibles: [primera, segunda, espera, reciente], anteriores: [anterior, sinFecha],
+  });
+  assert.deepEqual(agruparMisMesas([anterior, sinFecha], ahora), { visibles: [], anteriores: [anterior, sinFecha] });
 });
 
 function consultaDePrueba(respuestas: Array<Lectura<number> | Error>) {

@@ -1,4 +1,4 @@
-// Une la lógica del salón y la sala con React Native: memoria de la última mesa, avisos de AppState,
+// Une la lógica del salón y la sala con React Native: avisos de AppState,
 // la hoja de compartir del sistema y el destino de un enlace mientras se ingresa en la web.
 import type { AvisosDeRed } from "@eltruco/cliente/use-mesa.ts";
 import { AppState, Share } from "react-native";
@@ -6,7 +6,6 @@ import type { Guardado } from "../ingreso/almacen.ts";
 import { esWeb, guardadoSeguro } from "../ingreso/plataforma.ts";
 import { crearAvisosDeRed } from "./avisos-red.ts";
 import { crearContador } from "./eventos.ts";
-import { crearMemoriaDeMesa } from "./memoria.ts";
 
 const almacenamiento = (cual: "localStorage" | "sessionStorage"): Storage | null => {
   try {
@@ -23,9 +22,8 @@ const guardadoLocal: Guardado = {
   borrar: async clave => almacenamiento("localStorage")?.removeItem(clave),
 };
 
-/** Lo que se guarda en el dispositivo y no es secreto: la última mesa y el aviso de la comunidad. */
+/** Lo que se guarda en el dispositivo y no es secreto: el aviso de la comunidad. */
 export const guardadoDelDispositivo: Guardado = esWeb ? guardadoLocal : guardadoSeguro;
-export const memoriaDeMesa = crearMemoriaDeMesa(guardadoDelDispositivo);
 
 /** Vuelve a leer la mesa al volver la app a primer plano o, en la web, la red. Estable, como pide useMesa. */
 export const avisosDeApp: AvisosDeRed = crearAvisosDeRed({
