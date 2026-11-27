@@ -108,4 +108,25 @@ for service in api identidad; do
 done
 [[ $(cat "$tmp/estado/manual") == "$main $web_release" ]]
 portada
-echo "Ensayo de npm run vps: correcto ($release, web $web_release)"
+
+# GET /api/version publica el commit y la rama con que se construyó la API.
+https=$(dc port web 443 | sed 's/.*://')
+version=$(curl -fsk --resolve "mesa.internal:$https:127.0.0.1" "https://mesa.internal:$https/api/version")
+rama=$(git branch --show-current)
+python3 -c 'import json, sys; v = json.loads(sys.argv[1]); assert v["commit"] == sys.argv[2] and v["rama"] == sys.argv[3] and v["fecha"], v' \
+  "$version" "$sha" "$rama"
+
+# --reiniciar-datos: sin el host exacto no borra; con él deja la base migrada y vacía.
+sql() { dc exec -T db psql -U postgres -d truco -tAc "$1"; }
+sql "INSERT INTO juego.jugadores (emisor, sujeto, nombre) VALUES ('ensayo', 'ensayo', 'Ensayo')" >/dev/null
+migraciones=$(sql "SELECT count(*) FROM schema_migrations")
+if echo "otro" | python3 -B scripts/vps.py --reiniciar-datos >/dev/null 2>&1; then
+  echo "--reiniciar-datos no pidió el host" >&2; exit 1
+fi
+[[ $(sql "SELECT count(*) FROM juego.jugadores") == 1 ]] || { echo "Se borró sin confirmar" >&2; exit 1; }
+echo "$TRUCO_VPS" | python3 -B scripts/vps.py --reiniciar-datos
+[[ $(sql "SELECT count(*) FROM juego.jugadores") == 0 ]] || { echo "Quedaron jugadores" >&2; exit 1; }
+[[ $(sql "SELECT count(*) FROM schema_migrations") == "$migraciones" ]] || { echo "Faltan migraciones" >&2; exit 1; }
+[[ $(sql "SELECT count(*) FROM information_schema.schemata WHERE schema_name='identidad'") == 1 ]]
+portada
+echo "Ensayo de npm run vps: correcto ($release, web $web_release, datos reiniciados)"
