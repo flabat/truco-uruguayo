@@ -66,3 +66,4 @@ De terceros:
 - La baraja Tatú parte de [Cartas Tatú 50, de GlyphEnjoyer](https://commons.wikimedia.org/wiki/File:Cartas_Tat%C3%BA_50.png), digitalización publicada como CC0 1.0.
 - DM Sans y DM Serif Text se distribuyen con la SIL Open Font License 1.1 ([public/licenses/](public/licenses/)).
 - Las voces se generaron con ElevenLabs. Los efectos de sonido se sintetizan en `scripts/voces/efectos.ts`, sin muestras de terceros.
+- El logo de Sign in with Apple es de Apple y se usa con su licencia para desarrolladores. No está en el repositorio: la imagen de Keycloak lo baja de Apple Design Resources al construirse (`infra/keycloak/Dockerfile`). La AGPL no lo cubre, tampoco en las capturas que lo muestran.
