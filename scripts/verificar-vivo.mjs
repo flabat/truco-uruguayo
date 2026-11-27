@@ -80,8 +80,11 @@ async function rechaza(id, cookie, desde, esperado) {
 
 /** Las esperas son de cada lectura: el recibo de un comando no las guarda. */
 const sinEsperas = ({ esperas: _, ...partida }) => partida;
-/** La huella de una vista: las esperas cuentan por asiento, porque su hora empieza de nuevo al reiniciar la API. */
-const huella = p => hash(JSON.stringify({ ...p, esperas: p.esperas?.map(e => e.asiento) }));
+/**
+ * La huella de lo que la mesa guardó. Las esperas quedan fuera: dependen de quién estaba conectado
+ * en el momento de leer, y su hora empieza de nuevo al reiniciar la API.
+ */
+const huella = ({ esperas: _, ...p }) => hash(JSON.stringify(p));
 
 async function vistas(sesiones, ruta) {
   const todas = await Promise.all(sesiones.map(s => http(s, ruta)));

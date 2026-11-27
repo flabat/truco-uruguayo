@@ -11,8 +11,11 @@ const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 const base = "http://127.0.0.1:" + (process.env.PORT || 3001);
 const origin = new URL(process.env.WEB_ORIGIN).origin;
 const hash = valor => createHash("sha256").update(valor).digest("hex");
-/** La huella de una vista: las esperas cuentan por asiento, porque su hora empieza de nuevo al reiniciar la API. */
-const huella = p => hash(JSON.stringify({ ...p, esperas: p.esperas?.map(e => e.asiento) }));
+/**
+ * La huella de lo que la mesa guardó. Las esperas quedan fuera: dependen de quién estaba conectado
+ * en el momento de leer, y su hora empieza de nuevo al reiniciar la API.
+ */
+const huella = ({ esperas: _, ...p }) => hash(JSON.stringify(p));
 /** Una vista sin lo que falta de cada espera, que baja entre una lectura y la siguiente. */
 const sinRestante = p => ({ ...p, esperas: p.esperas?.map(({ restanteMs: _, ...e }) => e) });
 const comando = (version, tipo) => ({ id: randomUUID(), version, ...(tipo && {accion: {tipo}}) });
