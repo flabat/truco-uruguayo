@@ -196,6 +196,8 @@ test("sin el cliente de servicio, un aviso que cambia la cuenta responde 503 par
   await using endpoint = await servirEndpoint({ APPLE_CLIENT_ID: "co.eltru.ingreso" }, null);
   assert.equal((await endpoint.enviar({ payload: firmar(actual()) })).status, 503);
   assert.equal((await endpoint.enviar({ payload: firmar(conEvento({ type: "account-delete" })) })).status, 503);
+  // La documentación actual de Apple lo llama account-deleted; el diseño de #466, account-delete.
+  assert.equal((await endpoint.enviar({ payload: firmar(conEvento({ type: "account-deleted" })) })).status, 503);
   assert.equal((await endpoint.enviar({ payload: firmar(conEvento({ type: "email-enabled" })) })).status, 200);
   assert.deepEqual(endpoint.resultados, ["sin-cambios"]);
 });

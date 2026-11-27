@@ -149,12 +149,12 @@ try {
   await notificar(borradoB, 200, "sin-jugador");
   assert.deepEqual(await vinculos(kB.id), ["google"]);
 
-  // account-delete con contraseña: lo mismo, y también cierra la sesión de Keycloak.
+  // account-deleted (el nombre de la documentación actual de Apple) con contraseña: lo mismo, y cierra la sesión de Keycloak.
   const kC = await usuario({ clave: true });
   const c = await jugador("Clara aviso", kC.id);
   await ingresar(c);
   await abrirSesionKeycloak(kC);
-  await notificar(aviso("account-delete", kC.sub), 200, "apple-desvinculado");
+  await notificar(aviso("account-deleted", kC.sub), 200, "apple-desvinculado");
   assert.deepEqual(await vinculos(kC.id), []);
   assert.equal(await sesionesKeycloak(kC.id), 0);
   assert.deepEqual(await estado(c), cerrado);

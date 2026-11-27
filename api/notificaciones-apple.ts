@@ -185,7 +185,9 @@ export function crearNotificacionesApple(pool: Pool, env: NodeJS.ProcessEnv, {
   }
 
   /** `null` si hace falta Keycloak y no está configurado. */
-  async function aplicar({ tipo, sub, momento }: EventoApple): Promise<ResultadoAviso | null> {
+  async function aplicar({ tipo: recibido, sub, momento }: EventoApple): Promise<ResultadoAviso | null> {
+    // La documentación actual de Apple llama account-deleted a lo que antes era account-delete.
+    const tipo = recibido === "account-deleted" ? "account-delete" : recibido;
     // email-disabled y email-enabled: el correo de retransmisión de Apple lo maneja Keycloak.
     if (tipo !== "consent-revoked" && tipo !== "account-delete") return "sin-cambios";
     if (!cuentas) return null;
