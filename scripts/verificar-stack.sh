@@ -89,6 +89,7 @@ node scripts/verificar-ingreso-dev.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
 COMPOSE_PROJECT_NAME="$project" npm run auth:api
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-notificaciones-apple.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
