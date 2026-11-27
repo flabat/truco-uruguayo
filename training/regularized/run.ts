@@ -232,6 +232,8 @@ async function main() {
       await python.send({ cmd: "save", path: checkpoint });
       writeFileSync(join(run, "state.json"), JSON.stringify(state));
       writeFileSync(join(run, "ema.json"), JSON.stringify(ema));
+      // Las marcas se pueden recalcular con más pares durante la corrida (targets.ts).
+      if (existsSync(targetsPath)) targets = JSON.parse(readFileSync(targetsPath, "utf8"));
       log({ event: "boost", ...Object.fromEntries(fixed.map(([spec]) => [spec, Number(boost(spec).toFixed(2))])) });
     }
     if (state.iteration % Number(args["eval-every"]) === 0) {
