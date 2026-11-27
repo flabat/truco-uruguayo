@@ -12,10 +12,13 @@ import { sha } from "../league/development.ts";
  *
  *   node training/regularized/bundle.ts --candidate runs/regularized/duelo/actor.json \
  *     --independent runs/regularized/champions/finalista-duel.json --out runs/regularized/campeonato-duelo --matches 1024
+ *
+ * `--independent-lineage` nombra el linaje del independiente si no es el finalista de la liga de noviembre.
  */
 const { values: args } = parseArgs({ options: {
   candidate: { type: "string" }, independent: { type: "string" }, out: { type: "string" },
   matches: { type: "string", default: "1024" }, seed: { type: "string", default: "461027" },
+  "independent-lineage": { type: "string", default: "league-130-finalist" },
 } });
 const out = resolve(args.out!);
 mkdirSync(out, { recursive: true });
@@ -36,7 +39,7 @@ const pins = Object.fromEntries([["candidate", candidateFile], ["independent", i
 const bundle = {
   schema: "league-championship-input-v1", format: "duel", registryPins: pins,
   candidate: entry("candidate", candidateFile, "regularized-461", 461001),
-  independent: entry("independent", independentFile, "league-130-finalist", 461002),
+  independent: entry("independent", independentFile, args["independent-lineage"]!, 461002),
   counter: { ...entry("counter", counterFile, "counter-461", seed), family: receipt.chosenFamily,
     trainedAgainstSha256: sha(candidateFile), trainingReceipt: "counter-training/training-receipt.json",
     trainingReceiptSha256: sha(receiptFile) },

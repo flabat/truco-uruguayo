@@ -59,4 +59,5 @@ Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `a
 | `worker.ts`, `pool.ts` | Hilos que juegan y evalúan; proceso de Python. |
 | `learner.py` | Clonación, PPO regularizado y crítico, en Metal. |
 | `run.ts` | Liga, canalización, instantáneas, reanudación y exportación. |
+| `export.ts`, `bundle.ts` | Artefacto servible desde una instantánea y entrada del campeonato oficial de duelo. |
 | `evaluate.ts`, `potential.ts`, `diagnose.ts`, `envido.ts` | Puerta espejo, tablas de potencial, desglose de tantos y respuestas al envido. |

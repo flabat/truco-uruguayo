@@ -85,6 +85,16 @@ Horas en UTC.
 | 14:31–14:40 | Puerta final de duelo con 2048 pares y otra semilla: no pasa. |
 | 14:41 | Duelo C se separa de Duelo B con el triple de entropía, más autojuego, el explotador final y el contrajugador oficial en la liga. Cada 40 minutos un explotador nuevo entrena contra su última instantánea y se suma a la liga. |
 
+| 16:22 | Parejas A termina en la iteración 2954. Explotador de una hora contra el candidato al pie y otro igual contra `pie-parejas-v2`. |
+| 16:34 | Parejas independiente termina en la iteración 997. Selección al pie. |
+| 16:40 | Parejas B se separa de Parejas A con más entropía y autojuego; los explotadores entran a su liga. Parejas independiente queda afuera para seguir siendo independiente. |
+| 16:45 | Diagnóstico del agujero de duelo: el real envido. |
+| 16:52 | Tercetos independiente termina en la iteración 1185. Explotadores de tercetos. |
+| 17:24–17:38 | Puerta final al pie. |
+| 17:54–18:13 | Puerta final de tercetos. |
+| 18:14 | Tercetos B se separa de Tercetos A con la misma receta. |
+| 18:25 | Duelo independiente desde cero, para la puerta final de Duelo C, porque el finalista ya estaba en la liga. |
+
 <!-- PROCESO-RESTO -->
 
 ## Resultados
@@ -128,7 +138,7 @@ La puerta compara al candidato con el campeón sobre los mismos repartos. Para p
 | Explotador PPO de una hora | 12,5 % | 73,8 % | −61,3 [−63,5; −58,9] | ✗ |
 | Explotadores 1 a 4 de la jornada | 55 a 80 % | 29 a 43 % | +20,7 a +50,9 | ✓ |
 
-El candidato le gana a Ceibo con claridad y lo supera contra once de las catorce familias. Falla por poco contra V1 y contra el contrajugador oficial, y falla de lleno contra el explotador PPO.
+El candidato le gana a Ceibo con claridad y lo supera contra once de las catorce familias. Falla por poco contra V1 y contra el contrajugador oficial, y falla de lleno contra el explotador PPO. El finalista no cuenta como familia independiente: entró a la liga de Duelo B a las 08:40 con peso 0,06, y también es el independiente del campeonato oficial. Por eso Duelo C se mide además contra un linaje de duelo entrenado desde cero.
 
 **Explotabilidad.** Un explotador parte de los mismos pesos que su blanco, sin ancla, y juega solo contra él. La tabla muestra su tasa de victorias en entrenamiento a la misma altura:
 
@@ -164,9 +174,53 @@ El modelo le saca a V1 más que Ceibo en el truco y menos en el envido. Contra C
 
 <!-- RESULTADOS-DUELO-C -->
 
-<!-- RESULTADOS-PIE -->
+### Parejas con señas al pie
 
-<!-- RESULTADOS-TERCETOS -->
+**Selección.** Parejas A en la iteración 1822 y al final de la extensión, en la 2954, con 512 pares y la semilla 461200. La 2954 superó a la 1822 contra todas las familias: 75,4 % contra 70,1 % frente a `pie-parejas-v2`.
+
+**Puerta final.** 2048 pares con la semilla 461300; tardó 13 minutos y medio. La familia independiente es Parejas independiente, el linaje desde cero que la liga de Parejas A nunca vio. El explotador entrenó una hora contra el candidato.
+
+| Familia | Candidato | `pie-parejas-v2` | Diferencia [IC 95 %] | |
+| --- | ---: | ---: | --- | --- |
+| Cruce directo contra `pie-parejas-v2` | 77,3 % | | [75,8; 78,8] | ✓ |
+| Clásico al pie | 70,8 % | 65,5 % | +5,2 [+3,4; +7,2] | ✓ |
+| Aceptador | 75,0 % | 78,2 % | −3,2 [−5,1; −1,4] | ✗ |
+| El que no quiere | 91,9 % | 76,9 % | +15,0 [+13,3; +16,5] | ✓ |
+| Farolero frecuente | 69,9 % | 57,3 % | +12,6 [+10,5; +14,7] | ✓ |
+| Farolero ocasional | 70,7 % | 64,8 % | +5,9 [+4,1; +7,8] | ✓ |
+| Cartas fuertes | 83,1 % | 77,8 % | +5,4 [+3,5; +7,1] | ✓ |
+| Parejas independiente | 38,8 % | 39,6 % | −0,8 [−3,0; +1,5] | ✗ |
+| Explotador PPO de una hora | 39,1 % | 34,0 % | +5,2 [+3,1; +7,3] | ✓ |
+
+No pasa por dos familias:
+
+- **El aceptador**, que dice quiero a todo. Contra él no conviene farolear, y el candidato farolea: después de un envido rival responde falta envido el 30 % de las veces con menos de 24.
+- **Parejas independiente**, por poco. Ese linaje desde cero, sin clonación, le gana al campeón 60 % y al candidato 61 %, sobre todo en el envido: frente al candidato suma 10,8 tantos de envido por chico y cede 7,8. Al pie el patrón es menos nítido que en duelo porque cuenta el tanto del compañero.
+
+**Explotabilidad.** El explotador del candidato llegó a 63 % en la iteración 140 y a 65 % al terminar, en la 160. En duelo, el del candidato llegaba a 83 % a la misma altura. Uno contra `pie-parejas-v2`, con la misma inicialización y el mismo presupuesto, pasó de 78 % a 88 %. Con el mismo presupuesto, el explotador al pie consiguió bastante menos que el de duelo. El explotador también resultó fuerte en general: le gana a `pie-parejas-v2` 66 %.
+
+<!-- RESULTADOS-PIE-B -->
+
+### Tercetos al pie
+
+Tercetos A terminó en la iteración 2520. Con un solo candidato no hubo selección; la puerta de 512 pares con la semilla 461200 sirvió de anticipo y dio 66,7 % contra el bot clásico.
+
+**Puerta final.** 2048 pares con la semilla 461300; tardó 19 minutos. El campeón es `pie-clasico-v1`, así que las familias fijas son los cinco estilos.
+
+| Familia | Candidato | `pie-clasico-v1` | Diferencia [IC 95 %] | |
+| --- | ---: | ---: | --- | --- |
+| Cruce directo contra `pie-clasico-v1` | 67,5 % | | [65,8; 69,1] | ✓ |
+| Aceptador | 77,7 % | 63,7 % | +14,0 [+12,1; +16,0] | ✓ |
+| El que no quiere | 75,0 % | 60,3 % | +14,7 [+12,6; +16,7] | ✓ |
+| Farolero frecuente | 67,1 % | 57,1 % | +10,0 [+7,6; +12,3] | ✓ |
+| Farolero ocasional | 66,5 % | 51,1 % | +15,4 [+13,5; +17,4] | ✓ |
+| Cartas fuertes | 84,2 % | 76,7 % | +7,5 [+5,8; +9,4] | ✓ |
+| Tercetos independiente | 41,8 % | 43,5 % | −1,7 [−4,1; +0,6] | ✗ |
+| Explotador PPO de una hora | 37,9 % | 46,7 % | −8,8 [−11,1; −6,5] | ✗ |
+
+Contra los estilos, Tercetos A es el resultado más claro de la jornada: les saca entre 7 y 15 puntos más que el bot clásico. Falla contra los dos rivales aprendidos. Su explotador llegó a 65 % en la iteración 140, como al pie, pero la entropía de Tercetos A había bajado a 0,08: es el más determinista de los tres. Uno igual contra el bot clásico, con la misma inicialización, pasó de 68 % a 72 %.
+
+<!-- RESULTADOS-TERCETOS-B -->
 
 <!-- CONCLUSIONES -->
 
