@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { confirmar, confirmarComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable, type Registro } from "../../api/turnos.ts";
+import { confirmar, confirmarAutomatica, confirmarComputadora, decidirComputadora, guardarAcciones, jugarComputadoras, leerAccion, prepararTurno, restaurar, type ManoPublicable, type Registro } from "../../api/turnos.ts";
 import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPolitica, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import { mazo } from "@eltruco/motor/cartas.ts";
 import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import { observe } from "../../training/seat/index.ts";
-import { dueloFlor, dueloMazo, primeraParda } from "../fixtures/duelo-mazo.ts";
+import { dueloFlor, dueloMazo, dueloVale, primeraParda } from "../fixtures/duelo-mazo.ts";
+import { decisionReplay } from "../../api/replay-db.ts";
 
 test("ambas cartas perdedoras se entregan tapadas y la mano guardada conserva el cobro y la privacidad", () => {
   const mano = restaurar(dueloMazo, "duel");
@@ -193,4 +194,27 @@ test("las 28 flores compatibles dan la misma decisión y una combinación ganabl
     manos: [reparto.manos[0], ["bastos-01", "espadas-07", "espadas-05"]] } }, "duel", 40, [0]);
   assert.equal(posible.estado.antesDeSalida, undefined);
   assert.equal(vistaOnline(posible.estado, 0).turno, 0);
+});
+
+test("#460: la computadora no quiere el vale cuatro con la mano perdida y el replay registra la corrección", () => {
+  const mano = restaurar(dueloVale, "duel");
+  assert.deepEqual(decidirComputadora(mano, 1, "quiero"), { decision: "no-quiero", correccion: "nunca-querer-perdida" });
+  const fin = confirmarComputadora(mano, "duel", 1, "quiero");
+  assert.deepEqual(fin.estado.resultado, { equipo: 0, tantos: 3, motivo: "rechazo" });
+  const decision = decisionReplay(fin, "quiero", undefined, "nunca-querer-perdida");
+  assert.equal(decision.bot?.propuesta, "quiero");
+  assert.equal(decision.bot?.correccion, "nunca-querer-perdida");
+});
+
+test("un asiento cedido conserva su quiero aunque la mano esté perdida", () => {
+  const fin = confirmarAutomatica(restaurar(dueloVale, "duel"), "duel", 1, "quiero", [1]);
+  assert.equal(fin.turnos.at(-1)?.action.tipo, "quiero");
+});
+
+test("jugarComputadoras informa la corrección al confirmar", () => {
+  const vistas: (string | undefined)[] = [];
+  // La heurística acepta el vale cuatro con el as de espadas, como en el reporte.
+  const fin = jugarComputadoras(restaurar(dueloVale, "duel"), "duel", [0], false, (_mano, _propuesta, correccion) => vistas.push(correccion));
+  assert.deepEqual(vistas, ["nunca-querer-perdida"]);
+  assert.equal(fin.estado.resultado?.motivo, "rechazo");
 });
