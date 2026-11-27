@@ -1,13 +1,15 @@
 import { parentPort } from "node:worker_threads";
 import { playChico, rng, seatsOf, type Agent, type Mode } from "./env.ts";
 import { makeAgent, rawNetwork, ROW, writeRows } from "./agents.ts";
+import { loadPotential } from "./potential.ts";
+import type { Potential } from "./env.ts";
 import type { Network } from "./network.ts";
 
 /** Una entrada de la liga: el equipo A (aprendiz o candidato) contra el equipo B. Un asiento por elemento y equipo. */
 export interface Lineup { a: string[]; b: string[]; weight?: number; name?: string }
 export interface WeightsMessage { shapes: [number, number][]; data: Float32Array }
 export interface CollectJob { type: "collect"; id: number; weights: WeightsMessage; mix: Lineup[]; modes: Mode[]; modeWeights: number[];
-  rows: number; seed: number; target?: number }
+  rows: number; seed: number; target?: number; shaping?: boolean }
 export interface EvalJob { type: "eval"; id: number; weights?: WeightsMessage; lineup: Lineup; mode: Mode; pairs: number[]; seed: number;
   target?: number }
 export interface PairResult { pair: number; wins: [number, number]; hands: number; points: number[] }
@@ -40,6 +42,15 @@ function network(w?: WeightsMessage) {
   return cached.net;
 }
 
+const potentials = new Map<string, Potential | undefined>();
+function potentialFor(mode: Mode) {
+  const format = mode.startsWith("duel") ? "duel" : mode;
+  if (!potentials.has(format)) potentials.set(format, loadPotential(format));
+  const p = potentials.get(format);
+  if (!p) throw new Error("Falta la tabla de potencial de " + format);
+  return p;
+}
+
 function collect(job: CollectJob) {
   const random = rng(job.seed);
   const current = network(job.weights);
@@ -51,7 +62,8 @@ function collect(job: CollectJob) {
     const index = pick(weights, random());
     const mode = job.modes[pick(job.modeWeights, random())];
     const { agents, teamA } = agentsFor(job.mix[index], mode, random() < 0.5, current);
-    const result = playChico(mode, agents, random, job.target ?? 40);
+    const result = playChico(mode, agents, random, job.target ?? 40, undefined, random,
+      job.shaping ? potentialFor(mode) : undefined);
     const needed = result.records.reduce((a, r) => a + r.length, 0);
     if ((rows + needed + 1) * ROW > out.length) break;
     rows = writeRows(result, seat => (seat % 2) as 0 | 1, index, out, rows);

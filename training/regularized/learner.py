@@ -91,11 +91,12 @@ class Learner:
         adv = [0.0] * n
         nxt = 0.0
         for t in range(n - 1, -1, -1):
+            # Con recompensas moldeadas por mano, r_t puede ser distinto de cero antes del final.
             if done[t]:
                 delta = reward[t] - v[t]
                 nxt = delta
             else:
-                delta = v[t + 1] - v[t]
+                delta = reward[t] + v[t + 1] - v[t]
                 nxt = delta + lam * nxt
             adv[t] = nxt
         adv = torch.tensor(adv)
@@ -109,8 +110,7 @@ class Learner:
         out = [0.0] * len(reward)
         z = 0.0
         for t in range(len(reward) - 1, -1, -1):
-            if done[t]:
-                z = reward[t]
+            z = reward[t] if done[t] else reward[t] + z
             out[t] = z
         return torch.tensor(out)
 

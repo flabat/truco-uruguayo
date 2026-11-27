@@ -76,7 +76,7 @@ export function writeRows(result: ChicoResult, teamOf: (seat: number) => 0 | 1, 
       out[t + scalars.slot] = r.slot;
       out[t + scalars.logp] = r.logp;
       const last = k === recs.length - 1;
-      out[t + scalars.reward] = last ? reward : 0;
+      out[t + scalars.reward] = result.shaped ? r.reward ?? 0 : last ? reward : 0;
       out[t + scalars.done] = last ? 1 : 0;
       out[t + scalars.teacher] = r.target ? 1 : 0;
       out[t + scalars.opponent] = opponent;

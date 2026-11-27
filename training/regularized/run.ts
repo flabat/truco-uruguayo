@@ -18,7 +18,7 @@ import type { Lineup, WeightsMessage } from "./worker.ts";
  */
 const { values: args } = parseArgs({ options: {
   format: { type: "string" }, run: { type: "string" }, hours: { type: "string", default: "1" },
-  workers: { type: "string", default: "8" }, rows: { type: "string", default: "65536" },
+  workers: { type: "string" }, rows: { type: "string", default: "65536" },
   "bc-rows": { type: "string", default: "786432" }, "bc-epochs": { type: "string", default: "4" },
   hidden: { type: "string", default: "256,256" }, seed: { type: "string", default: "1" },
   eta: { type: "string", default: "0.05" }, "magnet-every": { type: "string", default: "50" },
@@ -26,6 +26,7 @@ const { values: args } = parseArgs({ options: {
   exploit: { type: "string" }, init: { type: "string" }, "eval-every": { type: "string", default: "40" },
   "eval-pairs": { type: "string", default: "96" }, "no-bc": { type: "boolean", default: false },
   mix: { type: "string", default: "league" },
+  shaping: { type: "string" }, "self-share": { type: "string" }, "snap-share": { type: "string" }, "fixed-share": { type: "string" },
 } });
 
 const run = resolve(args.run!);
@@ -33,14 +34,22 @@ mkdirSync(join(run, "snapshots"), { recursive: true });
 const configPath = join(run, "config.json");
 const resumed = existsSync(configPath);
 const config = resumed ? JSON.parse(readFileSync(configPath, "utf8")) : {
-  format: args.format, seed: Number(args.seed), hidden: args.hidden!.split(",").map(Number), workers: Number(args.workers),
+  format: args.format, seed: Number(args.seed), hidden: args.hidden!.split(",").map(Number), workers: Number(args.workers ?? 8),
   rows: Number(args.rows), eta: Number(args.eta), magnetEvery: Number(args["magnet-every"]), lr: Number(args.lr),
   entropy: Number(args.entropy), exploit: args.exploit ? (existsSync(args.exploit) ? resolve(args.exploit) : args.exploit) : null, init: args.init ? resolve(args.init) : null,
   mix: args.mix, featureVersion, created: new Date().toISOString(),
 };
+// Las proporciones de la liga se pueden cambiar al reanudar.
+for (const [key, arg] of [["selfShare", "self-share"], ["snapShare", "snap-share"], ["fixedShare", "fixed-share"]] as const) {
+  if (args[arg] !== undefined) config[key] = Number(args[arg]);
+}
+if (args.workers !== undefined) config.workers = Number(args.workers);
+config.selfShare ??= 0.33; config.snapShare ??= 0.2; config.fixedShare ??= 0.45;
+if (args.shaping !== undefined) config.shaping = args.shaping === "on";
+config.shaping ??= !resumed;
+writeFileSync(configPath, JSON.stringify(config, null, 2));
 if (!resumed) {
   if (!["duel", "pie", "tercetos"].includes(config.format)) throw new Error("Usá --format duel, pie o tercetos.");
-  writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
 const format: "duel" | "pie" | "tercetos" = config.format;
 const target = format === "tercetos" ? 50 : 40;
@@ -79,10 +88,10 @@ function league(snapshots: string[]): Lineup[] {
     const target = existsSync(config.exploit) ? "net:" + config.exploit : config.exploit;
     return [{ a: solo("learner"), b: solo(target), name: "target" }];
   }
-  const mix: Lineup[] = [{ a: solo("learner"), b: solo("learner"), weight: 0.33, name: "self" }];
+  const mix: Lineup[] = [{ a: solo("learner"), b: solo("learner"), weight: config.selfShare, name: "self" }];
   const recent = snapshots.slice(-8);
-  for (const s of recent) mix.push({ a: solo("learner"), b: solo("net:" + s), weight: 0.2 / recent.length, name: "snap" });
-  const share = fixed.reduce((a, [, w]) => a + w, 0);
+  for (const s of recent) mix.push({ a: solo("learner"), b: solo("net:" + s), weight: config.snapShare / recent.length, name: "snap" });
+  const share = config.fixedShare;
   const boosted = fixed.map(([spec, w]) => [spec, w * boost(spec)] as const);
   const total = boosted.reduce((a, [, w]) => a + w, 0);
   for (const [spec, w] of boosted) mix.push({ a: solo("learner"), b: solo(spec), weight: w * share / total, name: spec });
@@ -185,13 +194,13 @@ async function main() {
   const trainCfg = { eta: config.exploit ? 0 : config.eta, magnet_every: config.exploit ? 0 : config.magnetEvery,
     entropy: config.entropy, clip: 0.2, epochs: 2, batch: 4096, lambda: 0.95 };
   // Canalización: mientras Python aprende del lote anterior, los trabajadores juntan el siguiente con los pesos vigentes.
-  let collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration, target);
+  let collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration, target, config.shaping);
   while (Date.now() < deadline) {
     const batch = await collecting;
     const dataPath = join(run, "batch.f32");
     writeFileSync(dataPath, Buffer.from(batch.data.buffer, batch.data.byteOffset, batch.data.byteLength));
     const mix = league(state.snapshots);
-    collecting = pool.collect(weights, mix, modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 1, target);
+    collecting = pool.collect(weights, mix, modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 1, target, config.shaping);
     const stats = await python.send({ cmd: "train", path: dataPath, cfg: trainCfg });
     weights = await exportCurrent(join(run, "current.bin"));
     state.iteration++; state.chicos += batch.chicos; state.rows += batch.rows;
@@ -217,7 +226,7 @@ async function main() {
     if (state.iteration % Number(args["eval-every"]) === 0) {
       await collecting;
       await evaluateNow(weights, "iter");
-      collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 7, target);
+      collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 7, target, config.shaping);
     }
   }
   await collecting;

@@ -33,9 +33,10 @@ export class Pool {
     });
   }
   async collect(weights: WeightsMessage, mix: Lineup[], modes: Mode[], modeWeights: number[], rows: number, seed: number,
-      target = 40): Promise<Collected> {
+      target = 40, shaping = false): Promise<Collected> {
     const parts = await Promise.all(this.workers.map((_, i) => this.run<Collected>(i, {
       type: "collect", weights, mix, modes, modeWeights, rows: Math.ceil(rows / this.size), seed: (seed * 1009 + i * 7919) >>> 0, target,
+      shaping,
     })));
     const total = parts.reduce((a, p) => a + p.data.length, 0);
     const data = new Float32Array(total);

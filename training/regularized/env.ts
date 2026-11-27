@@ -71,7 +71,11 @@ export interface StepRecord {
   logp: number;
   /** Distribución del maestro, solo en clonación. */
   target?: Float64Array;
+  /** Recompensa moldeada por potencial que se acredita al cerrar la mano. */
+  reward?: number;
 }
+/** Valor del tanteador para un equipo, en [-1, 1]: Φ(propios, ajenos) = 2·P(ganar el chico) − 1. */
+export type Potential = (own: number, foe: number) => number;
 export interface Agent {
   id: string;
   act(s: Situation): { action: AccionOnline; record?: StepRecord };
@@ -124,6 +128,10 @@ export interface ChicoResult {
   /** Decisiones registradas por asiento, en orden. */
   records: StepRecord[][];
   points: { truco: [number, number]; envido: [number, number]; flor: [number, number] };
+  /** Si las recompensas ya vienen moldeadas por mano (y suman el resultado final). */
+  shaped: boolean;
+  /** Tanteador al empezar cada reparto. */
+  starts: [number, number][];
 }
 
 function scoreOf(state: EstadoOnline): [number, number] {
@@ -149,7 +157,7 @@ function pieIndications(estado: EstadoOnline, indicaciones: IndicacionPie[]) {
 
 /** `dealRandom` separa el azar de los repartos del de las decisiones, para emparejar chicos con los mismos repartos. */
 export function playChico(mode: Mode, agents: readonly Agent[], random: () => number, target = 40, firstMano?: Asiento,
-    dealRandom: () => number = random): ChicoResult {
+    dealRandom: () => number = random, potential?: Potential): ChicoResult {
   const n = seatsOf(mode);
   if (agents.length !== n) throw new Error("Cantidad de agentes incorrecta.");
   let score: [number, number] = [0, 0];
@@ -158,9 +166,18 @@ export function playChico(mode: Mode, agents: readonly Agent[], random: () => nu
   const counts = [Array(12).fill(0), Array(12).fill(0)];
   const points = { truco: [0, 0] as [number, number], envido: [0, 0] as [number, number], flor: [0, 0] as [number, number] };
   let hands = 0;
+  // Moldeado por potencial (Ng et al., 1999): al cerrar cada mano, cada asiento recibe Φ(después) − Φ(antes) de su equipo.
+  // La suma telescópica es el resultado final menos Φ(0, 0), así que la política óptima no cambia.
+  const pending = new Array(n).fill(0);
+  const starts: [number, number][] = [];
+  const phi = (team: number, s: readonly [number, number]) =>
+    s[team] >= target ? 1 : s[1 - team] >= target ? -1 : potential!(s[team], s[1 - team]);
   while (Math.max(...score) < target) {
     if (hands > 200) throw new Error("El chico no avanzó.");
     let estado = iniciarOnline(deal(mode, dealRandom, mano), score, target, hands + 1);
+    const before = score;
+    starts.push([score[0], score[1]]);
+    const firstRecord = records.map(r => r.length);
     const turns: PublicTurn[] = [];
     const indicaciones: IndicacionPie[] = [];
     let round = 0;
@@ -182,14 +199,32 @@ export function playChico(mode: Mode, agents: readonly Agent[], random: () => nu
         && (estado.antesDeSalida === seat || segundaPerdidaEnDuelo(estado, seat));
       const step = aplicarOnline(estado, entregar ? { tipo: "mazo", asiento: seat } : action);
       if (!step.ok) throw new Error(`Acción rechazada (${agents[seat].id}): ${step.error} ${JSON.stringify(action)}`);
-      turns.push({ action: action as PublicTurn["action"], awards: step.estado.cobros.slice(estado.cobros.length) });
+      const applied = step.estado.acciones.at(-1) ?? action;
+      turns.push({ action: applied as PublicTurn["action"], awards: step.estado.cobros.slice(estado.cobros.length) });
       estado = mode === "duel-arena" || n !== 2 ? step.estado : anticiparAnteFlor(step.estado, []);
     }
     for (const c of estado.cobros) points[c.motivo][c.equipo] += c.tantos;
     if (n === 2) countPublicHand(counts, turns.map(t => t.action));
     score = scoreOf(estado);
+    if (potential) {
+      for (let seat = 0; seat < n; seat++) {
+        const team = seat % 2;
+        pending[seat] += phi(team, score) - phi(team, before);
+        if (records[seat].length > firstRecord[seat]) {
+          const last = records[seat][records[seat].length - 1];
+          last.reward = (last.reward ?? 0) + pending[seat];
+          pending[seat] = 0;
+        }
+      }
+    }
     mano = ((mano + 1) % n) as Asiento;
     hands++;
   }
-  return { winner: score[0] >= target ? 0 : 1, score, hands, records, points };
+  if (potential) {
+    for (let seat = 0; seat < n; seat++) {
+      const last = records[seat].at(-1);
+      if (last && pending[seat]) last.reward = (last.reward ?? 0) + pending[seat];
+    }
+  }
+  return { winner: score[0] >= target ? 0 : 1, score, hands, records, points, shaped: !!potential, starts };
 }
