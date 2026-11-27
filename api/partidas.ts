@@ -300,10 +300,13 @@ export function crearPartidas(pool: Pool, web: URL, alCambiar: (mesaId: string) 
       desde: new Date(desde).toISOString(), disponible: new Date(disponible).toISOString(), restanteMs: restante }));
   }
 
-  /** La vista de una lectura suma quiénes traban la mesa. */
+  /**
+   * La vista de una lectura suma quiénes traban la mesa, y nada si no se espera a nadie. Quien lee no se
+   * espera a sí mismo: una lectura antes de abrir la conexión en vivo no le muestra su propio aviso.
+   */
   async function conEsperas(db: PoolClient, mesa: VistaMesa, mano: ManoPublicable, partida: PartidaJugador) {
-    const lista = await actualizarEsperas(db, mesa, mano);
-    return lista ? { ...partida, esperas: lista } : partida;
+    const lista = (await actualizarEsperas(db, mesa, mano) ?? []).filter(e => e.asiento !== partida.vista?.asiento);
+    return lista.length ? { ...partida, esperas: lista } : partida;
   }
 
   async function resolver(db: PoolClient, id: string, jugador: string, op?: Operacion, datos: Record<string, unknown> = {}) {

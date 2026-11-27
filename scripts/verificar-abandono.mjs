@@ -194,6 +194,7 @@ async function probarReemplazoParejas() {
   assert.equal(espera.nombre, a.nombre);
   assert.equal(Date.parse(espera.disponible) - Date.parse(espera.desde), plazo);
   assert.ok(espera.restanteMs > 0 && espera.restanteMs <= plazo, `restanteMs ${espera.restanteMs}`);
+  assert.deepEqual((await leerPorHttp(a, m.id)).esperas, undefined, "quien lee sin conexión en vivo no se espera a sí mismo");
   await rechazo(await reemplazar(b, m.id, 0), 409, noVencida);
   await dormir(plazo / 2);
   const recargada = (await leerPorHttp(b, m.id)).esperas[0];
@@ -206,7 +207,7 @@ async function probarReemplazoParejas() {
   const deB = await respuesta.json();
   assert.ok(await esperar(async () => await versionMano(m.id) > antes.version, 5000), "la computadora juega el asiento reemplazado");
   assert.equal(deB.ganadorPartida, null);
-  assert.deepEqual(deB.esperas, [], "la computadora ya juega el asiento de A");
+  assert.equal(deB.esperas, undefined, "la computadora ya juega el asiento de A");
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
   assert.deepEqual(asiento, { cedido: true, salida: "desconectada" });
   assert.equal(await resultadoEnPerfil(a, m.id), "desconectada");
@@ -261,7 +262,7 @@ async function probarCantoSinRespuesta() {
   await dormir(plazo + 300);
   const respuesta = await reemplazar(b, m.id, 0);
   assert.equal(respuesta.status, 200);
-  assert.deepEqual((await respuesta.json()).esperas, []);
+  assert.equal((await respuesta.json()).esperas, undefined);
   const { rows: [asiento] } = await pool.query("SELECT cedido, salida FROM juego.asientos WHERE mesa=$1 AND asiento=0", [m.id]);
   assert.deepEqual(asiento, { cedido: true, salida: "desconectada" });
   await desconectar(enVivo);
@@ -305,7 +306,7 @@ async function probarPieDesconectado() {
   await dormir(plazo + 300);
   const respuesta = await reemplazar(rival, m.id, 3);
   assert.equal(respuesta.status, 200);
-  assert.deepEqual((await respuesta.json()).esperas, []);
+  assert.equal((await respuesta.json()).esperas, undefined);
   assert.ok(await esperar(async () => (await leerPorHttp(rival, m.id)).version > antes.version, 10000),
     "la computadora sigue sin esperar al pie reemplazado");
   await desconectar(enVivo);
@@ -340,13 +341,13 @@ async function probarRegreso() {
   let avisos = enVivo.avisos;
   const primera = await conectar(a, m.id);
   assert.ok(await esperar(async () => enVivo.avisos > avisos, 2000), "la mesa relee cuando A se conecta");
-  assert.deepEqual((await leerPorHttp(b, m.id)).esperas, []);
+  assert.deepEqual((await leerPorHttp(b, m.id)).esperas, undefined);
   await dormir(plazo + 300);
   await rechazo(await reemplazar(b, m.id, 0), 409, noVencida);
   const segunda = await conectar(a, m.id);
   await desconectar(primera);
   await dormir(300);
-  assert.deepEqual((await leerPorHttp(b, m.id)).esperas, [], "A sigue conectado por la otra conexión");
+  assert.deepEqual((await leerPorHttp(b, m.id)).esperas, undefined, "A sigue conectado por la otra conexión");
   avisos = enVivo.avisos;
   await desconectar(segunda);
   assert.ok(await esperar(async () => enVivo.avisos > avisos, 2000), "la mesa relee cuando A cierra su última conexión");
