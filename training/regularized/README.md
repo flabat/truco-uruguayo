@@ -46,7 +46,7 @@ node training/regularized/evaluate.ts --format duel --candidate net:runs/regular
   --family contra=net:runs/regularized/contra/actor.json --pairs 1024 --out runs/regularized/puerta-duelo.json
 ```
 
-Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `actor:<archivo>` para cualquier actor de duelo del registro, `ceibo`, `v1`, `challenger`, los estilos (`caller`, `folder`, `frequent-bluff`, `rare-bluff`, `strong-cards`), y al pie `pie-clasico-v1`, `pie-parejas-v2` y `pie-<estilo>`. `diagnose.ts` desglosa los tantos por truco, envido y flor entre dos rivales.
+Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `actor:<archivo>` para cualquier actor de duelo del registro, `ceibo`, `v1`, `challenger`, los estilos (`caller`, `folder`, `frequent-bluff`, `rare-bluff`, `strong-cards`), y al pie `pie-clasico-v1`, `pie-parejas-v2` y `pie-<estilo>`. `diagnose.ts` desglosa los tantos por truco, envido y flor entre dos rivales o dos equipos, y `envido.ts` muestra cómo abre y cómo responde el envido cada lado según su tanto.
 
 ## Archivos
 
@@ -59,4 +59,4 @@ Los rivales se nombran así: `net:<archivo>` para una red de este entrenador, `a
 | `worker.ts`, `pool.ts` | Hilos que juegan y evalúan; proceso de Python. |
 | `learner.py` | Clonación, PPO regularizado y crítico, en Metal. |
 | `run.ts` | Liga, canalización, instantáneas, reanudación y exportación. |
-| `evaluate.ts`, `potential.ts`, `diagnose.ts` | Puerta espejo, tablas de potencial y desglose de tantos. |
+| `evaluate.ts`, `potential.ts`, `diagnose.ts`, `envido.ts` | Puerta espejo, tablas de potencial, desglose de tantos y respuestas al envido. |
