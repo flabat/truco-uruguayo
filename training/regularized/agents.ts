@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { featureSize, privilegedSize, slotCount } from "./features.ts";
 import { decodeNetwork, type Network, type RegularizedArtifact } from "./network.ts";
-import { netAgent, teacherAgent, type Agent, type ChicoResult, type Mode } from "./env.ts";
+import { netAgent, teacherAgent, withPie, type Agent, type ChicoResult, type Mode } from "./env.ts";
 import { ceiboAgent, duelBaseline, pieBaseline } from "./opponents.ts";
 
 /** Fila de entrenamiento: rasgos, rasgos del crítico, máscara, objetivo de clonación y seis escalares. */
@@ -41,7 +41,7 @@ export function loadNet(path: string): Network {
 const agentCache = new Map<string, Agent>();
 export function makeAgent(spec: string, mode: Mode, current?: Network): Agent {
   if (spec === "learner" || spec === "current" || spec.startsWith("teacher:")) return buildAgent(spec, mode, current);
-  const key = (mode === "pie" ? "pie|" : "duel|") + spec;
+  const key = (withPie(mode) ? "pie|" : "duel|") + spec;
   let agent = agentCache.get(key);
   if (!agent) { agent = buildAgent(spec, mode, current); agentCache.set(key, agent); }
   return agent;
@@ -51,7 +51,7 @@ function buildAgent(spec: string, mode: Mode, current?: Network): Agent {
   if (spec === "learner") { if (!current) throw new Error("Falta la red actual."); return netAgent("learner", current, true); }
   if (spec === "current") { if (!current) throw new Error("Falta la red actual."); return netAgent("current", current, false); }
   if (spec.startsWith("net:")) return netAgent(spec, loadNet(spec.slice(4)), false);
-  if (mode === "pie") return pieBaseline(spec);
+  if (withPie(mode)) return pieBaseline(spec);
   if (spec === "ceibo") return ceiboAgent(ceiboPath);
   return duelBaseline(spec);
 }

@@ -13,8 +13,10 @@ import { policy, sampleSlot, type Network } from "./network.ts";
  * duel-prod: reglas de las mesas de la API (flor inmediata, subida con rival posible, respuestas sin flor).
  * duel-arena: reparto V1 de la arena y del campeonato. pie: parejas con señas al pie, como crea la app.
  */
-export type Mode = "duel-prod" | "duel-arena" | "pie";
-export const seatsOf = (mode: Mode) => mode === "pie" ? 4 : 2;
+export type Mode = "duel-prod" | "duel-arena" | "pie" | "tercetos";
+export const seatsOf = (mode: Mode) => mode === "tercetos" ? 6 : mode === "pie" ? 4 : 2;
+/** Modalidades con señas al pie: parejas y tercetos, como crea la app. */
+export const withPie = (mode: Mode) => mode === "pie" || mode === "tercetos";
 
 export function rng(seed: number): () => number {
   let a = seed >>> 0, b = 0x9e3779b9, c = 0x243f6a88 ^ seed, d = 0xb7e15162;
@@ -41,7 +43,7 @@ export function deal(mode: Mode, random: () => number, mano: Asiento): RepartoOn
     const i = (s - mano + n) % n;
     return [cards[i], cards[i + n], cards[i + 2 * n]] as TresCartas;
   });
-  const base = { versionReparto: "online-1" as const, mano, dador: ((mano + n - 1) % n) as Asiento, manos, muestra: cards[n * 3] as CardId };
+  const base = { versionReparto: (n === 6 ? "online-2" : "online-1") as "online-1", mano, dador: ((mano + n - 1) % n) as Asiento, manos, muestra: cards[n * 3] as CardId };
   if (mode === "duel-arena") return base;
   const seats = Array.from({ length: n }, (_, i) => i as Asiento);
   return { ...base, reglaFlor: "inmediata-v2", subidaFlor: "con-rival-posible", respondenSinFlor: seats, respuestaSinFlor: "antes-de-actuar" };
@@ -77,7 +79,7 @@ export interface Agent {
 
 export function contextOf(s: Situation): DecisionContext {
   const { estado, seat, mode } = s;
-  if (mode === "pie") {
+  if (withPie(mode)) {
     return { vista: vistaOnline(estado, seat), score: s.score, target: s.target,
       pie: { vista: vistaDelPie(estado, seat, s.indicaciones), indicaciones: s.indicaciones } };
   }
@@ -132,7 +134,7 @@ function scoreOf(state: EstadoOnline): [number, number] {
 
 /** Pie de cada equipo: da sus indicaciones con la regla clásica al abrir cada vuelta. */
 function pieIndications(estado: EstadoOnline, indicaciones: IndicacionPie[]) {
-  for (let seat = 0; seat < 4; seat++) {
+  for (let seat = 0; seat < estado.mano.reparto.manos.length; seat++) {
     const asiento = seat as Asiento;
     let pie: VistaPie | undefined;
     try { pie = vistaDelPie(estado, asiento, indicaciones); } catch { pie = undefined; }
@@ -158,15 +160,16 @@ export function playChico(mode: Mode, agents: readonly Agent[], random: () => nu
   let hands = 0;
   while (Math.max(...score) < target) {
     if (hands > 200) throw new Error("El chico no avanzó.");
-    let estado = iniciarOnline(deal(mode, dealRandom, mano), score, target);
+    let estado = iniciarOnline(deal(mode, dealRandom, mano), score, target, hands + 1);
     const turns: PublicTurn[] = [];
     const indicaciones: IndicacionPie[] = [];
     let round = 0;
     let steps = 0;
     while (!estado.resultado) {
-      if (++steps > 80) throw new Error("La mano no avanzó.");
-      if (mode === "pie") {
-        const r = estado.mano.vueltas.length + 1;
+      if (++steps > 240) throw new Error("La mano no avanzó.");
+      if (withPie(mode)) {
+        // En tercetos cada lance abre su propia mano: la vuelta se identifica junto con el lance.
+        const r = (estado.historialLances?.length ?? 0) * 4 + estado.mano.vueltas.length + 1;
         if (r !== round) { round = r; pieIndications(estado, indicaciones); }
       }
       const seat = aDecidir(estado)[0];
@@ -175,12 +178,12 @@ export function playChico(mode: Mode, agents: readonly Agent[], random: () => nu
         indicaciones, uniform: random() });
       if (record) records[seat].push(record);
       // Como confirmarComputadora en la API: una carta elegida cuando solo cabe entregar es irse al mazo.
-      const entregar = mode !== "pie" && action.tipo === "carta" && estado.mano.restantes[seat].includes(action.carta)
+      const entregar = !withPie(mode) && action.tipo === "carta" && estado.mano.restantes[seat].includes(action.carta)
         && (estado.antesDeSalida === seat || segundaPerdidaEnDuelo(estado, seat));
       const step = aplicarOnline(estado, entregar ? { tipo: "mazo", asiento: seat } : action);
       if (!step.ok) throw new Error(`Acción rechazada (${agents[seat].id}): ${step.error} ${JSON.stringify(action)}`);
       turns.push({ action: action as PublicTurn["action"], awards: step.estado.cobros.slice(estado.cobros.length) });
-      estado = mode === "duel-arena" ? step.estado : anticiparAnteFlor(step.estado, []);
+      estado = mode === "duel-arena" || n !== 2 ? step.estado : anticiparAnteFlor(step.estado, []);
     }
     for (const c of estado.cobros) points[c.motivo][c.equipo] += c.tantos;
     if (n === 2) countPublicHand(counts, turns.map(t => t.action));

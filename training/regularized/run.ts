@@ -39,10 +39,12 @@ const config = resumed ? JSON.parse(readFileSync(configPath, "utf8")) : {
   mix: args.mix, featureVersion, created: new Date().toISOString(),
 };
 if (!resumed) {
-  if (config.format !== "duel" && config.format !== "pie") throw new Error("Usá --format duel o pie.");
+  if (!["duel", "pie", "tercetos"].includes(config.format)) throw new Error("Usá --format duel, pie o tercetos.");
   writeFileSync(configPath, JSON.stringify(config, null, 2));
 }
-const format: "duel" | "pie" = config.format;
+const format: "duel" | "pie" | "tercetos" = config.format;
+const target = format === "tercetos" ? 50 : 40;
+const champion = format === "duel" ? "ceibo" : format === "pie" ? "pie-parejas-v2" : "pie-clasico-v1";
 const deadline = Date.now() + Number(args.hours) * 3600_000;
 const log = (entry: Record<string, unknown>) => {
   const line = JSON.stringify({ t: new Date().toISOString(), ...entry });
@@ -50,10 +52,13 @@ const log = (entry: Record<string, unknown>) => {
   console.log(line);
 };
 
-const modes: Mode[] = format === "duel" ? ["duel-prod", "duel-arena"] : ["pie"];
+const modes: Mode[] = format === "duel" ? ["duel-prod", "duel-arena"] : [format];
 const modeWeights = format === "duel" ? [0.75, 0.25] : [1];
-const solo = (spec: string) => format === "duel" ? [spec] : [spec, spec];
-const fixed: [string, number][] = format === "duel"
+const solo = (spec: string) => format === "duel" ? [spec] : format === "pie" ? [spec, spec] : [spec, spec, spec];
+const fixed: [string, number][] = format === "tercetos"
+  ? [["pie-clasico-v1", 0.2], ["pie-caller", 0.05], ["pie-folder", 0.05], ["pie-frequent-bluff", 0.05],
+    ["pie-rare-bluff", 0.05], ["pie-strong-cards", 0.05]]
+  : format === "duel"
   ? [["ceibo", 0.12], ["v1", 0.05], ["challenger", 0.04], ["caller", 0.04], ["folder", 0.04], ["frequent-bluff", 0.06],
     ["rare-bluff", 0.04], ["strong-cards", 0.06]]
   : [["pie-parejas-v2", 0.15], ["pie-clasico-v1", 0.05], ["pie-caller", 0.04], ["pie-folder", 0.04], ["pie-frequent-bluff", 0.05],
@@ -82,10 +87,14 @@ function league(snapshots: string[]): Lineup[] {
   const total = boosted.reduce((a, [, w]) => a + w, 0);
   for (const [spec, w] of boosted) mix.push({ a: solo("learner"), b: solo(spec), weight: w * share / total, name: spec });
   if (format === "pie") mix.push({ a: ["learner", "pie-parejas-v2"], b: solo("pie-parejas-v2"), weight: 0.1, name: "partner-v2" });
+  if (format === "tercetos") mix.push({ a: ["learner", "pie-clasico-v1", "pie-clasico-v1"], b: solo("pie-clasico-v1"), weight: 0.1,
+    name: "partner-clasico" });
   return mix;
 }
 
-const evalField = format === "duel"
+const evalField = format === "tercetos"
+  ? ["pie-clasico-v1", "pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"]
+  : format === "duel"
   ? ["ceibo", "v1", "challenger", "caller", "folder", "frequent-bluff", "rare-bluff", "strong-cards"]
   : ["pie-parejas-v2", "pie-clasico-v1", "pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"];
 
@@ -113,14 +122,15 @@ async function exportCurrent(path: string) {
 export function artifactFrom(path: string, meta: Record<string, unknown>): RegularizedArtifact {
   const { shapes, data } = weightsFrom(path);
   const net = rawNetwork(shapes, data);
-  return { kind: regularizedKind, format: format === "duel" ? "duel" : "pairs-private-senas", features: featureVersion,
+  return { kind: regularizedKind, format: format === "duel" ? "duel" : format === "pie" ? "pairs-private-senas" : "triples",
+    features: featureVersion,
     ...(format === "duel" && { memory: "opponent" as const }), ...encodeNetwork(net), meta };
 }
 
 async function evaluateNow(weights: WeightsMessage, tag: string) {
   const out: Record<string, unknown> = {};
   for (const opp of evalField) {
-    const r = winRate(await pool.evaluate({ a: solo("current"), b: solo(opp) }, modes[0], Number(args["eval-pairs"]), 777, weights));
+    const r = winRate(await pool.evaluate({ a: solo("current"), b: solo(opp) }, modes[0], Number(args["eval-pairs"]), 777, weights, 0, target));
     out[opp] = Number(r.rate.toFixed(3));
   }
   log({ event: "eval", tag, iteration: state.iteration, ...out });
@@ -140,10 +150,9 @@ async function main() {
   const targetsPath = join(run, "targets.json");
   if (existsSync(targetsPath)) targets = JSON.parse(readFileSync(targetsPath, "utf8"));
   else if (!config.exploit) {
-    const champion = format === "duel" ? "ceibo" : "pie-parejas-v2";
     for (const [spec] of fixed) {
       targets[spec] = spec === champion ? 0.6
-        : winRate(await pool.evaluate({ a: solo(champion), b: solo(spec) }, modes[0], 128, 4242)).rate;
+        : winRate(await pool.evaluate({ a: solo(champion), b: solo(spec) }, modes[0], 128, 4242, undefined, 0, target)).rate;
     }
     writeFileSync(targetsPath, JSON.stringify(targets, null, 2));
     log({ event: "targets", ...targets });
@@ -152,14 +161,13 @@ async function main() {
   let weights = await exportCurrent(join(run, "current.bin"));
   if (!state.cloned && !args["no-bc"] && !config.exploit) {
     // Clonación del campeón: el maestro juega contra la liga fija y contra sí mismo.
-    const teacher = format === "duel" ? "teacher:ceibo" : "teacher:pie-parejas-v2";
-    const champion = format === "duel" ? "ceibo" : "pie-parejas-v2";
+    const teacher = "teacher:" + champion;
     const mix: Lineup[] = [{ a: solo(teacher), b: solo(champion), weight: 0.5 }, ...fixed.map(([s, w]) => ({ a: solo(teacher), b: solo(s), weight: w }))];
     const paths: string[] = [];
-    const target = Number(args["bc-rows"]);
+    const goal = Number(args["bc-rows"]);
     let rows = 0, part = 0;
-    while (rows < target) {
-      const c = await pool.collect(weights, mix, modes, modeWeights, Math.min(131072, target - rows), config.seed * 13 + part);
+    while (rows < goal) {
+      const c = await pool.collect(weights, mix, modes, modeWeights, Math.min(131072, goal - rows), config.seed * 13 + part, target);
       const p = join(run, `bc-${part++}.f32`);
       writeFileSync(p, Buffer.from(c.data.buffer, c.data.byteOffset, c.data.byteLength));
       paths.push(p); rows += c.rows;
@@ -177,13 +185,13 @@ async function main() {
   const trainCfg = { eta: config.exploit ? 0 : config.eta, magnet_every: config.exploit ? 0 : config.magnetEvery,
     entropy: config.entropy, clip: 0.2, epochs: 2, batch: 4096, lambda: 0.95 };
   // Canalización: mientras Python aprende del lote anterior, los trabajadores juntan el siguiente con los pesos vigentes.
-  let collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration);
+  let collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration, target);
   while (Date.now() < deadline) {
     const batch = await collecting;
     const dataPath = join(run, "batch.f32");
     writeFileSync(dataPath, Buffer.from(batch.data.buffer, batch.data.byteOffset, batch.data.byteLength));
     const mix = league(state.snapshots);
-    collecting = pool.collect(weights, mix, modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 1);
+    collecting = pool.collect(weights, mix, modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 1, target);
     const stats = await python.send({ cmd: "train", path: dataPath, cfg: trainCfg });
     weights = await exportCurrent(join(run, "current.bin"));
     state.iteration++; state.chicos += batch.chicos; state.rows += batch.rows;
@@ -209,7 +217,7 @@ async function main() {
     if (state.iteration % Number(args["eval-every"]) === 0) {
       await collecting;
       await evaluateNow(weights, "iter");
-      collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 7);
+      collecting = pool.collect(weights, league(state.snapshots), modes, modeWeights, config.rows, config.seed * 100003 + state.iteration + 7, target);
     }
   }
   await collecting;

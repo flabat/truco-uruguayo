@@ -20,17 +20,18 @@ const { values: args } = parseArgs({ options: {
   "no-builtin": { type: "boolean", default: false },
 } });
 
-const format = args.format as "duel" | "pie";
-const mode = (args.mode ?? (format === "duel" ? "duel-prod" : "pie")) as Mode;
-const champion = args.champion ?? (format === "duel" ? "ceibo" : "pie-parejas-v2");
+const format = args.format as "duel" | "pie" | "tercetos";
+const mode = (args.mode ?? (format === "duel" ? "duel-prod" : format)) as Mode;
+const champion = args.champion ?? (format === "duel" ? "ceibo" : format === "pie" ? "pie-parejas-v2" : "pie-clasico-v1");
 const builtin = format === "duel"
   ? ["v1", "challenger", "caller", "folder", "frequent-bluff", "rare-bluff", "strong-cards"]
+  : format === "tercetos" ? ["pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"]
   : ["pie-clasico-v1", "pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"];
 const families: [string, string][] = [
   ...(args["no-builtin"] ? [] : builtin.map(b => [b, b] as [string, string])),
   ...args.family!.map(f => f.split("=") as [string, string]),
 ];
-const team = (spec: string) => format === "duel" ? [spec] : [spec, spec];
+const team = (spec: string) => format === "duel" ? [spec] : format === "pie" ? [spec, spec] : [spec, spec, spec];
 const pairs = Number(args.pairs), seed = Number(args.seed);
 
 function bootstrap(stat: (idx: number[]) => number, n: number, alpha: number, draws = 4000) {

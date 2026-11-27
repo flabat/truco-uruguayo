@@ -32,10 +32,10 @@ export class Pool {
       this.workers[worker].postMessage({ ...job, id });
     });
   }
-  async collect(weights: WeightsMessage, mix: Lineup[], modes: Mode[], modeWeights: number[], rows: number, seed: number):
-      Promise<Collected> {
+  async collect(weights: WeightsMessage, mix: Lineup[], modes: Mode[], modeWeights: number[], rows: number, seed: number,
+      target = 40): Promise<Collected> {
     const parts = await Promise.all(this.workers.map((_, i) => this.run<Collected>(i, {
-      type: "collect", weights, mix, modes, modeWeights, rows: Math.ceil(rows / this.size), seed: (seed * 1009 + i * 7919) >>> 0,
+      type: "collect", weights, mix, modes, modeWeights, rows: Math.ceil(rows / this.size), seed: (seed * 1009 + i * 7919) >>> 0, target,
     })));
     const total = parts.reduce((a, p) => a + p.data.length, 0);
     const data = new Float32Array(total);
@@ -45,11 +45,12 @@ export class Pool {
     return { rows: parts.reduce((a, p) => a + p.rows, 0), chicos: parts.reduce((a, p) => a + p.chicos, 0),
       games: sum("games"), wins: sum("wins"), data };
   }
-  async evaluate(lineup: Lineup, mode: Mode, pairs: number, seed: number, weights?: WeightsMessage, offset = 0): Promise<PairResult[]> {
+  async evaluate(lineup: Lineup, mode: Mode, pairs: number, seed: number, weights?: WeightsMessage, offset = 0,
+      target = mode === "tercetos" ? 50 : 40): Promise<PairResult[]> {
     const chunks: number[][] = Array.from({ length: this.size }, () => []);
     for (let p = 0; p < pairs; p++) chunks[p % this.size].push(offset + p);
     const parts = await Promise.all(chunks.map((c, i) => c.length
-      ? this.run<{ results: PairResult[] }>(i, { type: "eval", lineup, mode, pairs: c, seed, weights })
+      ? this.run<{ results: PairResult[] }>(i, { type: "eval", lineup, mode, pairs: c, seed, weights, target })
       : Promise.resolve({ results: [] })));
     return parts.flatMap(p => p.results).sort((a, b) => a.pair - b.pair);
   }

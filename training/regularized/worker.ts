@@ -1,5 +1,5 @@
 import { parentPort } from "node:worker_threads";
-import { playChico, rng, type Agent, type Mode } from "./env.ts";
+import { playChico, rng, seatsOf, type Agent, type Mode } from "./env.ts";
 import { makeAgent, rawNetwork, ROW, writeRows } from "./agents.ts";
 import type { Network } from "./network.ts";
 
@@ -13,7 +13,7 @@ export interface EvalJob { type: "eval"; id: number; weights?: WeightsMessage; l
 export interface PairResult { pair: number; wins: [number, number]; hands: number; points: number[] }
 
 function agentsFor(lineup: Lineup, mode: Mode, swap: boolean, current: Network | undefined): { agents: Agent[]; teamA: 0 | 1 } {
-  const n = mode === "pie" ? 4 : 2;
+  const n = seatsOf(mode);
   const teamA = (swap ? 1 : 0) as 0 | 1;
   const agents: Agent[] = [];
   for (let seat = 0; seat < n; seat++) {
@@ -74,7 +74,7 @@ function evaluate(job: EvalJob) {
       const { agents, teamA } = agentsFor(job.lineup, job.mode, swap, current);
       const decisions = rng(job.seed ^ (pair * 7919 + (swap ? 104729 : 0)));
       const deals = rng((job.seed * 31 + pair) >>> 0);
-      const r = playChico(job.mode, agents, decisions, job.target ?? 40, (pair % (job.mode === "pie" ? 4 : 2)) as 0, deals);
+      const r = playChico(job.mode, agents, decisions, job.target ?? 40, (pair % seatsOf(job.mode)) as 0, deals);
       wins[swap ? 1 : 0] = r.winner === teamA ? 1 : 0;
       hands += r.hands;
       points[0] += r.score[teamA]; points[1] += r.score[1 - teamA];
