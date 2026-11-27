@@ -5,7 +5,7 @@ import { aplicarOnline, iniciarOnline, marcadorOnline, vistaOnline, vistaParaPol
 import { mazo } from "@eltruco/motor/cartas.ts";
 import { evaluarTantos } from "@eltruco/motor/tantos.ts";
 import { observe } from "../../training/seat/index.ts";
-import { dueloFlor, dueloMazo } from "../fixtures/duelo-mazo.ts";
+import { dueloFlor, dueloMazo, primeraParda } from "../fixtures/duelo-mazo.ts";
 
 test("ambas cartas perdedoras se entregan tapadas y la mano guardada conserva el cobro y la privacidad", () => {
   const mano = restaurar(dueloMazo, "duel");
@@ -59,18 +59,6 @@ test("empardar la segunda no alcanza, pero una pieza que puede ganarla mantiene 
   assert.equal(confirmarComputadora(conPieza, "duel", 1, "copas-12").estado.resultado, null);
   assert.equal(confirmarComputadora(conPieza, "duel", 1, "bastos-01").estado.resultado?.motivo, "vueltas");
 });
-
-// Secuencia pública del reporte #449, con cartas de ejemplo para las que quedaron tapadas.
-const primeraParda: Registro = {
-  ...dueloMazo, puntos_inicio: [5, 11],
-  reparto: { versionReparto: "online-1", mano: 0, dador: 1, muestra: "copas-10", reglaFlor: "inmediata-v2",
-    manos: [["copas-03", "bastos-03", "espadas-04"], ["oros-03", "bastos-06", "oros-04"]] },
-  acciones: [
-    { tipo: "real-envido", asiento: 0 }, { tipo: "no-quiero", asiento: 1 },
-    { tipo: "carta", asiento: 0, carta: "copas-03" }, { tipo: "truco", asiento: 1 }, { tipo: "quiero", asiento: 0 },
-    { tipo: "carta", asiento: 1, carta: "oros-03" }, { tipo: "carta", asiento: 0, carta: "bastos-03" },
-  ],
-};
 
 test("tras la primera parda las dos cartas que pierden la segunda se entregan tapadas", () => {
   const mano = restaurar(primeraParda, "duel");
