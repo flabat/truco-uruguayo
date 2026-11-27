@@ -93,6 +93,8 @@ async function configurar() {
     if (proveedor === "google" && (!config.prompt || config.prompt === "login")) {
       config.prompt = "select_account";
     }
+    // Keycloak ordena los botones por guiOrder. Apple pide que su botón no quede debajo de los demás.
+    if (proveedor === "apple") config.guiOrder = "0";
     return JSON.stringify({
       firstBrokerLoginFlowAlias: "first broker login",
       ...actual,
