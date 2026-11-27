@@ -1,7 +1,9 @@
 import { esCardId } from "@eltruco/motor/cartas.ts";
+import type { AccionOnline, VistaOnline } from "@eltruco/motor/mesa-online.ts";
+import type { IndicacionPie, VistaPie } from "@eltruco/motor/senas-pie.ts";
 import type { ActionId, Policy, SeatObservation } from "../contracts/index.ts";
-import { bidSlots, encode, type BidSlot } from "./features.ts";
-import { decodeNetwork, policy, regularizedKind, type RegularizedArtifact } from "./network.ts";
+import { actionOf, bidSlots, encode, type BidSlot } from "./features.ts";
+import { decodeNetwork, policy, regularizedKind, sampleSlot, type RegularizedArtifact } from "./network.ts";
 
 export { regularizedKind, type RegularizedArtifact };
 
@@ -28,5 +30,20 @@ export function openRegularized(artifact: RegularizedArtifact): Policy {
       const sum = out.reduce((a, b) => a + b, 0);
       return out.map(v => v / sum);
     },
+  };
+}
+
+/**
+ * Decisión al pie (parejas o tercetos) con la vista del asiento, sus señas y las palabras de la mano, igual que el bot
+ * clásico en `bot-pendiente.ts`. Las indicaciones del pie siguen la regla clásica (`elegirIndicacionesPie`).
+ */
+export function openRegularizedPie(artifact: RegularizedArtifact) {
+  if (artifact.format !== "pairs-private-senas" && artifact.format !== "triples") throw new TypeError("El actor no es al pie.");
+  const net = decodeNetwork(artifact);
+  return (vista: VistaOnline, pie: VistaPie | undefined, indicaciones: readonly IndicacionPie[],
+      score: readonly [number, number], target: number, uniform: number): AccionOnline | null => {
+    if (!vista.legales.length) return null;
+    const { x, mask, cards } = encode({ vista, score, target, pie: { vista: pie, indicaciones } });
+    return actionOf(sampleSlot(policy(net, x, mask), uniform), cards, vista.asiento);
   };
 }

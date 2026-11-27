@@ -82,3 +82,20 @@ test("el actor regularizado se registra y reparte probabilidad sobre las jugadas
   assert.throws(() => openActor({ ...model, features: "otra" }, "duel", 0), /incompatible/);
   assert.throws(() => openActor({ ...model, weights: model.weights.slice(0, 40) }, "duel", 0));
 });
+
+test("el actor al pie elige una jugada legal en parejas y tercetos", async () => {
+  const { openRegularizedPie } = await import("../../training/regularized/actor.ts");
+  const { vistaOnline, aDecidir } = await import("@eltruco/motor/mesa-online.ts");
+  const { vistaDelPie } = await import("@eltruco/motor/senas-pie.ts");
+  const { deal } = await import("../../training/regularized/env.ts");
+  for (const [format, mode, seats, target] of [["pairs-private-senas", "pie", 4, 40], ["triples", "tercetos", 6, 50]] as const) {
+    const decide = openRegularizedPie({ ...artifact(9), format, memory: undefined });
+    const estado = iniciarOnline(deal(mode, rng(4), 0), [0, 0], target, 1);
+    const seat = aDecidir(estado)[0];
+    const vista = vistaOnline(estado, seat);
+    const action = decide(vista, vistaDelPie(estado, seat, []), [], [0, 0], target, 0.3);
+    assert.ok(action && (vista.legales as string[]).includes(action.tipo), format);
+    assert.equal(vista.asiento, action.asiento);
+    assert.equal(seats, estado.mano.reparto.manos.length);
+  }
+});

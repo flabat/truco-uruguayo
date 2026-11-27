@@ -54,6 +54,8 @@ if (!resumed) {
 const format: "duel" | "pie" | "tercetos" = config.format;
 const target = format === "tercetos" ? 50 : 40;
 const champion = format === "duel" ? "ceibo" : format === "pie" ? "pie-parejas-v2" : "pie-clasico-v1";
+/** Finalista de la liga de noviembre: linaje independiente que le gana a Ceibo. */
+const finalist = "actor:" + new URL("../../runs/regularized/champions/finalista-duel.json", import.meta.url).pathname;
 const deadline = Date.now() + Number(args.hours) * 3600_000;
 const log = (entry: Record<string, unknown>) => {
   const line = JSON.stringify({ t: new Date().toISOString(), ...entry });
@@ -69,7 +71,7 @@ const fixed: [string, number][] = format === "tercetos"
     ["pie-rare-bluff", 0.05], ["pie-strong-cards", 0.05]]
   : format === "duel"
   ? [["ceibo", 0.12], ["v1", 0.05], ["challenger", 0.04], ["caller", 0.04], ["folder", 0.04], ["frequent-bluff", 0.06],
-    ["rare-bluff", 0.04], ["strong-cards", 0.06]]
+    ["rare-bluff", 0.04], ["strong-cards", 0.06], [finalist, 0.06]]
   : [["pie-parejas-v2", 0.15], ["pie-clasico-v1", 0.05], ["pie-caller", 0.04], ["pie-folder", 0.04], ["pie-frequent-bluff", 0.05],
     ["pie-rare-bluff", 0.04], ["pie-strong-cards", 0.05]];
 
@@ -104,7 +106,7 @@ function league(snapshots: string[]): Lineup[] {
 const evalField = format === "tercetos"
   ? ["pie-clasico-v1", "pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"]
   : format === "duel"
-  ? ["ceibo", "v1", "challenger", "caller", "folder", "frequent-bluff", "rare-bluff", "strong-cards"]
+  ? ["ceibo", "v1", "challenger", "caller", "folder", "frequent-bluff", "rare-bluff", "strong-cards", finalist]
   : ["pie-parejas-v2", "pie-clasico-v1", "pie-caller", "pie-folder", "pie-frequent-bluff", "pie-rare-bluff", "pie-strong-cards"];
 
 const pool = new Pool(config.workers);
@@ -140,7 +142,7 @@ async function evaluateNow(weights: WeightsMessage, tag: string) {
   const out: Record<string, unknown> = {};
   for (const opp of evalField) {
     const r = winRate(await pool.evaluate({ a: solo("current"), b: solo(opp) }, modes[0], Number(args["eval-pairs"]), 777, weights, 0, target));
-    out[opp] = Number(r.rate.toFixed(3));
+    out[opp.startsWith("actor:") ? "finalista" : opp] = Number(r.rate.toFixed(3));
   }
   log({ event: "eval", tag, iteration: state.iteration, ...out });
 }
@@ -158,8 +160,9 @@ async function main() {
 
   const targetsPath = join(run, "targets.json");
   if (existsSync(targetsPath)) targets = JSON.parse(readFileSync(targetsPath, "utf8"));
-  else if (!config.exploit) {
+  if (!config.exploit && fixed.some(([spec]) => !(spec in targets))) {
     for (const [spec] of fixed) {
+      if (spec in targets) continue;
       targets[spec] = spec === champion ? 0.6
         : winRate(await pool.evaluate({ a: solo(champion), b: solo(spec) }, modes[0], 128, 4242, undefined, 0, target)).rate;
     }
