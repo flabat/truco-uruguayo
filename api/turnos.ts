@@ -1,6 +1,7 @@
 import { versionSenasPie, type DestinoPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { esCardId } from "@eltruco/motor/cartas.ts";
-import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, segundaPerdidaEnDuelo, versionReglasOnline, vistaParaPolitica,
+import { corregirDecision } from "@eltruco/motor/correcciones.ts";
+import { aDecidir, anticiparAnteFlor, elegirAccionOnline, iniciarOnline, versionReglasOnline, vistaParaPolitica,
   type AccionOnline, type EstadoOnline, type RepartoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import { canSeeSignal, hasSignals, signals, signalVersionFor, type ActionId, type Format, type PublicTurn, type Signal } from "../training/contracts/index.ts";
@@ -59,11 +60,13 @@ export function confirmarAutomatica(mano: ManoPublicable, formato: Format, asien
   return humanos.includes(asiento) ? confirmarTurno(mano, formato, asiento, decision) : confirmarComputadora(mano, formato, asiento, decision);
 }
 
+/** La decisión de la computadora después de las correcciones del motor (#452, #460). */
+export function decidirComputadora(mano: ManoPublicable, asiento: Asiento, decision: ActionId): { decision: ActionId; correccion?: string } {
+  return corregirDecision(mano.estado, asiento, decision);
+}
+
 export function confirmarComputadora(mano: ManoPublicable, formato: Format, asiento: Asiento, decision: ActionId) {
-  // Conservar el canto que el actor eligió, incluida su probabilidad de retrucar.
-  const entregar = esCardId(decision) && mano.estado.mano.restantes[asiento].includes(decision)
-    && (mano.estado.antesDeSalida === asiento || segundaPerdidaEnDuelo(mano.estado, asiento));
-  return confirmarTurno(mano, formato, asiento, entregar ? "mazo" : decision);
+  return confirmarTurno(mano, formato, asiento, decidirComputadora(mano, asiento, decision).decision);
 }
 
 // La versión de almacenamiento se conserva para restaurar partidas históricas.
@@ -103,7 +106,7 @@ export function restaurar(fila: Registro, formato: Format, meta?: number, humano
 
 /** `esperan`: los asientos humanos que juega una persona; un asiento cedido es humano para las reglas, pero lo juega la computadora. */
 export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos: readonly number[], ensayo = false,
-    alConfirmar?: (mano: ManoPublicable, propuesta: ActionId) => void, esperan: readonly number[] = humanos) {
+    alConfirmar?: (mano: ManoPublicable, propuesta: ActionId, correccion?: string) => void, esperan: readonly number[] = humanos) {
   while (!mano.estado.resultado) {
     mano = prepararTurno(mano, humanos);
     const posibles = aDecidir(mano.estado);
@@ -115,8 +118,9 @@ export function jugarComputadoras(mano: ManoPublicable, formato: Format, humanos
     // El ensayo privado comprueba la transmisión de gestos desde un actor de prueba.
     const sena = hasSignals(formato) && ensayo ? signals[mano.turnos.length % signals.length] : undefined;
     const propuesta = identificador(sena ? {...accion, sena} : accion);
+    const { correccion } = humanos.includes(asiento) ? {} : decidirComputadora(mano, asiento, propuesta);
     mano = confirmarAutomatica(mano, formato, asiento, propuesta, humanos);
-    alConfirmar?.(mano, propuesta);
+    alConfirmar?.(mano, propuesta, correccion);
   }
   return mano;
 }

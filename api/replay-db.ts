@@ -22,14 +22,14 @@ for (const ruta of [
 ]) hash.update(ruta).update("\0").update(readFileSync(new URL(ruta, import.meta.url))).update("\0");
 const build = "sha256:" + hash.digest("hex");
 
-export function decisionReplay(mano: ManoPublicable, propuesta?: ActionId, bot?: DecisionBotV1): DecisionReplay {
+export function decisionReplay(mano: ManoPublicable, propuesta?: ActionId, bot?: DecisionBotV1, correccion?: string): DecisionReplay {
   const turno = mano.turnos.at(-1);
   if (!turno) throw new Error("Falta el turno confirmado para el replay.");
   const accion = turno.signal ? { ...turno.action, sena: turno.signal } : turno.action;
   const decision: DecisionReplay = { tipo: "decision", accion, cobros: turno.awards, puntos: marcadorOnline(mano.estado) };
   if (propuesta !== undefined) {
     const politica = bot ?? { solicitada: incumbent.id, aplicada: incumbent.id, observacion: "vista-para-politica-v1", acciones: versions.actions };
-    decision.bot = propuesta === identificador(accion) ? politica : { ...politica, propuesta };
+    decision.bot = propuesta === identificador(accion) ? politica : { ...politica, propuesta, ...(correccion !== undefined && { correccion }) };
   }
   return decision;
 }

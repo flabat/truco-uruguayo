@@ -14,7 +14,7 @@ import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
 import { asientoBotTercetos, confirmarTurnoTercetosDB, restaurarTercetosDB, type RegistroTercetos } from "./partidas-tercetos.ts";
 import { formatoMesa, politicaTercetos } from "./mesas.ts";
 import type { ServingDecision } from "./serving.ts";
-import { confirmarAutomatica, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
+import { confirmarAutomatica, decidirComputadora, guardarAcciones, prepararTurno, restaurar, turnosDeEquipo, type ManoPublicable, type Registro } from "./turnos.ts";
 import { decisionReplay, guardarDecisionesReplayDB } from "./replay-db.ts";
 import { esperanDe } from "./cedidos.ts";
 
@@ -102,10 +102,11 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     asiento, bot,
     actorActual: (esperan: Asiento[]) => actor(mano, esperan),
     async aplicar(db: PoolClient, { humanos }: Snapshot) {
+      const { correccion } = humanos.includes(asiento) ? {} : decidirComputadora(mano, asiento, decision.action);
       const nueva = prepararTurno(confirmarAutomatica(mano, formato, asiento, decision.action, humanos), humanos);
       await db.query("UPDATE juego.manos SET acciones=$3, version=version+1 WHERE mesa=$1 AND numero=$2",
         [fila.mesa, fila.numero, JSON.stringify(guardarAcciones(nueva))]);
-      await guardarDecisionesReplayDB(db, fila.mesa, [decisionReplay(nueva, decision.action, bot)], fila.meta);
+      await guardarDecisionesReplayDB(db, fila.mesa, [decisionReplay(nueva, decision.action, bot, correccion)], fila.meta);
       await programarTurno(db, fila.mesa, nueva, humanos);
     },
   };
