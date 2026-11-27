@@ -8,7 +8,7 @@
 
 **Tech Stack:** Keycloak 26.8.2 (keycloak.v2, FreeMarker, PatternFly 5), Docker multi-stage, Node 24 (`node:test`, Playwright).
 
-**Spec:** issue #466, sección «1. Botón de Apple»; alcance en #467. Guías: [HIG, Sign in with Apple](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple).
+**Spec:** [docs/superpowers/specs/2026-11-27-sign-in-with-apple-tienda-design.md](../specs/2026-11-27-sign-in-with-apple-tienda-design.md), sección «1. Botón de Apple» (también en #466); alcance en #467. Guías: [HIG, Sign in with Apple](https://developer.apple.com/design/human-interface-guidelines/sign-in-with-apple).
 
 ## Global Constraints
 
