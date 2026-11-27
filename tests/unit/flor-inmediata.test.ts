@@ -375,3 +375,46 @@ test("el reparto de la primera versión de flor inmediata conserva su respuesta 
   assert.deepEqual(aDecidir(tres), [0, 2]);
   assert.deepEqual(jugar(tres, { asiento: 2, tipo: "quiero" }).cobros.map(c => c.tantos), [8]);
 });
+
+test("sin rival que todavía pueda tener flor, solo se canta «Flor»", () => {
+  // #455: la computadora mano jugó el 7 de oros. Ya no puede tener flor, así que no hay a quién apostarle.
+  const reparto = { ...repartir(2, [1]), respondenSinFlor: [0] as const, respuestaSinFlor: "antes-de-actuar", subidaFlor: "con-rival-posible" } as const;
+  const salida = { tipo: "carta", asiento: 0, carta: "copas-01" } as const;
+  const jugada = jugar(iniciarOnline(reparto), salida);
+  assert.deepEqual(vistaOnline(jugada, 1).legales, ["flor"]);
+  for (const tipo of ["con-flor-envido", "contraflor-al-resto"] as const) {
+    assert.equal(aplicarOnline(jugada, { tipo, asiento: 1 }).ok, false);
+  }
+  const cobrada = jugar(jugada, { tipo: "flor", asiento: 1 });
+  assert.deepEqual(cobrada.cobros, [{ equipo: 1, tantos: 3, motivo: "flor" }]);
+
+  // Frente a un envido rival pasa lo mismo: quien envidó ya actuó.
+  assert.deepEqual(vistaOnline(jugar(iniciarOnline(reparto), envido), 1).legales, ["flor"]);
+  // De salida, el rival todavía puede tener flor.
+  assert.deepEqual(vistaOnline(iniciarOnline({ ...reparto, mano: 1, dador: 0 }), 1).legales.slice(0, 3),
+    ["flor", "con-flor-envido", "contraflor-al-resto"]);
+
+  // En parejas alcanza con que un rival no haya actuado.
+  const parejas = { ...repartir(4, [2]), subidaFlor: "con-rival-posible" } as const;
+  const conRival = [{ tipo: "carta", asiento: 0, carta: "copas-01" }, { tipo: "carta", asiento: 1, carta: "bastos-01" }] as const;
+  const falta3 = conRival.reduce(jugar, iniciarOnline(parejas));
+  assert.deepEqual(vistaOnline(falta3, 2).legales.slice(0, 3), ["flor", "con-flor-envido", "contraflor-al-resto"]);
+
+  // Un rival que ya cantó flor sigue admitiendo la subida.
+  const contra = { ...repartir(2, [0, 1]), subidaFlor: "con-rival-posible" } as const;
+  assert.deepEqual(vistaOnline(jugar(iniciarOnline(contra), { tipo: "flor", asiento: 0 }), 1).legales,
+    ["flor", "con-flor-envido", "contraflor-al-resto"]);
+
+  // Los repartos anteriores conservan las subidas para que sus historiales se reproduzcan igual.
+  const { subidaFlor: _, ...historico } = reparto;
+  assert.deepEqual(vistaOnline(jugar(iniciarOnline(historico), salida), 1).legales, ["flor", "con-flor-envido", "contraflor-al-resto"]);
+});
+
+test("los repartos nuevos limitan las subidas de flor a cuando un rival todavía puede tener flor", () => {
+  for (const reparto of [repartirOnline(2, 1, [1]), repartirOnline(4, 1)]) {
+    assert.equal(reparto.subidaFlor, "con-rival-posible");
+    assert.ok(esRepartoOnline(JSON.parse(JSON.stringify(reparto))));
+    assert.equal(esRepartoOnline({ ...reparto, subidaFlor: "siempre" }), false);
+    assert.equal(esRepartoOnline({ ...reparto, reglaFlor: "inmediata" }), false);
+  }
+});
