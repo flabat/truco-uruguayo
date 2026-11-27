@@ -13,7 +13,7 @@ import { crearSalon } from "./salon.ts";
 import { crearMisMesas } from "./mis-mesas.ts";
 import { atenderPerfil } from "./perfil.ts";
 import { atenderReporte, rutaReporte } from "./reportes.ts";
-import { crearCuenta, rutaEliminarCuenta } from "./cuenta.ts";
+import { crearCuenta, crearInicioBaja, rutaEliminarCuenta } from "./cuenta.ts";
 import { crearCapturaApple, crearServiciosBaja, procesarBajas } from "./bajas.ts";
 import { crearVersion, rutaVersion } from "./version.ts";
 
@@ -88,7 +88,8 @@ const poolVoz = configVoz && new pg.Pool({ connectionString: process.env.DATABAS
   connectionTimeoutMillis: 5000, statement_timeout: 15000 });
 poolVoz?.on("error", () => console.warn("Conexión de voz a PostgreSQL interrumpida."));
 const voz = poolVoz && configVoz ? crearVoz(poolVoz, crearDiscord(configVoz), web) : undefined;
-const cuenta = crearCuenta(pool, web, jugador => vivo.cerrarJugador(jugador), alCambiar);
+const iniciarBaja = crearInicioBaja(pool, jugador => vivo.cerrarJugador(jugador), alCambiar);
+const cuenta = crearCuenta(pool, web, iniciarBaja);
 const salon = crearSalon(pool, salonHabilitado, web, process.env.VOZ_ESPECTADORA_HABILITADA === "1" ? voz : undefined);
 const misMesas = crearMisMesas(pool);
 const detenerLimpieza = voz?.iniciarLimpieza();

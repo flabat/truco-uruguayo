@@ -39,7 +39,7 @@
 - `export class NotificacionInvalida extends Error` — firma, claims o eventos que no valen (→ 400).
 - `export interface EventoApple { tipo: string; sub: string; momento: string }` — `momento` es `event_time` como texto.
 - `export type ClavesApple = (kid: string) => Promise<KeyObject | null>`
-- `export function crearClavesApple(url?: string, opciones?: { vigenciaMs?: number; esperaMs?: number }): ClavesApple` — por omisión `https://appleid.apple.com/auth/keys`, 24 h y 5 s. Guarda las claves RSA por `kid`. Vuelve a bajarlas si vencieron o si falta el `kid`, salvo dentro de `pausaMs` (60 s) desde la última bajada. Si la bajada falla usa la caché vencida; sin caché, lanza un `Error` común (→ 503).
+- `export function crearClavesApple(url?: string, opciones?: { vigenciaMs?: number; pausaMs?: number; esperaMs?: number }): ClavesApple` — por omisión `https://appleid.apple.com/auth/keys`, 24 h y 5 s. Guarda las claves RSA por `kid`. Vuelve a bajarlas si vencieron o si falta el `kid`, salvo dentro de `pausaMs` (60 s) desde la última bajada. Si la bajada falla usa la caché vencida; sin caché, lanza un `Error` común (→ 503).
 - `export async function verificarNotificacion(jws: string, opciones: { claves: ClavesApple; audiencias: string[]; ahora?: number }): Promise<EventoApple>`
 
 - [ ] **Paso 1: pruebas que fallan.** Un par RSA generado en la prueba y un JWKS servido por `node:http` en `127.0.0.1:0`, que cuenta los pedidos. Casos, cada uno con su `test(...)`:
