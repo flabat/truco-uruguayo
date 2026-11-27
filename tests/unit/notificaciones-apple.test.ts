@@ -4,7 +4,7 @@ import { once } from "node:events";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createHmac, generateKeyPairSync, sign, type KeyObject } from "node:crypto";
 import {
-  NotificacionInvalida, crearClavesApple, crearNotificacionesApple, verificarNotificacion,
+  NotificacionInvalida, crearClavesApple, crearCuentasKeycloak, crearNotificacionesApple, verificarNotificacion,
   type ClavesApple, type CuentasKeycloak, type ResultadoAviso,
 } from "../../api/notificaciones-apple.ts";
 
@@ -130,9 +130,9 @@ test("si Apple no responde se usan las claves ya bajadas; sin ellas la notificac
 });
 
 // El endpoint, servido como en server.ts: un error inesperado responde 503.
-async function servirEndpoint(env: NodeJS.ProcessEnv, cuentas: CuentasKeycloak | null) {
+async function servirEndpoint(env: NodeJS.ProcessEnv, cuentas: CuentasKeycloak | null, pool = {} as never) {
   const resultados: ResultadoAviso[] = [];
-  const atender = crearNotificacionesApple({} as never, env, {
+  const atender = crearNotificacionesApple(pool, env, {
     emisor: "http://identidad.invalid/realms/mesa", claves, cuentas,
     iniciarBaja: async () => { throw new Error("no debería empezar una baja"); },
     cerrarConexiones: () => { throw new Error("no debería cerrar conexiones"); },
@@ -200,4 +200,60 @@ test("sin el cliente de servicio, un aviso que cambia la cuenta responde 503 par
   assert.equal((await endpoint.enviar({ payload: firmar(conEvento({ type: "account-deleted" })) })).status, 503);
   assert.equal((await endpoint.enviar({ payload: firmar(conEvento({ type: "email-enabled" })) })).status, 200);
   assert.deepEqual(endpoint.resultados, ["sin-cambios"]);
+});
+
+test("si Keycloak falla a mitad de camino, responde 503 y el aviso no queda aplicado para que Apple reintente", async () => {
+  const consultas: string[] = [];
+  const pool = { async query(sql: string) {
+    consultas.push(sql);
+    return sql.includes("FROM juego.jugadores") ? { rows: [{ id: "jugador-1" }], rowCount: 1 } : { rows: [], rowCount: 0 };
+  } };
+  const cuentas: CuentasKeycloak = {
+    usuarioDeApple: async () => "usuario-1", tieneOtroIngreso: async () => true, desvincularApple: async () => {},
+    cerrarSesiones: async () => { throw new Error("Keycloak no responde"); },
+  };
+  await using endpoint = await servirEndpoint({ APPLE_CLIENT_ID: "co.eltru.ingreso" }, cuentas, pool as never);
+  assert.equal((await endpoint.enviar({ payload: firmar(actual()) })).status, 503);
+  assert.deepEqual(endpoint.resultados, []);
+  assert.ok(consultas.some(sql => sql.includes("FROM juego.avisos_apple")), "consultó si el aviso ya estaba aplicado");
+  assert.ok(!consultas.some(sql => sql.includes("INSERT INTO juego.avisos_apple")), "no lo marcó como aplicado");
+});
+
+test("el usuario de Apple se confirma con su vínculo: si Keycloak no filtra, no se toca a nadie", async () => {
+  // Keycloak falso: la búsqueda devuelve lo que diga cada caso, sin filtrar.
+  const caso: { encontrados: { id: string }[]; vinculos: Record<string, { identityProvider: string; userId: string }[]> } =
+    { encontrados: [], vinculos: {} };
+  const consultas: string[] = [];
+  const keycloak = createServer((req, res) => {
+    const url = new URL(req.url!, "http://keycloak");
+    if (url.pathname.endsWith("/protocol/openid-connect/token")) return res.end(JSON.stringify({ access_token: "token" }));
+    if (url.pathname === "/admin/realms/mesa/users") {
+      consultas.push(url.search);
+      return res.end(JSON.stringify(caso.encontrados));
+    }
+    const vinculos = /^\/admin\/realms\/mesa\/users\/([^/]+)\/federated-identity$/.exec(url.pathname);
+    res.end(JSON.stringify(vinculos ? caso.vinculos[vinculos[1]] ?? [] : null));
+  }).listen(0, "127.0.0.1");
+  await once(keycloak, "listening");
+  try {
+    const cuentas = crearCuentasKeycloak({ KEYCLOAK_API_CLIENT_SECRET: "secreto",
+      OIDC_BACKEND: `http://127.0.0.1:${(keycloak.address() as { port: number }).port}/realms/mesa` })!;
+    const apple = { identityProvider: "apple", userId: "001.abc.0001" };
+    caso.encontrados = [{ id: "u-1" }];
+    caso.vinculos = { "u-1": [{ identityProvider: "google", userId: "g-1" }, apple] };
+    assert.equal(await cuentas.usuarioDeApple("001.abc.0001"), "u-1");
+    const busqueda = new URLSearchParams(consultas[0]);
+    assert.deepEqual([busqueda.get("idpAlias"), busqueda.get("idpUserId")], ["apple", "001.abc.0001"]);
+    caso.encontrados = [];
+    assert.equal(await cuentas.usuarioDeApple("001.abc.0001"), null);
+    // Un usuario sin ese vínculo, o varios: Keycloak no filtró y no se actúa sobre nadie.
+    caso.encontrados = [{ id: "u-2" }];
+    caso.vinculos = { "u-2": [{ identityProvider: "apple", userId: "001.otro.0002" }] };
+    await assert.rejects(cuentas.usuarioDeApple("001.abc.0001"));
+    caso.encontrados = [{ id: "u-1" }, { id: "u-2" }];
+    caso.vinculos = { "u-1": [apple], "u-2": [] };
+    await assert.rejects(cuentas.usuarioDeApple("001.abc.0001"));
+  } finally {
+    keycloak.close();
+  }
 });

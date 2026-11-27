@@ -83,7 +83,7 @@
 **Interfaces que produce:**
 - `export const rutaNotificacionesApple = "/api/auth/apple/notificaciones"`
 - `export interface CuentasKeycloak { usuarioDeApple(sub: string): Promise<string | null>; tieneOtroIngreso(usuario: string): Promise<boolean>; desvincularApple(usuario: string): Promise<void>; cerrarSesiones(usuario: string): Promise<void> }`
-- `export function crearCuentasKeycloak(env: NodeJS.ProcessEnv): CuentasKeycloak | null` — `GET /users?idpAlias=apple&idpUserId=<sub>&exact=true`; `GET /users/{id}/federated-identity` (otro proveedor) y `GET /users/{id}/credentials` (`type: "password"`); `DELETE /users/{id}/federated-identity/apple` (204 o 404); `POST /users/{id}/logout` (204 o 404).
+- `export function crearCuentasKeycloak(env: NodeJS.ProcessEnv): CuentasKeycloak | null` — `GET /users?idpAlias=apple&idpUserId=<sub>`, confirmado con el vínculo del usuario; `GET /users/{id}/federated-identity` (otro proveedor) y `GET /users/{id}/credentials` (`type: "password"`); `DELETE /users/{id}/federated-identity/apple` (204 o 404); `POST /users/{id}/logout` (204 o 404).
 - `export type ResultadoAviso = "sin-cambios" | "sin-jugador" | "repetido" | "consentimiento-revocado" | "apple-desvinculado" | "baja-iniciada"`
 - `export function crearNotificacionesApple(pool: Pool, env: NodeJS.ProcessEnv, opciones: { emisor: string; iniciarBaja: (jugador: string) => Promise<unknown>; cerrarConexiones: (jugador: string) => void; claves?: ClavesApple; cuentas?: CuentasKeycloak | null; alAplicar?: (resultado: ResultadoAviso) => void }): (req: IncomingMessage, res: ServerResponse) => Promise<void>`
 

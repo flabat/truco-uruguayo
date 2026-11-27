@@ -135,14 +135,22 @@ export function crearCuentasKeycloak(env: NodeJS.ProcessEnv): CuentasKeycloak | 
     // 404: el usuario o el vínculo ya no están, que es lo que se buscaba.
     if (respuesta.status !== 204 && respuesta.status !== 404) throw new Error(`Keycloak no pudo ${que} (${respuesta.status}).`);
   }
+  const vinculosDe = (id: string) =>
+    leer<{ identityProvider: string; userId: string }[]>(usuario(id) + "/federated-identity", "leer los vínculos");
   return {
     async usuarioDeApple(sub) {
       const consulta = new URLSearchParams({ idpAlias: "apple", idpUserId: sub, briefRepresentation: "true" });
-      const [encontrado] = await leer<{ id: string }[]>("/users?" + consulta, "buscar al usuario de Apple");
-      return encontrado?.id ?? null;
+      const encontrados = await leer<{ id: string }[]>("/users?" + consulta, "buscar al usuario de Apple");
+      if (!encontrados.length) return null;
+      // Keycloak vincula cada sub de Apple a un solo usuario. Antes de cerrar sesiones o empezar una baja,
+      // se confirma el vínculo: si la búsqueda no filtrara, no se actúa sobre otra cuenta.
+      const [{ id }] = encontrados;
+      const vinculado = (await vinculosDe(id)).some(v => v.identityProvider === "apple" && v.userId === sub);
+      if (encontrados.length > 1 || !vinculado) throw new Error("Keycloak devolvió usuarios que no tienen ese vínculo con Apple.");
+      return id;
     },
     async tieneOtroIngreso(id) {
-      const vinculos = await leer<{ identityProvider: string }[]>(usuario(id) + "/federated-identity", "leer los vínculos");
+      const vinculos = await vinculosDe(id);
       if (vinculos.some(vinculo => vinculo.identityProvider !== "apple")) return true;
       const credenciales = await leer<{ type: string }[]>(usuario(id) + "/credentials", "leer las credenciales");
       return credenciales.some(credencial => credencial.type === "password");
