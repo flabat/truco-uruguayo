@@ -46,7 +46,7 @@ export function FinDeMano({ fin, rect, limiteInferior, alPresionar, deshabilitad
   const hayFlor = fin.pruebas.some(p => p.motivo === "flor");
   const cobros = (
     <View>
-      <Text style={estilos.rotulo}>{fin.tituloCobros}</Text>
+      {fin.cobros.length ? <Text style={estilos.rotulo}>{fin.tituloCobros}</Text> : null}
       {fin.cobros.map(c => (
         <View key={c.equipo} style={estilos.fila}>
           <Text style={estilos.equipo}>{c.equipo}</Text>

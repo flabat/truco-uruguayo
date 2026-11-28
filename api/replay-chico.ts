@@ -31,11 +31,14 @@ export interface DecisionBotV1 {
   correccion?: string;
 }
 
+export type Motivo = "abandonada" | "desconectada";
+
 export type EventoChicoV1 = { secuencia: number } & (
   | { tipo: "reparto"; manoNumero: number; puntosInicio: Puntos; reparto: RepartoOnline | RepartoGallo }
   | { tipo: "decision"; accion: Confirmada | AccionGallo; duelo?: null | 1 | 2 | 3; bot?: DecisionBotV1; cobros: readonly Cobro[]; puntos: Puntos }
+  | { tipo: "salida"; asiento: number; motivo: Motivo; fecha: string }
   | { tipo: "cierre"; fecha: string; puntos: Puntos } & (
-      { estado: "terminado"; ganador: 0 | 1 } | { estado: "inconcluso"; ganador: null })
+      { estado: "terminado"; ganador: 0 | 1 } | { estado: "inconcluso"; ganador: null } | { estado: "abandonado"; ganador: 0 | 1 })
 );
 
 /** Formato privado y serializable. Los asientos son los índices del array, en orden de mesa. */
@@ -138,7 +141,10 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
   let indicaciones: IndicacionPie[] = [];
   let dadorAnterior: number | undefined;
   let puntos: Puntos = [0, 0];
-  let cierre: "terminado" | "inconcluso" | undefined;
+  let cierre: "terminado" | "inconcluso" | "abandonado" | undefined;
+  let ganadorAbandono: number | undefined;
+  // El asiento de la última salida: un cierre por abandono lo gana el equipo rival.
+  let ultimaSalida: number | undefined;
   for (let i = 0; i < fin; i++) {
     const e = eventos[i];
     const secuencia = i + 1;
@@ -180,6 +186,18 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
         if (!isDeepStrictEqual(e.cobros, mano.valor.cobros) || !isDeepStrictEqual(e.puntos, puntos)) {
           throw new Error("Los cobros o el tanteador difieren del motor.");
         }
+      } else if (e.tipo === "salida") {
+        if (!Number.isInteger(e.asiento) || (e.asiento as number) < 0 || (e.asiento as number) >= asientos.length
+          || (e.motivo !== "abandonada" && e.motivo !== "desconectada") || !fechaUTC(e.fecha)
+          || Date.parse(e.fecha) < Date.parse(cabecera.inicio)) throw new Error("Salida inválida.");
+        ultimaSalida = e.asiento as number;
+      } else if (e.tipo === "cierre" && e.estado === "abandonado") {
+        if (!mano || ultimaSalida === undefined || !fechaUTC(e.fecha) || Date.parse(e.fecha) < Date.parse(cabecera.inicio)
+          || !isDeepStrictEqual(e.puntos, puntos) || puntos.includes(meta) || e.ganador !== 1 - (ultimaSalida % 2)) {
+          throw new Error("Cierre incompatible con el resultado del chico.");
+        }
+        cierre = "abandonado";
+        ganadorAbandono = e.ganador;
       } else if (e.tipo === "cierre") {
         const ganador = puntos.indexOf(meta);
         const estadoEsperado = ganador < 0 ? "inconcluso" : "terminado";
@@ -195,6 +213,6 @@ export function reproducirChico(datos: unknown, asiento: number, hasta?: number)
   }
   const ganador = puntos.indexOf(meta);
   const vista = !mano ? null : mano.tipo === "gallo" ? vistaGallo(mano.valor, asiento) : vistaChicoOnline(mano.valor, asiento, cabecera.alPie ? indicaciones : undefined);
-  return { id, secuencia: fin, manoNumero, meta, puntos, ganador: ganador < 0 ? null : ganador,
+  return { id, secuencia: fin, manoNumero, meta, puntos, ganador: ganadorAbandono ?? (ganador < 0 ? null : ganador),
     estado: cierre ?? (ganador < 0 ? "en-juego" : "terminado"), vista };
 }

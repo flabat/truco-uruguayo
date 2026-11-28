@@ -59,6 +59,8 @@ services:
       OIDC_ISSUER: http://${TRUCO_HOST:-localhost}:${OIDC_PORT:-8080}/realms/mesa-local
       OIDC_BACKEND: http://identidad:8080/realms/mesa-local
       GESTION_SUJETO: ${GESTION_SUJETO:-}
+      # Cuánto traba la mesa un jugador desconectado antes de que lo puedan reemplazar (60 s si está vacío).
+      PLAZO_ESPERA_MS: ${PLAZO_ESPERA_MS:-}
     ports:
       - "${TRUCO_BIND:-127.0.0.1}:${API_PORT:-3001}:3001"
     depends_on:

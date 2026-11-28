@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { normalizarPartida, type PartidaJugador, type RespuestaPartida } from "@eltruco/motor/partida-jugador.ts";
 import { ErrorMesa, type Cliente, type Mesa } from "./cliente.ts";
 
@@ -87,7 +87,8 @@ export function useMesa(cliente: Cliente, id: string, recienCreada = false, avis
         recuperando = true;
         generacion++;
         setConectada(false);
-        if (e instanceof ErrorMesa && [401, 403, 404].includes(e.status)) {
+        // 409: quien abandonó o fue reemplazado ya no vuelve a la mesa; el servidor dice por qué.
+        if (e instanceof ErrorMesa && [401, 403, 404, 409].includes(e.status)) {
           setError(e);
           clearTimeout(timer);
           if (socket) {
@@ -143,5 +144,13 @@ export function useMesa(cliente: Cliente, id: string, recienCreada = false, avis
     };
   }, [cliente, ruta, recienCreada, avisos]);
 
-  return { ruta, mesa, partida, conectada, reconexion, error, refrescar };
+  /** Deja la partida. Resuelve al aceptarlo el servidor; un rechazo llega como `ErrorMesa`. */
+  const abandonar = useCallback(() => cliente.pedir<void>(ruta + "/abandonar", {}), [cliente, ruta]);
+  /** Cobra la partida o pone una computadora en el asiento de quien se desconectó, y vuelve a leer la mesa. */
+  const reemplazar = useCallback(async (asiento: number) => {
+    await cliente.pedir(ruta + "/reemplazar", { asiento });
+    await refrescar.current();
+  }, [cliente, ruta]);
+
+  return { ruta, mesa, partida, conectada, reconexion, error, refrescar, abandonar, reemplazar };
 }

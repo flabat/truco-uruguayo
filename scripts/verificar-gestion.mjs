@@ -224,6 +224,32 @@ try {
     assert.equal(actual.terminadas, totalesPrevios[equipo].terminadas + 1);
     assert.equal(actual.ganadas, totalesPrevios[equipo].ganadas + Number(equipo === final.ganadorPartida));
   }
+  // Una mesa cerrada por abandono queda terminada: gana quien se quedó y no suma a las ganadas de quien abandonó.
+  const previos = await Promise.all(personas.map(persona => jugador(ana, persona)));
+  const huida = await preparar(ana, bruno, "1v1", 40);
+  await leer(ana, "/api/mesas/" + huida.id + "/partida");
+  const salida = await ana.request.post("/api/mesas/" + huida.id + "/abandonar", { headers: { Origin: web }, data: {} });
+  assert.equal(salida.status(), 204, await salida.text());
+  const abandonada = (await leer(ana, historial + "&estado=terminada")).elementos.find(m => m.id === huida.id);
+  assert.equal(abandonada?.estado, "terminada");
+  assert.equal(abandonada.ganador, 1);
+  assert.ok(!(await leer(ana, historial + "&estado=sin-terminar")).elementos.some(m => m.id === huida.id));
+  const [deAna, deBruno] = await Promise.all(personas.map(persona => jugador(ana, persona)));
+  assert.equal(deAna.terminadas, previos[0].terminadas + 1);
+  assert.equal(deAna.ganadas, previos[0].ganadas);
+  assert.equal(deBruno.terminadas, previos[1].terminadas + 1);
+  assert.equal(deBruno.ganadas, previos[1].ganadas + 1);
+  // En parejas la mesa sigue sin ganador, pero quien abandonó ya terminó y perdió, como en su historial.
+  const enParejas = await preparar(ana, bruno, "2v2", 40);
+  await leer(ana, "/api/mesas/" + enParejas.id + "/partida");
+  const cedida = await ana.request.post("/api/mesas/" + enParejas.id + "/abandonar", { headers: { Origin: web }, data: {} });
+  assert.equal(cedida.status(), 204, await cedida.text());
+  assert.equal((await leer(ana, historial + "&estado=sin-terminar")).elementos.find(m => m.id === enParejas.id)?.ganador, null);
+  const [anaCedida, brunoSigue] = await Promise.all(personas.map(persona => jugador(ana, persona)));
+  assert.equal(anaCedida.terminadas, deAna.terminadas + 1);
+  assert.equal(anaCedida.ganadas, deAna.ganadas);
+  assert.equal(brunoSigue.terminadas, deBruno.terminadas);
+  assert.equal(brunoSigue.ganadas, deBruno.ganadas);
   await expect(ana.getByRole("navigation", { name: "Secciones del panel" })).toBeVisible();
   console.log("Gestión verificada con Keycloak, sesiones duplicadas, mesa sin repartir y chicos parciales, terminados y antiguos.");
 } finally {

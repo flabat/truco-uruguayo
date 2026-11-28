@@ -96,11 +96,15 @@ async function indicacionEnVivo(id, pie, orden) {
     autor.ws.send(JSON.stringify({ tipo: "indicacion", ...orden }));
     assert.deepEqual(await rival.recibir(), aviso);
     assert.deepEqual(await autor.recibir(), aviso);
-    const recibo = await autor.recibir();
+    // Cada conexión nueva también avisa al resto de la mesa: el autor puede recibir un aviso más.
+    let recibo = await autor.recibir();
+    while (recibo.tipo === "actualizar") recibo = await autor.recibir();
     assert.equal(recibo.tipo, "confirmacion");
     assert.equal(recibo.id, orden.id);
     const ruta = "/mesas/" + id + "/partida";
-    assert.deepEqual(recibo.partida, await json(pie, ruta));
+    // Las esperas son de cada lectura: el recibo no las guarda.
+    const { esperas: _, ...leida } = await json(pie, ruta);
+    assert.deepEqual(recibo.partida, leida);
     const refresco = await json(1, ruta);
     assert.deepEqual(refresco.indicaciones, recibo.partida.indicaciones);
     assert.deepEqual(recibo.partida.pie.grupos.map(g => g.emisor), [0]);
@@ -155,7 +159,9 @@ async function reconectar() {
       WHERE mesa=$1 ORDER BY a.asiento`, [mesa]);
     jugadores.splice(0, jugadores.length, ...personas.rows.map(j => ({ cookie: "truco_sesion=" + j.sujeto })));
     const ruta = "/mesas/" + mesa;
-    for (let i = 0; i < cantidad; i++) assert.deepEqual(await json(i, ruta + "/partida"), vistas[i]);
+    // Las esperas cuentan por asiento: su hora empieza de nuevo al reiniciar la API.
+    const sinHora = ({ esperas, ...partida }) => ({ ...partida, esperas: esperas?.map(e => e.asiento) });
+    for (let i = 0; i < cantidad; i++) assert.deepEqual(sinHora(await json(i, ruta + "/partida")), sinHora(vistas[i]));
     assert.deepEqual(await json(cantidad - 2, ruta + "/indicaciones", orden.vigente), recibo);
     const historico = await json(cantidad - 2, ruta + "/indicaciones", orden.anterior);
     assert.deepEqual(normalizarPartida(historico), recibo);
@@ -186,7 +192,9 @@ async function verificar(cantidad) {
       assert.deepEqual(p.pie.grupos[0].gestos, ["cejas", "labios-derecha"]);
       assert.notDeepEqual(p.pie.grupos, alterna.pie.grupos);
     } else {
-      assert.deepEqual(p, alterna, "Otro asiento pudo distinguir repartos que sólo cambiaron las cartas de A0");
+      // Las esperas llevan la hora de cada mesa; lo que importa es a quién esperan.
+      const sinHora = ({ esperas, ...partida }) => ({ ...partida, esperas: esperas?.map(e => e.asiento) });
+      assert.deepEqual(sinHora(p), sinHora(alterna), "Otro asiento pudo distinguir repartos que sólo cambiaron las cartas de A0");
     }
   }
   const salon = "/salon/mesas/" + id;

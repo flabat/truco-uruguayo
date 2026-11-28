@@ -74,7 +74,9 @@ function marcadores(legados: string) {
       SELECT g.id, g.modo, g.meta, g.mano, g.inicio, g.fin, coalesce(g.puntos,a.puntos) AS puntos
         FROM juego.marcadores_gestion g LEFT JOIN anteriores a USING (id)
     ), mesas AS (
-      SELECT t.*, CASE WHEN puntos[1] >= meta THEN 0 WHEN puntos[2] >= meta THEN 1 END AS ganador FROM tanteo t
+      SELECT t.*, coalesce((SELECT (c.evento->>'ganador')::integer FROM juego.eventos_chico c
+          WHERE c.mesa=t.id AND c.evento->>'tipo'='cierre' AND c.evento->>'estado'='abandonado' LIMIT 1),
+        CASE WHEN puntos[1] >= meta THEN 0 WHEN puntos[2] >= meta THEN 1 END) AS ganador FROM tanteo t
     )`;
 }
 
@@ -117,9 +119,12 @@ async function leerJugadores(db: PoolClient, pool: Pool, params: URLSearchParams
     const ids: string[] = elementos.map((j: {id: string}) => j.id);
     const legados = await marcadoresAnteriores(db, pool,
       "EXISTS (SELECT 1 FROM juego.asientos a WHERE a.jugador=ANY($1::uuid[]) AND a.mesa=m.id)", [ids]);
+    // Como en el historial del jugador, quien abandonó o fue reemplazado terminó y perdió esa partida,
+    // aunque la mesa siga o la gane su equipo.
     const {rows: totales} = await db.query(`WITH ${marcadores("$2")}
-      SELECT a.jugador, count(*)::int AS terminadas, count(*) FILTER (WHERE p.ganador=a.asiento % 2)::int AS ganadas
-      FROM juego.asientos a JOIN mesas p ON p.id=a.mesa WHERE a.jugador=ANY($1::uuid[]) AND p.ganador IS NOT NULL
+      SELECT a.jugador, count(*)::int AS terminadas, count(*) FILTER (WHERE p.ganador=a.asiento % 2 AND a.salida IS NULL)::int AS ganadas
+      FROM juego.asientos a JOIN mesas p ON p.id=a.mesa
+      WHERE a.jugador=ANY($1::uuid[]) AND (p.ganador IS NOT NULL OR a.salida IS NOT NULL)
       GROUP BY a.jugador`, [ids, JSON.stringify(legados)]);
     for (const j of elementos) {
       const estadistica = totales.find(fila => fila.jugador === j.id);
@@ -194,7 +199,7 @@ async function leerMesasGestion(db: PoolClient, pool: Pool, vivo: boolean, param
     const resultados = await marcadoresAnteriores(db, pool, "m.id=ANY($1::uuid[])", [pendientes]);
     for (const m of sinTanteo) {
       m.puntos = resultados.find(r => r.id === m.id)?.puntos ?? null;
-      if (m.puntos) {
+      if (m.puntos && m.ganador === null) {
         const ganador = m.puntos.findIndex((n: number) => n >= m.meta);
         m.ganador = ganador < 0 ? null : ganador;
       }

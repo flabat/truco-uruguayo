@@ -3,13 +3,15 @@ import { readFileSync, readdirSync } from "node:fs";
 import type { PoolClient } from "pg";
 import { marcadorOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
 import { cobrosDeDecision } from "./replay-chico-online.ts";
-import type { DecisionBotV1, EventoChicoV1, ReplayChicoPie, ReplayChicoV1 } from "./replay-chico.ts";
+import type { DecisionBotV1, EventoChicoV1, Motivo, ReplayChicoPie, ReplayChicoV1 } from "./replay-chico.ts";
 import { versionSenasPie, type IndicacionPie } from "@eltruco/motor/senas-pie.ts";
 import { versions, type ActionId } from "../training/contracts/index.ts";
 import { incumbent } from "../training/seat/index.ts";
 import type { FormatoMesa } from "./mesas.ts";
 import { identificador, type ManoPublicable } from "./turnos.ts";
 import { cedidosDe } from "./cedidos.ts";
+
+type Puntos = readonly [number, number];
 
 export type DecisionReplay = Omit<Extract<EventoChicoV1, { tipo: "decision" }>, "secuencia">;
 
@@ -46,7 +48,9 @@ async function posicionActual(db: PoolClient, mesa: string) {
     SELECT h.numero AS mano, jsonb_array_length(h.acciones) AS decisiones,
       (SELECT count(*)::integer FROM juego.eventos_chico i WHERE i.mesa=h.mesa AND i.mano=h.numero AND i.posicion IS NULL) AS palabras,
       COALESCE(e.secuencia, (SELECT 1 + COALESCE(sum(1 + jsonb_array_length(p.acciones) + jsonb_array_length(p.indicaciones)), 0)
-        FROM juego.manos p WHERE p.mesa=h.mesa AND p.numero<h.numero)) AS inicio
+        FROM juego.manos p WHERE p.mesa=h.mesa AND p.numero<h.numero)
+        -- Una salida ocupa una secuencia sin figurar en juego.manos.
+        + (SELECT count(*) FROM juego.eventos_chico s WHERE s.mesa=h.mesa AND s.mano<h.numero AND s.evento->>'tipo'='salida')) AS inicio
     FROM juego.manos h
     LEFT JOIN juego.eventos_chico e ON e.mesa=h.mesa AND e.mano=h.numero AND e.posicion=0
     WHERE h.mesa=$1 ORDER BY h.numero DESC LIMIT 1`, [mesa]);
@@ -104,4 +108,19 @@ export async function guardarIndicacionReplayDB(db: PoolClient, mesa: string, in
   if (indicacion.indiceAccion !== decisiones) throw new Error("El consejo no corresponde a la última jugada confirmada.");
   await db.query("INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build) VALUES ($1,$2,NULL,$3,$4,$5)",
     [mesa, mano, inicio + decisiones + palabras + 1, { tipo: "indicacion", indicacion }, build]);
+}
+
+/** La salida de un asiento no ocupa posición de jugada. Con `cierre`, el chico termina por abandono en la misma escritura. */
+export async function guardarSalidaReplayDB(db: PoolClient, mesa: string, asiento: number, motivo: Motivo,
+    cierre?: { ganador: 0 | 1; puntos: Puntos }) {
+  const { mano, inicio, palabras, decisiones } = await posicionActual(db, mesa);
+  const secuencia = inicio + decisiones + palabras + 1;
+  const fecha = "to_char(statement_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\"')";
+  await db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
+    VALUES ($1,$2,NULL,$3,$4::jsonb || jsonb_build_object('fecha', ${fecha}),$5)`,
+    [mesa, mano, secuencia, { tipo: "salida", asiento, motivo }, build]);
+  if (!cierre) return;
+  await db.query(`INSERT INTO juego.eventos_chico(mesa,mano,posicion,secuencia,evento,build)
+    VALUES ($1,$2,$3,$4,$5::jsonb || jsonb_build_object('fecha', ${fecha}),$6)`,
+    [mesa, mano, decisiones + 1, secuencia + 1, { tipo: "cierre", estado: "abandonado", ganador: cierre.ganador, puntos: cierre.puntos }, build]);
 }
