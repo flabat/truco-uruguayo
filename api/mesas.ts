@@ -170,7 +170,10 @@ async function crear(db: PoolClient, jugador: string, datos: Record<string, unkn
   if (alPie && !altasPie(true).includes(modo)) throw new ErrorPeticion(409, "Las señas al pie están deshabilitadas en esta modalidad.");
   const versionSenas = alPie ? versionSenasPie : nueva === "triples" ? null : signalVersionFor(nueva);
   const mejorada = modo === "2v2" && meta >= 20 && meta <= 80 && process.env.MODELO_PIE_PAREJAS !== "0";
-  const politicaAlPie = mejorada ? politicaPieParejas : politicaPie;
+  // Un actor aprendido activado al pie (policyctl.ts, claves pairs-pie y triples-pie) reemplaza a la política fija.
+  const aprendidaPie = alPie && (modo === "3v3" || mejorada) ? (await db.query<{ pin: string }>(
+    "SELECT pin FROM juego.activaciones WHERE formato=$1", [modo === "3v3" ? "triples-pie" : "pairs-pie"])).rows[0]?.pin : undefined;
+  const politicaAlPie = aprendidaPie ?? (mejorada ? politicaPieParejas : politicaPie);
   const politica = alPie ? politicaAlPie : modo === "3v3" ? politicaTercetos : null;
   const token = randomBytes(24).toString("base64url");
   const { rows: [mesa] } = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, meta, politica, perfil_tercetos, publica) VALUES ($1,$2,$3,$4,$5,

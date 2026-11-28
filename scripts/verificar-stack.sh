@@ -90,6 +90,7 @@ node scripts/verificar-ingreso-dev.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
 COMPOSE_PROJECT_NAME="$project" npm run auth:api
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-notificaciones-apple.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
@@ -103,6 +104,14 @@ for formato in duel pairs pairs-private-senas; do
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
+# Actores aprendidos al pie: las mesas nuevas los toman y la computadora juega chicos completos con ellos.
+for formato in pairs-pie triples-pie; do
+  pin=$(node scripts/actor-ensayo.ts "$formato" | "${compose[@]}" exec -T api node policyctl.ts register "$formato")
+  "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
+done
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-pie-aprendido.mjs
+"${compose[@]}" exec -T api node --input-type=module - al-pie-aprendido < scripts/verificar-ensayos.mjs
+for formato in pairs-pie triples-pie; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-retiro.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-abandono.mjs
 for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done

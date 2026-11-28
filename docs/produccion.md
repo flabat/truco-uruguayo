@@ -257,7 +257,7 @@ La construcción también graba la rama, la fecha y, si el commit tiene una etiq
      IdentityFile ~/.ssh/<clave>
    ```
 
-   o pasalo en cada ejecución con `TRUCO_VPS=root@<host>`. `TRUCO_VPS_SSH` agrega opciones de `ssh`, por ejemplo `-p 2222`.
+   o pasalo en cada ejecución con `TRUCO_VPS=root@<host>`. `TRUCO_VPS_SSH` agrega opciones de `ssh`, por ejemplo `-p 2222`. Si la cuenta tiene `sudo` sin contraseña pero no está en el grupo `docker`, como `ubuntu` en las imágenes de OVH, `TRUCO_VPS_SUDO=1` corre cada orden remota con `sudo`.
 3. El VPS ya tiene `/etc/truco-oriental/production.env` de la [publicación automática](#publicación-automática-desde-main).
 
 ### Qué queda en el VPS y cómo vuelve main

@@ -141,6 +141,9 @@ def host(env=os.environ):
 
 def ssh_command(target, command, env=os.environ):
     # TRUCO_VPS_SSH agrega opciones de ssh (por ejemplo "-i ~/.ssh/vps -p 2222").
+    # TRUCO_VPS_SUDO=1 corre cada orden con sudo, para una cuenta con sudo sin contraseña fuera del grupo docker.
+    if env.get("TRUCO_VPS_SUDO") == "1":
+        command = "sudo -n sh -c " + shlex.quote(command)
     return ["ssh", "-o", "BatchMode=yes", *shlex.split(env.get("TRUCO_VPS_SSH", "")), target, command]
 
 

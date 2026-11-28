@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { elegirIndicacionesPie } from "@eltruco/motor/bot-pie.ts";
 import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
+import { politicaParaAnticipar } from "./politica-pie.ts";
 import { aplicarOnline, vistaOnline, type AccionOnline, type EstadoOnline } from "@eltruco/motor/mesa-online.ts";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { DecisionBotV1 } from "./replay-chico.ts";
@@ -36,7 +37,7 @@ export function esperaDelPie(mano: ManoPublicable, humanos: readonly number[], a
   if (!companero || companero.pie === asiento || !humanos.includes(companero.pie)) return;
   const pie = vistaDelPie(estado, companero.pie, destinosAtendidos(mano));
   if (!pie?.opciones.some(o => o.destinatario === asiento)) return;
-  const jugada = accion ?? elegirAccionPoliticaPie(mano.politicaPie, vistaOnline(estado, asiento), companero, indicaciones);
+  const jugada = accion ?? elegirAccionPoliticaPie(politicaParaAnticipar(mano.politicaPie), vistaOnline(estado, asiento), companero, indicaciones);
   return jugada?.tipo === "carta" ? asiento : undefined;
 }
 

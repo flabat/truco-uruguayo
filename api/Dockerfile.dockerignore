@@ -29,6 +29,10 @@
 !training/duel/math.ts
 !training/partners/
 !training/partners/policy.ts
+!training/regularized/
+!training/regularized/actor.ts
+!training/regularized/features.ts
+!training/regularized/network.ts
 !training/selfplay/
 !training/selfplay/duel-card-odds.ts
 !training/selfplay/learner.ts

@@ -13,14 +13,17 @@ import { avanzarEnsayo } from "./partidas.ts";
 
 export async function insertarMesaComputadoras(db: PoolClient, formato: FormatoMesa, creador: string, pin?: string, cupo: number | null = null) {
   const tercetos = formato === "triples";
-  const alPie = pin === politicaPie || pin === politicaPieParejas;
-  if (alPie && (formato !== "pairs-private-senas" || cupo !== null)) {
-    throw new RangeError("El ensayo de señas al pie requiere parejas privadas entre computadoras.");
+  // Un actor aprendido al pie se ensaya en su modalidad: parejas privadas o tercetos.
+  const aprendidoPie = pin && /^[a-f0-9]{64}$/.test(pin) ? (await db.query<{ formato: string }>(
+    "SELECT formato FROM juego.artefactos WHERE pin=$1 AND formato IN ('pairs-pie','triples-pie')", [pin])).rows[0]?.formato : undefined;
+  const alPie = pin === politicaPie || pin === politicaPieParejas || aprendidoPie !== undefined;
+  if (alPie && (formato !== (aprendidoPie === "triples-pie" ? "triples" : "pairs-private-senas") || cupo !== null)) {
+    throw new RangeError("El ensayo de señas al pie requiere parejas privadas, o tercetos para un actor de tercetos al pie, entre computadoras.");
   }
-  if (tercetos && pin && pin !== politicaTercetos) throw new RangeError("El ensayo de tercetos requiere su política básica.");
+  if (tercetos && pin && pin !== politicaTercetos && !alPie) throw new RangeError("El ensayo de tercetos requiere su política básica.");
   if (!tercetos) requireTrainingFormat(formato);
   const modo = tercetos ? "3v3" : formato === "duel" ? "1v1" : "2v2";
-  const politica = tercetos ? politicaTercetos : pin ?? null;
+  const politica = tercetos && !alPie ? politicaTercetos : pin ?? null;
   const {rows: [mesa]} = await db.query(`INSERT INTO juego.mesas (modo, creador, invitacion, version_senas, solo_computadoras, politica, meta, perfil_tercetos, cupo_exhibicion, publica)
     VALUES ($1, $2, $3, $4, true, COALESCE($5,(SELECT pin FROM juego.activaciones WHERE formato=$6),$7), $8, $9, $10::smallint, $10::smallint IS NOT NULL) RETURNING id`, [
     modo, creador, randomUUID(), alPie ? versionSenasPie : tercetos ? null : signalVersionFor(formato), politica, formato,
