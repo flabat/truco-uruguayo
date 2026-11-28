@@ -10,11 +10,11 @@ En un día de Mac entrené computadoras con autojuego regularizado: PPO con una 
 | --- | --- | --- | --- |
 | Parejas al pie | Parejas C, iteración 3800 | 74,3 % [72,6; 76,0] contra `pie-parejas-v2` | Activo en el VPS como «Parejas al pie 1». |
 | Tercetos al pie | Tercetos A, iteración 2520 | 66,8 % [65,1; 68,5] contra `pie-clasico-v1` | Activo en el VPS como «Tercetos al pie 1». |
-| Duelo | Duelo C, iteración 4300 | 57,3 % [55,4; 59,1] contra Duelo 2 | Pasa el campeonato oficial contra V1, pero no la puerta relajada contra Duelo 2. Sigue Duelo 2. |
+| Duelo | Duelo C, iteración 4300 | 57,3 % [55,4; 59,1] contra Duelo 2 | Activo en el VPS como «Duelo 3». Pasa el campeonato oficial contra V1, pero no la puerta relajada contra Duelo 2; se activó por decisión del proyecto. |
 
 - **Al pie**, los dos modelos le ganan al campeón por 17 a 24 puntos y les sacan más que él a los cinco estilos fijos. Ninguno pierde en promedio más de 1,4 puntos frente a una familia que decide.
-- **En duelo**, Duelo C le gana a Duelo 2 en el cruce directo y frente a los rivales aprendidos (Ceibo, el finalista, un linaje independiente), y resiste mucho mejor a los explotadores. Pero Duelo 2 aprieta a V1 y a sus variantes más que nadie, y frente a V1, al retador y al farolero ocasional Duelo C saca entre 7 y 8 puntos menos que él.
-- **Ningún modelo pasa la puerta estricta.** Todos pierden contra un explotador PPO entrenado una hora contra ellos, como también le pasa a Ceibo. A pedido del dueño del proyecto, la activación usó una puerta relajada que trata a los explotadores como prueba de estrés.
+- **En duelo**, Duelo C le gana a Duelo 2 en el cruce directo y frente a los rivales aprendidos (Ceibo, el finalista, un linaje independiente), y resiste mucho mejor a los explotadores. Pero Duelo 2 aprieta a V1 y a sus variantes más que nadie, y frente a V1, al retador y al farolero ocasional Duelo C saca entre 7 y 8 puntos menos que él. Como esos rivales son variantes de V1 y no se parecen a una persona, el informe recomendó activarlo igual y el dueño del proyecto estuvo de acuerdo.
+- **Ningún modelo pasa la puerta estricta.** Todos pierden contra un explotador PPO entrenado una hora contra ellos, como también le pasa a Ceibo. A pedido del dueño del proyecto, las activaciones al pie usaron una puerta relajada que trata a los explotadores como prueba de estrés.
 - **El hallazgo principal es la explotabilidad.** Arrancar clonando al campeón hace que la entropía colapse y el modelo se vuelva determinista y explotable. Subir la entropía sola no alcanzó. Lo que funcionó fue sumarle explotadores frescos a la liga cada 40 minutos: el explotador de una hora pasó de ganar 87 % contra Duelo B a 65 % contra Duelo C.
 
 ## Punto de partida
@@ -126,13 +126,14 @@ Horas en UTC.
 | 00:07–01:03 | Explotador de una hora contra Duelo C. |
 | 01:03–01:24 | Puertas finales de duelo contra Duelo 2, con Duelo C y Duelo B sobre los mismos repartos. |
 | 01:25 | Activación en el VPS de «Parejas al pie 1» y «Tercetos al pie 1». Ensayo en el VPS de un chico completo de parejas y otro de tercetos al pie con los modelos activados: aprobado. |
+| 06:00 | Activación de Duelo C en el VPS como «Duelo 3», en lugar de Duelo 2. Ensayo de un chico completo de duelo: las 161 decisiones usaron su pin, sin respaldo. |
 
 ## Resultados
 
 La puerta compara al candidato con el campeón sobre los mismos repartos. Las cotas salen de un bootstrap por pares con corrección de Bonferroni.
 
 - **Puerta estricta.** El candidato le tiene que ganar al campeón con la cota inferior del 95 % por encima del 50 % y no perder más de 2 puntos frente al campeón contra ninguna familia, también con la cota inferior.
-- **Puerta relajada**, la que pidió el dueño del proyecto a las 18:41 y la que decidió las activaciones. Mantiene el cruce directo. Contra cada familia que no sea un explotador, el candidato no puede perder en promedio más de 2 puntos frente al campeón, y la cota inferior no puede bajar de −5. Los explotadores PPO quedan como información (`training/regularized/verdict.ts`).
+- **Puerta relajada**, la que pidió el dueño del proyecto a las 18:41 y la que decidió las activaciones al pie. Mantiene el cruce directo. Contra cada familia que no sea un explotador, el candidato no puede perder en promedio más de 2 puntos frente al campeón, y la cota inferior no puede bajar de −5. Los explotadores PPO quedan como información (`training/regularized/verdict.ts`).
 
 Las puertas de la tarde usaron la semilla 461300 y las nocturnas la 461400. Ninguna de las dos se usó para elegir instantáneas: eso se hizo con la 461200.
 
@@ -356,10 +357,10 @@ Pasan los dos. La regla de activación, fijada antes de las puertas, elige al de
 
 ### Próximos pasos
 
-- **Duelo:** Duelo C pasa el campeonato oficial y le gana a Duelo 2, pero no pasa la puerta relajada contra él. Activarlo es una decisión del proyecto: cambia un modelo que exprime a V1 por uno más general y menos explotable. La alternativa es un Duelo D desde Duelo C con Duelo 2 en la liga y la ponderación según la puerta persiguiendo sus marcas.
+- **Duelo:** «Duelo 3» cambió un modelo que exprime a V1 por uno más general y menos explotable. El próximo paso es un Duelo D desde Duelo C con Duelo 2 en la liga y la ponderación según la puerta persiguiendo sus marcas, para recuperar lo que Duelo 2 le saca a V1 y a sus variantes sin volver a ser explotable.
 - **Tercetos:** un Tercetos C desde Tercetos B con más rivales fijos, para recuperar los estilos sin perder la robustez.
 - **Varias semillas por formato**, para saber cuánto varía cada resultado.
-- **Mirar las partidas con personas** en las mesas al pie, ahora que los dos modelos están activos.
+- **Mirar las partidas con personas**, ahora que los tres modelos están activos. En duelo importa sobre todo si las personas juegan más parecido a V1, donde Duelo 2 rendía más, o a los rivales aprendidos, donde rinde más Duelo C.
 
 ## Limitaciones
 
@@ -371,17 +372,21 @@ Pasan los dos. La regla de activación, fijada antes de las puertas, elige al de
 
 ## Para llevarlo a la app
 
-#464 integró el cableado, y el VPS sirve los modelos regularizados desde las 22:57. El 28 de noviembre a la 01:25 UTC quedaron activados:
+#464 integró el cableado, y el VPS sirve los modelos regularizados desde las 22:57. El 28 de noviembre quedaron activados:
 
-| Clave | Nombre | Pin | Modelo |
-| --- | --- | --- | --- |
-| `pairs-pie` | Parejas al pie 1 | `3844512649a4` | Parejas C, iteración 3800 |
-| `triples-pie` | Tercetos al pie 1 | `5159eb12687e` | Tercetos A, iteración 2520 |
-| `duel` | Duelo 2 | `2cefef8e30b7` | Sin cambios |
+| Clave | Nombre | Pin | Modelo | Desde (UTC) |
+| --- | --- | --- | --- | --- |
+| `pairs-pie` | Parejas al pie 1 | `3844512649a4` | Parejas C, iteración 3800 | 01:25 |
+| `triples-pie` | Tercetos al pie 1 | `5159eb12687e` | Tercetos A, iteración 2520 | 01:25 |
+| `duel` | Duelo 3 | `5ddfce0cc19f` | Duelo C, iteración 4300; reemplaza a Duelo 2 (`2cefef8e30b7`) | 06:00 |
 
-Un ensayo en el VPS jugó un chico completo de parejas y otro de tercetos al pie y comprobó que cada decisión de la computadora usó el pin activado. Los pesos y los artefactos quedan en `runs/regularized/` de la Mac y en `juego.artefactos` del VPS.
+Dos ensayos en el VPS, uno al pie y otro de duelo, jugaron chicos completos de parejas, tercetos y duelo y comprobaron que cada decisión de la computadora usó el pin activado, sin respaldo. Los pesos y los artefactos quedan en `runs/regularized/` de la Mac y en `juego.artefactos` del VPS.
 
-**Duelo.** El artefacto `truco-regularized-v1` es servible por `api/actor-registry.ts` y entra en la imagen de la API. Duelo C está en `runs/regularized/candidates/duel-c-pick.json` (pin `5ddfce0cc19f`) y su campeonato oficial, aprobado, en `runs/regularized/campeonato-duel-c/`. Activarlo es `register duel` y `activate duel` con ese archivo. Ojo: `rollback duel` borra la activación y deja a V1, no a Duelo 2; para volver a Duelo 2 hay que activar su pin.
+**Duelo.** El artefacto `truco-regularized-v1` es servible por `api/actor-registry.ts` y entra en la imagen de la API. Duelo C está en `runs/regularized/candidates/duel-c-pick.json` y su campeonato oficial, aprobado, en `runs/regularized/campeonato-duel-c/`. Ojo: `rollback duel` borra la activación y deja a V1, no a Duelo 2. Para volver a Duelo 2, Duelo 2 sigue registrado en `juego.artefactos`:
+
+```sh
+ssh truco-vps "sudo docker exec truco-produccion-api-1 node policyctl.ts activate duel 2cefef8e30b7ac5dfc865f8d94094b1037836f1a67977abdb1fc26ef903ce0f8"
+```
 
 **Parejas al pie y tercetos.** El cableado:
 
