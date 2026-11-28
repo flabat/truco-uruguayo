@@ -31,8 +31,48 @@ main:has(.truco-social) {
     padding-block-start: 0;
 }
 
-.truco-social #kc-social-providers a {
-    min-height: 2.75rem;
+#kc-social-providers {
+    --truco-social-alto: 2.75rem;
+}
+
+#kc-social-providers a {
+    min-height: var(--truco-social-alto);
+}
+
+/* Sign in with Apple según las Human Interface Guidelines: negro sobre fondo claro y blanco sobre oscuro, con
+   logo y título del mismo color. El logo de Apple trae su margen y mide lo mismo que el botón; el título mide
+   el 43 % del alto, en la fuente del sistema. El margen inicial alinea el glifo con los demás íconos.
+   .pf-v5-c-button iguala la especificidad del borde gris que keycloak.v2 pone a los botones sociales. */
+#kc-social-providers .pf-v5-c-button.truco-apple {
+    --truco-apple-fondo: #000;
+    --truco-apple-tinta: #fff;
+    --pf-v5-c-button--m-tertiary--BackgroundColor: var(--truco-apple-fondo);
+    --pf-v5-c-button--m-tertiary--Color: var(--truco-apple-tinta);
+    --pf-v5-c-button--m-tertiary--after--BorderColor: var(--truco-apple-fondo);
+    padding-block: 0;
+    padding-inline-start: 0.625rem;
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", Arial, sans-serif;
+    font-size: calc(var(--truco-social-alto) * 0.43);
+    font-weight: 500;
+}
+
+.pf-v5-theme-dark #kc-social-providers .pf-v5-c-button.truco-apple {
+    --truco-apple-fondo: #fff;
+    --truco-apple-tinta: #000;
+}
+
+#kc-social-providers .truco-apple img {
+    width: auto;
+    height: var(--truco-social-alto);
+}
+
+#kc-social-providers .truco-apple-oscuro,
+.pf-v5-theme-dark #kc-social-providers .truco-apple-claro {
+    display: none;
+}
+
+.pf-v5-theme-dark #kc-social-providers .truco-apple-oscuro {
+    display: block;
 }
 
 #truco-existing-account {

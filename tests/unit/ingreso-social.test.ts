@@ -78,6 +78,7 @@ for (const [proveedor, campoId, campoSecreto] of [
     assert.equal(creado.config.clientId, "aplicacion");
     assert.equal(creado.config.clientSecret, secreto);
     assert.equal(creado.config.prompt, proveedor === "google" ? "select_account" : proveedor === "discord" ? "consent" : undefined);
+    assert.equal(creado.config.guiOrder, undefined);
     if (proveedor === "discord") {
       assert.equal(creado.config.userIDClaim, "id");
       assert.equal(creado.config.userNameClaim, "username");
@@ -119,6 +120,33 @@ for (const concurrente of [false, true]) {
     assert.equal(actualizado.config.prompt, "select_account");
   });
 }
+
+const credencialesApple = {
+  KEYCLOAK_ADMIN_TOKEN: token, APPLE_CLIENT_ID: "co.eltru.prueba", APPLE_PRIVATE_KEY: secreto,
+  APPLE_TEAM_ID: "EQUIPO1234", APPLE_KEY_ID: "CLAVE12345",
+};
+
+test("crea Apple primero en la lista, con el equipo, la clave y los tokens guardados", async t => {
+  const admin = await administrador(t, [404], [201]);
+  const resultado = await ejecutar("apple", admin.url, credencialesApple);
+  assert.equal(resultado.codigo, 0, resultado.salida);
+  const creado = JSON.parse(admin.peticiones[1].cuerpo);
+  assert.equal(creado.alias, "apple");
+  assert.equal(creado.displayName, "Apple");
+  assert.equal(creado.storeToken, true);
+  assert.equal(creado.config.teamId, "EQUIPO1234");
+  assert.equal(creado.config.keyId, "CLAVE12345");
+  assert.equal(creado.config.guiOrder, "0");
+  assert.ok(!resultado.salida.includes(token) && !resultado.salida.includes(secreto));
+});
+
+test("la rotación de Apple lo devuelve al primer lugar", async t => {
+  const existente = { alias: "apple", providerId: "apple", config: { clientId: "anterior", guiOrder: "5" } };
+  const admin = await administrador(t, [200, existente], [204]);
+  const resultado = await ejecutar("apple", admin.url, credencialesApple);
+  assert.equal(resultado.codigo, 0, resultado.salida);
+  assert.equal(JSON.parse(admin.peticiones[1].cuerpo).config.guiOrder, "0");
+});
 
 test("las credenciales del otro proveedor no habilitan un alta incompleta", async t => {
   const admin = await administrador(t);

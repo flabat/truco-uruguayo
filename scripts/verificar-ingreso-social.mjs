@@ -1,10 +1,62 @@
 import assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { chromium, expect } from "@playwright/test";
 
 const [web, ...habilitados] = process.argv.slice(2);
 const browser = await chromium.launch();
 const ingreso = new URL("/api/auth/login", web).href;
+// Sumas de los SVG oficiales de Apple que la imagen de Keycloak baja al construirse.
+const sumasLogoApple = Object.fromEntries(
+  readFileSync(new URL("../infra/keycloak/logo-apple.sha256", import.meta.url), "utf8")
+    .trim().split("\n").map(linea => linea.split(/\s+/).reverse()),
+);
+
+// Sign in with Apple según las Human Interface Guidelines: logo oficial del alto del botón, título y logo
+// del mismo color, negro sobre fondo claro y blanco sobre oscuro, y nunca más chico que los demás botones.
+async function verificarApple(page, oscuro) {
+  await expect(page.locator("html.pf-v5-theme-dark")).toHaveCount(oscuro ? 1 : 0);
+  const boton = page.locator("#social-apple");
+  const titulo = boton.locator("span");
+  const [fondo, tinta] = oscuro ? ["rgb(255, 255, 255)", "rgb(0, 0, 0)"] : ["rgb(0, 0, 0)", "rgb(255, 255, 255)"];
+  await expect(boton).toHaveCSS("background-color", fondo);
+  await expect(titulo).toHaveCSS("color", tinta);
+  assert.equal(await boton.evaluate(a => getComputedStyle(a, "::after").borderColor), fondo, "Sin borde gris alrededor de Apple.");
+
+  const logo = boton.locator("img:visible");
+  await expect(logo).toHaveCount(1);
+  const archivo = oscuro ? "apple-negro.svg" : "apple-blanco.svg";
+  const origen = await logo.evaluate(img => img.currentSrc);
+  assert.ok(origen.endsWith("/img/social/" + archivo), origen);
+  assert.ok(await logo.evaluate(img => img.complete && img.naturalWidth > 0), "El logo de Apple debe cargar.");
+  const svg = await page.request.get(origen);
+  assert.equal(svg.headers()["content-type"], "image/svg+xml");
+  assert.equal(createHash("sha256").update(await svg.body()).digest("hex"), sumasLogoApple[archivo]);
+
+  const caja = await boton.boundingBox();
+  const cajaLogo = await logo.boundingBox();
+  const cajaTitulo = await titulo.boundingBox();
+  assert.ok(Math.abs(cajaLogo.height - caja.height) < 0.5 && Math.abs(cajaLogo.y - caja.y) < 0.5,
+    "El logo debe medir lo mismo que el botón, sin relleno vertical.");
+  assert.ok(caja.width >= 140 && caja.height >= 30);
+  const proporcion = parseFloat(await titulo.evaluate(span => getComputedStyle(span).fontSize)) / caja.height;
+  assert.ok(proporcion > 0.41 && proporcion < 0.45, `El título mide ${proporcion} del alto; Apple usa 0.43.`);
+  assert.ok(caja.x + caja.width - (cajaTitulo.x + cajaTitulo.width) >= 0.08 * caja.width,
+    "El margen derecho del título debe ser al menos el 8 % del ancho.");
+  const otro = page.locator("#kc-social-providers a[id^='social-']:not(#social-apple)").first();
+  const cajaOtro = await otro.boundingBox();
+  assert.ok(Math.abs(caja.height - cajaOtro.height) < 0.5 && Math.abs(caja.width - cajaOtro.width) < 0.5,
+    "Apple debe medir lo mismo que los demás botones.");
+  const radio = elemento => elemento.evaluate(a => getComputedStyle(a).borderRadius);
+  assert.equal(await radio(boton), await radio(otro));
+
+  // El borde de foco de PatternFly toma el color del botón: sobre negro tiene que verse un contorno.
+  await page.locator("#login-select-toggle").focus();
+  await page.keyboard.press("Tab");
+  await expect(boton).toBeFocused();
+  assert.notEqual(await boton.evaluate(a => getComputedStyle(a).outlineStyle), "none");
+  assert.notEqual(await boton.evaluate(a => getComputedStyle(a).outlineColor), fondo);
+}
 
 async function verificarMarca(page) {
   await expect(page).toHaveTitle(/El Truco/);
@@ -38,10 +90,11 @@ async function verificarOrdenYClaveLocal(viewport, locale) {
     await expect(introduccion).toContainText(locale === "es" ? "crear tu jugador" : "join the game");
     for (const nombre of ["Google", "Facebook", "Discord", "Apple"].filter(nombre => habilitados.includes(nombre.toLowerCase()))) {
       const boton = page.locator("#social-" + nombre.toLowerCase());
-      const etiqueta = (locale === "es" ? "Continuar con " : "Sign in with ") + nombre;
+      const etiqueta = (locale === "es" ? "Continuar con " : "Continue with ") + nombre;
       await expect(boton).toHaveText(etiqueta);
       await expect(boton).toHaveAccessibleName(etiqueta);
     }
+    if (habilitados.includes("apple")) await expect(proveedores.first()).toHaveId("social-apple");
     const resumen = cuentaLocal.locator("summary");
     await expect(resumen).toBeVisible();
     await expect(usuario).toBeHidden();
@@ -77,6 +130,18 @@ async function verificarOrdenYClaveLocal(viewport, locale) {
 try {
   await verificarOrdenYClaveLocal({ width: 1280, height: 800 }, "es");
   await verificarOrdenYClaveLocal({ width: 375, height: 760 }, "en");
+  if (habilitados.includes("apple")) {
+    for (const [viewport, locale, colorScheme] of [
+      [{ width: 1280, height: 800 }, "es", "light"],
+      [{ width: 375, height: 760 }, "en", "light"],
+      [{ width: 375, height: 760 }, "en", "dark"],
+    ]) {
+      const pagina = await browser.newPage({ viewport, locale, colorScheme });
+      await pagina.goto(ingreso);
+      await verificarApple(pagina, colorScheme === "dark");
+      await pagina.close();
+    }
+  }
   const page = await browser.newPage();
   await page.goto(ingreso);
   const issuer = new URL("/realms/mesa-local/", page.url());
