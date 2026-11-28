@@ -27,6 +27,12 @@ test("el jugador abre su perfil y navega el historial", async ({ page }, testInf
     }, {
       id: "13b9d260-a762-4f99-be74-efdd3f4988c5", modo: "3v3", meta: 50, mano: 3, resultado: "sin-terminar",
       fecha: "2026-11-17T15:30:00.000Z", puntos: { propios: 12, rivales: 16 },
+    }, {
+      id: "5c1c3f0e-0f0b-4c52-8d3c-3b0c5c1d9a01", modo: "1v1", meta: 40, mano: 2, resultado: "abandonada",
+      fecha: "2026-11-16T15:30:00.000Z", puntos: { propios: 3, rivales: 5 },
+    }, {
+      id: "5c1c3f0e-0f0b-4c52-8d3c-3b0c5c1d9a02", modo: "1v1", meta: 40, mano: 2, resultado: "desconectada",
+      fecha: "2026-11-15T15:30:00.000Z", puntos: { propios: 3, rivales: 5 },
     }] : [{
       id: "774a99d9-f5f2-4c76-8d80-6ebe333f8f0e", modo: "1v1", meta: 40, mano: 1, resultado: "desconocido",
       fecha: null, puntos: null,
@@ -40,6 +46,8 @@ test("el jugador abre su perfil y navega el historial", async ({ page }, testInf
   await expect(page.getByRole("heading", { name: "Parejas · A 40 tantos" })).toBeVisible();
   await expect(page.getByText("Tu equipo 40 · Rivales 31")).toBeVisible();
   await expect(page.getByText("Ganada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Abandonada", { exact: true })).toBeVisible();
+  await expect(page.getByText("Desconectada", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Abrir mesa" }).first()).toHaveAttribute("href", "/jugar/?mesa=" + mesa);
   const sinDesborde = await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
   expect(sinDesborde).toBe(true);

@@ -10,6 +10,7 @@ compose=(docker compose --project-name "$project")
 desplazamiento=$((10 * ${TRUCO_COLA_PUESTO:-0}))
 export TRUCO_BIND=127.0.0.1 TRUCO_HOST=${TEST_TRUCO_HOST:-localhost} WEB_PORT=${TEST_WEB_PORT:-$((18081 + desplazamiento))} API_PORT=0
 export SALON_HABILITADO=1 EXHIBICIONES_HABILITADAS=0 SENAS_PIE_PAREJAS=1 SENAS_PIE_TERCETOS=1
+export PLAZO_ESPERA_MS=1500 # El reemplazo por desconexión se prueba sin esperar un minuto.
 export GESTION_SUJETO=2e98a700-1205-4e9b-8161-000000000001 # Ana, en el realm descartable.
 export OIDC_PORT="${TEST_OIDC_PORT:-$((18080 + desplazamiento))}"
 export KC_BOOTSTRAP_ADMIN_USERNAME=operador-prueba KC_BOOTSTRAP_ADMIN_PASSWORD=clave-descartable
@@ -89,6 +90,7 @@ node scripts/verificar-ingreso-dev.mjs "http://$TRUCO_HOST:$WEB_PORT" "$project"
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas.mjs
 COMPOSE_PROJECT_NAME="$project" npm run auth:api
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-bajas-vencidas.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-notificaciones-apple.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-salon.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-voz.mjs
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-partidas.mjs
@@ -102,7 +104,16 @@ for formato in duel pairs pairs-private-senas; do
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
+# Actores aprendidos al pie: las mesas nuevas los toman y la computadora juega chicos completos con ellos.
+for formato in pairs-pie triples-pie; do
+  pin=$(node scripts/actor-ensayo.ts "$formato" | "${compose[@]}" exec -T api node policyctl.ts register "$formato")
+  "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
+done
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-pie-aprendido.mjs
+"${compose[@]}" exec -T api node --input-type=module - al-pie-aprendido < scripts/verificar-ensayos.mjs
+for formato in pairs-pie triples-pie; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-retiro.mjs
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-abandono.mjs
 for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
 "${compose[@]}" run --no-deps --rm -T api node --input-type=module < scripts/verificar-inferencia.mjs

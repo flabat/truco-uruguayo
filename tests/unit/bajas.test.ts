@@ -56,3 +56,33 @@ test("si Keycloak no responde, guardar el token de Apple no demora el ingreso m�
   assert.notEqual(resultado, "colgado");
   assert.ok(Date.now() - inicio < 1500);
 });
+
+test("la administración de Keycloak pide con el token del cliente de servicio, en el realm del backend", async () => {
+  const { createServer } = await import("node:http");
+  const { once } = await import("node:events");
+  const { adminKeycloak } = await import("../../api/bajas.ts");
+  const pedidos: { ruta: string; autorizacion?: string; cuerpo: string }[] = [];
+  const keycloak = createServer((req, res) => {
+    let cuerpo = "";
+    req.on("data", parte => { cuerpo += parte; });
+    req.on("end", () => {
+      pedidos.push({ ruta: req.method + " " + req.url, autorizacion: req.headers.authorization, cuerpo });
+      if (req.url === "/realms/mesa/protocol/openid-connect/token") res.end(JSON.stringify({ access_token: "token-servicio" }));
+      else res.writeHead(204).end();
+    });
+  }).listen(0, "127.0.0.1");
+  await once(keycloak, "listening");
+  const origen = `http://127.0.0.1:${(keycloak.address() as { port: number }).port}`;
+  try {
+    assert.equal(adminKeycloak({ OIDC_BACKEND: origen + "/realms/mesa" }), null, "sin el secreto no hay administración");
+    const pedir = adminKeycloak({ KEYCLOAK_API_CLIENT_SECRET: "secreto", OIDC_BACKEND: "http://identidad.invalid/realms/mesa", KEYCLOAK_ADMIN_URL: origen + "/" })!;
+    assert.equal((await pedir("/users/u-1/logout", { method: "POST" })).status, 204);
+    assert.equal(pedidos.length, 2);
+    const token = new URLSearchParams(pedidos[0].cuerpo);
+    assert.equal(pedidos[0].ruta, "POST /realms/mesa/protocol/openid-connect/token");
+    assert.deepEqual([token.get("grant_type"), token.get("client_id"), token.get("client_secret")], ["client_credentials", "truco-api", "secreto"]);
+    assert.deepEqual(pedidos[1], { ruta: "POST /admin/realms/mesa/users/u-1/logout", autorizacion: "Bearer token-servicio", cuerpo: "" });
+  } finally {
+    keycloak.close();
+  }
+});

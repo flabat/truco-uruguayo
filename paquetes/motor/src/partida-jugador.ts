@@ -21,6 +21,10 @@ interface Marcador {
   puntos: [number, number];
   meta: number;
   ganadorPartida: Equipo | null;
+  /** Humanos activos desconectados que traban la mesa; fechas ISO del reloj del servidor. */
+  esperas?: { asiento: number; nombre: string; desde: string; disponible: string; restanteMs: number }[];
+  /** La partida terminó porque alguien salió: gana `ganador` aunque nadie llegó a la meta. */
+  cierreAbandono?: { asiento: number; nombre: string; motivo: "abandonada" | "desconectada"; ganador: Equipo };
 }
 
 interface PartidaSinRepartir extends Marcador {

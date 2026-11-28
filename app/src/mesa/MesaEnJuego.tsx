@@ -28,6 +28,7 @@ import { useColaDePresentacion } from "./useCola.ts";
 import { useJugadas } from "./useJugadas.ts";
 import { useEfectos } from "./useEfectos.ts";
 import { usePreferencias } from "./usePreferencias.ts";
+import { AvisoEspera } from "./vistas/AvisoEspera.tsx";
 import { HojaMano } from "./vistas/HojaMano.tsx";
 import { HojaMas } from "./vistas/HojaMas.tsx";
 import { HojaTantos } from "./vistas/HojaTantos.tsx";
@@ -49,7 +50,8 @@ export function MesaEnJuego({ id }: { id: string }) {
   const [eventos] = useState(crearEventos);
   // Se lee una sola vez: la marca de la sala se consume al abrir la mesa.
   const [presencio] = useState(() => presencioElReparto(id));
-  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar } = useMesa(cliente, id, presencio, avisosDeApp);
+  const { ruta, mesa, partida: lectura, conectada, reconexion, error, refrescar, abandonar, reemplazar } =
+    useMesa(cliente, id, presencio, avisosDeApp);
   useEfectos(eventos, cargadas && preferencias.hapticos, mesa?.asientos.length ?? 0);
   const recibida = lectura?.vista ? lectura : undefined;
   const simple: Partida | undefined = recibida && recibida.formato !== "triples" ? recibida as Partida : undefined;
@@ -145,12 +147,14 @@ export function MesaEnJuego({ id }: { id: string }) {
     voz: <HojaVoz ruta={ruta} disponible={mesa.vozDisponible === true} />,
     mas: (
       <HojaMas versionReglas={mesa.versionReglas} politica={mesa.politica} nombreModelo={mesa.edicionModelo?.nombre}
-        preferencias={preferencias} cambiar={cambiar} reducirMovimiento={reducirMovimiento} salir={salirAlSalon} />
+        preferencias={preferencias} cambiar={cambiar} reducirMovimiento={reducirMovimiento} salir={salirAlSalon}
+        abandono={partida.ganadorPartida == null ? { modo: mesa.modo, abandonar: () => abandonar().then(salirAlSalon) } : undefined} />
     ),
   };
 
   return (
     <MesaPantalla mesa={mesaVisible} senas={senas} hojaCantos={hojaCantos} acciones={acciones} extra={extra}
-      rechazos={rechazos} conectada={conectada} eventos={eventos} liviano={liviano} hapticos={cargadas && preferencias.hapticos} />
+      rechazos={rechazos} conectada={conectada} eventos={eventos} liviano={liviano} hapticos={cargadas && preferencias.hapticos}
+      aviso={<AvisoEspera esperas={recibida.esperas} modo={mesa.modo} reemplazar={reemplazar} />} />
   );
 }

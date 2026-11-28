@@ -122,6 +122,41 @@ Apple exige este ingreso en la app porque ofrece Google y Discord. Hace falta el
 
 La extensión firma el secreto con la clave en cada ingreso, así que no hay un secreto que venza. Keycloak guarda los tokens de Apple (`storeToken`) para que la API los revoque al eliminar una cuenta, como exige Apple. Apple entrega el nombre solo en el primer ingreso y puede ocultar el correo del jugador.
 
+Si el jugador oculta su correo, Apple le da una dirección de retransmisión (`@privaterelay.appleid.com`) que solo acepta mensajes de remitentes registrados. Keycloak manda correos cuando el realm tiene SMTP: verificación, vinculación y recuperación. Para que lleguen, registrá el dominio y la dirección remitente de Keycloak en el servicio de retransmisión de Apple. [Configurar la retransmisión privada de correo](https://developer.apple.com/help/account/capabilities/configure-private-email-relay-service/)
+
+### Notificaciones de Apple
+
+Apple avisa al servidor cuando un jugador deja de usar su Apple ID con El Truco o elimina su cuenta de Apple. La API recibe esos avisos en `POST /api/auth/apple/notificaciones`.
+
+En [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list), abrí el App ID primario `co.eltru.app`, elegí **Configure** en **Sign in with Apple** y cargá como URL de notificaciones de servidor a servidor la de la API: `https://eltru.co/api/auth/apple/notificaciones` en producción. Guardá el App ID. [Habilitar las notificaciones de servidor a servidor](https://developer.apple.com/help/account/configure-app-capabilities/enabling-server-to-server-notifications)
+
+La API necesita `APPLE_CLIENT_ID` y el cliente de servicio `truco-api` (`KEYCLOAK_API_CLIENT_SECRET`). Sin `APPLE_CLIENT_ID`, el endpoint responde 404.
+
+Apple manda `{"payload": "<JWS>"}`. La API acepta la notificación si:
+
+- La firma RS256 es de una de las claves de Apple (`https://appleid.apple.com/auth/keys`). La API las guarda un día y las vuelve a bajar ante una clave nueva. Si Apple no responde, usa las que ya tenía.
+- `iss` es `https://appleid.apple.com`.
+- `aud` es `APPLE_CLIENT_ID` (el Services ID) o el bundle `co.eltru.app`.
+- `iat` tiene menos de 24 horas, con 5 minutos de tolerancia para el reloj.
+
+Con el `sub` del evento, la API busca al usuario de Keycloak vinculado a `apple` y, con él, al jugador.
+
+| Evento | Qué hace |
+| --- | --- |
+| `consent-revoked` | Cierra las sesiones del jugador en la API, sus conexiones en vivo y sus sesiones de Keycloak, y borra el token de Apple guardado. Conserva el vínculo: si vuelve a entrar con Apple, recupera su jugador. |
+| `account-deleted` (antes `account-delete`) | Si Apple era su única forma de entrar, sin otro proveedor vinculado ni contraseña, empieza la misma baja que **Eliminar mi cuenta**: 30 días de gracia y después se anonimiza. Si tiene otra forma de entrar, quita el vínculo con Apple, borra el token y cierra sus sesiones. La cuenta sigue. |
+| `email-disabled`, `email-enabled` | Solo se registran en el log. |
+
+Respuestas:
+
+- **200** para una notificación válida, aunque no haya jugador con ese `sub`.
+- **400** si la firma o los claims no valen.
+- **503** si Keycloak o las claves de Apple no responden, o si falta el cliente de servicio. Apple puede reintentar.
+
+Repetir un evento no cambia nada. La API guarda durante 30 días un hash de cada evento aplicado (tipo, `sub` y `event_time`) en `juego.avisos_apple`. Así, un reenvío no cierra las sesiones que el jugador abrió después. El log registra el tipo y el resultado, sin el `sub` ni el correo.
+
+En las pruebas, `APPLE_KEYS_URL` reemplaza la dirección de las claves de Apple, como `APPLE_REVOKE_URL` la de la revocación. Dentro de `npm run check:stack`, `scripts/verificar-notificaciones-apple.mjs` firma un aviso de cada tipo con una clave propia y comprueba su efecto en la base y en Keycloak. [Procesar los cambios en las cuentas de Sign in with Apple](https://developer.apple.com/documentation/signinwithapple/processing-changes-for-sign-in-with-apple-accounts)
+
 ## Ingreso desde la app
 
 La app usa el mismo ingreso, sin cookie:

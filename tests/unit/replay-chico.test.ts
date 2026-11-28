@@ -105,3 +105,70 @@ test("la procedencia privada distingue una política alternativa, un humano y un
   assert.deepEqual(reproducirChico(juego, 0).puntos, [40, 0]);
   assert.throws(() => reproducirChico({ ...fixture("gallo"), origen: "mesa" }, 0), /sintético/);
 });
+
+function abandonado(juego: ReturnType<typeof fixture>, extra: Record<string, unknown> = {}) {
+  const [reparto, decision, , cierre] = juego.eventos;
+  const salida = { tipo: "salida", secuencia: 3, asiento: 0, motivo: "abandonada", fecha: "2026-11-19T12:00:30Z" };
+  const final = { ...cierre, secuencia: 4, estado: "abandonado", ganador: 1, puntos: [0, 0], ...extra };
+  return { salida, final, eventos: [reparto, decision, salida, final] };
+}
+
+test("acepta un cierre abandonado después de una salida", () => {
+  const juego = fixture("duelo");
+  const { eventos } = abandonado(juego);
+  const fin = reproducirChico({ ...juego, eventos }, 1);
+  assert.equal(fin.ganador, 1);
+  assert.equal(fin.estado, "abandonado");
+  assert.deepEqual(fin.puntos, [0, 0]);
+  assert.equal(reproducirChico({ ...juego, eventos }, 1, 3).estado, "en-juego");
+});
+
+test("rechaza un cierre abandonado sin salida", () => {
+  const juego = fixture("duelo");
+  const { final } = abandonado(juego);
+  const eventos = [juego.eventos[0], juego.eventos[1], { ...final, secuencia: 3 }];
+  assert.throws(() => reproducirChico({ ...juego, eventos }, 0), /Cierre incompatible/);
+});
+
+test("rechaza un cierre abandonado con puntos distintos al tanteador", () => {
+  const juego = fixture("duelo");
+  const { eventos } = abandonado(juego, { puntos: [1, 0] });
+  assert.throws(() => reproducirChico({ ...juego, eventos }, 0), /Cierre incompatible/);
+});
+
+test("rechaza una salida mal formada y un abandono con ganador inválido", () => {
+  const juego = fixture("duelo");
+  const { salida, final } = abandonado(juego);
+  const con = (s: object, f: object = final) => ({ ...juego, eventos: [juego.eventos[0], juego.eventos[1], s, f] });
+  assert.throws(() => reproducirChico(con({ ...salida, motivo: "otra" }), 0), /Salida/);
+  assert.throws(() => reproducirChico(con({ ...salida, asiento: 2 }), 0), /Salida/);
+  assert.throws(() => reproducirChico(con({ ...salida, fecha: "ayer" }), 0), /Salida/);
+  assert.throws(() => reproducirChico(con(salida, { ...final, ganador: null }), 0), /Cierre incompatible/);
+  assert.throws(() => reproducirChico(con(salida, { ...final, ganador: 2 }), 0), /Cierre incompatible/);
+});
+
+test("rechaza un cierre abandonado que no gana el rival de la última salida", () => {
+  const juego = fixture("duelo");
+  const { salida, final } = abandonado(juego);
+  const con = (...resto: object[]) => ({ ...juego, eventos: [juego.eventos[0], juego.eventos[1], ...resto] });
+  assert.throws(() => reproducirChico(con(salida, { ...final, ganador: 0 }), 0), /Cierre incompatible/);
+  const deB = { ...salida, asiento: 1 };
+  assert.equal(reproducirChico(con(deB, { ...final, ganador: 0 }), 0).ganador, 0);
+  assert.throws(() => reproducirChico(con(deB, final), 0), /Cierre incompatible/);
+  // Con dos salidas, el cierre corresponde a la última.
+  const dos = con({ ...salida, secuencia: 3 }, { ...deB, secuencia: 4 }, { ...final, secuencia: 5, ganador: 0 });
+  assert.equal(reproducirChico(dos, 0).ganador, 0);
+  assert.throws(() => reproducirChico(con({ ...deB, secuencia: 3 }, { ...salida, secuencia: 4 }, { ...final, secuencia: 5, ganador: 0 }), 0),
+    /Cierre incompatible/);
+});
+
+test("una salida sin cierre no cambia el resultado", () => {
+  const juego = fixture("duelo");
+  const { salida } = abandonado(juego);
+  const [reparto, decision, resto, cierre] = juego.eventos;
+  const con = { ...juego, eventos: [reparto, decision, salida, { ...resto, secuencia: 4 }, { ...cierre, secuencia: 5 }] };
+  const sin = reproducirChico(juego, 0);
+  const luego = reproducirChico(con, 0);
+  assert.deepEqual({ ...luego, secuencia: 0 }, { ...sin, secuencia: 0 });
+  assert.equal(luego.estado, "terminado");
+});

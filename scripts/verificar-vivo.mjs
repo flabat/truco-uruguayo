@@ -55,9 +55,17 @@ function conectar(s, id) {
   };
 }
 
+/**
+ * Conecta de a uno: cada conexión nueva avisa a toda la mesa, la propia incluida. Esperar ese aviso
+ * en todos antes de seguir deja las colas vacías, así un aviso de llegada no se confunde después con
+ * el de una jugada ni con una confirmación.
+ */
 async function suscribir(sesiones, id) {
-  const clientes = sesiones.map((s, i) => conectar(s, i === 0 ? id.toUpperCase() : id));
-  for (const c of clientes) assert.deepEqual(await c.recibir(), { tipo: "actualizar" });
+  const clientes = [];
+  for (const [i, s] of sesiones.entries()) {
+    clientes.push(conectar(s, i === 0 ? id.toUpperCase() : id));
+    for (const c of clientes) assert.deepEqual(await c.recibir(), { tipo: "actualizar" });
+  }
   return clientes;
 }
 
@@ -69,6 +77,14 @@ async function rechaza(id, cookie, desde, esperado) {
   res.resume();
   ws.terminate();
 }
+
+/** Las esperas son de cada lectura: el recibo de un comando no las guarda. */
+const sinEsperas = ({ esperas: _, ...partida }) => partida;
+/**
+ * La huella de lo que la mesa guardó. Las esperas quedan fuera: dependen de quién estaba conectado
+ * en el momento de leer, y su hora empieza de nuevo al reiniciar la API.
+ */
+const huella = ({ esperas: _, ...p }) => hash(JSON.stringify(p));
 
 async function vistas(sesiones, ruta) {
   const todas = await Promise.all(sesiones.map(s => http(s, ruta)));
@@ -177,7 +193,7 @@ async function iniciar(sesiones, ajena) {
   const regreso = conectar(sesiones[turno], id);
   assert.deepEqual(await regreso.recibir(), { tipo: "actualizar" });
   regreso.ws.send(JSON.stringify(orden));
-  assert.deepEqual(await regreso.recibir(), { tipo: "confirmacion", id: orden.id, partida: despues[turno] });
+  assert.deepEqual(await regreso.recibir(), { tipo: "confirmacion", id: orden.id, partida: sinEsperas(despues[turno]) });
   regreso.ws.send(JSON.stringify({...orden, accion: {...orden.accion, sena: "beso"}}));
   assert.equal((await regreso.recibir()).tipo, "error");
   const viejo = { ...orden, id: randomUUID() };
@@ -194,7 +210,7 @@ async function iniciar(sesiones, ajena) {
   const huellaReplay = await comprobarReplay(id, despues, orden);
   await pool.query("CREATE TABLE juego.prueba_vivo (mesa uuid, asiento int, orden jsonb, huellas jsonb, replay_sha text)");
   await pool.query("INSERT INTO juego.prueba_vivo VALUES ($1,$2,$3,$4,$5)", [
-    id, turno, JSON.stringify(orden), JSON.stringify(despues.map(p => hash(JSON.stringify(p)))), huellaReplay,
+    id, turno, JSON.stringify(orden), JSON.stringify(despues.map(huella)), huellaReplay,
   ]);
 }
 
@@ -202,11 +218,11 @@ async function reconectar(sesiones) {
   const [previo] = (await pool.query("SELECT * FROM juego.prueba_vivo")).rows;
   const clientes = await suscribir(sesiones, previo.mesa);
   const vigentes = await vistas(sesiones, "/api/mesas/" + previo.mesa + "/partida");
-  assert.deepEqual(vigentes.map(p => hash(JSON.stringify(p))), previo.huellas);
+  assert.deepEqual(vigentes.map(huella), previo.huellas);
   const autor = clientes[previo.asiento];
   autor.ws.send(JSON.stringify(previo.orden));
   const confirmacion = await autor.recibir();
-  assert.deepEqual(confirmacion, { tipo: "confirmacion", id: previo.orden.id, partida: vigentes[previo.asiento] });
+  assert.deepEqual(confirmacion, { tipo: "confirmacion", id: previo.orden.id, partida: sinEsperas(vigentes[previo.asiento]) });
   assert.equal(await comprobarReplay(previo.mesa, vigentes, previo.orden), previo.replay_sha);
 }
 

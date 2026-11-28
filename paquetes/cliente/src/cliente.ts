@@ -94,6 +94,8 @@ export function crearCliente(opciones: OpcionesCliente = {}): Cliente {
         const resultado = await response.json().catch(() => null);
         throw new ErrorMesa(response.status, resultado?.error || "No se pudo abrir la mesa.");
       }
+      // Sin contenido (por ejemplo, al abandonar): no hay JSON que leer.
+      if (response.status === 204) return undefined as T;
       return response.json();
     },
     vivo(ruta: string) {

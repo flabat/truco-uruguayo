@@ -27,10 +27,15 @@ export async function retirarJugador(db: PoolClient, jugador: string): Promise<s
       await db.query("UPDATE juego.asientos SET cedido = true WHERE mesa = $1 AND jugador = $2", [mesa.id, jugador]);
       await reanudarComputadoras(db, mesa.id);
     } else {
-      await db.query("DELETE FROM juego.asientos WHERE mesa = $1 AND jugador = $2", [mesa.id, jugador]);
-      if (mesa.creador === jugador) await db.query("UPDATE juego.mesas SET cancelada = now(), publica = false WHERE id = $1", [mesa.id]);
+      await retirarSinReparto(db, mesa, jugador);
     }
     cambiadas.push(mesa.id);
   }
   return cambiadas;
+}
+
+/** La mesa todavía no tiene reparto y está bloqueada por quien llama: el asiento queda libre; si la creó, la mesa se cancela. */
+export async function retirarSinReparto(db: PoolClient, mesa: { id: string; creador: string }, jugador: string): Promise<void> {
+  await db.query("DELETE FROM juego.asientos WHERE mesa = $1 AND jugador = $2", [mesa.id, jugador]);
+  if (mesa.creador === jugador) await db.query("UPDATE juego.mesas SET cancelada = now(), publica = false WHERE id = $1", [mesa.id]);
 }

@@ -4,7 +4,7 @@ export interface ResumenPartida {
   meta: number;
   mano: number;
   fecha: string | null;
-  resultado: "ganada" | "perdida" | "sin-terminar" | "desconocido";
+  resultado: "ganada" | "perdida" | "abandonada" | "desconectada" | "sin-terminar" | "desconocido";
   puntos: { propios: number; rivales: number } | null;
 }
 

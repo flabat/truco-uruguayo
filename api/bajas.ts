@@ -118,32 +118,44 @@ function claveTokens(env: NodeJS.ProcessEnv): Buffer | null {
   return clave;
 }
 
-/** Sin el secreto del cliente de servicio `truco-api` no hay bajas que completar: devuelve `null`. */
-export function crearServiciosBaja(env: NodeJS.ProcessEnv, pool: Pool): ServiciosBaja | null {
+/**
+ * Pedidos a la administración de Keycloak con el cliente de servicio `truco-api`, relativos a `/admin/realms/<realm>`.
+ * Sin su secreto devuelve `null`.
+ */
+export function adminKeycloak(env: NodeJS.ProcessEnv): ((ruta: string, init?: RequestInit) => Promise<Response>) | null {
   const secreto = env.KEYCLOAK_API_CLIENT_SECRET;
   if (!secreto || !env.OIDC_BACKEND) return null;
   const backend = new URL(env.OIDC_BACKEND);
-  const realm = backend.pathname.split("/").filter(Boolean).at(-1)!;
+  const realm = encodeURIComponent(backend.pathname.split("/").filter(Boolean).at(-1)!);
   // La administración de Keycloak no es pública: en producción se usa la dirección interna.
   const base = (env.KEYCLOAK_ADMIN_URL ?? backend.origin).replace(/\/$/, "");
-  const apple = configApple(env);
-  const clave = claveTokens(env);
-  const revocar = env.APPLE_REVOKE_URL ?? "https://appleid.apple.com/auth/revoke";
+  const plazo = () => AbortSignal.timeout(10_000);
 
   async function tokenServicio() {
-    const respuesta = await fetch(`${base}/realms/${encodeURIComponent(realm)}/protocol/openid-connect/token`, {
-      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ grant_type: "client_credentials", client_id: "truco-api", client_secret: secreto }),
+    const respuesta = await fetch(`${base}/realms/${realm}/protocol/openid-connect/token`, {
+      method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, signal: plazo(),
+      body: new URLSearchParams({ grant_type: "client_credentials", client_id: "truco-api", client_secret: secreto! }),
     });
     if (!respuesta.ok) throw new Error(`Keycloak rechazó el cliente de servicio (${respuesta.status}).`);
     return (await respuesta.json()).access_token as string;
   }
 
+  return async (ruta, init = {}) => fetch(`${base}/admin/realms/${realm}${ruta}`, {
+    ...init, signal: plazo(), headers: { ...init.headers as Record<string, string>, authorization: "Bearer " + await tokenServicio() },
+  });
+}
+
+/** Sin el secreto del cliente de servicio `truco-api` no hay bajas que completar: devuelve `null`. */
+export function crearServiciosBaja(env: NodeJS.ProcessEnv, pool: Pool): ServiciosBaja | null {
+  const pedir = adminKeycloak(env);
+  if (!pedir) return null;
+  const apple = configApple(env);
+  const clave = claveTokens(env);
+  const revocar = env.APPLE_REVOKE_URL ?? "https://appleid.apple.com/auth/revoke";
+
   return {
     async borrarUsuario(sujeto) {
-      const respuesta = await fetch(`${base}/admin/realms/${encodeURIComponent(realm)}/users/${encodeURIComponent(sujeto)}`, {
-        method: "DELETE", headers: { authorization: "Bearer " + await tokenServicio() },
-      });
+      const respuesta = await pedir(`/users/${encodeURIComponent(sujeto)}`, { method: "DELETE" });
       if (respuesta.status !== 204 && respuesta.status !== 404) throw new Error(`Keycloak no borró el usuario (${respuesta.status}).`);
     },
     async tokenApple(jugador) {

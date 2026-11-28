@@ -2,6 +2,7 @@ import {teamTransferKind, openTeamTransfer, type TeamTransferActor} from "../tra
 import {teamMixtureKind, openTeamMixture, type TeamMixtureActor} from "../training/selfplay/team-mixture.ts";
 import {isSelfplayKind, openSelfplay, type SelfplayActor} from "../training/selfplay/learner.ts";
 import {kind, openAnchored, type AnchoredActor} from "../training/anchored/actor.ts";
+import {openRegularized, regularizedKind, type RegularizedArtifact} from "../training/regularized/actor.ts";
 import {createHash} from "node:crypto";
 import type { Asiento } from "@eltruco/motor/reparto.ts";
 import type { Format, Policy } from "../training/contracts/index.ts";
@@ -26,5 +27,6 @@ export function openActor(artifact: unknown, format: Format, seat: Asiento): Pol
   if ("kind" in artifact && artifact.kind === teamMixtureKind) return openTeamMixture(artifact as TeamMixtureActor);
   if ("kind" in artifact && isSelfplayKind(artifact.kind)) return openSelfplay(artifact as SelfplayActor);
   if ("kind" in artifact && artifact.kind === kind) return openAnchored(artifact as AnchoredActor);
+  if ("kind" in artifact && artifact.kind === regularizedKind) return openRegularized(artifact as RegularizedArtifact);
   return format === "duel" ? asDuelActor(artifact as DuelExport) : loadPartnerPolicy(artifact as Actor, seat);
 }

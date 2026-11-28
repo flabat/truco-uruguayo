@@ -62,7 +62,9 @@
 .perfil-partidas time { color: var(--muted); font-size: .88rem; }
 .perfil-resultado { font-weight: 700; }
 .perfil-resultado[data-resultado="ganada"] { color: var(--ink); }
-.perfil-resultado[data-resultado="perdida"] { color: var(--accent); }
+.perfil-resultado[data-resultado="perdida"],
+.perfil-resultado[data-resultado="abandonada"],
+.perfil-resultado[data-resultado="desconectada"] { color: var(--accent); }
 .perfil-paginas {
   display: flex;
   flex-wrap: wrap;

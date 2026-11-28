@@ -6,7 +6,8 @@ import { nombrar } from "@eltruco/cliente/textos.ts";
 import { fuentes } from "../../tema.ts";
 import type { AsientoVisible, MesaVisible } from "../modelo.ts";
 import { enRect, mesaColores } from "./estilo.ts";
-import { cajasDelMazo, Globo } from "./Globo.tsx";
+import { Globo } from "./Globo.tsx";
+import { limitesDeGlobo, rotuloDeMuestra } from "../lugar-globo.ts";
 
 // Los dos equipos de tercetos, con los tonos de la maqueta tercetos-v2.
 const colorDeEquipo = ["#f2d27a", "#c9886f"] as const;
@@ -87,23 +88,12 @@ function Rotulo({ asiento, geo, columna, propio, tercetos }: {
   );
 }
 
-/** El rótulo de la muestra entra en una línea: se ensancha alrededor del mazo, dentro de la columna. */
-function rotuloDeMuestra({ mazo, columna }: Geometria) {
-  const ancho = Math.max(mazo.rotulo.ancho, 136);
-  const centro = mazo.rotulo.x + mazo.rotulo.ancho / 2;
-  const x = Math.max(columna.x + 2, Math.min(centro - ancho / 2, columna.x + columna.ancho - ancho - 2));
-  return { ...mazo.rotulo, x, ancho };
-}
-
 /**
  * Nombre y papel de cada asiento, los globos de canto que saltan desde su ancla y el rótulo de la
  * muestra. Las cartas las dibuja el lienzo.
  */
 export function Asientos({ mesa, geometria, liviano = false }: { mesa: MesaVisible; geometria: Geometria; liviano?: boolean }) {
-  const limites = {
-    columna: geometria.columna, arriba: geometria.barra.y + geometria.barra.alto, estado: geometria.estado,
-    evitar: cajasDelMazo(geometria),
-  };
+  const limites = limitesDeGlobo(geometria);
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {mesa.asientos.map(a => {

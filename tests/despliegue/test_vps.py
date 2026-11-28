@@ -54,6 +54,11 @@ class HostTest(unittest.TestCase):
         with patch.object(v, "out", return_value=f"hostname {v.ALIAS}\nport 22"), self.assertRaises(SystemExit):
             v.host({})
 
+    def test_sudo_wraps_each_remote_command(self):
+        self.assertEqual(v.ssh_command("vps", "rm -rf a && tar -x -C a", {"TRUCO_VPS_SUDO": "1"}),
+                         ["ssh", "-o", "BatchMode=yes", "vps", "sudo -n sh -c 'rm -rf a && tar -x -C a'"])
+        self.assertEqual(v.ssh_command("vps", "sh -s", {})[-1], "sh -s")
+
     def test_platform(self):
         with patch.object(v, "out", return_value="x86_64"):
             self.assertEqual(v.platform("vps", {}), "linux/amd64")

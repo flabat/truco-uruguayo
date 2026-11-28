@@ -7,7 +7,7 @@ import { hasSignals, versions, type Move, type SeatObservation } from "../traini
 import { observe } from "../training/seat/index.ts";
 import { signalRules } from "../training/signals/index.ts";
 import { accionesPie, observacionPie, politicaPie } from "@eltruco/motor/bot-pie.ts";
-import { elegirAccionPoliticaPie } from "@eltruco/motor/modelo-pie.ts";
+import { cargarPoliticaPie, decidirPie, esPin } from "./politica-pie.ts";
 import { versionSenasPie, vistaDelPie } from "@eltruco/motor/senas-pie.ts";
 import { asientoBotPie, confirmarJugadaPieDB, esperaDelPie } from "./partidas-pie.ts";
 import { elegirAccionTercetos } from "@eltruco/motor/bot-tercetos.ts";
@@ -46,9 +46,12 @@ async function snapshot(db: Pool | PoolClient, id?: string, exhibicion = false) 
 
 export interface Inferencia { decide(pin: string, obs: SeatObservation): Promise<ServingDecision> }
 
-async function decidirTurno(fila: Fila, servicio: Inferencia) {
+async function decidirTurno(db: Pool | PoolClient, fila: Fila, servicio: Inferencia) {
   if (fila.version_senas === versionSenasPie) {
-    if (fila.modo !== "2v2" && fila.politica !== politicaPie) throw new Error("La mesa requiere la política clásica al pie.");
+    if (fila.modo !== "2v2" && fila.politica !== politicaPie && !esPin(fila.politica)) {
+      throw new Error("La mesa requiere la política clásica al pie o un actor aprendido.");
+    }
+    const aprendida = esPin(fila.politica) ? await cargarPoliticaPie(db, fila.politica) : undefined;
     const indicaciones = fila.indicaciones ?? [];
     const mano: ManoPublicable = fila.modo === "3v3"
       ? { estado: restaurarTercetosDB(fila), turnos: [], indicaciones, pasesPie: fila.pases_pie }
@@ -59,7 +62,7 @@ async function decidirTurno(fila: Fila, servicio: Inferencia) {
     const inicio = performance.now();
     // Un bot activo ve sus cartas y recibe exactamente las mismas señas y palabras que ese asiento humano.
     const vista = vistaOnline(mano.estado, asiento);
-    const accion = elegirAccionPoliticaPie(fila.politica, vista, vistaDelPie(mano.estado, asiento, indicaciones), indicaciones);
+    const accion = decidirPie(fila.politica, aprendida, mano.estado, vista, vistaDelPie(mano.estado, asiento, indicaciones), indicaciones);
     if (!accion) throw new Error("La computadora al pie no encontró una acción legal.");
     const bot: DecisionBotV1 = { solicitada: fila.politica, aplicada: fila.politica, observacion: observacionPie,
       acciones: accionesPie, latenciaMs: performance.now() - inicio };
@@ -123,7 +126,7 @@ async function aplicarInferencia(db: PoolClient, fila: Fila, turno: NonNullable<
 export async function jugarTurnoExhibicion(db: PoolClient, servicio: Inferencia, id: string) {
   const fila = await snapshot(db, id, true);
   if (!fila || fila.humanos.length) throw new Error("Se esperaba un turno pendiente entre computadoras.");
-  const turno = await decidirTurno(fila, servicio);
+  const turno = await decidirTurno(db, fila, servicio);
   if (!turno) throw new Error("La exhibición perdió el turno pendiente.");
   await aplicarInferencia(db, fila, turno);
 }
@@ -132,7 +135,7 @@ export async function jugarTurnoExhibicion(db: PoolClient, servicio: Inferencia,
 export async function resolverTurno(pool: Pool, servicio: Inferencia, notificar: (id: string) => void, id?: string) {
   const fila = await snapshot(pool, id);
   if (!fila) return false;
-  const turno = await decidirTurno(fila, servicio);
+  const turno = await decidirTurno(pool, fila, servicio);
   if (!turno) return false;
   const db = await pool.connect();
   try {

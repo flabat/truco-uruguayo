@@ -6,7 +6,8 @@ const modalidades: Record<ResumenPartida["modo"], string> = {
   "1v1": "Duelo", "2v2": "Parejas", "3v3": "Tercetos",
 };
 const resultados: Record<ResumenPartida["resultado"], string> = {
-  ganada: "Ganada", perdida: "Perdida", "sin-terminar": "Sin terminar", desconocido: "Resultado sin datos",
+  ganada: "Ganada", perdida: "Perdida", abandonada: "Abandonada", desconectada: "Desconectada",
+  "sin-terminar": "Sin terminar", desconocido: "Resultado sin datos",
 };
 const fechaLocal = new Intl.DateTimeFormat("es-UY", { dateStyle: "medium" });
 const fechaBaja = new Intl.DateTimeFormat("es-UY", { dateStyle: "long" });

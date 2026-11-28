@@ -416,8 +416,23 @@ async function probarParejasConPie() {
     if (m.pie.pie === yo) {
       const grupo = m.pie.grupos.find(g => g.emisor === companero);
       if (grupo?.gestos.length) {
-        await expect(p.getByTestId("globo-senas-" + companero)).toBeVisible(espera);
-        if (globos++ === 0) await capturar(p, "parejas-globo-375x760");
+        const globo = p.getByTestId("globo-senas-" + companero);
+        await expect(globo).toBeVisible(espera);
+        if (globos++ === 0) {
+          await capturar(p, "parejas-globo-375x760");
+          // El globo no tapa el rótulo de la muestra (#474).
+          const [g, m] = await Promise.all([globo.boundingBox(), p.getByText(/^Muestra · /).boundingBox()]);
+          assert.ok(g.x + g.width <= m.x || m.x + m.width <= g.x || g.y + g.height <= m.y || m.y + m.height <= g.y,
+            `el globo ${JSON.stringify(g)} tapa la muestra ${JSON.stringify(m)}`);
+          // Tocarlo lo achica a una ficha junto al nombre; tocar la ficha lo vuelve a abrir.
+          await globo.getByRole("button").click();
+          const ficha = p.getByTestId("ficha-senas-" + companero);
+          await expect(ficha).toBeVisible(espera);
+          await expect(globo).toHaveCount(0);
+          await capturar(p, "parejas-ficha-375x760");
+          await ficha.click();
+          await expect(globo).toBeVisible(espera);
+        }
       }
     } else if (m.pie.grupos.some(g => g.emisor === yo)) {
       // Si el pie ya le habló en esta vuelta y no tiró, la frase reemplaza a la píldora junto a la mano (#425).
@@ -660,6 +675,74 @@ async function probarEscritorio() {
   console.log(`Escritorio 1v1: paneles sin tira, ${abrioCantos ? "C abre Cantos y Escape la cierra, " : ""}tras tocar Sonido, 1 y 2 seguidos juegan una sola carta.`);
 }
 
+/** luis abandona un duelo contra la computadora desde «Más», confirma y vuelve al salón; la mesa ya no lo recibe. */
+async function probarAbandono() {
+  const luis = await entrar("luis");
+  await crearMesa(luis, "1 contra 1", true);
+  const id = await enLaMesa(luis);
+  // En su turno sin canto por responder no hay hoja forzada que tape «Más».
+  await avanzar([luis], id, x => x.vista.legales.includes("carta") && !x.vista.pendiente && x.vista.porDeclararFlor === null);
+  await boton(luis, "Más").click();
+  await expect(luis.getByTestId("hoja-mas")).toBeVisible(espera);
+  await boton(luis, "Abandonar la partida").click();
+  await expect(luis.getByTestId("confirmar-abandono"))
+    .toContainText("Vas a perder esta partida y quedará como Abandonada en tu historial.");
+  await expect(luis.getByTestId("confirmar-abandono")).not.toContainText("Una computadora va a jugar tu lugar.");
+  await capturar(luis, "abandono-375x760");
+  await boton(luis, "Seguir jugando").click();
+  await expect(luis.getByTestId("confirmar-abandono")).toHaveCount(0);
+  await boton(luis, "Abandonar la partida").click();
+  await boton(luis, "Abandonar").click();
+  await expect(titulo(luis, "Mesas en juego")).toBeVisible(espera);
+  const lectura = await luis.request.get(`/api/mesas/${id}/partida`);
+  assert.equal(lectura.status(), 409);
+  assert.equal((await lectura.json()).error, "Abandonaste esta partida.");
+  // Volver por el enlace muestra el motivo del servidor y la salida al salón.
+  await luis.goto(`/jugar/mesa?id=${id}`);
+  await expect(luis.getByText("Abandonaste esta partida.")).toBeVisible(espera);
+  await boton(luis, "Volver al salón").click();
+  await expect(titulo(luis, "Mesas en juego")).toBeVisible(espera);
+  await luis.context().close();
+  console.log("Abandono desde la mesa: confirmación, vuelta al salón y 409 con el motivo al volver.");
+}
+
+/**
+ * Duelo entre eva y luis: a quien le toca se le cierra la página. El rival ve «Esperando a …» con la cuenta
+ * y, al vencer el plazo corto de la pila, cobra la partida; el fin dice que el otro se desconectó.
+ */
+async function probarEsperaYCobro() {
+  const eva = await entrar("eva");
+  const luis = await entrar("luis", escritorio);
+  const id = await mesaConInvitados(eva, "1 contra 1", [luis]);
+  const mesa = await api(eva, "/api/mesas/" + id);
+  const paginas = [eva, luis];
+  let manos;
+  await expect.poll(async () => {
+    manos = await Promise.all(paginas.map(p => partida(p, id)));
+    return manos.filter(m => m.vista.legales.length > 0).length;
+  }, espera).toBe(1);
+  const i = manos.findIndex(m => m.vista.legales.length > 0);
+  const [sale, queda] = i === 0 ? [eva, luis] : [luis, eva];
+  const nombre = mesa.asientos[manos[i].vista.asiento].nombre;
+  await sale.context().close();
+  const aviso = queda.getByTestId("aviso-espera-" + manos[i].vista.asiento);
+  await expect(aviso).toContainText(`Esperando a ${nombre}…`, espera);
+  await expect(boton(queda, "Cobrar la partida")).toBeVisible(espera);
+  await expect(boton(queda, "Seguir esperando")).toBeVisible();
+  await capturar(queda, "espera-" + (queda === luis ? "1280x800" : "375x760"));
+  await boton(queda, "Seguir esperando").click();
+  await expect(aviso).toHaveCount(0);
+  // Ocultado no vuelve hasta el minuto: el cobro se prueba recargando la mesa, que olvida lo ocultado.
+  await queda.reload();
+  await boton(queda, "Cobrar la partida").click();
+  await expect(queda.getByTestId("fin-de-mano")).toContainText(`${nombre} se desconectó.`, espera);
+  await expect(queda.getByTestId("fin-de-mano")).toContainText("Ganaste la partida");
+  await expect(boton(queda, "Crear otra mesa")).toBeVisible();
+  await capturar(queda, "cobro-" + (queda === luis ? "1280x800" : "375x760"));
+  await queda.context().close();
+  console.log(`Duelo entre personas: ${nombre} se desconectó, el rival vio la cuenta, siguió esperando y cobró la partida.`);
+}
+
 /** El interruptor «Modo liviano» de la hoja Más (en el teléfono, el ☰ de la barra). */
 async function abrirModoLiviano(p) {
   await boton(p, "Más").click();
@@ -829,13 +912,13 @@ async function probarPrivacidad() {
 
 const todos = {
   probarDueloConComputadora, probarEnvido, probarFlorAlMazo, probarParejasConPie, probarPrivacidad, probarTercetos, probarEspectador, probarEscritorio,
-  probarAnimaciones,
+  probarAnimaciones, probarAbandono, probarEsperaYCobro,
 };
 try {
   for (const [nombre, caso] of Object.entries(todos)) {
     if (casos.length === 0 || casos.includes(nombre)) await caso();
   }
-  console.log("Mesa nueva de la app verificada contra la pila local · duelo, envido, señas al pie, privacidad, tercetos, espectador, escritorio y animaciones.");
+  console.log("Mesa nueva de la app verificada contra la pila local · duelo, envido, señas al pie, privacidad, tercetos, espectador, escritorio, animaciones, abandono y espera.");
 } catch (error) {
   // Con una falla, la captura de cada página abierta muestra en qué quedó la mesa.
   const abiertas = browser.contexts().flatMap(c => c.pages());
