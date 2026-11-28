@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import { playMatch } from "../arena/index.ts";
 import { versions, type Format, type Policy } from "../contracts/index.ts";
-import { coordinates, duelActorId, duelSchema, loadDuelActor, width, type DuelExport } from "../duel/actor.ts";
+import { coordinates, duelActorId, duelSchema, width, type DuelExport } from "../duel/actor.ts";
 import { incumbent } from "../seat/index.ts";
 import { main as trainPartners } from "../partners/cli.ts";
 import { domainSeed, digest, monteCarloId, recurrentId } from "../partners/policy.ts";
-import { interval, json, loadTeam, pairOutcomes, rate, save, sha } from "./development.ts";
+import { interval, json, loadDuelPolicy, loadTeam, pairOutcomes, rate, save, sha } from "./development.ts";
 
 interface CounterState {
   schema: "duel-mc-counter-v1"; target: string; seed:number; completed:number; decisions:number; buckets:number;
@@ -48,7 +48,7 @@ function strengths(row:CounterState["cells"][string], slot:number) {
   return Math.exp(3*row.sum[slot]/(row.count[slot]+12))*Math.min(4,Math.max(.05,prior));
 }
 function duelCounter(path:string,out:string,seed:number,matches:number) {
-  const opponent=loadDuelActor(path),target=sha(path),checkpoint=join(out,"counter-state.json");
+  const opponent=loadDuelPolicy(path),target=sha(path),checkpoint=join(out,"counter-state.json");
   const state:CounterState=existsSync(checkpoint) ? json(checkpoint) : {schema:"duel-mc-counter-v1",target,seed,
     completed:0,decisions:0,buckets:256,cells:{}};
   if(state.target!==target||state.seed!==seed||state.schema!=="duel-mc-counter-v1")throw Error("Otro rival o linaje en el checkpoint.");

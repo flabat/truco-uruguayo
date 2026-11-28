@@ -103,6 +103,14 @@ for formato in duel pairs pairs-private-senas; do
   "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
 done
 "${compose[@]}" exec -T api node --input-type=module - aprendidos < scripts/verificar-ensayos.mjs
+# Actores aprendidos al pie: las mesas nuevas los toman y la computadora juega chicos completos con ellos.
+for formato in pairs-pie triples-pie; do
+  pin=$(node scripts/actor-ensayo.ts "$formato" | "${compose[@]}" exec -T api node policyctl.ts register "$formato")
+  "${compose[@]}" exec -T api node policyctl.ts activate "$formato" "$pin"
+done
+"${compose[@]}" exec -T api node --input-type=module < scripts/verificar-pie-aprendido.mjs
+"${compose[@]}" exec -T api node --input-type=module - al-pie-aprendido < scripts/verificar-ensayos.mjs
+for formato in pairs-pie triples-pie; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" exec -T api node --input-type=module < scripts/verificar-retiro.mjs
 for formato in duel pairs pairs-private-senas; do "${compose[@]}" exec -T api node policyctl.ts rollback "$formato"; done
 "${compose[@]}" stop api
